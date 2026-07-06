@@ -1,0 +1,234 @@
+export interface RepoRow {
+	id: number;
+	owner: string;
+	name: string;
+	full_name: string;
+	github_url: string;
+	event_id: string;
+	created_at: string;
+	first_seen_at: string;
+	default_branch: string | null;
+	description: string | null;
+	language: string | null;
+	stars: number | null;
+	forks: number | null;
+	watchers: number | null;
+	license: string | null;
+	topics: string | null;
+	pushed_at: string | null;
+	updated_at: string | null;
+	enriched_at: string | null;
+	deleted_at: string | null;
+	github_archived: number;
+	last_checked_at: string | null;
+	open_issues: number | null;
+	size: number | null;
+	discovery_source: string;
+	homepage: string | null;
+	visibility: string | null;
+	owner_avatar_url: string | null;
+	owner_type: string | null;
+}
+
+export type DiscoverySource = 'gharchive' | 'github_search';
+
+export interface NewRepo {
+	owner: string;
+	name: string;
+	full_name: string;
+	github_url: string;
+	event_id: string;
+	created_at: string;
+	first_seen_at: string;
+	discovery_source?: DiscoverySource;
+}
+
+export interface EnrichmentData {
+	default_branch: string | null;
+	description: string | null;
+	language: string | null;
+	stars: number;
+	forks: number;
+	watchers: number;
+	license: string | null;
+	topics: string[];
+	pushed_at: string | null;
+	updated_at: string | null;
+	open_issues?: number;
+	size?: number;
+	homepage?: string | null;
+	visibility?: string | null;
+	owner_avatar_url?: string | null;
+	owner_type?: string | null;
+}
+
+export interface RepoQuery {
+	q?: string;
+	language?: string;
+	neverEnriched?: boolean;
+	feed?: string;
+	sort?: string;
+	source?: string;
+	year?: number;
+	dateFrom?: string;
+	dateTo?: string;
+	archivedOnly?: boolean;
+	hasReadme?: boolean;
+	hasRelease?: boolean;
+	deletedOnly?: boolean;
+	includeDeleted?: boolean;
+	minStars?: number;
+	minForks?: number;
+	page?: number;
+	perPage?: number;
+}
+
+export interface RepoQueryResult {
+	repos: RepoRow[];
+	total: number;
+	page: number;
+	perPage: number;
+	totalPages: number;
+}
+
+export interface ArchiveSnapshotRow {
+	id: number;
+	repo_id: number;
+	snapshot_type: 'readme' | 'source';
+	file_path: string;
+	file_size: number;
+	sha256: string;
+	head_sha: string | null;
+	archived_at: string;
+}
+
+export interface NewArchiveSnapshot {
+	repo_id: number;
+	snapshot_type: 'readme' | 'source';
+	file_path: string;
+	file_size: number;
+	sha256: string;
+	head_sha: string | null;
+	archived_at: string;
+}
+
+export interface ReleaseInput {
+	github_release_id: number | null;
+	tag: string;
+	name: string | null;
+	published_at: string | null;
+	prerelease: boolean;
+	draft: boolean;
+	body: string | null;
+	tarball_url: string | null;
+	zipball_url: string | null;
+	assets: {
+		github_asset_id: number;
+		name: string;
+		size: number;
+		download_count: number;
+		content_type: string | null;
+		browser_download_url: string | null;
+	}[];
+}
+
+export interface ReleaseRow {
+	id: number;
+	repo_id: number;
+	github_release_id: number | null;
+	tag: string;
+	name: string | null;
+	published_at: string | null;
+	prerelease: number;
+	draft: number;
+	body: string | null;
+	tarball_url: string | null;
+	zipball_url: string | null;
+	first_seen_at: string;
+}
+
+export interface ReleaseAssetRow {
+	id: number;
+	release_id: number;
+	github_asset_id: number;
+	name: string;
+	size: number;
+	download_count: number;
+	content_type: string | null;
+	browser_download_url: string | null;
+}
+
+export interface RepoEventRow {
+	id: number;
+	repo_id: number;
+	event_type: string;
+	event_time: string;
+	payload_json: string;
+}
+
+export type JobType = 'daemon' | 'ingest' | 'enrich' | 'refresh' | 'archive';
+export type JobStatus = 'running' | 'success' | 'failed' | 'cancelled';
+
+export interface JobRunRow {
+	id: number;
+	job_type: JobType;
+	status: JobStatus;
+	started_at: string;
+	finished_at: string | null;
+	detail_json: string;
+	error: string | null;
+}
+
+export interface IngestionStateRow {
+	hour_key: string;
+	ingested_at: string;
+	events: number;
+	inserted: number;
+	skipped: number;
+	source: string;
+}
+
+export interface MetricSnapshotRow {
+	id: number;
+	repo_id: number;
+	stars: number;
+	forks: number;
+	watchers: number;
+	open_issues: number;
+	size: number;
+	captured_at: string;
+}
+
+export interface MetricSnapshotInput {
+	stars: number;
+	forks: number;
+	watchers: number;
+	open_issues: number;
+	size: number;
+}
+
+export interface BackfillJobRow {
+	id: number;
+	start_date: string;
+	end_date: string;
+	source: string;
+	max_hours_per_run: number;
+	status: string;
+	created_at: string;
+	updated_at: string;
+	last_error: string | null;
+}
+
+export interface BackfillHourRow {
+	id: number;
+	job_id: number;
+	hour_key: string;
+	year: number;
+	date: string;
+	status: string;
+	source: string | null;
+	events_parsed: number;
+	repos_inserted: number;
+	error: string | null;
+	updated_at: string;
+}

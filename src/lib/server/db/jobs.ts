@@ -1,0 +1,80 @@
+import { getDb } from './connection.js';
+import type { JobRunRow, JobStatus, JobType } from './types.js';
+
+export function startJobRun(jobType: JobType, detail: Record<string, unknown> = {}): number {
+	const db = getDb();
+	const startedAt = new Date().toISOString();
+	const result = db
+		.prepare(
+			`INSERT INTO job_runs (job_type, status, started_at, detail_json)
+			 VALUES (?, 'running', ?, ?)`
+		)
+		.run(jobType, startedAt, JSON.stringify(detail));
+	return Number(result.lastInsertRowid);
+}
+
+export function updateJobRun(id: number, detail: Record<string, unknown>): void {
+	const db = getDb();
+	db.prepare('UPDATE job_runs SET detail_json = ? WHERE id = ?').run(JSON.stringify(detail), id);
+}
+
+export function finishJobRun(
+	id: number,
+	status: Exclude<JobStatus, 'running'>,
+	detail: Record<string, unknown> = {},
+	error?: string
+): void {
+	const db = getDb();
+	db.prepare(
+		`UPDATE job_runs
+		 SET status = ?, finished_at = ?, detail_json = ?, error = ?
+		 WHERE id = ?`
+	).run(status, new Date().toISOString(), JSON.stringify(detail), error ?? null, id);
+}
+
+export function listRecentJobRuns(limit = 30): JobRunRow[] {
+	const db = getDb();
+	return db
+		.prepare('SELECT * FROM job_runs ORDER BY started_at DESC LIMIT ?')
+		.all(limit) as JobRunRow[];
+}
+
+export function getLatestDaemonJob(): JobRunRow | null {
+	const db = getDb();
+	const row = db
+		.prepare(
+			`SELECT * FROM job_runs
+			 WHERE job_type = 'daemon'
+			 ORDER BY started_at DESC
+			 LIMIT 1`
+		)
+		.get() as JobRunRow | undefined;
+	return row ?? null;
+}
+
+export function getLatestJobsByType(): Partial<Record<JobType, JobRunRow>> {
+	const db = getDb();
+	const rows = db
+		.prepare(
+			`SELECT j.*
+			 FROM job_runs j
+			 INNER JOIN (
+			   SELECT job_type, MAX(started_at) AS max_started
+			   FROM job_runs
+			   GROUP BY job_type
+			 ) latest ON j.job_type = latest.job_type AND j.started_at = latest.max_started`
+		)
+		.all() as JobRunRow[];
+
+	const map: Partial<Record<JobType, JobRunRow>> = {};
+	for (const row of rows) map[row.job_type] = row;
+	return map;
+}
+
+export function parseJobDetail(row: JobRunRow): Record<string, unknown> {
+	try {
+		return JSON.parse(row.detail_json) as Record<string, unknown>;
+	} catch {
+		return {};
+	}
+}

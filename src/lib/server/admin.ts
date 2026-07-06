@@ -1,0 +1,115 @@
+import {
+	countReposFirstSeenSince,
+	countReposByDiscoverySource,
+	sumArchiveSnapshotBytes,
+	countArchiveSnapshotFiles
+} from '$lib/server/db/birth-feed';
+import {
+	countIngestedHours,
+	countMetricSnapshots,
+	countRepos,
+	countReposDueForRefresh,
+	countReposWithMetrics,
+	countUnenriched,
+	getLatestJobsByType,
+	latestIngestedHour,
+	listIngestedHours,
+	listMissingHourKeys,
+	listRecentJobRuns,
+	parseJobDetail
+} from '$lib/server/db';
+import {
+	countReposByYear,
+	countReposArchived,
+	countReposEnriched,
+	countReposWithReadme,
+	countReposWithReleases,
+	listLatestErrors
+} from '$lib/server/db/admin-stats';
+import {
+	getActiveBackfillJob,
+	getBackfillProgress,
+	getLatestBackfillJob,
+	listBackfillJobs
+} from '$lib/server/db/backfill';
+import { getBackupSummary } from '$lib/server/backup';
+import { fetchGitHubRateLimit } from '$lib/server/github';
+import { defaultHourKey } from '$lib/server/gharchive';
+import { getDaemonUiStatus } from '$lib/server/worker-control';
+
+const REFRESH_INTERVAL_HOURS = Number(process.env.REFRESH_INTERVAL_HOURS ?? 24);
+
+function startOfUtcDay(): string {
+	const now = new Date();
+	return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+}
+
+export async function getAdminStatus() {
+	const daemon = getDaemonUiStatus();
+	const refreshJob = getLatestJobsByType().refresh;
+	const refreshDetail = refreshJob ? parseJobDetail(refreshJob) : null;
+	const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+	const backfillJob = getActiveBackfillJob() ?? getLatestBackfillJob();
+	const rateLimit = await fetchGitHubRateLimit().catch(() => null);
+
+	let backfill = null as null | {
+		job: NonNullable<typeof backfillJob>;
+		progress: ReturnType<typeof getBackfillProgress>;
+	};
+
+	if (backfillJob) {
+		backfill = {
+			job: backfillJob,
+			progress: getBackfillProgress(backfillJob.id)
+		};
+	}
+
+	const currentJob = listRecentJobRuns(1)[0] ?? null;
+
+	return {
+		daemon,
+		currentJob,
+		workers: getLatestJobsByType(),
+		recentJobs: listRecentJobRuns(40),
+		ingestion: {
+			latestHour: latestIngestedHour(),
+			targetHour: defaultHourKey(),
+			missingHours: listMissingHourKeys(20),
+			recentHours: listIngestedHours(20),
+			totalHours: countIngestedHours(),
+			reposLastHour: countReposFirstSeenSince(oneHourAgo),
+			reposToday: countReposFirstSeenSince(startOfUtcDay())
+		},
+		archive: {
+			fileCount: countArchiveSnapshotFiles(),
+			indexedBytes: sumArchiveSnapshotBytes()
+		},
+		discovery: {
+			githubSearchRepos: countReposByDiscoverySource('github_search')
+		},
+		refresh: {
+			intervalHours: REFRESH_INTERVAL_HOURS,
+			dueCount: countReposDueForRefresh(),
+			totalSnapshots: countMetricSnapshots(),
+			reposWithSnapshots: countReposWithMetrics(),
+			lastJob: refreshJob,
+			lastDetail: refreshDetail
+		},
+		stats: {
+			totalRepos: countRepos(),
+			unenrichedRepos: countUnenriched(),
+			enrichedRepos: countReposEnriched(),
+			archivedRepos: countReposArchived(),
+			readmeRepos: countReposWithReadme(),
+			releaseRepos: countReposWithReleases(),
+			reposByYear: countReposByYear()
+		},
+		backfill,
+		backfillJobs: listBackfillJobs(10),
+		rateLimit,
+		latestErrors: listLatestErrors(10),
+		backup: getBackupSummary()
+	};
+}
+
+export type AdminStatus = Awaited<ReturnType<typeof getAdminStatus>>;
