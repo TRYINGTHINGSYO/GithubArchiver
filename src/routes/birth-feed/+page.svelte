@@ -235,7 +235,7 @@
 
 <p class="api-hint">
 	API: <a href="/api/birth-feed">/api/birth-feed</a> | <a href="/api/events">/api/events</a> |
-	<a href="/api/trends">/api/trends</a> | <a href="/admin/status">Worker status</a> | <a href="/">All repos</a>
+	<a href="/api/trends">/api/trends</a> | <a href="/admin">Admin</a> | <a href="/">All repos</a>
 </p>
 
 <style>

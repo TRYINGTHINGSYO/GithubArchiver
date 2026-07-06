@@ -1,29 +1,63 @@
 import { json } from '@sveltejs/kit';
-import { runPipelineNow, runWorkerJob } from '$lib/server/worker-control';
+import {
+	runArchiveJob,
+	runEnrichJob,
+	runIngestHourJob,
+	runIngestMissingJob,
+	runPipelineJob,
+	runRefreshJob,
+	runSearchIngestJob,
+	runBackupJob
+} from '$lib/server/job-runner';
 import type { RequestHandler } from './$types';
 
-const WORKERS: Record<string, string> = {
-	pipeline: 'pipeline:once',
-	ingest: 'ingest:hour',
-	enrich: 'enrich:repos',
-	archive: 'archive:repos',
-	refresh: 'enrich:refresh'
-};
-
 export const POST: RequestHandler = async ({ request }) => {
-	const body = (await request.json()) as { action?: string };
+	const body = (await request.json()) as {
+		action?: string;
+		hour_key?: string;
+		include_archives?: boolean;
+		compress?: boolean;
+	};
+
 	const action = body.action ?? '';
 
-	if (action === 'pipeline') {
-		const result = runPipelineNow();
-		return json({ ok: true, ...result });
+	switch (action) {
+		case 'pipeline': {
+			const result = runPipelineJob();
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'ingest': {
+			const result = runIngestHourJob(body.hour_key);
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'ingest-missing': {
+			const result = runIngestMissingJob();
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'search-ingest': {
+			const result = runSearchIngestJob(body.hour_key);
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'enrich': {
+			const result = runEnrichJob();
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'archive': {
+			const result = runArchiveJob();
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'refresh': {
+			const result = runRefreshJob();
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'backup': {
+			const result = runBackupJob({
+				includeArchives: body.include_archives ?? false,
+				compress: body.compress ?? false
+			});
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		default:
+			return json({ error: `Unknown action: ${action}` }, { status: 400 });
 	}
-
-	const script = WORKERS[action];
-	if (!script) {
-		return json({ error: `Unknown action: ${action}` }, { status: 400 });
-	}
-
-	const result = runWorkerJob(script);
-	return json({ ok: true, action, ...result });
 };

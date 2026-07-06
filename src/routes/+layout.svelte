@@ -10,9 +10,7 @@
 		<div class="stats-bar">
 			<span>Preserving GitHub's interesting repos</span>
 			<a href="/birth-feed" class="admin-link">Birth Feed</a>
-			<a href="/admin/status" class="admin-link">Status</a>
-			<a href="/admin/doctor" class="admin-link">Doctor</a>
-			<a href="/admin/storage" class="admin-link">Storage</a>
+			<a href="/admin" class="admin-link">Admin</a>
 		</div>
 	</div>
 </header>

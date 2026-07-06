@@ -20,7 +20,7 @@ import {
 	ingestHour,
 	ingestSourceForRecord,
 	isIngestSuccess
-} from '../../scripts/lib/ingest-core.js';
+} from '$ingest-core';
 import { insertRepo } from './db/repos.js';
 import { appendRepoEvent } from './events.js';
 

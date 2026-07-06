@@ -6,7 +6,7 @@ import {
 	getBackfillProgress,
 	listBackfillJobs
 } from '$lib/server/db/backfill';
-import { runWorkerJob } from '$lib/server/worker-control';
+import { runBackfillResumeJob } from '$lib/server/job-runner';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async () => {
@@ -23,9 +23,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 	if (resume) {
 		const active = getActiveBackfillJob();
-		const env = active ? { BACKFILL_JOB_ID: String(active.id) } : undefined;
-		const result = runWorkerJob('backfill:resume', env);
-		return json({ ok: true, spawned: true, pid: result.pid, jobId: active?.id ?? null });
+		const result = runBackfillResumeJob(active?.id);
+		return json(
+			{ ok: result.queued, jobId: active?.id ?? null, ...result },
+			{ status: result.queued ? 200 : 409 }
+		);
 	}
 
 	const body = (await request.json()) as {
@@ -53,8 +55,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
 	});
 
 	if (body.run_now) {
-		const result = runWorkerJob('backfill:resume', { BACKFILL_JOB_ID: String(jobId) });
-		return json({ ok: true, jobId, job: getBackfillJob(jobId), pid: result.pid });
+		const result = runBackfillResumeJob(jobId);
+		return json(
+			{ ok: result.queued, jobId, job: getBackfillJob(jobId), ...result },
+			{ status: result.queued ? 200 : 409 }
+		);
 	}
 
 	return json({ ok: true, jobId, job: getBackfillJob(jobId) });

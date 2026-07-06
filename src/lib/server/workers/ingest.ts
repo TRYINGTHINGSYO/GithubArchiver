@@ -1,4 +1,4 @@
-import { formatIngestLine, ingestHour, ingestSourceForRecord, isIngestSuccess } from '../../../scripts/lib/ingest-core.js';
+import { formatIngestLine, ingestHour, ingestSourceForRecord, isIngestSuccess } from '$ingest-core';
 
 import {
 

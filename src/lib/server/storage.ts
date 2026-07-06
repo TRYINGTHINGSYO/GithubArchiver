@@ -56,6 +56,9 @@ export interface StorageReport {
 
 export interface StorageOptions {
 	cleanup?: boolean;
+	deleteOrphans?: boolean;
+	deleteDuplicates?: boolean;
+	trimOld?: boolean;
 }
 
 const SAMPLE_LIMIT = 20;
@@ -432,17 +435,17 @@ export function runStorageAnalysis(opts: StorageOptions = {}): StorageReport {
 	const protectedIds = buildProtectedIds(snapshots);
 	const cleanups: StorageCleanup[] = [];
 
-	if (cleanup && envFlag('STORAGE_DELETE_ORPHANS')) {
+	if (cleanup && (opts.deleteOrphans || envFlag('STORAGE_DELETE_ORPHANS'))) {
 		cleanups.push(cleanupOrphans(snapshots, diskFiles));
 	}
 
-	if (cleanup && envFlag('STORAGE_DELETE_DUPLICATES')) {
+	if (cleanup && (opts.deleteDuplicates || envFlag('STORAGE_DELETE_DUPLICATES'))) {
 		const result = cleanupDuplicates(snapshots, protectedIds);
 		cleanups.push(result.cleanup);
 		snapshots = result.remaining as (ArchiveSnapshotRow & { full_name: string })[];
 	}
 
-	if (ageTrimEnabled(cleanup)) {
+	if (opts.trimOld || ageTrimEnabled(cleanup)) {
 		const result = cleanupOldSnapshots(snapshots, protectedIds, keepLastN);
 		cleanups.push(result.cleanup);
 		snapshots = result.remaining as (ArchiveSnapshotRow & { full_name: string })[];

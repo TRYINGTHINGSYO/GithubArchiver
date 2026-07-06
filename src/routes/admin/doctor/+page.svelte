@@ -1,10 +1,38 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import type { CheckStatus } from '$lib/server/doctor';
 
 	let { data }: { data: PageData } = $props();
 
+	let actionMsg = $state('');
+	let actionError = $state(false);
+	let actionLoading = $state(false);
+
 	const report = $derived(data.report);
+
+	async function runRepair(opts: Record<string, boolean>, label: string) {
+		if (!confirm(`${label}?`)) return;
+		actionLoading = true;
+		actionMsg = '';
+		actionError = false;
+		try {
+			const res = await fetch('/api/admin/maintenance', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'doctor', ...opts })
+			});
+			const json = await res.json();
+			if (!res.ok) throw new Error(json.error ?? res.statusText);
+			actionMsg = `${label} complete — see Job history for details`;
+			await invalidateAll();
+		} catch (err) {
+			actionError = true;
+			actionMsg = err instanceof Error ? err.message : String(err);
+		} finally {
+			actionLoading = false;
+		}
+	}
 
 	function statusClass(status: CheckStatus): string {
 		if (status === 'ok') return 'badge archived';
@@ -20,7 +48,7 @@
 <h1>Archive Doctor</h1>
 <p class="doctor-lead">
 	Health checks for database, snapshots, FTS, jobs, and daemon checkpoints.
-	Run repairs with <code>npm run doctor</code> and env flags.
+	Repairs run in-process and results are saved to <a href="/admin/jobs?type=maintenance">Job history</a>.
 </p>
 
 <div class="stats-bar" style="margin-bottom: 1.5rem">
@@ -56,24 +84,25 @@
 </section>
 
 <section class="detail-section">
-	<h2 class="section-title">Repairs (CLI)</h2>
-	<dl class="detail-grid">
-		<div>
-			<dt>Rebuild FTS</dt>
-			<dd><code>DOCTOR_REBUILD_FTS=1 npm run doctor</code></dd>
-		</div>
-		<div>
-			<dt>Mark missing snapshots</dt>
-			<dd><code>DOCTOR_MARK_MISSING_SNAPSHOTS=1 npm run doctor</code></dd>
-		</div>
-	</dl>
+	<h2 class="section-title">Repairs</h2>
+	<div class="doctor-actions">
+		<button type="button" class="filter-btn" disabled={actionLoading} onclick={() => runRepair({ rebuild_fts: true }, 'Rebuild FTS index')}>
+			Rebuild FTS
+		</button>
+		<button type="button" class="filter-btn" disabled={actionLoading} onclick={() => runRepair({ mark_missing_snapshots: true }, 'Remove DB rows for missing snapshot files')}>
+			Mark missing snapshots
+		</button>
+	</div>
+	{#if actionMsg}
+		<p class="doctor-meta" class:doctor-error={actionError}>{actionMsg}</p>
+	{/if}
 	<p class="doctor-meta">
 		Mark missing removes <code>archive_snapshots</code> rows whose files are absent on disk.
 	</p>
 </section>
 
 <p class="api-hint">
-	<a href="/admin/status">Worker status</a> ·
+	<a href="/admin">Control center</a> ·
 	<a href="/">← Back to repos</a>
 </p>
 
@@ -123,5 +152,16 @@
 	.doctor-meta {
 		font-size: 0.85rem;
 		color: var(--text-muted);
+	}
+
+	.doctor-error {
+		color: var(--red);
+	}
+
+	.doctor-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
 	}
 </style>

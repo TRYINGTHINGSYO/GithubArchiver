@@ -3,6 +3,13 @@ import { existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } 
 import { join, resolve } from 'node:path';
 import { platform } from 'node:os';
 import { getLatestDaemonJob, parseJobDetail } from './db/jobs';
+import {
+	getBackgroundDaemonState,
+	isBackgroundDaemonRunning,
+	startBackgroundDaemon,
+	stopBackgroundDaemon
+} from './background-daemon';
+import { getCurrentJobLabel, isJobRunnerBusy } from './job-runner';
 
 const DATA_DIR = resolve(process.env.DATA_DIR ?? './data');
 const PID_FILE = join(DATA_DIR, 'daemon.pid');
@@ -36,13 +43,6 @@ function isProcessAlive(pid: number): boolean {
 		return true;
 	} catch {
 		return false;
-	}
-}
-
-function waitMs(ms: number) {
-	const end = Date.now() + ms;
-	while (Date.now() < end) {
-		// busy wait — startDaemon is synchronous
 	}
 }
 
@@ -103,29 +103,30 @@ function spawnScript(
 }
 
 export function startDaemon(): { pid: number } {
+	if (isBackgroundDaemonRunning()) {
+		throw new Error('Auto-scan is already running');
+	}
 	if (isDaemonProcessRunning()) {
-		throw new Error('Daemon is already running');
+		throw new Error('External daemon is already running');
 	}
-	spawnScript('daemon', 'daemon');
-
-	const deadline = Date.now() + 8000;
-	while (Date.now() < deadline) {
-		const pid = readPid();
-		if (pid && isProcessAlive(pid)) {
-			return { pid };
-		}
-		waitMs(200);
+	const result = startBackgroundDaemon();
+	if (!result.started) {
+		throw new Error(result.message);
 	}
-
-	const pid = readPid();
-	if (pid && isProcessAlive(pid)) return { pid };
-	throw new Error('Daemon start requested but process did not register a PID within 8s — check worker log');
+	return { pid: process.pid };
 }
 
 export function stopDaemon(): { stopped: boolean; message: string } {
+	if (isBackgroundDaemonRunning()) {
+		return stopBackgroundDaemon();
+	}
+	return stopDaemonProcess();
+}
+
+function stopDaemonProcess(): { stopped: boolean; message: string } {
 	const pid = readPid();
 	if (!pid) {
-		return { stopped: false, message: 'No daemon PID file found' };
+		return { stopped: false, message: 'Auto-scan is not running' };
 	}
 	if (!isProcessAlive(pid)) {
 		rmSync(PID_FILE, { force: true });
@@ -144,14 +145,6 @@ export function stopDaemon(): { stopped: boolean; message: string } {
 				// ignore
 			}
 		}
-		waitMs(500);
-		if (isProcessAlive(pid)) {
-			try {
-				process.kill(pid, 'SIGKILL');
-			} catch {
-				// ignore
-			}
-		}
 	}
 
 	rmSync(PID_FILE, { force: true });
@@ -161,16 +154,20 @@ export function stopDaemon(): { stopped: boolean; message: string } {
 		: { stopped: true, message: `Stopped daemon pid ${pid}` };
 }
 
+/** Legacy spawn path — prefer job-runner from admin API. */
 export function runPipelineNow(): { pid: number } {
 	return spawnScript('pipeline:once', 'pipeline');
 }
 
+/** Legacy spawn path — prefer job-runner from admin API. */
 export function runWorkerJob(script: string, extraEnv?: Record<string, string>): { pid: number } {
 	return spawnScript(script, script, extraEnv);
 }
 
 export function getDaemonUiStatus() {
-	const processRunning = isDaemonProcessRunning();
+	const bgRunning = isBackgroundDaemonRunning();
+	const bgState = getBackgroundDaemonState();
+	const processRunning = isDaemonProcessRunning() || bgRunning;
 	const job = getLatestDaemonJob();
 	const detail = job ? parseJobDetail(job) : null;
 	const dbRunning =
@@ -181,10 +178,14 @@ export function getDaemonUiStatus() {
 	return {
 		processRunning,
 		running: processRunning || dbRunning,
+		inProcess: bgRunning,
+		phase: bgState.phase,
 		job,
 		detail,
 		lastRunAt: job?.finished_at ?? job?.started_at ?? null,
-		nextRunAt: detail?.sleep_until ?? null,
-		logTail: getWorkerLogTail(30)
+		nextRunAt: bgState.sleepUntil ?? (detail?.sleep_until as string | undefined) ?? null,
+		logTail: getWorkerLogTail(30),
+		jobRunnerBusy: isJobRunnerBusy(),
+		currentJob: getCurrentJobLabel()
 	};
 }

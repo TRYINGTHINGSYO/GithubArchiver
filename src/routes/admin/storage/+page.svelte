@@ -1,10 +1,38 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
 	import { formatBytes, timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
+	let actionMsg = $state('');
+	let actionError = $state(false);
+	let actionLoading = $state(false);
+
 	const report = $derived(data.report);
+
+	async function runCleanup(opts: Record<string, boolean>, label: string) {
+		if (!confirm(`${label}? This cannot be undone.`)) return;
+		actionLoading = true;
+		actionMsg = '';
+		actionError = false;
+		try {
+			const res = await fetch('/api/admin/maintenance', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'storage', ...opts })
+			});
+			const json = await res.json();
+			if (!res.ok) throw new Error(json.error ?? res.statusText);
+			actionMsg = `${label} complete — see Job history for details`;
+			await invalidateAll();
+		} catch (err) {
+			actionError = true;
+			actionMsg = err instanceof Error ? err.message : String(err);
+		} finally {
+			actionLoading = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -13,8 +41,8 @@
 
 <h1>Archive Storage</h1>
 <p class="storage-lead">
-	Disk usage, duplicates, and cleanup candidates. Run analysis with
-	<code>npm run storage:analyze</code>.
+	Disk usage, duplicates, and cleanup. Actions run in-process and results are saved to
+	<a href="/admin/jobs?type=maintenance">Job history</a>.
 </p>
 
 <div class="stats-bar" style="margin-bottom: 1.5rem">
@@ -108,26 +136,26 @@
 </section>
 
 <section class="detail-section">
-	<h2 class="section-title">Safe cleanup (CLI)</h2>
-	<dl class="detail-grid">
-		<div>
-			<dt>Delete orphans</dt>
-			<dd><code>STORAGE_DELETE_ORPHANS=1 npm run storage:analyze</code></dd>
-		</div>
-		<div>
-			<dt>Delete duplicates</dt>
-			<dd><code>STORAGE_DELETE_DUPLICATES=1 npm run storage:analyze</code></dd>
-		</div>
-		<div>
-			<dt>Trim old snapshots</dt>
-			<dd><code>STORAGE_KEEP_LAST_N=5 npm run storage:analyze</code></dd>
-		</div>
-	</dl>
+	<h2 class="section-title">Cleanup</h2>
+	<div class="storage-actions">
+		<button type="button" class="filter-btn" disabled={actionLoading} onclick={() => runCleanup({ delete_orphans: true }, 'Delete orphan files on disk')}>
+			Delete orphans
+		</button>
+		<button type="button" class="filter-btn" disabled={actionLoading} onclick={() => runCleanup({ delete_duplicates: true }, 'Delete duplicate snapshot files')}>
+			Delete duplicates
+		</button>
+		<button type="button" class="filter-btn" disabled={actionLoading} onclick={() => runCleanup({ trim_old: true }, `Trim snapshots beyond keep-last-${report.keep_last_n}`)}>
+			Trim old snapshots
+		</button>
+	</div>
+	{#if actionMsg}
+		<p class="storage-meta" class:storage-error={actionError}>{actionMsg}</p>
+	{/if}
 </section>
 
 <p class="api-hint">
-	<a href="/admin/doctor">Doctor</a> ·
-	<a href="/admin/status">Status</a> ·
+	<a href="/admin/doctor">Health</a> ·
+	<a href="/admin">Control center</a> ·
 	<a href="/">← Back to repos</a>
 </p>
 
@@ -154,5 +182,16 @@
 		padding: 0.35rem 0;
 		border-bottom: 1px solid var(--border);
 		word-break: break-all;
+	}
+
+	.storage-error {
+		color: var(--red);
+	}
+
+	.storage-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
 	}
 </style>

@@ -27,12 +27,20 @@ import {
 	listLatestErrors
 } from '$lib/server/db/admin-stats';
 import {
+	getActiveBackfillJob,
+	getBackfillProgress,
+	getLatestBackfillJob,
+	listBackfillJobs
+} from '$lib/server/db/backfill';
+import {
 	getSearchIngestSummary,
 	listRecentSearchIngestStats
 } from '$lib/server/db/search-ingest';
 import { getBackupSummary } from '$lib/server/backup';
 import { fetchGitHubRateLimit } from '$lib/server/github';
 import { defaultHourKey } from '$lib/server/gharchive';
+import { getBackgroundDaemonState } from '$lib/server/background-daemon';
+import { getCurrentJobLabel, isJobRunnerBusy } from '$lib/server/job-runner';
 import { getDaemonUiStatus } from '$lib/server/worker-control';
 
 const REFRESH_INTERVAL_HOURS = Number(process.env.REFRESH_INTERVAL_HOURS ?? 24);
@@ -66,6 +74,11 @@ export async function getAdminStatus() {
 
 	return {
 		daemon,
+		backgroundWorker: {
+			...getBackgroundDaemonState(),
+			jobRunnerBusy: isJobRunnerBusy(),
+			currentJob: getCurrentJobLabel()
+		},
 		currentJob,
 		workers: getLatestJobsByType(),
 		recentJobs: listRecentJobRuns(40),

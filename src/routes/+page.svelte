@@ -170,7 +170,7 @@
 			{:else}
 				<p>No repositories match your filters.</p>
 			{/if}
-			<p class="empty-hint">Run <code>npm run ingest:hour</code> or start the daemon from <a href="/admin/status">/admin/status</a>.</p>
+			<p class="empty-hint">No repos yet — open <a href="/admin">Admin</a> and click <strong>GitHub Search Ingest</strong> or start <strong>Auto-Scan</strong>.</p>
 		</div>
 	{:else}
 		<ul class="repo-list">

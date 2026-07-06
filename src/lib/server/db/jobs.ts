@@ -39,6 +39,29 @@ export function listRecentJobRuns(limit = 30): JobRunRow[] {
 		.all(limit) as JobRunRow[];
 }
 
+export function getJobRunById(id: number): JobRunRow | null {
+	const db = getDb();
+	const row = db.prepare('SELECT * FROM job_runs WHERE id = ?').get(id) as JobRunRow | undefined;
+	return row ?? null;
+}
+
+export function listJobRuns(opts: { limit?: number; jobType?: string; offset?: number } = {}): JobRunRow[] {
+	const db = getDb();
+	const limit = opts.limit ?? 50;
+	const offset = opts.offset ?? 0;
+	if (opts.jobType) {
+		return db
+			.prepare(
+				`SELECT * FROM job_runs WHERE job_type = ?
+				 ORDER BY started_at DESC LIMIT ? OFFSET ?`
+			)
+			.all(opts.jobType, limit, offset) as JobRunRow[];
+	}
+	return db
+		.prepare('SELECT * FROM job_runs ORDER BY started_at DESC LIMIT ? OFFSET ?')
+		.all(limit, offset) as JobRunRow[];
+}
+
 export function getLatestDaemonJob(): JobRunRow | null {
 	const db = getDb();
 	const row = db

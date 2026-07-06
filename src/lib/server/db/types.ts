@@ -166,7 +166,16 @@ export interface RepoEventRow {
 	payload_json: string;
 }
 
-export type JobType = 'daemon' | 'ingest' | 'enrich' | 'refresh' | 'archive';
+export type JobType =
+	| 'daemon'
+	| 'ingest'
+	| 'enrich'
+	| 'refresh'
+	| 'archive'
+	| 'pipeline'
+	| 'backup'
+	| 'backfill'
+	| 'maintenance';
 export type JobStatus = 'running' | 'success' | 'failed' | 'cancelled';
 
 export interface JobRunRow {

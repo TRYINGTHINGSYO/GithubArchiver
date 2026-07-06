@@ -40,6 +40,8 @@ export interface DoctorReport {
 
 export interface DoctorOptions {
 	repair?: boolean;
+	rebuildFts?: boolean;
+	markMissingSnapshots?: boolean;
 }
 
 const SAMPLE_LIMIT = 15;
@@ -391,12 +393,12 @@ export function runDoctor(opts: DoctorOptions = {}): DoctorReport {
 	checks.push(checkDaemonCheckpoint());
 
 	if (repair) {
-		if (envFlag('DOCTOR_REBUILD_FTS')) {
+		if (opts.rebuildFts || envFlag('DOCTOR_REBUILD_FTS')) {
 			repairs.push(repairRebuildFts());
 			checks[checks.findIndex((c) => c.id === 'fts_row_count')] = checkFtsRowCount();
 		}
 
-		if (envFlag('DOCTOR_MARK_MISSING_SNAPSHOTS')) {
+		if (opts.markMissingSnapshots || envFlag('DOCTOR_MARK_MISSING_SNAPSHOTS')) {
 			repairs.push(repairMarkMissingSnapshots(snapshots));
 			snapshots = listAllSnapshots();
 			checks[checks.findIndex((c) => c.id === 'missing_archive_files')] =
