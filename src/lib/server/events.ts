@@ -6,6 +6,9 @@ export const REPO_EVENT_TYPES = [
 	'first_seen',
 	'metadata_updated',
 	'metrics_updated',
+	'default_branch_updated',
+	'license_changed',
+	'topics_changed',
 	'readme_changed',
 	'snapshot_created',
 	'release_detected',
@@ -47,6 +50,9 @@ function toLiveBusEventType(eventType: RepoEventType): 'repo.created' | 'repo.up
 			return 'repo.archived';
 		case 'metadata_updated':
 		case 'metrics_updated':
+		case 'default_branch_updated':
+		case 'license_changed':
+		case 'topics_changed':
 		case 'readme_changed':
 		case 'release_detected':
 			return 'repo.enriched';
@@ -85,6 +91,12 @@ export function eventLabel(eventType: RepoEventType): string {
 			return 'Metadata updated';
 		case 'metrics_updated':
 			return 'Metrics changed';
+		case 'default_branch_updated':
+			return 'Default branch updated';
+		case 'license_changed':
+			return 'License changed';
+		case 'topics_changed':
+			return 'Topics changed';
 		case 'readme_changed':
 			return 'README changed';
 		case 'snapshot_created':

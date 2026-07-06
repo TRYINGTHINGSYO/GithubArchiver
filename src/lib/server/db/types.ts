@@ -216,6 +216,35 @@ export interface MetricSnapshotInput {
 	size: number;
 }
 
+export interface RepoCommitSnapshotRow {
+	id: number;
+	repo_id: number;
+	sha: string;
+	tree_sha: string | null;
+	parent_sha: string | null;
+	committed_at: string | null;
+	author_name: string | null;
+	author_email: string | null;
+	default_branch: string;
+	observed_at: string;
+}
+
+export interface RepoLicenseHistoryRow {
+	id: number;
+	repo_id: number;
+	license: string | null;
+	observed_at: string;
+}
+
+export interface RepoTopicsHistoryRow {
+	id: number;
+	repo_id: number;
+	topics_json: string;
+	added_json: string | null;
+	removed_json: string | null;
+	observed_at: string;
+}
+
 export interface BackfillJobRow {
 	id: number;
 	start_date: string;

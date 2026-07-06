@@ -10,7 +10,7 @@ import {
 } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { basename, join, relative, resolve } from 'node:path';
-import { getDb, DB_PATH } from './db/connection';
+import { getDb, getDatabasePath } from './db/connection';
 import { CURRENT_SCHEMA_VERSION } from './db/schema';
 import {
 	countArchiveSnapshotFiles,
@@ -342,7 +342,7 @@ async function backupDatabase(destPath: string): Promise<void> {
 
 export async function runBackup(opts: BackupOptions = {}): Promise<BackupResult> {
 	const { includeArchives, compress } = resolveBackupOptions(opts);
-	const dbPath = resolve(DB_PATH);
+	const dbPath = resolve(getDatabasePath());
 	const archiveDir = resolve(process.env.ARCHIVE_DIR ?? './data/archives');
 	const backupsRoot = resolve(BACKUPS_DIR);
 	const dirName = formatBackupDirName();

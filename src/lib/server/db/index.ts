@@ -1,4 +1,4 @@
-export { getDb, DB_PATH } from './connection';
+export { getDb, getDatabasePath, closeDb } from './connection';
 export { CURRENT_SCHEMA_VERSION, runMigrations } from './schema';
 export * from './types';
 export * from './repos';
@@ -14,3 +14,4 @@ export * from './backfill';
 export * from './admin-stats';
 export * from './repo-query';
 export * from './search-ingest';
+export * from './repo-history';

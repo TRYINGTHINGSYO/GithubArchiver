@@ -170,6 +170,24 @@ interface GitHubCommitRef {
 	sha: string;
 }
 
+interface GitHubCommitDetail {
+	sha: string;
+	commit: {
+		author: { name: string; email: string; date: string };
+		tree: { sha: string };
+	};
+	parents: { sha: string }[];
+}
+
+export interface BranchCommitInfo {
+	sha: string;
+	tree_sha: string;
+	parent_sha: string | null;
+	committed_at: string;
+	author_name: string;
+	author_email: string;
+}
+
 export async function fetchBranchHeadSha(
 	owner: string,
 	repo: string,
@@ -179,6 +197,24 @@ export async function fetchBranchHeadSha(
 		`/repos/${owner}/${repo}/commits/${encodeURIComponent(branch)}`
 	);
 	return commit.sha;
+}
+
+export async function fetchBranchCommit(
+	owner: string,
+	repo: string,
+	branch: string
+): Promise<BranchCommitInfo> {
+	const data = await ghFetch<GitHubCommitDetail>(
+		`/repos/${owner}/${repo}/commits/${encodeURIComponent(branch)}`
+	);
+	return {
+		sha: data.sha,
+		tree_sha: data.commit.tree.sha,
+		parent_sha: data.parents[0]?.sha ?? null,
+		committed_at: data.commit.author.date,
+		author_name: data.commit.author.name,
+		author_email: data.commit.author.email
+	};
 }
 
 export async function downloadSourceTarball(

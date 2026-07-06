@@ -24,7 +24,9 @@
     "backfill:day": "tsx scripts/backfill-day.ts",
     "backfill:range": "tsx scripts/backfill-range.ts",
     "backfill:resume": "tsx scripts/backfill-resume.ts",
-    "daemon": "tsx scripts/daemon.ts"
+    "daemon": "tsx scripts/daemon.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.12",
@@ -34,7 +36,8 @@
     "svelte": "^5.30.0",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "better-sqlite3": "^11.9.1",

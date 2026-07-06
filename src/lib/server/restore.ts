@@ -10,7 +10,7 @@ import {
 import { createServer } from 'node:net';
 import { spawnSync } from 'node:child_process';
 import { basename, dirname, join, resolve } from 'node:path';
-import { closeDb, DB_PATH } from './db/connection';
+import { closeDb, getDatabasePath } from './db/connection';
 import { getLatestDaemonJob, parseJobDetail } from './db/jobs';
 import { runBackup, type BackupResult, type BackupType } from './backup';
 
@@ -58,11 +58,11 @@ function readBackupMetadata(backupDir: string): BackupMetadata | null {
 
 function findDatabaseFile(backupDir: string): string {
 	const metadata = readBackupMetadata(backupDir);
-	const preferred = metadata?.files?.database ?? basename(DB_PATH);
+	const preferred = metadata?.files?.database ?? basename(getDatabasePath());
 	const named = join(backupDir, preferred);
 	if (existsSync(named) && statSync(named).isFile()) return named;
 
-	const fallback = join(backupDir, basename(DB_PATH));
+	const fallback = join(backupDir, basename(getDatabasePath()));
 	if (existsSync(fallback) && statSync(fallback).isFile()) return fallback;
 
 	for (const name of ['githubarchive.db']) {
@@ -230,7 +230,7 @@ export async function runRestore(opts: RestoreOptions): Promise<RestoreResult> {
 	try {
 		const backupDbPath = findDatabaseFile(resolved.dir);
 		const backupType = inferBackupType(resolved.dir);
-		const liveDbPath = resolve(DB_PATH);
+		const liveDbPath = resolve(getDatabasePath());
 
 		console.log('Creating pre-restore backup of current state...');
 		const preRestoreBackup = await runBackup();

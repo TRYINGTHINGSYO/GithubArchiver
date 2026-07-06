@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 
-export const CURRENT_SCHEMA_VERSION = 9;
+export const CURRENT_SCHEMA_VERSION = 10;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -407,6 +407,54 @@ function migration009(database: Database.Database) {
 	`);
 }
 
+function migration010(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS repo_commit_snapshots (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repo_id INTEGER NOT NULL,
+			sha TEXT NOT NULL,
+			tree_sha TEXT,
+			parent_sha TEXT,
+			committed_at TEXT,
+			author_name TEXT,
+			author_email TEXT,
+			default_branch TEXT NOT NULL,
+			observed_at TEXT NOT NULL,
+			FOREIGN KEY (repo_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_repo_commit_snapshots_repo_observed
+			ON repo_commit_snapshots(repo_id, observed_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_repo_commit_snapshots_repo_sha
+			ON repo_commit_snapshots(repo_id, sha);
+
+		CREATE TABLE IF NOT EXISTS repo_license_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repo_id INTEGER NOT NULL,
+			license TEXT,
+			observed_at TEXT NOT NULL,
+			FOREIGN KEY (repo_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_repo_license_history_repo_observed
+			ON repo_license_history(repo_id, observed_at DESC);
+
+		CREATE TABLE IF NOT EXISTS repo_topics_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repo_id INTEGER NOT NULL,
+			topics_json TEXT NOT NULL,
+			added_json TEXT,
+			removed_json TEXT,
+			observed_at TEXT NOT NULL,
+			FOREIGN KEY (repo_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_repo_topics_history_repo_observed
+			ON repo_topics_history(repo_id, observed_at DESC);
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -416,7 +464,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	6: migration006,
 	7: migration007,
 	8: migration008,
-	9: migration009
+	9: migration009,
+	10: migration010
 };
 
 export function runMigrations(database: Database.Database) {

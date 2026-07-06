@@ -16,6 +16,10 @@ import {
 	fetchRepoMetadata,
 	fetchTags
 } from '$lib/server/github';
+import {
+	recordRepoHistoryChanges,
+	stripHistoryTrackedChanges
+} from '$lib/server/record-repo-history';
 
 const IMPORTANT_METADATA_FIELDS: (keyof EnrichmentData)[] = [
 	'default_branch',
@@ -60,6 +64,13 @@ function importantMetadataChanges(
 	}
 
 	return changes;
+}
+
+function metadataChangesForEvent(
+	before: RepoRow,
+	after: EnrichmentData
+): Record<string, { old: unknown; new: unknown }> {
+	return stripHistoryTrackedChanges(importantMetadataChanges(before, after));
 }
 
 function metricChanges(
@@ -223,7 +234,11 @@ export async function enrichRepo(repo: RepoRow): Promise<void> {
 
 	const enrichment = toEnrichmentData(data);
 	const wasEnriched = repo.enriched_at !== null;
-	const metadataDelta = importantMetadataChanges(repo, enrichment);
+	const observedAt = new Date().toISOString();
+
+	await recordRepoHistoryChanges(repo, enrichment, observedAt);
+
+	const metadataDelta = metadataChangesForEvent(repo, enrichment);
 
 	saveEnrichment(repo.id, enrichment);
 
@@ -242,7 +257,11 @@ export async function refreshRepo(repo: RepoRow): Promise<{ metricsChanged: bool
 	repo = await applyRenameAndArchive(repo, data);
 
 	const enrichment = toEnrichmentData(data);
-	const metadataDelta = importantMetadataChanges(repo, enrichment);
+	const observedAt = new Date().toISOString();
+
+	await recordRepoHistoryChanges(repo, enrichment, observedAt);
+
+	const metadataDelta = metadataChangesForEvent(repo, enrichment);
 	const metricsDelta = metricChanges(repo, enrichment);
 
 	saveRefreshUpdate(repo.id, enrichment);

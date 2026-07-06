@@ -1,248 +1,280 @@
 # GithubArchive+
 
-Append-only local archive for GitHub repositories, built on [GH Archive](https://www.gharchive.org/) hourly event dumps.
+An append-only archive for GitHub repositories — ingest from [GH Archive](https://www.gharchive.org/) and GitHub Search, enrich via the GitHub API, snapshot READMEs and source tarballs locally, and browse everything through a SvelteKit UI.
 
-## Quick start
+**Live:** [new-production-9120.up.railway.app](https://new-production-9120.up.railway.app)  
+**Repo:** [github.com/TRYINGTHINGSYO/GithubArchiver](https://github.com/TRYINGTHINGSYO/GithubArchiver)
+
+---
+
+## What it does
+
+```
+GH Archive (.json.gz)          GitHub Search API
+        │                              │
+        └──────────┬───────────────────┘
+                   ▼
+            SQLite (repos, events, FTS)
+                   │
+         GitHub API (enrich / refresh)
+                   ▼
+         Local archives (README + tarball)
+                   │
+                   ▼
+         SvelteKit UI + REST API
+```
+
+- **Discover** new repos from hourly GH Archive CreateEvents, with GitHub Search fallback when the archive is empty or unavailable
+- **Shard** search queries (hour → 15 min → 5 min → 1 min) when `total_count > 1000`
+- **Enrich** metadata, releases, rename/delete detection
+- **Archive** README and source snapshots to disk
+- **Browse** search, feeds, timelines, birth feed, and per-repo detail pages
+- **Operate** entirely from the browser via `/admin` — no SSH or terminal required in production
+
+---
+
+## Quick start (local)
 
 ```bash
 npm install
-cp .env.example .env   # add GITHUB_TOKEN for higher API limits
+cp .env.example .env          # add GITHUB_TOKEN (public_repo scope)
 npm run db:init
+npm run dev                   # http://localhost:5173
+```
+
+Open **[/admin](http://localhost:5173/admin)** and click **GitHub Search Ingest** or **Start Auto-Scan**.
+
+Or run workers manually:
+
+```bash
 npm run ingest:hour
 npm run enrich:repos
 npm run archive:repos
-npm run dev            # http://localhost:5173
 ```
 
 Workers load `.env` automatically via `scripts/load-env.ts`.
 
-## Windows desktop launch
+### Windows desktop
 
-Double-click `start-githubarchive.bat` to install dependencies when needed, run `npm run db:init`, start the Svelte app, and open `http://localhost:5173/admin/status`.
+Double-click `start-githubarchive.bat` to install deps, run `db:init`, start the dev server, and open `/admin`.  
+Use `stop-githubarchive.bat` to stop the server. See [docs/LOCAL_DESKTOP.md](docs/LOCAL_DESKTOP.md).
 
-Use `stop-githubarchive.bat` to stop the local server on port 5173. See [docs/LOCAL_DESKTOP.md](docs/LOCAL_DESKTOP.md) for first-time setup, normal use, backup/restore, and backfill warnings.
+---
 
-## Architecture
+## Admin (browser control center)
+
+All operations run **in-process** inside the web server and are recorded in `job_runs` for recall.
+
+| Tab | URL | Purpose |
+|-----|-----|---------|
+| **Control** | `/admin` | Auto-scan, search ingest, pipeline, enrich, archive, backup, backfill |
+| **Job history** | `/admin/jobs` | View past runs with full stored JSON results |
+| **Health** | `/admin/doctor` | DB/FTS/snapshot checks; one-click repairs |
+| **Storage** | `/admin/storage` | Disk usage, duplicates, orphan cleanup |
+
+### Control panel actions
+
+| Button | What it does |
+|--------|----------------|
+| **Start Auto-Scan** | Continuous ingest → enrich → refresh → archive loop |
+| **GitHub Search Ingest** | Discover repos for the current hour via Search API |
+| **Ingest Missing Hours** | Backfill any GH Archive hours not yet ingested |
+| **Full Pipeline** | One-shot ingest + enrich + refresh + archive |
+| **Enrich / Archive / Refresh** | Run a single worker batch |
+| **Create Backup** | SQLite + manifest backup to `BACKUPS_DIR` |
+| **Start backfill** | Resumable date-range backfill with progress bar |
+
+`/admin/status` redirects to `/admin`.
+
+On **Railway**, auto-scan starts automatically on deploy (`BACKGROUND_WORKER=auto`).
+
+---
+
+## Railway deployment
+
+The repo includes a `Dockerfile` and `railway.toml`. Connect the GitHub repo to Railway and attach a **volume** mounted at `/data`.
+
+### Required environment variables
 
 ```
-GH Archive (.json.gz)
-    → ingest:hour / ingest:today
-    → SQLite (repos + repository_events)
-
-GitHub API
-    → enrich:repos (metadata, releases, rename/delete detection)
-    → archive:repos (README + source tarball snapshots)
-
-SvelteKit UI + REST API
-    → browse, search, timeline, feeds
+DATA_DIR=/data
+DATABASE_PATH=/data/githubarchive.db
+ARCHIVE_DIR=/data/archives
+BACKUPS_DIR=/data/backups
+GITHUB_TOKEN=ghp_...          # public_repo scope only
 ```
 
-### Source layout
+### Optional
 
 ```
-src/lib/server/
-  db/
-    connection.ts   # getDb(), WAL SQLite
-    schema.ts       # schema_version migrations
-    types.ts        # shared row types
-    repos.ts        # repo queries + enrichment updates
-    archive.ts      # snapshot persistence
-    releases.ts     # release/tag storage
-    events.ts       # repository_events SQL
-    index.ts        # re-exports
-  events.ts         # event labels + appendRepoEvent helper
-  enrich.ts         # enrichment orchestration
-  archiver.ts       # local snapshot worker logic
-  github.ts         # GitHub REST client
-  gharchive.ts      # GH Archive stream parser
-  repos.ts          # UI/API-facing repo service
-
-scripts/
-  load-env.ts       # dotenv bootstrap (import first in workers)
-  ingest-hour.ts
-  ingest-today.ts
-  enrich-repos.ts
-  archive-repos.ts
-  init-db.ts
+BACKGROUND_WORKER=auto        # default on Railway; set 0 to disable auto-scan
+PORT=8080                     # Railway sets this automatically
 ```
 
-## Workers
+Deploy flow: Docker build (`npm ci` + `npm run build`) → `npm run db:init` → `node build`.  
+First deploy typically takes **5–10 minutes** (native `better-sqlite3` compile + SvelteKit build).
+
+---
+
+## Workers (CLI)
 
 | Script | Purpose |
 |--------|---------|
 | `ingest:hour` | One GH Archive hour (`GH_ARCHIVE_HOUR` or previous UTC hour) |
 | `ingest:today` | All completed UTC hours today |
-| `ingest:search` | GitHub Search fallback only (test today's hour) |
+| `ingest:search` | GitHub Search discovery only (current hour) |
 | `enrich:repos` | GitHub metadata for unenriched repos (batch 50) |
-| `enrich:refresh` | Re-check enriched repos when `last_checked_at` >24h; append metric snapshots |
-| `archive:repos` | Local README + tarball snapshots for enriched repos |
+| `enrich:refresh` | Re-check enriched repos when `last_checked_at` > 24h |
+| `archive:repos` | Local README + tarball snapshots |
 | `db:init` | Run schema migrations |
-| `daemon` | Continuous ingest → enrich → archive loop |
-| `backup` | Local SQLite copy + archives manifest + metadata JSON |
-| `restore` | Restore from backup folder or `.tar.gz` (requires `RESTORE_CONFIRM=1`) |
+| `daemon` | Continuous ingest → enrich → refresh → archive loop |
+| `pipeline:once` | Single full cycle (no daemon loop) |
+| `backup` / `restore` | Local backup and restore |
 | `doctor` | Health checks; optional FTS rebuild / missing snapshot cleanup |
-| `storage:analyze` | Archive disk usage, duplicates, cleanup (optional env flags) |
-| `pipeline:once` | Single ingest → enrich → archive cycle (no daemon loop) |
-| `backfill:day` | Backfill one UTC day (`BACKFILL_DAY`, optional `BACKFILL_SOURCE`) |
-| `backfill:range` | Backfill date range (`BACKFILL_START`, `BACKFILL_END`) |
-| `backfill:resume` | Resume active or `BACKFILL_JOB_ID` backfill job |
-
-## Daemon
+| `storage:analyze` | Archive disk usage, duplicates, cleanup |
+| `backfill:day` / `backfill:range` / `backfill:resume` | Resumable historical backfill |
 
 ```bash
-npm run daemon
+npm run daemon    # foreground loop; Ctrl+C to stop
 ```
 
-Runs in the foreground: ingests missing GH Archive hours, enriches unenriched repos, **refreshes stale enriched repos**, archives enriched repos, then sleeps 5–15 minutes (configurable). Graceful shutdown on Ctrl+C. Backoff on failures and GitHub rate limits.
+---
 
-**From the browser:** `/admin/status` has **Start Daemon**, **Stop Daemon**, **Run Pipeline Now**, and one-shot worker buttons — no terminal needed after startup.
+## GitHub Search sharding
 
-Status page: `/admin/status`
+When GitHub Search returns `total_count > 1000` for an hour window, the ingestor automatically splits:
 
-Migrations are versioned in `schema_version` (current: **v7**). Tables:
+1. **1 hour** → 4 × **15-minute** windows  
+2. Still > 1000 → 3 × **5-minute** windows  
+3. Still > 1000 → 5 × **1-minute** windows  
+
+Each shard fetches up to `SEARCH_MAX_PAGES` pages (100 repos/page). Stats per shard are stored in `search_ingest_stats`. Configure depth with `SEARCH_SHARD_MAX_DEPTH` (default `3`).
+
+---
+
+## Database schema
+
+Migrations are versioned in `schema_version` (current: **v9**).
 
 | Table | Purpose |
 |-------|---------|
-| `repos` | Core record + enrichment columns + `deleted_at` + `last_checked_at` + `discovery_source` |
-| `repo_metrics_snapshots` | Historical stars/forks/watchers/open_issues/size per refresh |
-| `repos_fts` | FTS5 virtual table for full-text search |
+| `repos` | Core record, enrichment columns, `discovery_source`, `deleted_at` |
+| `repos_fts` | FTS5 full-text search |
 | `repository_events` | Append-only timeline |
 | `archive_snapshots` | Local snapshot metadata |
-| `repo_aliases` | Rename history (`old_full_name` → repo) |
+| `repo_metrics_snapshots` | Historical stars/forks/watchers per refresh |
+| `repo_aliases` | Rename history |
 | `releases` / `release_assets` | Release and tag records |
 | `ingestion_state` | Per-hour GH Archive ingest checkpoint |
-| `job_runs` | Worker/daemon job history |
-| `backfill_jobs` / `backfill_hours` | Resumable all-years backfill progress (hour checkpoints) |
+| `job_runs` | Worker/daemon/maintenance job history |
+| `backfill_jobs` / `backfill_hours` | Resumable backfill progress |
+| `search_ingest_stats` | Per-shard GitHub Search telemetry |
 | `schema_version` | Applied migration versions |
 
-Data files: `./data/githubarchive.db`, `./data/archives/`, `./data/backups/`
+**Local paths:** `./data/githubarchive.db`, `./data/archives/`, `./data/backups/`  
+**Railway paths:** `/data/...` (persistent volume)
 
-## Backup
-
-```bash
-npm run backup
-```
-
-Creates `data/backups/YYYY-MM-DD_HH-mm-ss/` with:
-
-- `githubarchive.db` — SQLite point-in-time copy
-- `archives-manifest.json` — file listing of `ARCHIVE_DIR` + snapshot rows
-- `metadata.json` — schema version, backup type, counts, paths, backup size
-
-By default archive snapshot **files** are not bundled (manifest only). Options:
-
-```bash
-# Full backup — copy data/archives into the backup folder
-BACKUP_INCLUDE_ARCHIVES=1 npm run backup
-
-# Compress backup as .tar.gz (works with either type)
-BACKUP_COMPRESS=1 npm run backup
-
-# Both
-BACKUP_INCLUDE_ARCHIVES=1 BACKUP_COMPRESS=1 npm run backup
-```
-
-Status page `/admin/status` shows latest backup time, size, and type (`manifest-only` vs `full`).
-
-## Restore
-
-```bash
-# Stop daemon and dev server first
-RESTORE_BACKUP_PATH=./data/backups/YYYY-MM-DD_HH-mm-ss RESTORE_CONFIRM=1 npm run restore
-```
-
-Supports backup folders and `.tar.gz` files. Creates a pre-restore backup automatically, removes stale WAL/SHM files, restores `archives/` only when present in the backup, and runs `npm run db:init`.
-
-See [docs/RESTORE.md](docs/RESTORE.md) for details.
-
-## Doctor
-
-```bash
-npm run doctor
-DOCTOR_REBUILD_FTS=1 npm run doctor
-DOCTOR_MARK_MISSING_SNAPSHOTS=1 npm run doctor
-```
-
-Health page: `/admin/doctor`
-
-| Variable | Effect |
-|----------|--------|
-| `DOCTOR_REBUILD_FTS` | Reindex all repos into `repos_fts` |
-| `DOCTOR_MARK_MISSING_SNAPSHOTS` | Remove `archive_snapshots` rows for missing files |
-
-## Storage
-
-```bash
-npm run storage:analyze
-STORAGE_DELETE_ORPHANS=1 npm run storage:analyze
-STORAGE_DELETE_DUPLICATES=1 npm run storage:analyze
-STORAGE_KEEP_LAST_N=5 npm run storage:analyze
-```
-
-Storage page: `/admin/storage`
-
-| Variable | Effect |
-|----------|--------|
-| `STORAGE_DELETE_ORPHANS` | Delete files on disk not referenced by `archive_snapshots` |
-| `STORAGE_DELETE_DUPLICATES` | Remove duplicate SHA-256 snapshots (keeps latest README/source) |
-| `STORAGE_KEEP_LAST_N` | Trim to N snapshots per repo/type (keeps latest README/source) |
-
-## Environment variables
-
-| Variable | Default | Used by |
-|----------|---------|---------|
-| `GITHUB_TOKEN` | — | GitHub API (5000 req/hr) |
-| `DATABASE_PATH` | `./data/githubarchive.db` | SQLite |
-| `ARCHIVE_DIR` | `./data/archives` | Snapshot files |
-| `BACKUPS_DIR` | `./data/backups` | Local backup output |
-| `BACKUP_INCLUDE_ARCHIVES` | `0` | Copy `ARCHIVE_DIR` into backup (`1` = full backup) |
-| `BACKUP_COMPRESS` | `0` | Pack backup as `.tar.gz` (`1` = compressed) |
-| `RESTORE_BACKUP_PATH` | — | Backup folder or `.tar.gz` for `npm run restore` |
-| `RESTORE_CONFIRM` | — | Set to `1` to run restore after reading warnings |
-| `ARCHIVE_MAX_REPOS` | `10` | archive worker |
-| `ARCHIVE_MAX_BYTES` | `52428800` | tarball size limit |
-| `ARCHIVE_TIMEOUT_MS` | `120000` | download timeout |
-| `ARCHIVE_DELAY_MS` | `1000` | delay between archives |
-| `ENRICH_BATCH_SIZE` | `50` | enrich worker |
-| `ENRICH_DELAY_MS` | `800` | delay between enriches |
-| `REFRESH_BATCH_SIZE` | `50` | refresh worker batch |
-| `REFRESH_DELAY_MS` | `800` | delay between refreshes |
-| `REFRESH_INTERVAL_HOURS` | `24` | refresh when `last_checked_at` older than this |
-| `DAEMON_SLEEP_MIN_MS` | `300000` | daemon min sleep between loops |
-| `DAEMON_SLEEP_MAX_MS` | `900000` | daemon max sleep between loops |
-| `DAEMON_INGEST_MAX_HOURS` | `6` | max hours ingested per daemon cycle |
-| `GH_ARCHIVE_HOUR` | previous UTC hour | ingest:hour override |
-| `BACKFILL_DAY` | — | single day for `backfill:day` (`YYYY-MM-DD`) |
-| `BACKFILL_START` / `BACKFILL_END` | — | date range for `backfill:range` |
-| `BACKFILL_SOURCE` | `auto` | `auto`, `gharchive`, or `github_search` |
-| `BACKFILL_MAX_HOURS` | `6` | max hours processed per backfill run |
-| `BACKFILL_JOB_ID` | — | resume a specific backfill job |
+---
 
 ## Browse
 
-- `/` — search (FTS5, all years), filters, sort, activity feeds, pagination
-- `/birth-feed` — newest discoveries with same filters/sort
-- `/admin/status` — daemon controls, backfill, live job status, stats
-- `/repo/[owner]/[repo]` — metadata + archived README viewer + snapshot downloads
-- `/repo/[owner]/[repo]/compare-readme` — compare two README snapshots (`?from=&to=`)
-- `/repo/[owner]/[repo]/timeline` — event timeline
+| Route | Description |
+|-------|-------------|
+| `/` | Repo feed — FTS search, filters, sort, live/trending/archive feeds |
+| `/birth-feed` | Newest discoveries with filters |
+| `/admin` | Control center (see above) |
+| `/repo/[owner]/[repo]` | Metadata, README viewer, snapshot downloads |
+| `/repo/[owner]/[repo]/timeline` | Event timeline |
+| `/repo/[owner]/[repo]/compare-readme` | Compare two README snapshots (`?from=&to=`) |
+
+---
 
 ## API
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/repos` | List repos — FTS when `q` set; filters: `year`, `date_from`, `date_to`, `source`, `language`, `min_stars`, `min_forks`, `archived_only`, `has_readme`, `has_release`, `deleted_only`; sort: `sort=` |
-| `GET /api/search` | FTS search (`q` required; same filters/sort as `/api/repos`) |
-| `GET /api/birth-feed` | Birth feed JSON (same filters/sort) |
-| `GET /api/admin/status` | Daemon, backfill, stats, rate limit, errors |
-| `POST /api/admin/daemon` | `{ "action": "start" \| "stop" }` |
-| `POST /api/admin/workers` | `{ "action": "pipeline" \| "ingest" \| "enrich" \| "archive" \| "refresh" }` |
-| `GET /api/admin/backfill` | List backfill jobs + progress |
-| `POST /api/admin/backfill` | Create job `{ startDate, endDate, source, maxHoursPerRun }`; `?resume=1` resumes |
-| `GET /api/snapshots/[id]` | Download archived README or source snapshot (path-safe) |
+| `GET /api/repos` | List repos — FTS when `q` set; filters: `year`, `date_from`, `date_to`, `source`, `language`, `min_stars`, `min_forks`, `archived_only`, `has_readme`, `has_release`, `deleted_only`; `sort=` |
+| `GET /api/search` | FTS search (`q` required) |
+| `GET /api/birth-feed` | Birth feed JSON |
 | `GET /api/events` | Recent `repository_events` |
-| `GET /api/releases/latest` | Latest releases across all repos |
+| `GET /api/trends` | Trending stats |
+| `GET /api/releases/latest` | Latest releases across repos |
+| `GET /api/snapshots/[id]` | Download archived snapshot (path-safe) |
 | `GET /api/repo/[owner]/[repo]/timeline` | Per-repo timeline JSON |
+| `GET /api/admin/status` | Daemon, backfill, stats, rate limits, errors |
+| `POST /api/admin/daemon` | `{ "action": "start" \| "stop" }` |
+| `POST /api/admin/workers` | `{ "action": "pipeline" \| "ingest" \| "ingest-missing" \| "search-ingest" \| "enrich" \| "archive" \| "refresh" \| "backup" }` |
+| `GET /api/admin/jobs` | Job history (`?id=`, `?type=`, `?limit=`) |
+| `GET /api/admin/backfill` | Backfill jobs + progress |
+| `POST /api/admin/backfill` | Create or resume backfill |
+| `POST /api/admin/maintenance` | Doctor repairs or storage cleanup |
+
+---
+
+## Environment variables
+
+| Variable | Default | Used by |
+|----------|---------|---------|
+| `GITHUB_TOKEN` | — | GitHub API (strongly recommended) |
+| `DATABASE_PATH` | `./data/githubarchive.db` | SQLite |
+| `DATA_DIR` | `./data` | PID/log files, worker output |
+| `ARCHIVE_DIR` | `./data/archives` | Snapshot files |
+| `BACKUPS_DIR` | `./data/backups` | Backup output |
+| `BACKGROUND_WORKER` | `auto` on Railway | In-process auto-scan on boot |
+| `SEARCH_SHARD_MAX_DEPTH` | `3` | Search sharding depth |
+| `SEARCH_FALLBACK_MIN_EVENTS` | `1000` | Min GH Archive events before search fallback |
+| `SEARCH_MAX_PAGES` | `10` | Max pages per search shard |
+| `ENRICH_BATCH_SIZE` | `50` | Enrich batch size |
+| `REFRESH_INTERVAL_HOURS` | `24` | Re-enrich after this many hours |
+| `DAEMON_SLEEP_MIN_MS` | `300000` | Auto-scan min sleep between loops |
+| `DAEMON_SLEEP_MAX_MS` | `900000` | Auto-scan max sleep between loops |
+| `GH_ARCHIVE_HOUR` | previous UTC hour | `ingest:hour` override |
+| `BACKFILL_START` / `BACKFILL_END` | — | Backfill date range |
+| `BACKFILL_SOURCE` | `auto` | `auto`, `gharchive`, or `github_search` |
+
+See `.env.example` for the full list.
+
+---
+
+## Backup & restore
+
+```bash
+npm run backup
+BACKUP_INCLUDE_ARCHIVES=1 BACKUP_COMPRESS=1 npm run backup
+
+RESTORE_BACKUP_PATH=./data/backups/YYYY-MM-DD_HH-mm-ss RESTORE_CONFIRM=1 npm run restore
+```
+
+Or use **Create Backup** in `/admin`. See [docs/RESTORE.md](docs/RESTORE.md).
+
+---
+
+## Project layout
+
+```
+src/lib/server/
+  db/                  # SQLite schema, repos, jobs, backfill, search-ingest stats
+  workers/             # ingest, enrich, refresh, archive cycles
+  background-daemon.ts # In-process auto-scan loop (production)
+  job-runner.ts        # In-process one-shot jobs (admin API)
+  admin.ts             # Status aggregation for admin UI
+  enrich.ts            # Enrichment orchestration
+  archiver.ts          # Snapshot worker
+  github.ts            # GitHub REST client
+  gharchive.ts         # GH Archive stream parser
+  repo-discovery.ts    # GitHub Search + sharding
+
+src/routes/
+  admin/               # Control center, job history, doctor, storage
+  api/                 # REST endpoints
+  birth-feed/          # Discovery feed
+  repo/[owner]/[repo]/ # Per-repo pages
+
+scripts/               # CLI worker entry points
+data/                  # SQLite DB, archives, backups (gitignored)
+```
+
+---
 
 ## License
 
