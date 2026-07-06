@@ -100,34 +100,62 @@ Renames / deletes / archives continue through existing flows.
 
 ## v11 — Derived Intelligence (Phase 1B)
 
-**Read-only layer** — no schema changes if performance allows.
+**Read-only layer** — no schema changes if performance allows. **Canonical metric definitions:** [`docs/METRICS.md`](./METRICS.md).
 
-### Approach
+### Phase 1 — SQL-derived metrics
 
-- SQL **views** over `repo_metrics_snapshots`
-- Optional **materialized** `repo_growth_daily` (clearly derived, refreshable from source)
-- REST endpoints + UI feeds
+From `repo_metrics_snapshots` only (no new GitHub API calls):
 
-Derived values must be **reproducible** from snapshots — not a second source of truth.
+| Metric | Definition (summary) |
+|--------|----------------------|
+| `star_velocity_24h` | Δstars ÷ elapsed days (24h lookback) |
+| `star_velocity_7d` | Δstars ÷ elapsed days (7d lookback) |
+| `fork_velocity_7d` | Δforks ÷ elapsed days |
+| `watcher_velocity_7d` | Δwatchers ÷ elapsed days |
+| `star_acceleration` | current 7d star velocity − prior 7d star velocity |
+| `growth_percentile` | rank of `star_velocity_7d` within language/discovery-week cohort |
 
-### Metrics to compute
+Prefer SQL views/CTEs; optional in-process cache or materialized `repo_growth_daily` only if profiling requires it (must remain rebuildable from snapshots).
 
-| Derived | Source |
-|---------|--------|
-| stars/day, forks/day, watchers/day | Δ over 1d |
-| 7-day / 30-day growth | Δ over window |
-| velocity | Δ stars / days |
-| acceleration | Δ velocity week-over-week |
-| growth percentile | vs cohort (discovery week, language) |
+### Phase 2 — API
 
-### Feeds
+| Endpoint | Feed |
+|----------|------|
+| `GET /api/trending/velocity` | Fastest growing (24h / 7d) |
+| `GET /api/trending/gainers` | Biggest weekly star gain (absolute Δ) |
+| `GET /api/trending/acceleration` | Highest acceleration |
+| `GET /api/trending/emerging` | High acceleration, low star count |
 
-- Fastest Growing Today
-- Fastest Growing Week
-- Exploding Projects (high acceleration)
-- Sleeping Giants (high acceleration, low base)
+Shared filters: `language`, `created_after`, `min_stars`, `min_growth`, `limit`.
 
-No new GitHub API calls. SQL + API only.
+Refactor `getTrendSnapshot()` to use shared metric helpers (replaces ad-hoc `MAX − MIN`).
+
+### Phase 3 — UI
+
+- 🚀 Fastest Growing
+- ⭐ Biggest Weekly Gainers
+- 📈 Highest Acceleration
+- 🌱 Emerging Projects
+- 😴 Sleeping Giants (stretch)
+
+Trending dashboard and/or birth-feed sections; extend repo cards with `star_velocity_7d` when defined.
+
+---
+
+## v11.5 — Discovery UI Refresh
+
+**After v11 metrics ship** — homepage and feeds need real velocity/acceleration data before the redesign pays off.
+
+Planned hierarchy changes (spec in [`docs/UI.md`](./UI.md)):
+
+- Hero + stat cards answering “what’s archived / what’s new / are we live?”
+- Sidebar navigation; quick filters vs collapsed advanced filters
+- Event stream icons + color categories (includes v10 event types)
+- Richer repo cards with interest hints and icon status row
+- Command palette (`/`); trending language/topic bars
+- Discovery sections powered by `/api/trending/*` (not placeholder links)
+
+Does **not** change ingestion or schema. Can overlap with v12 feature icons on cards.
 
 ---
 
@@ -318,7 +346,8 @@ v13  repo_dependencies
 ## UI backlog (by version)
 
 **v10:** license/topic change badges on repo cards; history sections on repo page  
-**v11:** trending dashboard; growth graphs  
+**v11:** trending feeds API + velocity badges on cards; growth graphs  
+**v11.5:** discovery platform UI refresh — see [`UI.md`](./UI.md)  
 **v12:** feature filters on birth-feed and search  
 **v13:** dependency explorer  
 **Archaeology:** synthesized milestone timeline (uses state service)
@@ -329,11 +358,12 @@ v13  repo_dependencies
 
 1. **v10** — one migration, enrich hooks, event types, basic repo page history
 2. **Repository state service** — `getRepoState()` (can ship with v10)
-3. **v11** — views + `/api/trending` + feed UI
-4. **Archaeology** — milestone detector + timeline UI
-5. **v12** — file index in archive worker + feature derivation
-6. **v13** — dependency parsers (npm first)
+3. **v11** — SQL views + `/api/trending` + minimal trending feed UI
+4. **v11.5** — discovery UI refresh (hero, sidebar, cards — powered by v11 metrics)
+5. **Archaeology** — milestone detector + timeline UI
+6. **v12** — file index in archive worker + feature derivation
+7. **v13** — dependency parsers (npm first)
 
 ---
 
-*Last updated: July 2026 — schema **v10** shipped (historical resolution). Next: **v11** derived intelligence.*
+*Last updated: July 2026 — schema **v10** shipped (historical resolution). **v11** metric definitions locked in [`METRICS.md`](./METRICS.md); implementation next.*
