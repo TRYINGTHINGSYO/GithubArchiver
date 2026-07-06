@@ -93,7 +93,7 @@ async function ingestHourOnce(hourKey: string, url: string): Promise<IngestResul
 
 	if (shouldRunSearchFallback(stats.parsedEvents, stats.repoCreates)) {
 		console.log(
-			`  ${hourKey}: GH Archive had ${stats.parsedEvents} events but 0 repo CreateEvents — running GitHub Search fallback…`
+			`  ${hourKey}: GH Archive had ${stats.parsedEvents} events but 0 repo CreateEvents — Search fallback started`
 		);
 		if (!process.env.GITHUB_TOKEN) {
 			console.warn('  GITHUB_TOKEN recommended for Search API (30 req/min unauthenticated).');
@@ -105,7 +105,11 @@ async function ingestHourOnce(hourKey: string, url: string): Promise<IngestResul
 		searchQuery = search.query;
 		source = resolveSource(ghInserted, searchInserted);
 		console.log(
-			`  ${hourKey}: [github_search] query=${search.query} found=${search.found} +${search.inserted} new, ${search.skipped} skipped (${search.pages} page(s)${search.incomplete ? ', incomplete' : ''})`
+			`  ${hourKey}: [github_search] total_count=${search.totalCount} found=${search.found} inserted=${search.inserted} skipped=${search.skipped} shards=${search.shards} pages=${search.pages}${search.incomplete ? ' (incomplete)' : ''}`
+		);
+	} else if (stats.repoCreates === 0 && stats.parsedEvents > 0) {
+		console.log(
+			`  ${hourKey}: GH Archive had ${stats.parsedEvents} events, 0 repo CreateEvents (below search fallback threshold)`
 		);
 	} else if (stats.repoCreates > 0) {
 		console.log(`  ${hourKey}: [gharchive] ${stats.repoCreates} repo CreateEvents`);
@@ -156,7 +160,7 @@ export async function ingestHour(hourKey: string): Promise<IngestResult> {
 					retries++;
 					const wait = RETRY_BASE_MS * 2 ** (retries - 1);
 					console.warn(
-						`  ${hourKey}: unavailable (HTTP ${err.httpStatus}), retry ${retries}/${maxRetries} in ${Math.round(wait / 1000)}s…`
+						`  ${hourKey}: GH Archive unavailable (HTTP ${err.httpStatus}), retry ${retries}/${maxRetries} in ${Math.round(wait / 1000)}s…`
 					);
 					await sleep(wait);
 					continue;
@@ -234,7 +238,7 @@ export function formatIngestLine(result: IngestResult): string {
 		return `${base} downloaded ${sourceTag} — ${result.parsedEvents} parsed events, ${result.repoCreates} repo CreateEvents, +${result.inserted} new, ${result.skipped} skipped${searchPart}`;
 	}
 	if (result.outcome === 'unavailable') {
-		return `${base} unavailable (HTTP ${result.httpStatus ?? '?'}) — not marked complete`;
+		return `${base} GH Archive unavailable (HTTP ${result.httpStatus ?? '?'}) — not marked complete`;
 	}
 	return `${base} failed — ${result.error ?? 'unknown error'}`;
 }

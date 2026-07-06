@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 
-export const CURRENT_SCHEMA_VERSION = 8;
+export const CURRENT_SCHEMA_VERSION = 9;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -380,6 +380,33 @@ function migration008(database: Database.Database) {
 	`);
 }
 
+function migration009(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS search_ingest_stats (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			hour_key TEXT NOT NULL,
+			query TEXT NOT NULL,
+			shard_depth INTEGER NOT NULL DEFAULT 0,
+			shard_minutes INTEGER,
+			total_count INTEGER,
+			incomplete_results INTEGER NOT NULL DEFAULT 0,
+			pages_fetched INTEGER NOT NULL DEFAULT 0,
+			found INTEGER NOT NULL DEFAULT 0,
+			inserted INTEGER NOT NULL DEFAULT 0,
+			skipped INTEGER NOT NULL DEFAULT 0,
+			source TEXT NOT NULL DEFAULT 'github_search',
+			status TEXT NOT NULL DEFAULT 'running',
+			started_at TEXT NOT NULL,
+			finished_at TEXT,
+			error TEXT
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_search_ingest_hour ON search_ingest_stats(hour_key);
+		CREATE INDEX IF NOT EXISTS idx_search_ingest_started ON search_ingest_stats(started_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_search_ingest_status ON search_ingest_stats(status);
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -388,7 +415,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	5: migration005,
 	6: migration006,
 	7: migration007,
-	8: migration008
+	8: migration008,
+	9: migration009
 };
 
 export function runMigrations(database: Database.Database) {

@@ -14,12 +14,14 @@ async function main() {
 
 	const result = await ingestReposFromSearch(hourKey);
 
-	console.log(`Query:     ${result.query}`);
-	console.log(`Found:     ${result.found}`);
-	console.log(`Inserted:  ${result.inserted}`);
-	console.log(`Skipped:   ${result.skipped}`);
-	console.log(`Pages:     ${result.pages}`);
-	if (result.incomplete) console.log('Note:      GitHub marked results incomplete (hit search cap).');
+	console.log(`Query:        ${result.query}`);
+	console.log(`Total count:  ${result.totalCount}`);
+	console.log(`Found:        ${result.found}`);
+	console.log(`Inserted:     ${result.inserted}`);
+	console.log(`Skipped:      ${result.skipped}`);
+	console.log(`Pages:        ${result.pages}`);
+	console.log(`Shards:       ${result.shards}`);
+	if (result.incomplete) console.log('Note:         GitHub marked results incomplete (hit search cap).');
 }
 
 main().catch((err) => {

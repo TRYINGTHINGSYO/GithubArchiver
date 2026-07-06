@@ -232,3 +232,22 @@ export interface BackfillHourRow {
 	error: string | null;
 	updated_at: string;
 }
+
+export interface SearchIngestStatRow {
+	id: number;
+	hour_key: string;
+	query: string;
+	shard_depth: number;
+	shard_minutes: number | null;
+	total_count: number | null;
+	incomplete_results: number;
+	pages_fetched: number;
+	found: number;
+	inserted: number;
+	skipped: number;
+	source: string;
+	status: string;
+	started_at: string;
+	finished_at: string | null;
+	error: string | null;
+}

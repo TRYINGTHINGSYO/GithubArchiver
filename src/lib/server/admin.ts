@@ -27,11 +27,9 @@ import {
 	listLatestErrors
 } from '$lib/server/db/admin-stats';
 import {
-	getActiveBackfillJob,
-	getBackfillProgress,
-	getLatestBackfillJob,
-	listBackfillJobs
-} from '$lib/server/db/backfill';
+	getSearchIngestSummary,
+	listRecentSearchIngestStats
+} from '$lib/server/db/search-ingest';
 import { getBackupSummary } from '$lib/server/backup';
 import { fetchGitHubRateLimit } from '$lib/server/github';
 import { defaultHourKey } from '$lib/server/gharchive';
@@ -106,6 +104,10 @@ export async function getAdminStatus() {
 		},
 		backfill,
 		backfillJobs: listBackfillJobs(10),
+		searchIngest: {
+			recent: listRecentSearchIngestStats(15),
+			summary: getSearchIngestSummary()
+		},
 		rateLimit,
 		latestErrors: listLatestErrors(10),
 		backup: getBackupSummary()

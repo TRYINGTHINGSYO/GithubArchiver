@@ -13,3 +13,4 @@ export * from './birth-feed';
 export * from './backfill';
 export * from './admin-stats';
 export * from './repo-query';
+export * from './search-ingest';

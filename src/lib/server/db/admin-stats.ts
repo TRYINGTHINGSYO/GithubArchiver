@@ -56,7 +56,15 @@ export function listLatestErrors(limit = 10): { source: string; message: string;
 		)
 		.all(limit) as { source: string; message: string; at: string }[];
 
-	return [...jobErrors, ...backfillErrors]
+	const searchErrors = db
+		.prepare(
+			`SELECT 'github_search' as source, query || ': ' || error as message, started_at as at
+			 FROM search_ingest_stats WHERE status = 'failed' AND error IS NOT NULL
+			 ORDER BY started_at DESC LIMIT ?`
+		)
+		.all(limit) as { source: string; message: string; at: string }[];
+
+	return [...jobErrors, ...backfillErrors, ...searchErrors]
 		.sort((a, b) => b.at.localeCompare(a.at))
 		.slice(0, limit);
 }

@@ -290,20 +290,38 @@ export interface GitHubRateLimitInfo {
 	remaining: number;
 	used: number;
 	resetAt: string | null;
+	searchLimit: number;
+	searchRemaining: number;
+	searchResetAt: string | null;
 }
 
 export async function fetchGitHubRateLimit(): Promise<GitHubRateLimitInfo> {
 	const res = await fetch(`${GITHUB_API}/rate_limit`, { headers: headers() });
 	if (!res.ok) {
-		return { limit: 0, remaining: 0, used: 0, resetAt: null };
+		return {
+			limit: 0,
+			remaining: 0,
+			used: 0,
+			resetAt: null,
+			searchLimit: 0,
+			searchRemaining: 0,
+			searchResetAt: null
+		};
 	}
 	const body = (await res.json()) as {
 		rate: { limit: number; remaining: number; used: number; reset: number };
+		resources?: {
+			search?: { limit: number; remaining: number; reset: number };
+		};
 	};
+	const search = body.resources?.search;
 	return {
 		limit: body.rate.limit,
 		remaining: body.rate.remaining,
 		used: body.rate.used,
-		resetAt: body.rate.reset ? new Date(body.rate.reset * 1000).toISOString() : null
+		resetAt: body.rate.reset ? new Date(body.rate.reset * 1000).toISOString() : null,
+		searchLimit: search?.limit ?? 0,
+		searchRemaining: search?.remaining ?? 0,
+		searchResetAt: search?.reset ? new Date(search.reset * 1000).toISOString() : null
 	};
 }

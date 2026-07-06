@@ -249,11 +249,69 @@
 </section>
 
 <section class="detail-section">
+	<h2 class="section-title">GitHub Search ingestion</h2>
+	{#if status.searchIngest.summary.latest}
+		{@const s = status.searchIngest.summary.latest}
+		<dl class="detail-grid">
+			<div><dt>Latest hour</dt><dd class="mono">{s.hour_key}</dd></div>
+			<div><dt>Shards</dt><dd>{s.shard_count}</dd></div>
+			<div><dt>GitHub total_count (sum)</dt><dd>{s.total_count_sum.toLocaleString()}</dd></div>
+			<div><dt>Found / inserted / skipped</dt><dd>{s.found_sum} / {s.inserted_sum} / {s.skipped_sum}</dd></div>
+			<div><dt>Pages fetched</dt><dd>{s.pages_sum}</dd></div>
+			{#if s.failed_shards > 0}
+				<div><dt>Failed shards</dt><dd class="admin-error">{s.failed_shards}</dd></div>
+			{/if}
+		</dl>
+		<p class="admin-meta">
+			Low insert counts usually mean dedupe (repos already in DB) or a narrow hour window — not a broken API.
+		</p>
+	{:else}
+		<p class="empty-state">No GitHub Search ingest runs recorded yet.</p>
+	{/if}
+	{#if status.searchIngest.summary.lastError}
+		<p class="admin-error">
+			Last search error ({timeAgo(status.searchIngest.summary.lastError.started_at)}):
+			{status.searchIngest.summary.lastError.error}
+		</p>
+	{/if}
+	{#if status.searchIngest.recent.length > 0}
+		<table class="data-table" style="margin-top: 1rem">
+			<thead>
+				<tr>
+					<th>Query</th>
+					<th>total_count</th>
+					<th>found</th>
+					<th>inserted</th>
+					<th>skipped</th>
+					<th>pages</th>
+					<th>status</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each status.searchIngest.recent as row}
+					<tr>
+						<td class="mono admin-query" title={row.query}>{row.query}</td>
+						<td>{row.total_count ?? '—'}</td>
+						<td>{row.found}</td>
+						<td>{row.inserted}</td>
+						<td>{row.skipped}</td>
+						<td>{row.pages_fetched}</td>
+						<td><span class={statusClass(row.status === 'completed' ? 'success' : row.status)}>{row.status}</span></td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{/if}
+</section>
+
+<section class="detail-section">
 	<h2 class="section-title">GitHub API</h2>
 	{#if status.rateLimit}
 		<dl class="detail-grid">
-			<div><dt>Remaining</dt><dd>{status.rateLimit.remaining} / {status.rateLimit.limit}</dd></div>
-			<div><dt>Resets</dt><dd>{status.rateLimit.resetAt ? timeAgo(status.rateLimit.resetAt) : '—'}</dd></div>
+			<div><dt>Core remaining</dt><dd>{status.rateLimit.remaining} / {status.rateLimit.limit}</dd></div>
+			<div><dt>Core resets</dt><dd>{status.rateLimit.resetAt ? timeAgo(status.rateLimit.resetAt) : '—'}</dd></div>
+			<div><dt>Search remaining</dt><dd>{status.rateLimit.searchRemaining} / {status.rateLimit.searchLimit}</dd></div>
+			<div><dt>Search resets</dt><dd>{status.rateLimit.searchResetAt ? timeAgo(status.rateLimit.searchResetAt) : '—'}</dd></div>
 		</dl>
 	{:else}
 		<p class="admin-meta">Rate limit unavailable</p>
@@ -643,5 +701,12 @@
 	.admin-errors li {
 		padding: 0.35rem 0;
 		border-bottom: 1px solid var(--border);
+	}
+
+	.admin-query {
+		max-width: 280px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 </style>
