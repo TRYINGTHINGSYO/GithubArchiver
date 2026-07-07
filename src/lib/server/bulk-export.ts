@@ -8,19 +8,20 @@ import type { RepoRow } from '$lib/server/db/types';
 import { resolveSafeSnapshotPath } from '$lib/server/snapshots';
 
 async function createZipArchive() {
-	const mod = await import('archiver');
-	return mod.default('zip', { zlib: { level: 6 } });
+	const { ZipArchive } = await import('archiver');
+	return new ZipArchive({ zlib: { level: 6 } });
 }
 
 export type BulkExportScope = 'all' | 'active' | 'deleted';
 
 export interface BulkExportManifestEntry {
-	type: 'readme' | 'source';
+	type: 'readme' | 'source' | 'zip';
 	capture_reason: string;
 	archived_at: string;
 	zip_path: string;
 	snapshot_id: number;
 	file_size: number;
+	reused_existing_zip?: boolean;
 }
 
 export interface BulkExportManifestRepo {
@@ -118,6 +119,34 @@ export async function runBulkExport(opts: {
 		const entries: BulkExportManifestEntry[] = [];
 
 		for (const snapshotType of ['readme', 'source'] as const) {
+			if (snapshotType === 'source') {
+				const zipSnapshot = getLatestArchiveSnapshot(repo.id, 'zip');
+				if (zipSnapshot) {
+					let safeZipPath: string | null = null;
+					try {
+						safeZipPath = resolveSafeSnapshotPath(zipSnapshot.file_path);
+					} catch {
+						manifest.skipped_missing_files++;
+					}
+
+					if (safeZipPath && existsSync(safeZipPath)) {
+						const zipEntry = snapshotZipPath(repo.owner, repo.name, 'source', `${repo.name}.zip`);
+						archive.file(safeZipPath, { name: zipEntry });
+						entries.push({
+							type: 'zip',
+							capture_reason: zipSnapshot.capture_reason ?? 'daemon',
+							archived_at: zipSnapshot.archived_at,
+							zip_path: zipEntry,
+							snapshot_id: zipSnapshot.id,
+							file_size: zipSnapshot.file_size,
+							reused_existing_zip: true
+						});
+						manifest.snapshot_count++;
+						continue;
+					}
+				}
+			}
+
 			const snapshot = getLatestArchiveSnapshot(repo.id, snapshotType);
 			if (!snapshot) continue;
 

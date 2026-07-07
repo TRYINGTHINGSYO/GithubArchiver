@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 
-export const CURRENT_SCHEMA_VERSION = 12;
+export const CURRENT_SCHEMA_VERSION = 13;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -527,6 +527,14 @@ function migration012(database: Database.Database) {
 	}
 }
 
+function migration013(database: Database.Database) {
+	database.exec(`
+		CREATE INDEX IF NOT EXISTS idx_archive_snapshots_zip
+		  ON archive_snapshots(repo_id, archived_at DESC)
+		  WHERE snapshot_type = 'zip';
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -539,7 +547,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	9: migration009,
 	10: migration010,
 	11: migration011,
-	12: migration012
+	12: migration012,
+	13: migration013
 };
 
 export function runMigrations(database: Database.Database) {

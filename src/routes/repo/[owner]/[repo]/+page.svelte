@@ -180,6 +180,9 @@
 	</button>
 	<a href={data.repo.github_url} target="_blank" rel="noopener noreferrer">View GitHub</a>
 	<a href="/repo/{data.repo.owner}/{data.repo.name}/timeline">Timeline</a>
+	{#if data.downloadZipUrl}
+		<a class="download-zip" href={data.downloadZipUrl} download>Download ZIP</a>
+	{/if}
 </div>
 
 {#if actionMessage}
@@ -436,6 +439,10 @@
 	.action-bar button:disabled {
 		opacity: 0.55;
 		cursor: wait;
+	}
+
+	.action-bar .download-zip {
+		font-weight: 600;
 	}
 
 	.action-message {

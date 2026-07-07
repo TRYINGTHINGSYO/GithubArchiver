@@ -25,6 +25,7 @@ export interface BirthFeedRow extends RepoRow {
 	is_archived: number;
 	has_readme: number;
 	has_release: number;
+	has_source: number;
 }
 
 export interface BirthFeedResult {
@@ -49,6 +50,7 @@ const BIRTH_FEED_SELECT = `
 	       (r.enriched_at IS NOT NULL) AS is_enriched,
 	       EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id) AS is_archived,
 	       EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'readme') AS has_readme,
+	       EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'source') AS has_source,
 	       EXISTS (SELECT 1 FROM releases rl WHERE rl.repo_id = r.id) AS has_release
 	FROM repos r
 `;

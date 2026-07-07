@@ -11,6 +11,10 @@ import {
 import { appendRepoEvent } from '$lib/server/events';
 import { handleRepoNotFound } from '$lib/server/enrich';
 import {
+	createZipSnapshotForSource,
+	ensureZipForLatestSource
+} from '$lib/server/source-zip';
+import {
 	DownloadTooLargeError,
 	DownloadTimeoutError,
 	fetchBranchHeadSha,
@@ -30,6 +34,7 @@ export interface ArchiveRepoResult {
 	repo: string;
 	readme: 'saved' | 'skipped' | 'missing';
 	source: 'saved' | 'skipped' | 'missing' | 'too_large' | 'timeout';
+	zip: 'saved' | 'skipped' | 'missing';
 	error?: string;
 }
 
@@ -56,7 +61,8 @@ export async function archiveRepo(
 	const result: ArchiveRepoResult = {
 		repo: repo.full_name,
 		readme: 'missing',
-		source: 'missing'
+		source: 'missing',
+		zip: 'missing'
 	};
 
 	const branch = repo.default_branch;
@@ -120,6 +126,7 @@ export async function archiveRepo(
 
 		if (latestHeadSha === headSha) {
 			result.source = 'skipped';
+			result.zip = await ensureZipForLatestSource(repo, captureReason);
 			return result;
 		}
 
@@ -142,6 +149,17 @@ export async function archiveRepo(
 			archived_at: archivedAt,
 			capture_reason: captureReason
 		});
+		const sourceSnapshot = {
+			id: snapshotId,
+			repo_id: repo.id,
+			snapshot_type: 'source' as const,
+			file_path: tarPath,
+			file_size: tarball.length,
+			sha256: hash,
+			head_sha: headSha,
+			archived_at: archivedAt,
+			capture_reason: captureReason
+		};
 		appendRepoEvent(repo.id, 'snapshot_created', {
 			snapshot_type: 'source',
 			snapshot_id: snapshotId,
@@ -151,6 +169,23 @@ export async function archiveRepo(
 			file_path: tarPath
 		}, archivedAt);
 		result.source = 'saved';
+
+		const zipSnapshotId = await createZipSnapshotForSource(
+			repo,
+			sourceSnapshot,
+			tarball,
+			archivedAt,
+			captureReason
+		);
+		if (zipSnapshotId) {
+			result.zip = 'saved';
+			appendRepoEvent(repo.id, 'snapshot_created', {
+				snapshot_type: 'zip',
+				snapshot_id: zipSnapshotId,
+				head_sha: headSha,
+				source_snapshot_id: snapshotId
+			}, archivedAt);
+		}
 	} catch (err) {
 		if (err instanceof GitHubRateLimitError) throw err;
 		if (err instanceof GitHubNotFoundError) {

@@ -19,6 +19,7 @@ import {
 import { renderMarkdownSafe } from '$lib/server/markdown';
 import { enrichSnapshotMeta, readSnapshotText } from '$lib/server/snapshots';
 import type { SourceAnalysis } from '$lib/server/source-archive';
+import { getRepoZipDownloadUrl } from '$lib/server/source-zip';
 import { momentTag, velocityIndicator } from '$lib/server/intelligence';
 import {
 	eventLabel,
@@ -68,6 +69,7 @@ export interface RepoSummary {
 	classified_at: string | null;
 	search_snippet?: string | null;
 	search_rank?: number | null;
+	download_zip_url?: string | null;
 }
 
 function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: number | null }): RepoSummary {
@@ -110,7 +112,8 @@ function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: numb
 		category_confidence: row.category_confidence ?? null,
 		classified_at: row.classified_at ?? null,
 		search_snippet: row.fts_snippet ?? null,
-		search_rank: row.fts_rank ?? null
+		search_rank: row.fts_rank ?? null,
+		download_zip_url: getRepoZipDownloadUrl(row.owner, row.name, row.id)
 	};
 }
 
@@ -176,7 +179,7 @@ export function getAvailableLanguages() {
 
 export interface ArchiveSnapshot {
 	id: number;
-	snapshot_type: 'readme' | 'source';
+	snapshot_type: 'readme' | 'source' | 'zip';
 	file_path: string;
 	file_size: number;
 	sha256: string;
@@ -601,12 +604,13 @@ function buildActivitySummary(repo: RepoSummary, metrics: MetricSnapshotRow[]): 
 function buildLocalArchiveSummary(snapshots: ArchiveSnapshot[]): LocalArchiveSummary {
 	const readme = snapshots.filter((s) => s.snapshot_type === 'readme');
 	const source = snapshots.filter((s) => s.snapshot_type === 'source');
+	const counted = snapshots.filter((s) => s.snapshot_type !== 'zip');
 	return {
 		readme_archived: readme.length > 0,
 		source_archived: source.length > 0,
-		total_snapshots: snapshots.length,
-		total_bytes: snapshots.reduce((sum, snap) => sum + snap.file_size, 0),
-		last_snapshot_at: snapshots[0]?.archived_at ?? null,
+		total_snapshots: counted.length,
+		total_bytes: counted.reduce((sum, snap) => sum + snap.file_size, 0),
+		last_snapshot_at: counted[0]?.archived_at ?? null,
 		readme_count: readme.length,
 		source_count: source.length
 	};
@@ -625,9 +629,15 @@ function buildMergedTimeline(
 	];
 	for (const event of events) items.push({ type: event.event_type, label: event.label, time: event.event_time, detail: null });
 	for (const snapshot of snapshots) {
+		if (snapshot.snapshot_type === 'zip') continue;
 		items.push({
 			type: `${snapshot.snapshot_type}_archived`,
-			label: snapshot.snapshot_type === 'readme' ? 'README archived' : 'Source archived',
+			label:
+				snapshot.snapshot_type === 'readme'
+					? 'README archived'
+					: snapshot.snapshot_type === 'zip'
+						? 'Source ZIP archived'
+						: 'Source archived',
 			time: snapshot.archived_at,
 			detail: `${snapshot.snapshot_type} ${snapshot.id}`
 		});
@@ -760,6 +770,7 @@ export function getRepoWithSnapshots(owner: string, name: string) {
 
 	return {
 		repo,
+		downloadZipUrl: getRepoZipDownloadUrl(repo.owner, repo.name, row.id),
 		snapshots,
 		readmeSnapshots,
 		sourceSnapshots,

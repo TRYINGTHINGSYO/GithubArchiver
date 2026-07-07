@@ -7,6 +7,7 @@ import {
 	type BirthFeedQuery
 } from '$lib/server/db/birth-feed';
 import { momentTag, velocityIndicator } from '$lib/server/intelligence';
+import { getRepoZipDownloadUrl } from '$lib/server/source-zip';
 
 export interface BirthFeedItem {
 	id: number;
@@ -32,6 +33,8 @@ export interface BirthFeedItem {
 	archived: boolean;
 	has_readme: boolean;
 	has_release: boolean;
+	has_source: boolean;
+	download_zip_url: string | null;
 	moment_tag: string;
 	velocity: 'up' | 'down' | 'flat';
 }
@@ -67,6 +70,8 @@ export function listBirthFeed(opts: BirthFeedOptions = {}) {
 			archived: row.is_archived === 1,
 			has_readme: row.has_readme === 1,
 			has_release: row.has_release === 1,
+			has_source: row.has_source === 1,
+			download_zip_url: row.has_source === 1 ? getRepoZipDownloadUrl(row.owner, row.name, row.id) : null,
 			moment_tag: momentTag(row),
 			velocity: velocityIndicator(row)
 		})) satisfies BirthFeedItem[]

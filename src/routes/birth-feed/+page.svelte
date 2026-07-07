@@ -206,6 +206,9 @@
 						<span class="repo-time muted" title={repo.created_at}>GitHub created: {timeAgo(repo.created_at)} ({formatDateShort(repo.created_at)})</span>
 					</div>
 					<a class="repo-name" href="/repo/{repo.owner}/{repo.name}">{repo.full_name}</a>
+					{#if repo.download_zip_url}
+						<a class="download-zip" href={repo.download_zip_url} download>Download ZIP</a>
+					{/if}
 					<div class="birth-badges">
 						<span class="badge velocity" class:up={repo.velocity === 'up'} class:down={repo.velocity === 'down'}>{velocityIcon(repo.velocity)}</span>
 						<span class="badge moment">{repo.moment_tag}</span>
@@ -338,6 +341,24 @@
 
 	.birth-list .repo-item {
 		padding-bottom: 1rem;
+	}
+
+	.download-zip {
+		display: inline-block;
+		margin: 0.35rem 0;
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 0.25rem 0.55rem;
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: var(--accent);
+		text-decoration: none;
+		background: var(--bg-elevated);
+	}
+
+	.download-zip:hover {
+		background: var(--bg-hover);
+		text-decoration: none;
 	}
 
 	.repo-dates {

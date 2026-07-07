@@ -99,7 +99,7 @@ export interface RepoQueryResult {
 export interface ArchiveSnapshotRow {
 	id: number;
 	repo_id: number;
-	snapshot_type: 'readme' | 'source';
+	snapshot_type: 'readme' | 'source' | 'zip';
 	file_path: string;
 	file_size: number;
 	sha256: string;
@@ -110,7 +110,7 @@ export interface ArchiveSnapshotRow {
 
 export interface NewArchiveSnapshot {
 	repo_id: number;
-	snapshot_type: 'readme' | 'source';
+	snapshot_type: 'readme' | 'source' | 'zip';
 	file_path: string;
 	file_size: number;
 	sha256: string;

@@ -68,7 +68,7 @@ export function getLatestReadmePath(repoId: number): string | null {
 
 export function getLatestArchiveSnapshot(
 	repoId: number,
-	snapshotType: 'readme' | 'source'
+	snapshotType: 'readme' | 'source' | 'zip'
 ): ArchiveSnapshotRow | null {
 	const database = getDb();
 	const row = database

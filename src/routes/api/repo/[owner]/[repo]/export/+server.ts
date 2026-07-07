@@ -22,6 +22,34 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		});
 	}
 
+	if (snapshotType === 'source') {
+		let zipSnapshot = getLatestArchiveSnapshot(repo.id, 'zip');
+
+		if (!zipSnapshot) {
+			await archiveRepo(repo, getArchiveConfigFromEnv(), { captureReason: 'export' });
+			zipSnapshot = getLatestArchiveSnapshot(repo.id, 'zip');
+		}
+
+		if (zipSnapshot) {
+			throw redirect(302, `/api/snapshots/${zipSnapshot.id}`);
+		}
+
+		let sourceSnapshot = getLatestArchiveSnapshot(repo.id, 'source');
+		if (!sourceSnapshot) {
+			await archiveRepo(repo, getArchiveConfigFromEnv(), { captureReason: 'export' });
+			sourceSnapshot = getLatestArchiveSnapshot(repo.id, 'source');
+		}
+
+		if (!sourceSnapshot) {
+			return new Response(JSON.stringify({ error: 'Snapshot could not be created' }), {
+				status: 404,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
+
+		throw redirect(302, `/api/snapshots/${sourceSnapshot.id}`);
+	}
+
 	let snapshot = getLatestArchiveSnapshot(repo.id, snapshotType);
 
 	if (!snapshot) {

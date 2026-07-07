@@ -34,7 +34,7 @@ export function resolveSafeSnapshotPath(filePath: string): string {
 export interface SnapshotFileMeta {
 	id: number;
 	repo_id: number;
-	snapshot_type: 'readme' | 'source';
+	snapshot_type: 'readme' | 'source' | 'zip';
 	file_path: string;
 	file_size: number;
 	sha256: string;
@@ -100,11 +100,18 @@ export function snapshotDownloadFilename(snapshot: ArchiveSnapshotRow, safePath:
 	if (snapshot.snapshot_type === 'readme') {
 		return basename(safePath) || 'README.md';
 	}
+	if (snapshot.snapshot_type === 'zip') {
+		return basename(safePath) || 'source.zip';
+	}
 	return basename(safePath) || 'source.tar.gz';
 }
 
 export function snapshotContentType(snapshot: ArchiveSnapshotRow): string {
-	return snapshot.snapshot_type === 'readme'
-		? 'text/markdown; charset=utf-8'
-		: 'application/gzip';
+	if (snapshot.snapshot_type === 'readme') {
+		return 'text/markdown; charset=utf-8';
+	}
+	if (snapshot.snapshot_type === 'zip') {
+		return 'application/zip';
+	}
+	return 'application/gzip';
 }
