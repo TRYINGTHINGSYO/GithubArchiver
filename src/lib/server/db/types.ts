@@ -28,6 +28,11 @@ export interface RepoRow {
 	visibility: string | null;
 	owner_avatar_url: string | null;
 	owner_type: string | null;
+	summary: string | null;
+	summary_generated_at: string | null;
+	category: string | null;
+	category_confidence: number | null;
+	classified_at: string | null;
 }
 
 export type DiscoverySource = 'gharchive' | 'github_search';
@@ -100,6 +105,7 @@ export interface ArchiveSnapshotRow {
 	sha256: string;
 	head_sha: string | null;
 	archived_at: string;
+	capture_reason: string;
 }
 
 export interface NewArchiveSnapshot {
@@ -110,6 +116,7 @@ export interface NewArchiveSnapshot {
 	sha256: string;
 	head_sha: string | null;
 	archived_at: string;
+	capture_reason?: string;
 }
 
 export interface ReleaseInput {
@@ -186,6 +193,7 @@ export interface JobRunRow {
 	finished_at: string | null;
 	detail_json: string;
 	error: string | null;
+	reason: string | null;
 }
 
 export interface IngestionStateRow {

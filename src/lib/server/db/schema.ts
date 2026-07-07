@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 
-export const CURRENT_SCHEMA_VERSION = 10;
+export const CURRENT_SCHEMA_VERSION = 11;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -455,6 +455,68 @@ function migration010(database: Database.Database) {
 	`);
 }
 
+function migration011(database: Database.Database) {
+	const jobCols = columnNames(database, 'job_runs');
+	if (!jobCols.has('reason')) {
+		database.exec('ALTER TABLE job_runs ADD COLUMN reason TEXT');
+	}
+
+	const repoCols = columnNames(database, 'repos');
+	for (const def of [
+		'summary TEXT',
+		'summary_generated_at TEXT',
+		'category TEXT',
+		'category_confidence REAL',
+		'classified_at TEXT'
+	]) {
+		const name = def.split(' ')[0];
+		if (!repoCols.has(name)) {
+			database.exec(`ALTER TABLE repos ADD COLUMN ${def}`);
+		}
+	}
+
+	const archiveCols = columnNames(database, 'archive_snapshots');
+	if (!archiveCols.has('capture_reason')) {
+		database.exec(
+			`ALTER TABLE archive_snapshots ADD COLUMN capture_reason TEXT NOT NULL DEFAULT 'daemon'`
+		);
+	}
+
+	database.exec(`
+		CREATE INDEX IF NOT EXISTS idx_job_runs_reason ON job_runs(reason)
+		  WHERE reason IS NOT NULL;
+
+		CREATE INDEX IF NOT EXISTS idx_repos_category ON repos(category);
+		CREATE INDEX IF NOT EXISTS idx_repos_classified_at ON repos(classified_at);
+
+		CREATE INDEX IF NOT EXISTS idx_archive_snapshots_capture
+		  ON archive_snapshots(repo_id, snapshot_type, capture_reason, archived_at DESC);
+
+		CREATE TABLE IF NOT EXISTS repo_category_daily (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			observed_at TEXT NOT NULL,
+			category TEXT NOT NULL,
+			repo_count INTEGER NOT NULL,
+			pct_of_total REAL NOT NULL,
+			UNIQUE(observed_at, category)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_repo_category_daily_observed
+		  ON repo_category_daily(observed_at DESC);
+
+		CREATE TABLE IF NOT EXISTS daemon_decisions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			decided_at TEXT NOT NULL,
+			action TEXT NOT NULL,
+			reason TEXT NOT NULL,
+			backlog_json TEXT NOT NULL DEFAULT '{}',
+			job_run_id INTEGER REFERENCES job_runs(id)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_daemon_decisions_at ON daemon_decisions(decided_at DESC);
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -465,7 +527,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	7: migration007,
 	8: migration008,
 	9: migration009,
-	10: migration010
+	10: migration010,
+	11: migration011
 };
 
 export function runMigrations(database: Database.Database) {

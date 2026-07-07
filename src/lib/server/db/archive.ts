@@ -3,11 +3,12 @@ import type { ArchiveSnapshotRow, NewArchiveSnapshot } from './types';
 
 export function insertArchiveSnapshot(snapshot: NewArchiveSnapshot): number {
 	const database = getDb();
+	const captureReason = snapshot.capture_reason ?? 'daemon';
 	const result = database
 		.prepare(
 			`INSERT INTO archive_snapshots
-			 (repo_id, snapshot_type, file_path, file_size, sha256, head_sha, archived_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?)`
+			 (repo_id, snapshot_type, file_path, file_size, sha256, head_sha, archived_at, capture_reason)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			snapshot.repo_id,
@@ -16,7 +17,8 @@ export function insertArchiveSnapshot(snapshot: NewArchiveSnapshot): number {
 			snapshot.file_size,
 			snapshot.sha256,
 			snapshot.head_sha,
-			snapshot.archived_at
+			snapshot.archived_at,
+			captureReason
 		);
 	return Number(result.lastInsertRowid);
 }

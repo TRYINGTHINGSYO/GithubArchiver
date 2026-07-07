@@ -1,20 +1,36 @@
 import { getDb } from './connection.js';
 import type { JobRunRow, JobStatus, JobType } from './types.js';
 
-export function startJobRun(jobType: JobType, detail: Record<string, unknown> = {}): number {
+export function startJobRun(
+	jobType: JobType,
+	detail: Record<string, unknown> = {},
+	reason?: string | null
+): number {
 	const db = getDb();
 	const startedAt = new Date().toISOString();
 	const result = db
 		.prepare(
-			`INSERT INTO job_runs (job_type, status, started_at, detail_json)
-			 VALUES (?, 'running', ?, ?)`
+			`INSERT INTO job_runs (job_type, status, started_at, detail_json, reason)
+			 VALUES (?, 'running', ?, ?, ?)`
 		)
-		.run(jobType, startedAt, JSON.stringify(detail));
+		.run(jobType, startedAt, JSON.stringify(detail), reason ?? null);
 	return Number(result.lastInsertRowid);
 }
 
-export function updateJobRun(id: number, detail: Record<string, unknown>): void {
+export function updateJobRun(
+	id: number,
+	detail: Record<string, unknown>,
+	reason?: string | null
+): void {
 	const db = getDb();
+	if (reason !== undefined) {
+		db.prepare('UPDATE job_runs SET detail_json = ?, reason = ? WHERE id = ?').run(
+			JSON.stringify(detail),
+			reason,
+			id
+		);
+		return;
+	}
 	db.prepare('UPDATE job_runs SET detail_json = ? WHERE id = ?').run(JSON.stringify(detail), id);
 }
 
@@ -22,9 +38,18 @@ export function finishJobRun(
 	id: number,
 	status: Exclude<JobStatus, 'running'>,
 	detail: Record<string, unknown> = {},
-	error?: string
+	error?: string,
+	reason?: string | null
 ): void {
 	const db = getDb();
+	if (reason !== undefined) {
+		db.prepare(
+			`UPDATE job_runs
+			 SET status = ?, finished_at = ?, detail_json = ?, error = ?, reason = ?
+			 WHERE id = ?`
+		).run(status, new Date().toISOString(), JSON.stringify(detail), error ?? null, reason, id);
+		return;
+	}
 	db.prepare(
 		`UPDATE job_runs
 		 SET status = ?, finished_at = ?, detail_json = ?, error = ?
