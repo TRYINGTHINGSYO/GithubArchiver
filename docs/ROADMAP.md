@@ -142,6 +142,20 @@ Trending dashboard and/or birth-feed sections; extend repo cards with `star_velo
 
 ---
 
+## v11-ops — Autonomous daemon & repo intelligence
+
+**Parallel track** — [`PROPOSAL-autonomous-intelligence.md`](./PROPOSAL-autonomous-intelligence.md). Uses **`migration011`** (not the v11 views-only metrics track).
+
+- Backlog-aware daemon planner (`daemon-planner.ts`)
+- `job_runs.reason` + `daemon_decisions` log
+- On-demand snapshot export + `archive_snapshots.capture_reason`
+- `repos.summary` / `repos.category` at enrich time
+- Gap-aware GitHub Search via `repo_category_daily`
+
+Implementation order is section 9 of the proposal.
+
+---
+
 ## v11.5 — Discovery UI Refresh
 
 **After v11 metrics ship** — homepage and feeds need real velocity/acceleration data before the redesign pays off.
@@ -323,6 +337,7 @@ Render as vertical timeline on repo page.
 ```
 v10  repo_commit_snapshots, repo_license_history, repo_topics_history
 v11  (views only; optional repo_growth_daily materialized)
+v11-ops  migration011: summary, category, daemon_decisions, capture_reason, job_runs.reason
 v12  repo_files, repo_features
 v13  repo_dependencies
 —    repo_milestones (optional, archaeology)
@@ -359,10 +374,11 @@ v13  repo_dependencies
 1. **v10** — one migration, enrich hooks, event types, basic repo page history
 2. **Repository state service** — `getRepoState()` (can ship with v10)
 3. **v11** — SQL views + `/api/trending` + minimal trending feed UI
-4. **v11.5** — discovery UI refresh (hero, sidebar, cards — powered by v11 metrics)
-5. **Archaeology** — milestone detector + timeline UI
-6. **v12** — file index in archive worker + feature derivation
-7. **v13** — dependency parsers (npm first)
+4. **v11-ops** — autonomous daemon, summaries, categories ([`PROPOSAL-autonomous-intelligence.md`](./PROPOSAL-autonomous-intelligence.md); `migration011`)
+5. **v11.5** — discovery UI refresh (hero, sidebar, cards — powered by v11 metrics)
+6. **Archaeology** — milestone detector + timeline UI
+7. **v12** — file index in archive worker + feature derivation
+8. **v13** — dependency parsers (npm first)
 
 ---
 
