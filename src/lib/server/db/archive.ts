@@ -66,6 +66,22 @@ export function getLatestReadmePath(repoId: number): string | null {
 	return row?.file_path ?? null;
 }
 
+export function getLatestArchiveSnapshot(
+	repoId: number,
+	snapshotType: 'readme' | 'source'
+): ArchiveSnapshotRow | null {
+	const database = getDb();
+	const row = database
+		.prepare(
+			`SELECT * FROM archive_snapshots
+			 WHERE repo_id = ? AND snapshot_type = ?
+			 ORDER BY archived_at DESC
+			 LIMIT 1`
+		)
+		.get(repoId, snapshotType) as ArchiveSnapshotRow | undefined;
+	return row ?? null;
+}
+
 export function getArchiveSnapshotById(id: number): ArchiveSnapshotRow | null {
 	const database = getDb();
 	const row = database.prepare('SELECT * FROM archive_snapshots WHERE id = ?').get(id) as

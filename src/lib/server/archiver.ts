@@ -49,8 +49,10 @@ function repoArchiveDir(config: ArchiveConfig, owner: string, name: string): str
 
 export async function archiveRepo(
 	repo: RepoRow,
-	config: ArchiveConfig
+	config: ArchiveConfig,
+	opts: { captureReason?: string } = {}
 ): Promise<ArchiveRepoResult> {
+	const captureReason = opts.captureReason ?? 'daemon';
 	const result: ArchiveRepoResult = {
 		repo: repo.full_name,
 		readme: 'missing',
@@ -86,7 +88,8 @@ export async function archiveRepo(
 					file_size: buf.length,
 					sha256: hash,
 					head_sha: null,
-					archived_at: archivedAt
+					archived_at: archivedAt,
+					capture_reason: captureReason
 				});
 				appendRepoEvent(repo.id, 'readme_changed', {
 					snapshot_type: 'readme',
@@ -136,7 +139,8 @@ export async function archiveRepo(
 			file_size: tarball.length,
 			sha256: hash,
 			head_sha: headSha,
-			archived_at: archivedAt
+			archived_at: archivedAt,
+			capture_reason: captureReason
 		});
 		appendRepoEvent(repo.id, 'snapshot_created', {
 			snapshot_type: 'source',
