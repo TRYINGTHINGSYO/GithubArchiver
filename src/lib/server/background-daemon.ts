@@ -13,7 +13,7 @@ import { insertDaemonDecision } from './db/daemon-decisions';
 import { finishJobRun, reconcileOrphanedJobRuns, startJobRun, updateJobRun } from './db/jobs';
 import { runArchiveCycle } from './workers/archive';
 import { runEnrichCycle } from './workers/enrich';
-import { runIngestCycle } from './workers/ingest';
+import { runIngestCycle, isIngestCycleFailure } from './workers/ingest';
 import { runRefreshCycle } from './workers/refresh';
 import { runSearchGapCycle } from './workers/search-gap';
 
@@ -72,7 +72,7 @@ async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
 				`[daemon] ingest: ${ingest.downloaded} downloaded, +${ingest.inserted} repos`
 			);
 			return {
-				hadFailure: ingest.failed > 0 || ingest.unavailable > 0,
+				hadFailure: isIngestCycleFailure(ingest),
 				detail: ingest
 			};
 		}

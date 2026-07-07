@@ -121,12 +121,15 @@ export async function runIngestCycle(): Promise<IngestCycleResult> {
 
 
 
-	const status =
-		result.failed > 0 && result.downloaded === 0 && missing.length > 0 ? 'failed' : 'success';
+	const status = result.failed > 0 ? 'failed' : 'success';
 
-	finishJobRun(jobId, status, result, result.errors.join('; ') || undefined);
+	finishJobRun(jobId, status, result, result.failed > 0 ? result.errors.join('; ') : undefined);
 
 	return result;
+}
 
+/** True only for genuine ingest errors — unavailable hours are expected, not failures. */
+export function isIngestCycleFailure(result: IngestCycleResult): boolean {
+	return result.failed > 0;
 }
 
