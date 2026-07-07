@@ -303,9 +303,11 @@ export function listEnrichedReposForArchive(limit: number): RepoRow[] {
 			 WHERE r.enriched_at IS NOT NULL
 			   AND r.default_branch IS NOT NULL
 			   AND r.deleted_at IS NULL
-			 ORDER BY (
-			   SELECT MAX(a.archived_at) FROM archive_snapshots a WHERE a.repo_id = r.id
-			 ) ASC, r.first_seen_at DESC
+			   AND NOT EXISTS (
+			     SELECT 1 FROM archive_snapshots a
+			     WHERE a.repo_id = r.id AND a.snapshot_type = 'source'
+			   )
+			 ORDER BY r.first_seen_at DESC
 			 LIMIT ?`
 		)
 		.all(limit) as RepoRow[];

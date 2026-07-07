@@ -41,8 +41,15 @@ export async function runArchiveCycle(): Promise<ArchiveCycleResult> {
 		try {
 			const archive = await archiveRepo(repo, config);
 			if (archive.readme === 'saved' || archive.source === 'saved') result.saved++;
-			if (archive.readme === 'skipped' && archive.source === 'skipped') result.skipped++;
-			if (archive.source === 'too_large' || archive.source === 'timeout') result.issues++;
+			else if (archive.readme === 'skipped' && archive.source === 'skipped') result.skipped++;
+			else if (
+				archive.source === 'too_large' ||
+				archive.source === 'timeout' ||
+				archive.error ||
+				archive.source === 'missing'
+			) {
+				result.issues++;
+			}
 			await sleep(DELAY_MS);
 		} catch (err) {
 			if (err instanceof GitHubRateLimitError) {
