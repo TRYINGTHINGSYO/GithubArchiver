@@ -76,6 +76,7 @@
 		<option value="backup">backup</option>
 		<option value="backfill">backfill</option>
 		<option value="maintenance">maintenance</option>
+		<option value="export">export</option>
 	</select>
 	<button type="submit" class="filter-btn">Filter</button>
 </form>

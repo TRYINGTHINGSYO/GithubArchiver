@@ -8,8 +8,51 @@
 	let actionMsg = $state('');
 	let actionError = $state(false);
 	let actionLoading = $state(false);
+	let exportJobId = $state<number | null>(null);
+	let exportDownloadUrl = $state<string | null>(null);
 
 	const report = $derived(data.report);
+
+	async function startBulkExport(scope: 'all' | 'active' | 'deleted', label: string) {
+		if (!confirm(`${label}? This may take a while for large archives.`)) return;
+		actionLoading = true;
+		actionMsg = '';
+		actionError = false;
+		exportJobId = null;
+		exportDownloadUrl = null;
+		try {
+			const res = await fetch(`/api/export/bulk?scope=${scope}&format=zip`);
+			const json = await res.json();
+			if (!res.ok) throw new Error(json.error ?? res.statusText);
+			exportJobId = json.jobId;
+			actionMsg = `${label} started — job #${json.jobId}`;
+			pollExportJob(json.jobId);
+		} catch (err) {
+			actionError = true;
+			actionMsg = err instanceof Error ? err.message : String(err);
+		} finally {
+			actionLoading = false;
+		}
+	}
+
+	async function pollExportJob(jobId: number) {
+		for (let i = 0; i < 120; i++) {
+			await new Promise((r) => setTimeout(r, 3000));
+			const res = await fetch(`/api/export/bulk/${jobId}`);
+			if (!res.ok) continue;
+			const json = await res.json();
+			if (json.job.status === 'success' && json.downloadUrl) {
+				exportDownloadUrl = json.downloadUrl;
+				actionMsg = `Export #${jobId} ready — ${json.detail.repo_count ?? '?'} repos`;
+				return;
+			}
+			if (json.job.status === 'failed') {
+				actionError = true;
+				actionMsg = json.job.error ?? `Export #${jobId} failed`;
+				return;
+			}
+		}
+	}
 
 	async function runCleanup(opts: Record<string, boolean>, label: string) {
 		if (!confirm(`${label}? This cannot be undone.`)) return;
@@ -150,6 +193,49 @@
 	</div>
 	{#if actionMsg}
 		<p class="storage-meta" class:storage-error={actionError}>{actionMsg}</p>
+	{/if}
+</section>
+
+<section class="detail-section">
+	<h2 class="section-title">Bulk export</h2>
+	<p class="storage-meta">
+		Builds a zip from on-disk <code>archive_snapshots</code> (no GitHub re-fetch). Includes
+		<code>manifest.json</code>. Runs as a background job — poll Job history or the status link.
+	</p>
+	<div class="storage-actions">
+		<button
+			type="button"
+			class="filter-btn"
+			disabled={actionLoading}
+			onclick={() => startBulkExport('all', 'Export all repos with snapshots')}
+		>
+			Export all
+		</button>
+		<button
+			type="button"
+			class="filter-btn"
+			disabled={actionLoading}
+			onclick={() => startBulkExport('active', 'Export active repos only')}
+		>
+			Export active only
+		</button>
+		<button
+			type="button"
+			class="filter-btn"
+			disabled={actionLoading}
+			onclick={() => startBulkExport('deleted', 'Export deleted repos only')}
+		>
+			Export deleted only
+		</button>
+	</div>
+	{#if exportJobId}
+		<p class="storage-meta">
+			Export job <a href="/admin/jobs">#{exportJobId}</a> —
+			<a href="/api/export/bulk/{exportJobId}">status</a>
+			{#if exportDownloadUrl}
+				· <a href={exportDownloadUrl}>download zip</a>
+			{/if}
+		</p>
 	{/if}
 </section>
 

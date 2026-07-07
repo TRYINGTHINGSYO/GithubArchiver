@@ -3,8 +3,9 @@ import { join, resolve } from 'node:path';
 import { ingestHour } from '$ingest-core';
 import { runBackfillBatch } from './backfill-runner';
 import { runBackup, type BackupOptions } from './backup';
+import { runBulkExport, type BulkExportScope } from './bulk-export';
 import { getActiveBackfillJob, getBackfillJob } from './db/backfill';
-import { finishJobRun, startJobRun } from './db/jobs';
+import { finishJobRun, getRunningJobByType, startJobRun, updateJobRun } from './db/jobs';
 import { defaultHourKey } from './gharchive';
 import { ingestReposFromSearch } from './repo-discovery';
 import { runArchiveCycle } from './workers/archive';
@@ -201,4 +202,61 @@ export function runBackfillResumeJob(jobId?: number): EnqueueResult {
 			throw err;
 		}
 	});
+}
+
+export function startBulkExportJob(
+	scope: BulkExportScope,
+	format: 'zip' = 'zip'
+): { queued: boolean; jobId?: number; message: string } {
+	if (format !== 'zip') {
+		return { queued: false, message: 'Only zip format is supported' };
+	}
+
+	const running = getRunningJobByType('export');
+	if (running) {
+		return {
+			queued: false,
+			message: `Export job #${running.id} is already running`
+		};
+	}
+
+	if (isJobRunnerBusy()) {
+		return {
+			queued: false,
+			message: `Busy with "${currentLabel}" — wait for it to finish`
+		};
+	}
+
+	const jobId = startJobRun('export', { scope, format, phase: 'queued' });
+	const enqueueResult = enqueue(`export:${scope}`, async () => {
+		updateJobRun(jobId, { scope, format, phase: 'building' });
+		try {
+			const result = await runBulkExport({ scope, jobId, format });
+			finishJobRun(jobId, 'success', {
+				scope,
+				format,
+				zip_path: result.zip_path,
+				zip_bytes: result.zip_bytes,
+				repo_count: result.repo_count,
+				snapshot_count: result.snapshot_count,
+				skipped_missing_files: result.skipped_missing_files,
+				download_url: `/api/export/bulk/${jobId}/download`
+			});
+		} catch (err) {
+			finishJobRun(
+				jobId,
+				'failed',
+				{ scope, format },
+				err instanceof Error ? err.message : String(err)
+			);
+			throw err;
+		}
+	});
+
+	if (!enqueueResult.queued) {
+		finishJobRun(jobId, 'failed', { scope, format }, enqueueResult.message);
+		return { queued: false, message: enqueueResult.message };
+	}
+
+	return { queued: true, jobId, message: `Bulk export (${scope}) started` };
 }
