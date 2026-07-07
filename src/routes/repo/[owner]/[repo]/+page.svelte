@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { formatCategoryLabel } from '$lib/category-labels';
 	import { formatBytes, formatDateShort, shortSha, timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
@@ -34,8 +35,11 @@
 		{ label: 'Stars', value: data.repo.stars?.toLocaleString() ?? 'Unknown' },
 		{ label: 'Language', value: data.repo.language ?? 'Unknown' },
 		{ label: 'License', value: data.repo.license ?? 'Unknown' },
+		{ label: 'Category', value: formatCategoryLabel(data.repo.category) ?? 'Unknown' },
 		{ label: 'Last activity', value: lastActivity ? timeAgo(lastActivity) : 'Unknown' }
 	]);
+
+	const categoryLabel = $derived(formatCategoryLabel(data.repo.category));
 
 	$effect(() => {
 		if (!sourceAnalysis && data.sourceAnalysis) sourceAnalysis = data.sourceAnalysis;
@@ -201,8 +205,19 @@
 			</div>
 			<h1 class="mono">{data.repo.name}</h1>
 			<p class="definition">{data.summary.definition}</p>
+			{#if data.repo.summary && data.repo.summary !== data.repo.description}
+				<p class="archive-summary">Archive summary: {data.repo.summary}</p>
+			{/if}
 			<div class="meta-line">
 				<span class="mono">{data.repo.full_name}</span>
+				{#if categoryLabel}
+					<span class="category-pill" title="Classified {data.repo.classified_at ? timeAgo(data.repo.classified_at) : 'recently'}">
+						{categoryLabel}
+						{#if data.repo.category_confidence != null}
+							· {Math.round(data.repo.category_confidence * 100)}%
+						{/if}
+					</span>
+				{/if}
 				<span>Created {dateLabel(data.repo.created_at)}</span>
 				<span>Seen {dateLabel(data.repo.first_seen_at)}</span>
 				{#if data.repo.enriched_at}<span>Enriched {dateLabel(data.repo.enriched_at)}</span>{/if}
@@ -524,6 +539,25 @@
 		font-size: 1.05rem;
 		color: var(--text);
 		max-width: 76ch;
+	}
+
+	.archive-summary {
+		margin: 0 0 0.6rem;
+		font-size: 0.92rem;
+		color: var(--text-muted);
+		max-width: 76ch;
+	}
+
+	.category-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2rem;
+		padding: 0.12rem 0.55rem;
+		border-radius: 999px;
+		border: 1px solid var(--purple);
+		color: var(--purple);
+		font-size: 0.78rem;
+		font-weight: 500;
 	}
 
 	.homepage {

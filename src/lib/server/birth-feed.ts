@@ -18,8 +18,15 @@ export interface BirthFeedItem {
 	first_seen_at: string;
 	discovery_source: string;
 	description: string | null;
+	summary: string | null;
+	category: string | null;
 	language: string | null;
 	license: string | null;
+	stars: number | null;
+	forks: number | null;
+	pushed_at: string | null;
+	updated_at: string | null;
+	last_checked_at: string | null;
 	topics: string[];
 	enriched: boolean;
 	archived: boolean;
@@ -48,6 +55,13 @@ export function listBirthFeed(opts: BirthFeedOptions = {}) {
 			description: row.description,
 			language: row.language,
 			license: row.license,
+			stars: row.stars,
+			forks: row.forks,
+			pushed_at: row.pushed_at,
+			updated_at: row.updated_at,
+			last_checked_at: row.last_checked_at,
+			summary: row.summary,
+			category: row.category,
 			topics: parseTopics(row.topics),
 			enriched: row.is_enriched === 1,
 			archived: row.is_archived === 1,

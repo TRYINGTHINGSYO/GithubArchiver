@@ -61,6 +61,11 @@ export interface RepoSummary {
 	owner_type: string | null;
 	moment_tag: string;
 	velocity: 'up' | 'down' | 'flat';
+	summary: string | null;
+	summary_generated_at: string | null;
+	category: string | null;
+	category_confidence: number | null;
+	classified_at: string | null;
 	search_snippet?: string | null;
 	search_rank?: number | null;
 }
@@ -99,6 +104,11 @@ function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: numb
 		owner_type: row.owner_type,
 		moment_tag: momentTag(row),
 		velocity: velocityIndicator(row),
+		summary: row.summary ?? null,
+		summary_generated_at: row.summary_generated_at ?? null,
+		category: row.category ?? null,
+		category_confidence: row.category_confidence ?? null,
+		classified_at: row.classified_at ?? null,
 		search_snippet: row.fts_snippet ?? null,
 		search_rank: row.fts_rank ?? null
 	};
@@ -549,7 +559,10 @@ function buildProfileSummary(
 	technologies: TechnologyInsight[]
 ): ProfileSummary {
 	const techNames = technologies.slice(0, 5).map((item) => item.name);
-	const description = repo.description || `${repo.full_name} is a GitHub repository archived by GithubArchive+.`;
+	const description =
+		repo.summary?.trim() ||
+		repo.description ||
+		`${repo.full_name} is a GitHub repository archived by GithubArchive+.`;
 	const audience = /cli|command line|terminal/i.test(readmeText)
 		? 'Developers and command-line users'
 		: /api|sdk|library|package/i.test(readmeText)
