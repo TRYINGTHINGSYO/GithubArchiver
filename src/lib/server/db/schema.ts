@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 
-export const CURRENT_SCHEMA_VERSION = 11;
+export const CURRENT_SCHEMA_VERSION = 12;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -517,6 +517,16 @@ function migration011(database: Database.Database) {
 	`);
 }
 
+function migration012(database: Database.Database) {
+	const ingestCols = columnNames(database, 'ingestion_state');
+	if (!ingestCols.has('unavailable_at')) {
+		database.exec(`ALTER TABLE ingestion_state ADD COLUMN unavailable_at TEXT`);
+	}
+	if (!ingestCols.has('http_status')) {
+		database.exec(`ALTER TABLE ingestion_state ADD COLUMN http_status INTEGER`);
+	}
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -528,7 +538,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	8: migration008,
 	9: migration009,
 	10: migration010,
-	11: migration011
+	11: migration011,
+	12: migration012
 };
 
 export function runMigrations(database: Database.Database) {

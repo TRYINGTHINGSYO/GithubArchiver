@@ -182,7 +182,8 @@ export type JobType =
 	| 'pipeline'
 	| 'backup'
 	| 'backfill'
-	| 'maintenance';
+	| 'maintenance'
+	| 'export';
 export type JobStatus = 'running' | 'success' | 'failed' | 'cancelled';
 
 export interface JobRunRow {
@@ -203,6 +204,8 @@ export interface IngestionStateRow {
 	inserted: number;
 	skipped: number;
 	source: string;
+	unavailable_at: string | null;
+	http_status: number | null;
 }
 
 export interface MetricSnapshotRow {

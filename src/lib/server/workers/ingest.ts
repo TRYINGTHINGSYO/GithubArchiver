@@ -7,6 +7,7 @@ import {
 	listMissingHourKeys,
 
 	recordHourIngested,
+	recordHourUnavailable,
 
 	startJobRun
 
@@ -104,6 +105,9 @@ export async function runIngestCycle(): Promise<IngestCycleResult> {
 			result.unavailable++;
 
 			result.errors.push(`${hourKey}: unavailable (HTTP ${hour.httpStatus ?? '?'})`);
+			if (hour.httpStatus != null) {
+				recordHourUnavailable(hourKey, hour.httpStatus);
+			}
 
 		} else {
 
@@ -117,7 +121,8 @@ export async function runIngestCycle(): Promise<IngestCycleResult> {
 
 
 
-	const status = result.failed > 0 && result.downloaded === 0 ? 'failed' : 'success';
+	const status =
+		result.failed > 0 && result.downloaded === 0 && missing.length > 0 ? 'failed' : 'success';
 
 	finishJobRun(jobId, status, result, result.errors.join('; ') || undefined);
 

@@ -11,7 +11,7 @@ describe('migration011', () => {
 		const db = getDb();
 		const version = (db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number }).v;
 		expect(version).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(11);
+		expect(CURRENT_SCHEMA_VERSION).toBe(12);
 
 		const jobCols = (db.prepare('PRAGMA table_info(job_runs)').all() as { name: string }[]).map(
 			(c) => c.name
@@ -31,5 +31,11 @@ describe('migration011', () => {
 		).map((r) => r.name);
 		expect(tables).toContain('daemon_decisions');
 		expect(tables).toContain('repo_category_daily');
+
+		const ingestCols = (db.prepare('PRAGMA table_info(ingestion_state)').all() as { name: string }[]).map(
+			(c) => c.name
+		);
+		expect(ingestCols).toContain('unavailable_at');
+		expect(ingestCols).toContain('http_status');
 	});
 });

@@ -31,7 +31,10 @@ export function hasCurrentHourSearchGap(): boolean {
 	const db = getDb();
 	const hourKey = defaultHourKey();
 	const ghRow = db
-		.prepare(`SELECT 1 FROM ingestion_state WHERE hour_key = ? AND source = 'gharchive'`)
+		.prepare(
+			`SELECT 1 FROM ingestion_state
+			 WHERE hour_key = ? AND source = 'gharchive' AND unavailable_at IS NULL`
+		)
 		.get(hourKey);
 	if (!ghRow) return false;
 

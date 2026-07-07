@@ -106,8 +106,8 @@ export function archiveUrlForKey(key: string): string {
 }
 
 /** Previous complete UTC hour (GH Archive files appear ~1h after the hour ends). */
-export function defaultHourKey(): string {
-	const d = new Date();
+export function defaultHourKey(nowMs: number = Date.now()): string {
+	const d = new Date(nowMs);
 	d.setUTCHours(d.getUTCHours() - 1, 0, 0, 0);
 	return hourKey(d);
 }
