@@ -1,5 +1,10 @@
 import { listEnrichedReposForArchive } from '../db/index.js';
 import { finishJobRun, startJobRun } from '../db/jobs.js';
+import {
+	classifyArchiveRepoOutcome,
+	recordArchiveFailure,
+	type ArchiveRepoOutcome
+} from '../archive-outcomes.js';
 import { archiveRepo, getArchiveConfigFromEnv } from '../archiver.js';
 import { GitHubRateLimitError } from '../github.js';
 
@@ -15,8 +20,27 @@ export interface ArchiveCycleResult {
 	saved: number;
 	skipped: number;
 	issues: number;
+	blocked: number;
 	rateLimited: boolean;
 	rateLimitResetAt?: string;
+	outcomes: ArchiveRepoOutcome[];
+}
+
+function applyOutcome(result: ArchiveCycleResult, outcome: ArchiveRepoOutcome): void {
+	switch (outcome.bucket) {
+		case 'saved':
+			result.saved++;
+			break;
+		case 'skipped':
+			result.skipped++;
+			break;
+		case 'blocked':
+			result.blocked++;
+			break;
+		case 'issues':
+			result.issues++;
+			break;
+	}
 }
 
 export async function runArchiveCycle(): Promise<ArchiveCycleResult> {
@@ -29,7 +53,9 @@ export async function runArchiveCycle(): Promise<ArchiveCycleResult> {
 		saved: 0,
 		skipped: 0,
 		issues: 0,
-		rateLimited: false
+		blocked: 0,
+		rateLimited: false,
+		outcomes: []
 	};
 
 	if (repos.length === 0) {
@@ -40,15 +66,12 @@ export async function runArchiveCycle(): Promise<ArchiveCycleResult> {
 	for (const repo of repos) {
 		try {
 			const archive = await archiveRepo(repo, config);
-			if (archive.readme === 'saved' || archive.source === 'saved') result.saved++;
-			else if (archive.readme === 'skipped' && archive.source === 'skipped') result.skipped++;
-			else if (
-				archive.source === 'too_large' ||
-				archive.source === 'timeout' ||
-				archive.error ||
-				archive.source === 'missing'
-			) {
-				result.issues++;
+			const outcome = classifyArchiveRepoOutcome(repo.id, archive);
+			result.outcomes.push(outcome);
+			applyOutcome(result, outcome);
+
+			if (outcome.permanent) {
+				recordArchiveFailure(repo.id, archive);
 			}
 			await sleep(DELAY_MS);
 		} catch (err) {
@@ -58,7 +81,15 @@ export async function runArchiveCycle(): Promise<ArchiveCycleResult> {
 				finishJobRun(jobId, 'failed', result, err.message);
 				return result;
 			}
-			result.issues++;
+			const failure = classifyArchiveRepoOutcome(repo.id, {
+				repo: repo.full_name,
+				readme: 'missing',
+				source: 'missing',
+				zip: 'missing',
+				error: err instanceof Error ? err.message : String(err)
+			});
+			result.outcomes.push(failure);
+			applyOutcome(result, failure);
 		}
 	}
 

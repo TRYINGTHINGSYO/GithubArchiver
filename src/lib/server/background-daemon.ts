@@ -113,7 +113,7 @@ async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
 		}
 		case 'archive': {
 			const archive = await runArchiveCycle();
-			appendLog(`[daemon] archive: ${archive.saved} saved`);
+			appendLog(`[daemon] archive: ${archive.saved} saved, ${archive.blocked} blocked, ${archive.issues} issues`);
 			return {
 				hadFailure: archive.rateLimited,
 				rateLimitResetAt: archive.rateLimitResetAt,

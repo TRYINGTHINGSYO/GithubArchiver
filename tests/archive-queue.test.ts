@@ -51,6 +51,30 @@ describe('listEnrichedReposForArchive', () => {
 		expect(queue.find((r) => r.id === hasId)).toBeUndefined();
 	});
 
+	it('excludes repos with permanent archive_failed events', () => {
+		const db = getDb();
+		const now = '2026-07-07T12:00:00.000Z';
+
+		db.prepare(
+			`INSERT INTO repos (owner, name, full_name, github_url, event_id, created_at, first_seen_at, discovery_source, enriched_at, default_branch)
+			 VALUES ('blocked', 'repo', 'blocked/repo', 'https://github.com/blocked/repo', 'e5', ?, ?, 'github_search', ?, 'main')`
+		).run(now, now, now);
+
+		const blockedId = (db.prepare(`SELECT id FROM repos WHERE full_name = 'blocked/repo'`).get() as { id: number }).id;
+
+		db.prepare(
+			`INSERT INTO repository_events (repo_id, event_type, event_time, payload_json)
+			 VALUES (?, 'archive_failed', ?, ?)`
+		).run(
+			blockedId,
+			now,
+			JSON.stringify({ reason: 'too large', permanent: true })
+		);
+
+		const queue = listEnrichedReposForArchive(10).map((r) => r.full_name);
+		expect(queue).not.toContain('blocked/repo');
+	});
+
 	it('orders oldest enriched repos first (FIFO)', () => {
 		const db = getDb();
 		const early = '2026-07-01T12:00:00.000Z';

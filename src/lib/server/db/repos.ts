@@ -307,6 +307,12 @@ export function listEnrichedReposForArchive(limit: number): RepoRow[] {
 			     SELECT 1 FROM archive_snapshots a
 			     WHERE a.repo_id = r.id AND a.snapshot_type = 'source'
 			   )
+			   AND NOT EXISTS (
+			     SELECT 1 FROM repository_events e
+			     WHERE e.repo_id = r.id
+			       AND e.event_type = 'archive_failed'
+			       AND json_extract(e.payload_json, '$.permanent') = 1
+			   )
 			 ORDER BY r.enriched_at ASC
 			 LIMIT ?`
 		)

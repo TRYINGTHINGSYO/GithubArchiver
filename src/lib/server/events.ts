@@ -16,7 +16,8 @@ export const REPO_EVENT_TYPES = [
 	'archived',
 	'unarchived',
 	'deleted',
-	'enrichment_failed'
+	'enrichment_failed',
+	'archive_failed'
 ] as const;
 
 export type RepoEventType = (typeof REPO_EVENT_TYPES)[number];
@@ -86,11 +87,11 @@ export function listMemoryEvents(opts: { sinceId?: number; limit?: number } = {}
 export function eventLabel(eventType: RepoEventType): string {
 	switch (eventType) {
 		case 'first_seen':
-			return 'First seen';
+			return 'New repository';
 		case 'metadata_updated':
 			return 'Metadata updated';
 		case 'metrics_updated':
-			return 'Metrics changed';
+			return 'Stars increased';
 		case 'default_branch_updated':
 			return 'Default branch updated';
 		case 'license_changed':
@@ -98,7 +99,7 @@ export function eventLabel(eventType: RepoEventType): string {
 		case 'topics_changed':
 			return 'Topics changed';
 		case 'readme_changed':
-			return 'README changed';
+			return 'README updated';
 		case 'snapshot_created':
 			return 'Snapshot archived';
 		case 'release_detected':
@@ -113,6 +114,8 @@ export function eventLabel(eventType: RepoEventType): string {
 			return 'Repository deleted';
 		case 'enrichment_failed':
 			return 'Enrichment failed';
+		case 'archive_failed':
+			return 'Archive failed';
 		default:
 			return eventType;
 	}
