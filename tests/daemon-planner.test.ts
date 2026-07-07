@@ -109,6 +109,21 @@ describe('daemon-planner', () => {
 		expect(ms).toBeLessThan(SLEEP_MAX);
 	});
 
+	it('caps sleep when unarchived source backlog is large', () => {
+		const ms = computeDaemonSleepMs({
+			backlog: emptyBacklog({ unarchivedSource: 50_000 }),
+			hadFailure: false,
+			failureStreak: 0,
+			sleepMinMs: 300_000,
+			sleepMaxMs: SLEEP_MAX,
+			backoffBaseMs: 60_000,
+			backoffMaxMs: SLEEP_MAX,
+			archiveBacklogSleepMs: 60_000,
+			archiveBacklogSleepThreshold: 1000
+		});
+		expect(ms).toBe(60_000);
+	});
+
 	it('uses short sleep on failure when backlog remains', () => {
 		const ms = computeDaemonSleepMs({
 			backlog: emptyBacklog({ staleRefresh: 500 }),

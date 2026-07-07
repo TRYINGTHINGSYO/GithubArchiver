@@ -38,6 +38,22 @@ const MAX_TAR_ENTRIES = 7000;
 const MAX_FILES_RETURNED = 800;
 const MAX_COMPRESSED_ANALYSIS_BYTES = Number(process.env.SOURCE_ANALYSIS_MAX_BYTES ?? 30_000_000);
 const analysisCache = new Map<string, SourceAnalysis | null>();
+const tarIndexCache = new Map<string, Map<string, { offset: number; size: number }>>();
+
+export interface SourceTarIndexEntry {
+	offset: number;
+	size: number;
+}
+
+export function clearSourceTarIndexCache(snapshotId?: number): void {
+	if (snapshotId === undefined) {
+		tarIndexCache.clear();
+		return;
+	}
+	for (const key of tarIndexCache.keys()) {
+		if (key.startsWith(`${snapshotId}:`)) tarIndexCache.delete(key);
+	}
+}
 
 const EXT_LANGUAGE: Record<string, string> = {
 	'.js': 'JavaScript',
@@ -178,11 +194,138 @@ function cacheKey(snapshot: ArchiveSnapshotRow): string {
 export function clearSourceAnalysisCache(snapshotId?: number): void {
 	if (snapshotId === undefined) {
 		analysisCache.clear();
+		clearSourceTarIndexCache();
 		return;
 	}
 	for (const key of analysisCache.keys()) {
 		if (key.startsWith(`${snapshotId}:`)) analysisCache.delete(key);
 	}
+	clearSourceTarIndexCache(snapshotId);
+}
+
+function loadGunzippedTar(snapshot: ArchiveSnapshotRow): { tar: Buffer; error: string | null } {
+	let safePath: string;
+	try {
+		safePath = resolveSafeSnapshotPath(snapshot.file_path);
+	} catch {
+		return { tar: Buffer.alloc(0), error: 'Snapshot path could not be resolved safely.' };
+	}
+	if (!existsSync(safePath)) {
+		return { tar: Buffer.alloc(0), error: 'Snapshot file is missing on disk.' };
+	}
+	if (snapshot.file_size > MAX_COMPRESSED_ANALYSIS_BYTES) {
+		return {
+			tar: Buffer.alloc(0),
+			error: `Source archive exceeds analysis limit (${MAX_COMPRESSED_ANALYSIS_BYTES.toLocaleString()} bytes).`
+		};
+	}
+	try {
+		return { tar: gunzipSync(readFileSync(safePath)), error: null };
+	} catch (err) {
+		return { tar: Buffer.alloc(0), error: err instanceof Error ? err.message : String(err) };
+	}
+}
+
+export function indexSourceTarball(
+	snapshot: ArchiveSnapshotRow | null
+): { index: Map<string, SourceTarIndexEntry>; error: string | null } {
+	if (!snapshot || snapshot.snapshot_type !== 'source') {
+		return { index: new Map(), error: 'No source snapshot.' };
+	}
+	const key = cacheKey(snapshot);
+	const cached = tarIndexCache.get(key);
+	if (cached) return { index: cached, error: null };
+
+	const { tar, error } = loadGunzippedTar(snapshot);
+	if (error) return { index: new Map(), error };
+
+	const index = new Map<string, SourceTarIndexEntry>();
+	let offset = 0;
+	let entries = 0;
+
+	while (offset + 512 <= tar.length && entries < MAX_TAR_ENTRIES) {
+		const header = tar.subarray(offset, offset + 512);
+		if (header.every((b) => b === 0)) break;
+
+		const rawName = header.subarray(0, 100).toString('utf8').replace(/\0.*$/, '');
+		const prefix = header.subarray(345, 500).toString('utf8').replace(/\0.*$/, '');
+		const fullRawName = prefix ? `${prefix}/${rawName}` : rawName;
+		const path = stripRoot(fullRawName).replace(/\/$/, '');
+		const size = octalSize(header.subarray(124, 136));
+		const typeflag = String.fromCharCode(header[156] || 48);
+		const isDirectory = typeflag === '5' || fullRawName.endsWith('/');
+
+		if (path && !isDirectory && size > 0) {
+			index.set(path, { offset: offset + 512, size });
+		}
+
+		offset += 512 + Math.ceil(size / 512) * 512;
+		entries++;
+	}
+
+	tarIndexCache.set(key, index);
+	return { index, error: null };
+}
+
+const BINARY_EXTENSIONS = new Set([
+	'.png',
+	'.jpg',
+	'.jpeg',
+	'.gif',
+	'.webp',
+	'.ico',
+	'.pdf',
+	'.zip',
+	'.gz',
+	'.tar',
+	'.wasm',
+	'.exe',
+	'.dll',
+	'.so',
+	'.dylib',
+	'.bin',
+	'.mp3',
+	'.mp4',
+	'.woff',
+	'.woff2',
+	'.ttf',
+	'.eot',
+	'.otf',
+	'.class',
+	'.jar'
+]);
+
+export function isProbablyBinary(path: string, content: Buffer): boolean {
+	const ext = extensionFor(path);
+	if (BINARY_EXTENSIONS.has(ext)) return true;
+	if (content.includes(0)) return true;
+	return false;
+}
+
+export function readSourceFileFromSnapshot(
+	snapshot: ArchiveSnapshotRow | null,
+	filePath: string
+): { content: Buffer | null; binary: boolean; error: string | null } {
+	if (!snapshot || snapshot.snapshot_type !== 'source') {
+		return { content: null, binary: false, error: 'No source snapshot.' };
+	}
+	const normalized = filePath.replace(/\\/g, '/').replace(/^\/+/, '');
+	const { index, error } = indexSourceTarball(snapshot);
+	if (error) return { content: null, binary: false, error };
+
+	const entry = index.get(normalized);
+	if (!entry) return { content: null, binary: false, error: 'File not found in archive.' };
+
+	const { tar, error: tarError } = loadGunzippedTar(snapshot);
+	if (tarError) return { content: null, binary: false, error: tarError };
+
+	const end = entry.offset + entry.size;
+	if (end > tar.length) {
+		return { content: null, binary: false, error: 'Archive index is out of range.' };
+	}
+
+	const content = tar.subarray(entry.offset, end);
+	return { content, binary: isProbablyBinary(normalized, content), error: null };
 }
 
 export function analyzeSourceSnapshot(snapshot: ArchiveSnapshotRow | null): SourceAnalysis | null {
@@ -190,34 +333,15 @@ export function analyzeSourceSnapshot(snapshot: ArchiveSnapshotRow | null): Sour
 	const key = cacheKey(snapshot);
 	if (analysisCache.has(key)) return analysisCache.get(key) ?? null;
 
-	let safePath: string;
-	try {
-		safePath = resolveSafeSnapshotPath(snapshot.file_path);
-	} catch {
-		const result = emptyAnalysis(snapshot, 'Snapshot path could not be resolved safely.');
-		analysisCache.set(key, result);
-		return result;
-	}
-
-	if (!existsSync(safePath)) {
-		const result = emptyAnalysis(snapshot, 'Snapshot file is missing on disk.');
-		analysisCache.set(key, result);
-		return result;
-	}
-
-	if (snapshot.file_size > MAX_COMPRESSED_ANALYSIS_BYTES) {
-		const result = emptyAnalysis(
-			snapshot,
-			`Source archive is ${snapshot.file_size.toLocaleString()} bytes; analysis limit is ${MAX_COMPRESSED_ANALYSIS_BYTES.toLocaleString()} bytes.`,
-			true
-		);
-		analysisCache.set(key, result);
-		return result;
-	}
-
 	let tar: Buffer;
 	try {
-		tar = gunzipSync(readFileSync(safePath));
+		const loaded = loadGunzippedTar(snapshot);
+		if (loaded.error) {
+			const result = emptyAnalysis(snapshot, loaded.error);
+			analysisCache.set(key, result);
+			return result;
+		}
+		tar = loaded.tar;
 	} catch (err) {
 		const result = emptyAnalysis(snapshot, err instanceof Error ? err.message : String(err));
 		analysisCache.set(key, result);

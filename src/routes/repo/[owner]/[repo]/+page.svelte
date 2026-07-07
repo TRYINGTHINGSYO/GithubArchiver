@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { formatCategoryLabel } from '$lib/category-labels';
+	import FileBrowser from '$lib/components/FileBrowser.svelte';
 	import { formatBytes, formatDateShort, shortSha, timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
@@ -309,6 +310,13 @@
 			{/if}
 		</section>
 	{/if}
+
+	<FileBrowser
+		owner={data.repo.owner}
+		name={data.repo.name}
+		hasSource={Boolean(data.latestSource?.file_exists)}
+		onArchive={() => runRepoAction('archive')}
+	/>
 
 	{#if data.latestSource}
 		<details class="fold" class:soft-update={hasSectionUpdate('archive')} ontoggle={analyzeOnOpen}>

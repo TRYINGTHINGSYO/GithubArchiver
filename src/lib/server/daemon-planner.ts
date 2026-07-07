@@ -167,8 +167,16 @@ export function computeDaemonSleepMs(opts: {
 	nowMs?: number;
 	/** Test hook: fixed idle sleep instead of random */
 	idleSleepMs?: number;
+	/** When unarchived source backlog exceeds threshold, cap sleep at this value */
+	archiveBacklogSleepMs?: number;
+	archiveBacklogSleepThreshold?: number;
 }): number {
 	if (hasAnyBacklog(opts.backlog)) {
+		const threshold = opts.archiveBacklogSleepThreshold ?? Number(process.env.ARCHIVE_BACKLOG_SLEEP_THRESHOLD ?? 1000);
+		const archiveSleep = opts.archiveBacklogSleepMs ?? Number(process.env.ARCHIVE_BACKLOG_SLEEP_MS ?? 60_000);
+		if (opts.backlog.unarchivedSource >= threshold) {
+			return Math.min(opts.sleepMinMs, archiveSleep);
+		}
 		return opts.sleepMinMs;
 	}
 

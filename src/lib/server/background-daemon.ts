@@ -112,12 +112,46 @@ async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
 			};
 		}
 		case 'archive': {
-			const archive = await runArchiveCycle();
-			appendLog(`[daemon] archive: ${archive.saved} saved, ${archive.blocked} blocked, ${archive.issues} issues`);
+			const burstThreshold = Number(process.env.ARCHIVE_BURST_BACKLOG_MIN ?? 100);
+			const burstMax = Math.max(1, Number(process.env.ARCHIVE_BURST_CYCLES ?? 3));
+			const backlog = queryBacklogSnapshot({ rateLimitedUntil });
+			const cycles =
+				backlog.unarchivedSource >= burstThreshold
+					? burstMax
+					: 1;
+
+			let combined: Record<string, unknown> = { burst_cycles: cycles };
+			let hadFailure = false;
+			let rateLimitResetAt: string | undefined;
+
+			for (let i = 0; i < cycles && !stopRequested; i++) {
+				const archive = await runArchiveCycle();
+				combined = {
+					...combined,
+					[`cycle_${i + 1}`]: archive,
+					saved: (Number(combined.saved) || 0) + archive.saved,
+					planned: (Number(combined.planned) || 0) + archive.planned,
+					blocked: (Number(combined.blocked) || 0) + archive.blocked,
+					issues: (Number(combined.issues) || 0) + archive.issues
+				};
+				appendLog(
+					`[daemon] archive cycle ${i + 1}/${cycles}: ${archive.saved} saved, ${archive.blocked} blocked, ${archive.issues} issues`
+				);
+				if (archive.rateLimited) {
+					hadFailure = true;
+					rateLimitResetAt = archive.rateLimitResetAt;
+					break;
+				}
+				if (archive.planned === 0) break;
+			}
+
+			appendLog(
+				`[daemon] archive burst done: ${combined.saved ?? 0} saved total (${cycles} cycle(s))`
+			);
 			return {
-				hadFailure: archive.rateLimited,
-				rateLimitResetAt: archive.rateLimitResetAt,
-				detail: archive
+				hadFailure,
+				rateLimitResetAt,
+				detail: combined
 			};
 		}
 		case 'idle':

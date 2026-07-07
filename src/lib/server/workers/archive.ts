@@ -9,7 +9,8 @@ import { archiveRepo, getArchiveConfigFromEnv } from '../archiver.js';
 import { GitHubRateLimitError } from '../github.js';
 
 const MAX_REPOS = Number(process.env.ARCHIVE_MAX_REPOS ?? 25);
-const DELAY_MS = Number(process.env.ARCHIVE_DELAY_MS ?? 1000);
+const DELAY_MS = Number(process.env.ARCHIVE_DELAY_MS ?? 300);
+const CONCURRENCY = Math.max(1, Number(process.env.ARCHIVE_CONCURRENCY ?? 3));
 
 function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
@@ -43,10 +44,60 @@ function applyOutcome(result: ArchiveCycleResult, outcome: ArchiveRepoOutcome): 
 	}
 }
 
+async function archiveOneRepo(
+	repo: Awaited<ReturnType<typeof listEnrichedReposForArchive>>[number],
+	config: ReturnType<typeof getArchiveConfigFromEnv>
+): Promise<ArchiveRepoOutcome> {
+	try {
+		const archive = await archiveRepo(repo, config);
+		const outcome = classifyArchiveRepoOutcome(repo.id, archive);
+		if (outcome.permanent) {
+			recordArchiveFailure(repo.id, archive);
+		}
+		return outcome;
+	} catch (err) {
+		if (err instanceof GitHubRateLimitError) {
+			throw err;
+		}
+		return classifyArchiveRepoOutcome(repo.id, {
+			repo: repo.full_name,
+			readme: 'missing',
+			source: 'missing',
+			zip: 'missing',
+			error: err instanceof Error ? err.message : String(err)
+		});
+	}
+}
+
+async function runArchivePool(
+	repos: Awaited<ReturnType<typeof listEnrichedReposForArchive>>,
+	config: ReturnType<typeof getArchiveConfigFromEnv>
+): Promise<ArchiveRepoOutcome[]> {
+	const outcomes: ArchiveRepoOutcome[] = [];
+	let index = 0;
+
+	async function worker(): Promise<void> {
+		while (index < repos.length) {
+			const current = repos[index++];
+			const outcome = await archiveOneRepo(current, config);
+			outcomes.push(outcome);
+			if (DELAY_MS > 0) await sleep(DELAY_MS);
+		}
+	}
+
+	const workers = Array.from({ length: Math.min(CONCURRENCY, repos.length) }, () => worker());
+	await Promise.all(workers);
+	return outcomes;
+}
+
 export async function runArchiveCycle(): Promise<ArchiveCycleResult> {
 	const config = getArchiveConfigFromEnv();
 	const repos = listEnrichedReposForArchive(MAX_REPOS);
-	const jobId = startJobRun('archive', { max_repos: MAX_REPOS, planned: repos.length });
+	const jobId = startJobRun('archive', {
+		max_repos: MAX_REPOS,
+		concurrency: CONCURRENCY,
+		planned: repos.length
+	});
 
 	const result: ArchiveCycleResult = {
 		planned: repos.length,
@@ -63,36 +114,30 @@ export async function runArchiveCycle(): Promise<ArchiveCycleResult> {
 		return result;
 	}
 
-	for (const repo of repos) {
-		try {
-			const archive = await archiveRepo(repo, config);
-			const outcome = classifyArchiveRepoOutcome(repo.id, archive);
-			result.outcomes.push(outcome);
+	try {
+		const outcomes = await runArchivePool(repos, config);
+		result.outcomes = outcomes;
+		for (const outcome of outcomes) {
 			applyOutcome(result, outcome);
-
-			if (outcome.permanent) {
-				recordArchiveFailure(repo.id, archive);
-			}
-			await sleep(DELAY_MS);
-		} catch (err) {
-			if (err instanceof GitHubRateLimitError) {
-				result.rateLimited = true;
-				result.rateLimitResetAt = err.resetAt.toISOString();
-				finishJobRun(jobId, 'failed', result, err.message);
-				return result;
-			}
-			const failure = classifyArchiveRepoOutcome(repo.id, {
-				repo: repo.full_name,
-				readme: 'missing',
-				source: 'missing',
-				zip: 'missing',
-				error: err instanceof Error ? err.message : String(err)
-			});
-			result.outcomes.push(failure);
-			applyOutcome(result, failure);
 		}
+	} catch (err) {
+		if (err instanceof GitHubRateLimitError) {
+			result.rateLimited = true;
+			result.rateLimitResetAt = err.resetAt.toISOString();
+			finishJobRun(jobId, 'failed', result, err.message);
+			return result;
+		}
+		throw err;
 	}
 
 	finishJobRun(jobId, 'success', result);
 	return result;
+}
+
+export function getArchiveWorkerConfig() {
+	return {
+		maxRepos: MAX_REPOS,
+		delayMs: DELAY_MS,
+		concurrency: CONCURRENCY
+	};
 }
