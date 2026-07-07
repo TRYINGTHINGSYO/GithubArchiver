@@ -10,7 +10,7 @@ import {
 	type DaemonAction
 } from './daemon-planner';
 import { insertDaemonDecision } from './db/daemon-decisions';
-import { finishJobRun, startJobRun, updateJobRun } from './db/jobs';
+import { finishJobRun, reconcileOrphanedJobRuns, startJobRun, updateJobRun } from './db/jobs';
 import { runArchiveCycle } from './workers/archive';
 import { runEnrichCycle } from './workers/enrich';
 import { runIngestCycle } from './workers/ingest';
@@ -329,12 +329,24 @@ export function stopBackgroundDaemon(): { stopped: boolean; message: string } {
 }
 
 let autoStartAttempted = false;
+let orphanJobsReconciled = false;
+
+function reconcileOrphanedJobsOnce(): void {
+	if (orphanJobsReconciled) return;
+	orphanJobsReconciled = true;
+	const count = reconcileOrphanedJobRuns();
+	if (count > 0) {
+		console.log(`[daemon] reconciled ${count} orphaned job_run(s)`);
+		appendLog(`[daemon] reconciled ${count} orphaned job_run(s)`);
+	}
+}
 
 /** Start auto-scan on boot when BACKGROUND_WORKER=auto|1 (default auto on Railway). */
 export function ensureBackgroundWorker(): void {
 	if (autoStartAttempted) return;
 	autoStartAttempted = true;
 
+	reconcileOrphanedJobsOnce();
 	const mode = process.env.BACKGROUND_WORKER ?? 'auto';
 	const onRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID);
 	const enabled =

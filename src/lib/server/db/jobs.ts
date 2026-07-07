@@ -70,6 +70,19 @@ export function getJobRunById(id: number): JobRunRow | null {
 	return row ?? null;
 }
 
+export function getRunningJobByType(jobType: JobType): JobRunRow | null {
+	const db = getDb();
+	const row = db
+		.prepare(
+			`SELECT * FROM job_runs
+			 WHERE job_type = ? AND status = 'running'
+			 ORDER BY started_at DESC
+			 LIMIT 1`
+		)
+		.get(jobType) as JobRunRow | undefined;
+	return row ?? null;
+}
+
 export function listJobRuns(opts: { limit?: number; jobType?: string; offset?: number } = {}): JobRunRow[] {
 	const db = getDb();
 	const limit = opts.limit ?? 50;
@@ -125,4 +138,27 @@ export function parseJobDetail(row: JobRunRow): Record<string, unknown> {
 	} catch {
 		return {};
 	}
+}
+
+const DEFAULT_ORPHAN_JOB_AGE_MS = 10 * 60 * 1000;
+
+export function reconcileOrphanedJobRuns(
+	maxAgeMs: number = DEFAULT_ORPHAN_JOB_AGE_MS,
+	nowMs: number = Date.now()
+): number {
+	const db = getDb();
+	const cutoff = new Date(nowMs - maxAgeMs).toISOString();
+	const orphans = db
+		.prepare(
+			`SELECT id FROM job_runs
+			 WHERE status = 'running' AND started_at < ?`
+		)
+		.all(cutoff) as { id: number }[];
+
+	const reason = 'orphaned: process restarted mid-run';
+	for (const row of orphans) {
+		finishJobRun(row.id, 'failed', { orphaned: true }, reason, reason);
+	}
+
+	return orphans.length;
 }
