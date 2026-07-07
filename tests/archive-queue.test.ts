@@ -50,4 +50,23 @@ describe('listEnrichedReposForArchive', () => {
 		expect(queue.find((r) => r.id === needsId)).toBeTruthy();
 		expect(queue.find((r) => r.id === hasId)).toBeUndefined();
 	});
+
+	it('orders oldest enriched repos first (FIFO)', () => {
+		const db = getDb();
+		const early = '2026-07-01T12:00:00.000Z';
+		const late = '2026-07-07T12:00:00.000Z';
+
+		db.prepare(
+			`INSERT INTO repos (owner, name, full_name, github_url, event_id, created_at, first_seen_at, discovery_source, enriched_at, default_branch)
+			 VALUES ('newer', 'queue', 'newer/queue', 'https://github.com/newer/queue', 'e3', ?, ?, 'github_search', ?, 'main')`
+		).run(late, late, late);
+
+		db.prepare(
+			`INSERT INTO repos (owner, name, full_name, github_url, event_id, created_at, first_seen_at, discovery_source, enriched_at, default_branch)
+			 VALUES ('older', 'queue', 'older/queue', 'https://github.com/older/queue', 'e4', ?, ?, 'github_search', ?, 'main')`
+		).run(early, early, early);
+
+		const queue = listEnrichedReposForArchive(10);
+		expect(queue.map((r) => r.full_name)).toEqual(['older/queue', 'newer/queue']);
+	});
 });

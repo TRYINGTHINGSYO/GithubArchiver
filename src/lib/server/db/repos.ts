@@ -307,7 +307,7 @@ export function listEnrichedReposForArchive(limit: number): RepoRow[] {
 			     SELECT 1 FROM archive_snapshots a
 			     WHERE a.repo_id = r.id AND a.snapshot_type = 'source'
 			   )
-			 ORDER BY r.first_seen_at DESC
+			 ORDER BY r.enriched_at ASC
 			 LIMIT ?`
 		)
 		.all(limit) as RepoRow[];

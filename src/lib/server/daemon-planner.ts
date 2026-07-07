@@ -49,11 +49,14 @@ export function scoreAction(action: DaemonAction, backlog: BacklogSnapshot): num
 		case 'search_gap':
 			return backlog.currentHourSearchGap ? 85 : 0;
 		case 'enrich':
-			return backlog.unenriched > 0 ? 80 + Math.log10(backlog.unenriched + 1) * 10 : 0;
+			// Log-scaled, capped below archive floor so any unarchived repo wins.
+			if (backlog.unenriched <= 0) return 0;
+			return Math.min(130, 80 + Math.log10(backlog.unenriched + 1) * 10);
 		case 'refresh':
 			return backlog.staleRefresh > 0 ? 50 + Math.log10(backlog.staleRefresh + 1) * 8 : 0;
 		case 'archive':
-			return backlog.unarchivedSource > 0 ? 40 + Math.log10(backlog.unarchivedSource + 1) * 6 : 0;
+			// Floor 140 + backlog so archive beats enrich; ingest (150+n) still wins missing hours.
+			return backlog.unarchivedSource > 0 ? 140 + backlog.unarchivedSource : 0;
 		case 'idle':
 			return 0;
 	}
@@ -124,6 +127,16 @@ export function pickAction(
 	}
 
 	const ranked = rankActions(backlog);
+
+	// Missing GH Archive hours are the most time-sensitive — always beat archive/enrich.
+	if (backlog.missingGhArchiveHours > 0) {
+		return {
+			action: 'ingest',
+			reason: formatReason('ingest', backlog),
+			ranked
+		};
+	}
+
 	const best = ranked[0];
 
 	if (!best || best.score === 0) {

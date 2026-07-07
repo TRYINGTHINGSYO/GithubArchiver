@@ -25,11 +25,29 @@ const SLEEP_MIN = 5_000;
 const SLEEP_MAX = 900_000;
 
 describe('daemon-planner', () => {
-	it('picks enrich when unenriched dominates stale refresh and ingest is caught up', () => {
+	it('picks enrich when unenriched dominates and archive backlog is empty', () => {
 		const backlog = emptyBacklog({ unenriched: 6231, staleRefresh: 12 });
 		const decision = pickAction(backlog);
 		expect(decision.action).toBe('enrich');
 		expect(decision.reason).toContain('enrich');
+	});
+
+	it('prefers archive over enrich when unarchived source backlog exists', () => {
+		const backlog = emptyBacklog({ unenriched: 109_000, unarchivedSource: 5_050 });
+		const decision = pickAction(backlog);
+		expect(decision.action).toBe('archive');
+		expect(decision.reason).toContain('archive');
+	});
+
+	it('scores archive above enrich at any realistic combined backlog', () => {
+		const backlog = emptyBacklog({ unenriched: 1_000_000, unarchivedSource: 1 });
+		expect(scoreAction('archive', backlog)).toBeGreaterThan(scoreAction('enrich', backlog));
+	});
+
+	it('prefers ingest over archive when missing hours exist', () => {
+		const backlog = emptyBacklog({ missingGhArchiveHours: 1, unarchivedSource: 5_000 });
+		expect(scoreAction('archive', backlog)).toBeGreaterThan(scoreAction('enrich', backlog));
+		expect(pickAction(backlog).action).toBe('ingest');
 	});
 
 	it('prefers ingest over enrich when missing hours exist even with huge unenriched backlog', () => {

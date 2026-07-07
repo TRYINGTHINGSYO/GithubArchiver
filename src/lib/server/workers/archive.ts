@@ -3,7 +3,7 @@ import { finishJobRun, startJobRun } from '../db/jobs.js';
 import { archiveRepo, getArchiveConfigFromEnv } from '../archiver.js';
 import { GitHubRateLimitError } from '../github.js';
 
-const MAX_REPOS = Number(process.env.ARCHIVE_MAX_REPOS ?? 10);
+const MAX_REPOS = Number(process.env.ARCHIVE_MAX_REPOS ?? 25);
 const DELAY_MS = Number(process.env.ARCHIVE_DELAY_MS ?? 1000);
 
 function sleep(ms: number) {
