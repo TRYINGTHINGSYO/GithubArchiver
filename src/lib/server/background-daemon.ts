@@ -1,10 +1,21 @@
-import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { appendFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { runBackfillBatch } from './backfill-runner';
+import { queryBacklogSnapshot } from './daemon-backlog';
+import {
+	computeDaemonSleepMs,
+	daemonActionJobType,
+	hasAnyBacklog,
+	pickAction,
+	type DaemonAction
+} from './daemon-planner';
+import { insertDaemonDecision } from './db/daemon-decisions';
 import { finishJobRun, startJobRun, updateJobRun } from './db/jobs';
 import { runArchiveCycle } from './workers/archive';
 import { runEnrichCycle } from './workers/enrich';
 import { runIngestCycle } from './workers/ingest';
 import { runRefreshCycle } from './workers/refresh';
+import { runSearchGapCycle } from './workers/search-gap';
 
 const SLEEP_MIN_MS = Number(process.env.DAEMON_SLEEP_MIN_MS ?? 5 * 60 * 1000);
 const SLEEP_MAX_MS = Number(process.env.DAEMON_SLEEP_MAX_MS ?? 15 * 60 * 1000);
@@ -21,6 +32,7 @@ let failureStreak = 0;
 let phase = 'stopped' as string;
 let sleepUntil: string | null = null;
 let startedAt: string | null = null;
+let rateLimitedUntil: string | null = null;
 
 function ensureDataDir() {
 	mkdirSync(DATA_DIR, { recursive: true });
@@ -36,20 +48,6 @@ function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
 }
 
-function randomSleepMs(): number {
-	if (SLEEP_MIN_MS >= SLEEP_MAX_MS) return SLEEP_MIN_MS;
-	return SLEEP_MIN_MS + Math.floor(Math.random() * (SLEEP_MAX_MS - SLEEP_MIN_MS + 1));
-}
-
-function computeBackoffMs(): number {
-	return Math.min(BACKOFF_BASE_MS * 2 ** failureStreak, BACKOFF_MAX_MS);
-}
-
-function rateLimitWaitMs(resetAt?: string): number {
-	if (!resetAt) return computeBackoffMs();
-	return Math.max(new Date(resetAt).getTime() - Date.now(), BACKOFF_BASE_MS);
-}
-
 async function waitWithStop(ms: number): Promise<boolean> {
 	const step = 1000;
 	let remaining = ms;
@@ -60,13 +58,81 @@ async function waitWithStop(ms: number): Promise<boolean> {
 	return !stopRequested;
 }
 
+interface ActionRunResult {
+	hadFailure: boolean;
+	rateLimitResetAt?: string;
+	detail?: Record<string, unknown>;
+}
+
+async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
+	switch (action) {
+		case 'ingest': {
+			const ingest = await runIngestCycle();
+			appendLog(
+				`[daemon] ingest: ${ingest.downloaded} downloaded, +${ingest.inserted} repos`
+			);
+			return {
+				hadFailure: ingest.failed > 0 || ingest.unavailable > 0,
+				detail: ingest
+			};
+		}
+		case 'search_gap': {
+			const search = await runSearchGapCycle();
+			appendLog(`[daemon] search_gap: +${search.inserted} repos (${search.found} found)`);
+			return {
+				hadFailure: search.rateLimited,
+				rateLimitResetAt: search.rateLimitResetAt,
+				detail: search
+			};
+		}
+		case 'backfill': {
+			const backfill = await runBackfillBatch(undefined, 1);
+			appendLog(`[daemon] backfill: processed ${backfill.processed} hour(s)`);
+			return {
+				hadFailure: backfill.failed > 0,
+				detail: backfill
+			};
+		}
+		case 'enrich': {
+			const enrich = await runEnrichCycle();
+			appendLog(`[daemon] enrich: ${enrich.enriched} enriched`);
+			return {
+				hadFailure: enrich.rateLimited,
+				rateLimitResetAt: enrich.rateLimitResetAt,
+				detail: enrich
+			};
+		}
+		case 'refresh': {
+			const refresh = await runRefreshCycle();
+			appendLog(`[daemon] refresh: ${refresh.refreshed} refreshed`);
+			return {
+				hadFailure: refresh.rateLimited,
+				rateLimitResetAt: refresh.rateLimitResetAt,
+				detail: refresh
+			};
+		}
+		case 'archive': {
+			const archive = await runArchiveCycle();
+			appendLog(`[daemon] archive: ${archive.saved} saved`);
+			return {
+				hadFailure: archive.rateLimited,
+				rateLimitResetAt: archive.rateLimitResetAt,
+				detail: archive
+			};
+		}
+		case 'idle':
+			return { hadFailure: false };
+	}
+}
+
 async function runLoop(): Promise<void> {
 	startedAt = new Date().toISOString();
 	daemonJobId = startJobRun('daemon', {
 		pid: process.pid,
 		started_at: startedAt,
 		phase: 'starting',
-		in_process: true
+		in_process: true,
+		autonomous: true
 	});
 
 	appendLog(`daemon started in-process (pid ${process.pid})`);
@@ -74,7 +140,10 @@ async function runLoop(): Promise<void> {
 
 	while (!stopRequested) {
 		const loopStarted = new Date().toISOString();
-		phase = 'ingest';
+		const backlog = queryBacklogSnapshot({ rateLimitedUntil });
+		const decision = pickAction(backlog);
+
+		phase = decision.action;
 		sleepUntil = null;
 		updateJobRun(daemonJobId, {
 			pid: process.pid,
@@ -82,75 +151,111 @@ async function runLoop(): Promise<void> {
 			phase,
 			loop_started: loopStarted,
 			failure_streak: failureStreak,
-			in_process: true
+			in_process: true,
+			last_decision: decision,
+			backlog
 		});
 
 		let hadFailure = false;
 		let rateLimitResetAt: string | undefined;
+		let childJobId: number | null = null;
 
 		try {
-			appendLog('[daemon] ingest…');
-			const ingest = await runIngestCycle();
-			appendLog(
-				`[daemon] ingest: ${ingest.downloaded} downloaded, +${ingest.inserted} repos`
-			);
-			if (ingest.failed > 0 || ingest.unavailable > 0) hadFailure = true;
+			appendLog(`[daemon] decision: ${decision.reason}`);
 
-			if (stopRequested) break;
-
-			phase = 'enrich';
-			updateJobRun(daemonJobId, { phase, last_ingest: ingest, in_process: true });
-			appendLog('[daemon] enrich…');
-			const enrich = await runEnrichCycle();
-			if (enrich.rateLimited) {
-				hadFailure = true;
-				rateLimitResetAt = enrich.rateLimitResetAt;
+			if (decision.action !== 'idle') {
+				const jobType = daemonActionJobType(decision.action);
+				if (jobType) {
+					childJobId = startJobRun(
+						jobType,
+						{
+							daemon_action: decision.action,
+							backlog,
+							ranked: decision.ranked,
+							parent_daemon_job_id: daemonJobId
+						},
+						decision.reason
+					);
+				}
 			}
 
-			if (stopRequested) break;
+			insertDaemonDecision({
+				action: decision.action,
+				reason: decision.reason,
+				backlog,
+				jobRunId: childJobId
+			});
 
-			phase = 'refresh';
-			updateJobRun(daemonJobId, { phase, last_enrich: enrich, in_process: true });
-			appendLog('[daemon] refresh…');
-			const refresh = await runRefreshCycle();
-			if (refresh.rateLimited) {
-				hadFailure = true;
-				rateLimitResetAt = refresh.rateLimitResetAt;
+			if (decision.action !== 'idle') {
+				const actionResult = await runDaemonAction(decision.action);
+				hadFailure = actionResult.hadFailure;
+				rateLimitResetAt = actionResult.rateLimitResetAt;
+				if (childJobId !== null) {
+					finishJobRun(
+						childJobId,
+						hadFailure ? 'failed' : 'success',
+						actionResult.detail ?? {},
+						hadFailure ? 'cycle reported failure or rate limit' : undefined,
+						decision.reason
+					);
+				}
 			}
 
-			if (stopRequested) break;
-
-			phase = 'archive';
-			updateJobRun(daemonJobId, { phase, last_refresh: refresh, in_process: true });
-			appendLog('[daemon] archive…');
-			const archive = await runArchiveCycle();
-			if (archive.rateLimited) {
-				hadFailure = true;
-				rateLimitResetAt = archive.rateLimitResetAt;
+			if (rateLimitResetAt) {
+				rateLimitedUntil = rateLimitResetAt;
+			} else if (!hadFailure) {
+				rateLimitedUntil = null;
 			}
 
 			failureStreak = hadFailure ? failureStreak + 1 : 0;
-			const waitMs = hadFailure ? rateLimitWaitMs(rateLimitResetAt) : randomSleepMs();
+
+			const backlogAfter = queryBacklogSnapshot({ rateLimitedUntil });
+			const waitMs = computeDaemonSleepMs({
+				backlog: backlogAfter,
+				hadFailure,
+				rateLimitResetAt,
+				failureStreak,
+				sleepMinMs: SLEEP_MIN_MS,
+				sleepMaxMs: SLEEP_MAX_MS,
+				backoffBaseMs: BACKOFF_BASE_MS,
+				backoffMaxMs: BACKOFF_MAX_MS
+			});
+
 			sleepUntil = new Date(Date.now() + waitMs).toISOString();
-			phase = 'sleeping';
+			phase = hasAnyBacklog(backlogAfter) ? 'backlog-sleep' : 'sleeping';
 
 			updateJobRun(daemonJobId, {
 				pid: process.pid,
 				phase,
 				sleep_until: sleepUntil,
+				sleep_ms: waitMs,
 				failure_streak: failureStreak,
-				last_archive: archive,
+				last_action: decision.action,
+				last_reason: decision.reason,
+				backlog_after: backlogAfter,
 				in_process: true
 			});
 
-			appendLog(`[daemon] sleeping until ${sleepUntil}`);
+			appendLog(`[daemon] sleeping ${waitMs}ms until ${sleepUntil} (${phase})`);
 			if (!(await waitWithStop(waitMs))) break;
 		} catch (err) {
 			failureStreak++;
 			const message = err instanceof Error ? err.message : String(err);
 			appendLog(`[daemon] error: ${message}`);
+			if (childJobId !== null) {
+				finishJobRun(childJobId, 'failed', {}, message, decision.reason);
+			}
 			phase = 'error';
-			const waitMs = computeBackoffMs();
+			const backlogAfter = queryBacklogSnapshot({ rateLimitedUntil });
+			const waitMs = computeDaemonSleepMs({
+				backlog: backlogAfter,
+				hadFailure: true,
+				failureStreak,
+				sleepMinMs: SLEEP_MIN_MS,
+				sleepMaxMs: SLEEP_MAX_MS,
+				backoffBaseMs: BACKOFF_BASE_MS,
+				backoffMaxMs: BACKOFF_MAX_MS
+			});
 			sleepUntil = new Date(Date.now() + waitMs).toISOString();
 			updateJobRun(daemonJobId, {
 				pid: process.pid,
@@ -181,6 +286,7 @@ async function runLoop(): Promise<void> {
 	phase = 'stopped';
 	sleepUntil = null;
 	startedAt = null;
+	rateLimitedUntil = null;
 }
 
 export function isBackgroundDaemonRunning(): boolean {
@@ -195,7 +301,8 @@ export function getBackgroundDaemonState() {
 		startedAt,
 		pid: running ? process.pid : null,
 		jobId: daemonJobId,
-		failureStreak
+		failureStreak,
+		rateLimitedUntil
 	};
 }
 

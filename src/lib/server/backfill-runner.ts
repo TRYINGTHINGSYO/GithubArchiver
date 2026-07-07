@@ -111,7 +111,7 @@ async function ingestHourForBackfill(hourKey: string, source: BackfillSource) {
 	return { outcome: 'failed' as const, error: result.error, eventsParsed: 0, reposInserted: 0, source: 'gharchive' as const };
 }
 
-export async function runBackfillBatch(jobId?: number): Promise<BackfillRunResult> {
+export async function runBackfillBatch(jobId?: number, maxHours?: number): Promise<BackfillRunResult> {
 	const job = jobId ? getBackfillJob(jobId) : getActiveBackfillJob();
 	if (!job) {
 		throw new Error('No active backfill job');
@@ -119,7 +119,7 @@ export async function runBackfillBatch(jobId?: number): Promise<BackfillRunResul
 
 	updateBackfillJob(job.id, { status: 'running' });
 	resetRunningBackfillHours(job.id);
-	const hours = listPendingBackfillHours(job.id, job.max_hours_per_run);
+	const hours = listPendingBackfillHours(job.id, maxHours ?? job.max_hours_per_run);
 	const result: BackfillRunResult = {
 		jobId: job.id,
 		processed: 0,
