@@ -36,6 +36,7 @@ import {
 	getSearchIngestSummary,
 	listRecentSearchIngestStats
 } from '$lib/server/db/search-ingest';
+import { summarizeDaemonDecisions } from '$lib/server/db/daemon-decisions';
 import { getBackupSummary } from '$lib/server/backup';
 import { fetchGitHubRateLimit } from '$lib/server/github';
 import { defaultHourKey } from '$lib/server/gharchive';
@@ -123,7 +124,8 @@ export async function getAdminStatus() {
 		},
 		rateLimit,
 		latestErrors: listLatestErrors(10),
-		backup: getBackupSummary()
+		backup: getBackupSummary(),
+		daemonDecisions: summarizeDaemonDecisions(24)
 	};
 }
 
