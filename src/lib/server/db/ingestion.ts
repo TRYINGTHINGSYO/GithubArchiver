@@ -98,8 +98,7 @@ function unavailableState(row: IngestionStateRow | undefined): HourUnavailableSt
 	return { unavailable_at: row.unavailable_at, http_status: row.http_status };
 }
 
-/** GH Archive hours that should drive ingest priority (excludes unpublished / cooling-down 404s). */
-export function listMissingHourKeys(limit?: number, nowMs: number = Date.now()): string[] {
+function collectMissingHourKeys(nowMs: number = Date.now()): string[] {
 	const upTo = defaultHourKey(nowMs);
 	const from = ingestRangeStart();
 	const all = listHourKeysBetween(from, upTo);
@@ -110,15 +109,23 @@ export function listMissingHourKeys(limit?: number, nowMs: number = Date.now()):
 		stateByKey.set(row.hour_key, row);
 	}
 
-	const missing = all.filter((key) => {
+	return all.filter((key) => {
 		const row = stateByKey.get(key);
 		if (row && row.unavailable_at == null) return false;
 		if (shouldExcludeHourFromMissingBacklog(key, unavailableState(row), nowMs)) return false;
 		return true;
 	});
+}
 
+/** Full filtered count for daemon priority (no batch slice). */
+export function countMissingGhArchiveHours(nowMs: number = Date.now()): number {
+	return collectMissingHourKeys(nowMs).length;
+}
+
+/** GH Archive hours that should drive ingest priority (excludes unpublished / cooling-down 404s). */
+export function listMissingHourKeys(limit?: number, nowMs: number = Date.now()): string[] {
 	const maxHours = limit ?? Number(process.env.DAEMON_INGEST_MAX_HOURS ?? 6);
-	return missing.slice(0, maxHours);
+	return collectMissingHourKeys(nowMs).slice(0, maxHours);
 }
 
 export function latestIngestedHour(): string | null {

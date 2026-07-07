@@ -127,16 +127,6 @@ export function pickAction(
 	}
 
 	const ranked = rankActions(backlog);
-
-	// Missing GH Archive hours are the most time-sensitive — always beat archive/enrich.
-	if (backlog.missingGhArchiveHours > 0) {
-		return {
-			action: 'ingest',
-			reason: formatReason('ingest', backlog),
-			ranked
-		};
-	}
-
 	const best = ranked[0];
 
 	if (!best || best.score === 0) {

@@ -6,8 +6,13 @@ import {
 	shouldExcludeHourFromMissingBacklog
 } from '$lib/server/gharchive-hours';
 import { getDb } from '$lib/server/db/connection';
-import { listMissingHourKeys, recordHourUnavailable } from '$lib/server/db/ingestion';
-import { scoreAction } from '$lib/server/daemon-planner';
+import {
+	countMissingGhArchiveHours,
+	listMissingHourKeys,
+	recordHourUnavailable
+} from '$lib/server/db/ingestion';
+import { pickAction, scoreAction } from '$lib/server/daemon-planner';
+import { queryBacklogSnapshot } from '$lib/server/daemon-backlog';
 import { setupTestDb, teardownTestDb } from './helpers/db';
 
 describe('gharchive-hours / missing backlog', () => {
@@ -59,11 +64,34 @@ describe('gharchive-hours / missing backlog', () => {
 
 describe('gharchive-hours', () => {
 	beforeEach(() => setupTestDb());
-	afterEach(() => teardownTestDb());
+	afterEach(() => {
+		delete process.env.DAEMON_INGEST_FROM;
+		delete process.env.DAEMON_INGEST_MAX_HOURS;
+		teardownTestDb();
+	});
 
 	it('listMissingHourKeys excludes publish-grace hours even without a prior attempt', () => {
 		const nowMs = Date.parse('2026-07-07T09:30:00.000Z');
 		const missing = listMissingHourKeys(undefined, nowMs);
 		expect(missing).not.toContain('2026-07-07-08');
+	});
+
+	it('countMissingGhArchiveHours returns full filtered count without batch slice', () => {
+		const nowMs = Date.parse('2026-07-07T09:30:00.000Z');
+		process.env.DAEMON_INGEST_MAX_HOURS = '2';
+		process.env.DAEMON_INGEST_FROM = '2026-07-07-00';
+
+		expect(listMissingHourKeys(undefined, nowMs).length).toBeLessThanOrEqual(2);
+		expect(countMissingGhArchiveHours(nowMs)).toBeGreaterThan(2);
+	});
+
+	it('grace-excluded hours yield missingGhArchiveHours=0 in pickAction path', () => {
+		const nowMs = Date.parse('2026-07-07T09:30:00.000Z');
+		process.env.DAEMON_INGEST_FROM = '2026-07-07-08';
+		recordHourUnavailable('2026-07-07-08', 404);
+
+		const snapshot = queryBacklogSnapshot({ nowMs });
+		expect(snapshot.missingGhArchiveHours).toBe(0);
+		expect(pickAction(snapshot, nowMs).action).not.toBe('ingest');
 	});
 });

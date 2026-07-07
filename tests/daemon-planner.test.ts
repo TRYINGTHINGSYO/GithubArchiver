@@ -44,9 +44,24 @@ describe('daemon-planner', () => {
 		expect(scoreAction('archive', backlog)).toBeGreaterThan(scoreAction('enrich', backlog));
 	});
 
-	it('prefers ingest over archive when missing hours exist', () => {
-		const backlog = emptyBacklog({ missingGhArchiveHours: 1, unarchivedSource: 5_000 });
-		expect(scoreAction('archive', backlog)).toBeGreaterThan(scoreAction('enrich', backlog));
+	it('prefers archive over ingest when unarchived backlog dominates missing hours', () => {
+		const backlog = emptyBacklog({ missingGhArchiveHours: 3, unarchivedSource: 5_000 });
+		expect(scoreAction('ingest', backlog)).toBe(153);
+		expect(scoreAction('archive', backlog)).toBe(5140);
+		const decision = pickAction(backlog);
+		expect(decision.action).toBe('archive');
+		expect(decision.reason).toContain('archive');
+	});
+
+	it('prefers ingest over archive when missing hours dominate unarchived backlog', () => {
+		const backlog = emptyBacklog({ missingGhArchiveHours: 3, unarchivedSource: 0 });
+		expect(pickAction(backlog).action).toBe('ingest');
+	});
+
+	it('prefers ingest over archive when missing hours slightly outweigh unarchived backlog', () => {
+		const backlog = emptyBacklog({ missingGhArchiveHours: 3, unarchivedSource: 10 });
+		expect(scoreAction('ingest', backlog)).toBe(153);
+		expect(scoreAction('archive', backlog)).toBe(150);
 		expect(pickAction(backlog).action).toBe('ingest');
 	});
 

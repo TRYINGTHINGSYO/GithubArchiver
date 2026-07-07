@@ -4,7 +4,7 @@
 
 import { getActiveBackfillJob, getBackfillProgress } from '$lib/server/db/backfill';
 import { getDb } from '$lib/server/db/connection';
-import { listMissingHourKeys } from '$lib/server/db/ingestion';
+import { countMissingGhArchiveHours } from '$lib/server/db/ingestion';
 import { countReposDueForRefresh, countUnenriched } from '$lib/server/db/repos';
 import { defaultHourKey } from '$lib/server/gharchive';
 import type { BacklogSnapshot } from '$lib/server/daemon-planner';
@@ -54,9 +54,12 @@ export function countBackfillPendingHours(): number {
 	return getBackfillProgress(job.id).pending;
 }
 
-export function queryBacklogSnapshot(opts: { rateLimitedUntil?: string | null } = {}): BacklogSnapshot {
+export function queryBacklogSnapshot(
+	opts: { rateLimitedUntil?: string | null; nowMs?: number } = {}
+): BacklogSnapshot {
+	const nowMs = opts.nowMs ?? Date.now();
 	return {
-		missingGhArchiveHours: listMissingHourKeys().length,
+		missingGhArchiveHours: countMissingGhArchiveHours(nowMs),
 		currentHourSearchGap: hasCurrentHourSearchGap(),
 		backfillPendingHours: countBackfillPendingHours(),
 		unenriched: countUnenriched(),
