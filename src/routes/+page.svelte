@@ -1,4 +1,5 @@
 <script lang="ts">
+	import RepoListItem from '$lib/components/RepoListItem.svelte';
 	import { timeAgo, formatDateShort } from '$lib/utils';
 	import type { PageData } from './$types';
 
@@ -175,28 +176,7 @@
 	{:else}
 		<ul class="repo-list">
 			{#each data.repos as repo}
-				<li class="repo-item">
-					<div class="repo-dates">
-						<span class="repo-time" title={repo.first_seen_at}>
-							First seen by archive: {timeAgo(repo.first_seen_at)}
-						</span>
-						<span class="repo-time muted" title={repo.created_at}>
-							GitHub created: {timeAgo(repo.created_at)} ({formatDateShort(repo.created_at)})
-						</span>
-					</div>
-					<a class="repo-name" href="/repo/{repo.owner}/{repo.name}">{repo.full_name}</a>
-					<div class="repo-meta">
-						{#if repo.language}<span>{repo.language}</span>{/if}
-						{#if repo.stars !== null}<span>★ {repo.stars}</span>{/if}
-						{#if repo.search_snippet}
-							<span class="search-snippet">{@html repo.search_snippet}</span>
-						{:else if repo.description}
-							<span>{repo.description}</span>
-						{/if}
-						{#if repo.deleted_at}<span class="badge deleted">deleted</span>{/if}
-						{#if !repo.enriched_at}<span class="badge pending">not enriched</span>{/if}
-					</div>
-				</li>
+				<RepoListItem {repo} />
 			{/each}
 		</ul>
 

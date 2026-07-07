@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { timeAgo, formatDateShort } from '$lib/utils';
+	import { handleRepoCardClick, handleRepoCardKeydown, stopCardNavigation } from '$lib/repo-nav';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -200,14 +201,28 @@
 	{:else}
 		<ul class="repo-list birth-list">
 			{#each data.repos as repo}
-				<li class="repo-item">
+				<li
+					class="repo-item repo-item-link"
+					role="link"
+					tabindex="0"
+					aria-label="View {repo.full_name}"
+					onclick={(event) => handleRepoCardClick(event, repo.owner, repo.name)}
+					onkeydown={(event) => handleRepoCardKeydown(event, repo.owner, repo.name)}
+				>
 					<div class="repo-dates">
 						<span class="repo-time" title={repo.first_seen_at}>First seen by archive: {timeAgo(repo.first_seen_at)}</span>
 						<span class="repo-time muted" title={repo.created_at}>GitHub created: {timeAgo(repo.created_at)} ({formatDateShort(repo.created_at)})</span>
 					</div>
-					<a class="repo-name" href="/repo/{repo.owner}/{repo.name}">{repo.full_name}</a>
+					<span class="repo-name">{repo.full_name}</span>
 					{#if repo.download_zip_url}
-						<a class="download-zip" href={repo.download_zip_url} download>Download ZIP</a>
+						<a
+							class="download-zip"
+							href={repo.download_zip_url}
+							download
+							onclick={stopCardNavigation}
+						>
+							Download ZIP
+						</a>
 					{/if}
 					<div class="birth-badges">
 						<span class="badge velocity" class:up={repo.velocity === 'up'} class:down={repo.velocity === 'down'}>{velocityIcon(repo.velocity)}</span>
@@ -341,6 +356,7 @@
 
 	.birth-list .repo-item {
 		padding-bottom: 1rem;
+		cursor: pointer;
 	}
 
 	.download-zip {
