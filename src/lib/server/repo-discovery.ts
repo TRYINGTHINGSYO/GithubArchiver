@@ -4,11 +4,17 @@ import {
 	failSearchIngestStat,
 	startSearchIngestStat
 } from '$lib/server/db/search-ingest';
+import { rollupCategoryDailyIfNeeded } from '$lib/server/db/category-stats';
 import type { DiscoverySource } from '$lib/server/db/types';
 import { appendRepoEvent } from '$lib/server/events';
 import { parseHourKey } from '$lib/server/gharchive';
 import { GitHubRateLimitError, searchRepositories } from '$lib/server/github';
 import type { GitHubSearchRepoItem, GitHubSearchRepoResponse } from '$lib/server/github';
+import {
+	categorySearchQualifier,
+	getUnderrepresentedCategories,
+	pickGapCategoryForHour
+} from '$lib/server/category-discovery';
 
 const SEARCH_PER_PAGE = 100;
 const SEARCH_MAX_PAGES = Number(process.env.SEARCH_MAX_PAGES ?? 10);
@@ -260,6 +266,8 @@ async function ingestTimeWindow(
 }
 
 export async function ingestReposFromSearch(hourKey: string): Promise<SearchIngestResult> {
+	rollupCategoryDailyIfNeeded();
+
 	console.log(`  Search fallback started for ${hourKey}`);
 	const hourStart = parseHourKey(hourKey);
 	const hourEndDate = hourEnd(hourStart);
@@ -281,6 +289,22 @@ export async function ingestReposFromSearch(hourKey: string): Promise<SearchInge
 		}
 	} else {
 		await paginateShard(hourKey, query, 0, null, probe, acc);
+	}
+
+	const gaps = getUnderrepresentedCategories();
+	const gapCategory = pickGapCategoryForHour(hourKey, gaps);
+	const qualifier = gapCategory ? categorySearchQualifier(gapCategory) : null;
+	if (qualifier) {
+		const gapQuery = `${hourCreatedSearchQuery(hourKey)} ${qualifier}`;
+		console.log(`  Gap-aware supplementary search for underrepresented category ${gapCategory}: ${gapQuery}`);
+		try {
+			const gapProbe = await searchRepositories(gapQuery, 1, SEARCH_PER_PAGE);
+			await paginateShard(hourKey, gapQuery, 0, null, gapProbe, acc);
+		} catch (err) {
+			if (err instanceof GitHubRateLimitError) throw err;
+			const message = err instanceof Error ? err.message : String(err);
+			console.warn(`  Gap-aware search skipped: ${message}`);
+		}
 	}
 
 	console.log(

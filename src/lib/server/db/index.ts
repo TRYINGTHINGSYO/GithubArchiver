@@ -16,3 +16,4 @@ export * from './repo-query';
 export * from './search-ingest';
 export * from './repo-history';
 export * from './daemon-decisions';
+export * from './category-stats';
