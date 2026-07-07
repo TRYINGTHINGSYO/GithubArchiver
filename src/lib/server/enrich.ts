@@ -20,6 +20,7 @@ import {
 	recordRepoHistoryChanges,
 	stripHistoryTrackedChanges
 } from '$lib/server/record-repo-history';
+import { applyRepoIntelligence } from '$lib/server/apply-repo-intelligence';
 
 const IMPORTANT_METADATA_FIELDS: (keyof EnrichmentData)[] = [
 	'default_branch',
@@ -241,6 +242,7 @@ export async function enrichRepo(repo: RepoRow): Promise<void> {
 	const metadataDelta = metadataChangesForEvent(repo, enrichment);
 
 	saveEnrichment(repo.id, enrichment);
+	applyRepoIntelligence(repo, enrichment);
 
 	if (wasEnriched && Object.keys(metadataDelta).length > 0) {
 		appendRepoEvent(repo.id, 'metadata_updated', {
@@ -266,6 +268,7 @@ export async function refreshRepo(repo: RepoRow): Promise<{ metricsChanged: bool
 
 	saveRefreshUpdate(repo.id, enrichment);
 	insertMetricSnapshot(repo.id, toMetricInput(enrichment));
+	applyRepoIntelligence(repo, enrichment);
 
 	if (Object.keys(metadataDelta).length > 0) {
 		appendRepoEvent(repo.id, 'metadata_updated', {
