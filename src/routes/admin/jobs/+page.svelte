@@ -87,6 +87,7 @@
 				<th>ID</th>
 				<th>Type</th>
 				<th>Status</th>
+				<th>Reason</th>
 				<th>Started</th>
 				<th>Duration</th>
 			</tr>
@@ -103,6 +104,7 @@
 					<td class="mono">#{job.id}</td>
 					<td class="mono">{job.job_type}</td>
 					<td><span class={statusClass(job.status)}>{job.status}</span></td>
+					<td class="reason-cell" title={job.reason ?? ''}>{job.reason ?? '—'}</td>
 					<td>{timeAgo(job.started_at)}</td>
 					<td>{jobDuration(job.started_at, job.finished_at)}</td>
 				</tr>
@@ -120,6 +122,9 @@
 				<div><dt>Status</dt><dd><span class={statusClass(selected.status)}>{selected.status}</span></dd></div>
 				<div><dt>Started</dt><dd>{selected.started_at}</dd></div>
 				<div><dt>Finished</dt><dd>{selected.finished_at ?? '—'}</dd></div>
+				{#if selected.reason}
+					<div class="reason-full"><dt>Reason</dt><dd>{selected.reason}</dd></div>
+				{/if}
 			</dl>
 			{#if selected.error}
 				<p class="jobs-error">{selected.error}</p>
@@ -201,5 +206,19 @@
 	.jobs-subtitle {
 		font-size: 0.95rem;
 		margin: 1rem 0 0.5rem;
+	}
+
+	.reason-cell {
+		max-width: 220px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: 0.82rem;
+		color: var(--text-muted);
+	}
+
+	.reason-full dd {
+		color: var(--text);
+		line-height: 1.4;
 	}
 </style>
