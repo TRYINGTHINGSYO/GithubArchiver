@@ -23,3 +23,14 @@
 <main class="container">
 	{@render children()}
 </main>
+
+<nav class="mobile-tabbar" aria-label="Primary mobile navigation">
+	<a href="/">Home</a>
+	<a href="/#repository-feed">Feed</a>
+	<a href="/birth-feed">Live</a>
+	{#if data.isAdmin}
+		<a href="/admin">Admin</a>
+	{:else}
+		<a href="/login">Login</a>
+	{/if}
+</nav>

@@ -92,13 +92,19 @@
 	);
 	const pulseMetrics = $derived([
 		{
-			icon: 'A',
+			icon: 'R',
+			label: 'Repositories',
+			value: data.archivePulse.totalRepos.toLocaleString(),
+			detail: 'Discovered and indexed locally'
+		},
+		{
+			icon: 'P',
 			label: data.archivePulse.metadataOnly ? 'Metadata tracked' : 'Preserved repos',
 			value: (data.archivePulse.metadataOnly ? data.archivePulse.totalRepos : data.archivePulse.preservedRepos).toLocaleString(),
 			detail: data.archivePulse.metadataOnly ? 'Artifact storage disabled' : `${preservationRate}% of discovered repos`
 		},
 		{
-			icon: 'R',
+			icon: 'M',
 			label: 'README saved',
 			value: data.archivePulse.readmeSaved.toLocaleString(),
 			detail: data.archivePulse.metadataOnly ? 'Disabled by METADATA_ONLY=1' : `${data.archivePulse.readmeChanges.toLocaleString()} README change events`
@@ -165,31 +171,11 @@
 	<title>GithubArchive+ - {feedTitle}</title>
 </svelte:head>
 
-<section class="product-hero" aria-labelledby="home-title">
-	<div class="hero-copy">
-		<p class="eyebrow">Repository intelligence and preservation</p>
-		<h1 id="home-title">GitHub Archive+ remembers what GitHub forgets.</h1>
-		<p>
-			Preserve repositories, understand their evolution, and inspect the evidence behind every insight.
-		</p>
-		<div class="hero-actions">
-			<a class="button" href="#repository-feed">Browse Archive</a>
-			<a class="button-secondary" href="/admin">Archive Repository</a>
-		</div>
-	</div>
-	<div class="hero-panel" aria-label="System summary">
-		<span>Archive Pulse</span>
-		<strong>{data.archivePulse.metadataOnly ? data.archivePulse.totalRepos.toLocaleString() : data.archivePulse.preservedRepos.toLocaleString()}</strong>
-		<p>{data.archivePulse.metadataOnly ? 'repositories tracked in metadata-only mode' : 'repositories with preserved local evidence'}</p>
-		<a href={buildUrl({ feed: 'recently_archived', page: 1 })}>View preserved repos</a>
-	</div>
-</section>
-
-<section class="section-block" aria-labelledby="pulse-title">
+<section class="section-block archive-inventory" aria-labelledby="pulse-title">
 	<div class="section-heading">
 		<div>
 			<p class="eyebrow">Archive Pulse</p>
-			<h2 id="pulse-title">What the archive has protected</h2>
+			<h1 id="pulse-title">What GitHubArchive+ has so far</h1>
 		</div>
 		<a href="/admin" class="button-ghost">System health</a>
 	</div>
@@ -204,6 +190,26 @@
 				</div>
 			</article>
 		{/each}
+	</div>
+</section>
+
+<section class="product-hero" aria-labelledby="home-title">
+	<div class="hero-copy">
+		<p class="eyebrow">Repository intelligence and preservation</p>
+		<h2 id="home-title">GitHub Archive+ remembers what GitHub forgets.</h2>
+		<p>
+			Preserve repositories, understand their evolution, and inspect the evidence behind every insight.
+		</p>
+		<div class="hero-actions">
+			<a class="button" href="#repository-feed">Browse Archive</a>
+			<a class="button-secondary" href="/admin">Archive Repository</a>
+		</div>
+	</div>
+	<div class="hero-panel" aria-label="System summary">
+		<span>Archive Pulse</span>
+		<strong>{data.archivePulse.metadataOnly ? data.archivePulse.totalRepos.toLocaleString() : data.archivePulse.preservedRepos.toLocaleString()}</strong>
+		<p>{data.archivePulse.metadataOnly ? 'repositories tracked in metadata-only mode' : 'repositories with preserved local evidence'}</p>
+		<a href={buildUrl({ feed: 'recently_archived', page: 1 })}>View preserved repos</a>
 	</div>
 </section>
 
@@ -412,12 +418,16 @@
 		margin-bottom: 2rem;
 	}
 
+	.archive-inventory {
+		padding-top: 1.25rem;
+	}
+
 	.product-hero {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) 320px;
 		gap: 1.25rem;
 		align-items: stretch;
-		padding: 3rem 0 1rem;
+		padding: 1rem 0;
 	}
 
 	.hero-copy {
@@ -435,7 +445,7 @@
 		text-transform: uppercase;
 	}
 
-	.product-hero h1 {
+	.product-hero h2 {
 		max-width: 830px;
 		margin: 0;
 		font-size: clamp(2.5rem, 6vw, 5rem);
@@ -493,6 +503,12 @@
 		margin-bottom: 1rem;
 	}
 
+	.archive-inventory .section-heading h1 {
+		margin: 0.15rem 0 0;
+		font-size: clamp(1.75rem, 4vw, 3rem);
+		line-height: 1;
+	}
+
 	.section-heading h2,
 	.developer-tools h2 {
 		margin: 0.15rem 0 0;
@@ -501,7 +517,7 @@
 
 	.pulse-grid {
 		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
+		grid-template-columns: repeat(5, minmax(0, 1fr));
 		gap: 0.85rem;
 	}
 
@@ -679,9 +695,12 @@
 
 	@media (max-width: 920px) {
 		.product-hero,
-		.pulse-grid,
 		.featured-grid {
 			grid-template-columns: 1fr 1fr;
+		}
+
+		.pulse-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 
 		.hero-panel {
@@ -704,7 +723,165 @@
 		}
 
 		.product-hero {
-			padding-top: 1.2rem;
+			padding-top: 0;
+		}
+	}
+
+	@media (max-width: 720px) {
+		.archive-inventory {
+			margin: -0.3rem -0.25rem 1rem;
+			padding-top: 0.25rem;
+		}
+
+		.archive-inventory .section-heading {
+			display: grid;
+			gap: 0.75rem;
+			margin-bottom: 0.8rem;
+		}
+
+		.archive-inventory .section-heading h1 {
+			font-size: 1.55rem;
+			line-height: 1.05;
+		}
+
+		.archive-inventory .button-ghost {
+			justify-self: stretch;
+			min-height: 2.5rem;
+		}
+
+		.pulse-grid {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 0.55rem;
+		}
+
+		.pulse-card {
+			grid-template-columns: 36px minmax(0, 1fr) auto;
+			align-items: center;
+			gap: 0.7rem;
+			padding: 0.72rem;
+			border-radius: 8px;
+			box-shadow: none;
+		}
+
+		.pulse-card div {
+			display: contents;
+		}
+
+		.pulse-card span:not(.metric-icon) {
+			font-size: 0.9rem;
+			font-weight: 750;
+			color: var(--text);
+		}
+
+		.pulse-card strong {
+			grid-column: 3;
+			grid-row: 1;
+			font-size: 1.2rem;
+			text-align: right;
+			white-space: nowrap;
+		}
+
+		.pulse-card small {
+			grid-column: 2 / 4;
+			grid-row: 2;
+			font-size: 0.75rem;
+			line-height: 1.25;
+		}
+
+		.metric-icon {
+			width: 32px;
+			height: 32px;
+			grid-row: 1 / 3;
+		}
+
+		.product-hero {
+			margin-top: 0.75rem;
+			padding: 0.85rem;
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+		}
+
+		.product-hero h2 {
+			font-size: 1.75rem;
+			line-height: 1.05;
+		}
+
+		.product-hero p {
+			font-size: 0.95rem;
+		}
+
+		.hero-panel {
+			display: none;
+		}
+
+		.hero-actions {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 0.55rem;
+		}
+
+		.hero-actions .button,
+		.hero-actions .button-secondary {
+			min-height: 2.65rem;
+			padding: 0.5rem;
+			font-size: 0.84rem;
+		}
+
+		.featured-grid {
+			display: flex;
+			overflow-x: auto;
+			margin: 0 -1rem;
+			padding: 0 1rem 0.35rem;
+			scroll-snap-type: x mandatory;
+		}
+
+		.featured-card {
+			min-width: 82%;
+			scroll-snap-align: start;
+		}
+
+		.activity-block {
+			display: none;
+		}
+
+		.search-panel {
+			position: sticky;
+			top: 58px;
+			z-index: 25;
+			margin: 0 -0.25rem 0.75rem;
+			padding: 0.65rem;
+			border-radius: 8px;
+			background: color-mix(in srgb, var(--bg-subtle) 96%, transparent);
+			backdrop-filter: blur(14px);
+		}
+
+		.feed-nav {
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			margin: 0 -1rem 0.8rem;
+			padding: 0 1rem 0.2rem;
+		}
+
+		.feed-link {
+			flex: 0 0 auto;
+			min-height: 2.25rem;
+			display: inline-flex;
+			align-items: center;
+		}
+
+		.feed-tools {
+			display: grid;
+			margin: 0.75rem 0;
+		}
+
+		.feed-tools .button-ghost {
+			width: 100%;
+		}
+
+		.developer-tools {
+			margin-bottom: 5rem;
 		}
 	}
 </style>
