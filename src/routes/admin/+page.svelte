@@ -9,6 +9,9 @@
 	let actionMsg = $state('');
 	let actionError = $state(false);
 	let actionLoading = $state<string | null>(null);
+	let activeAdminTab = $state<
+		'overview' | 'workers' | 'storage' | 'jobs' | 'logs' | 'health' | 'danger'
+	>('overview');
 	let backfillStart = $state('');
 	let backfillEnd = $state('');
 	let backfillSource = $state('auto');
@@ -27,6 +30,15 @@
 		}
 	);
 	const workerTypes = ['daemon', 'ingest', 'enrich', 'refresh', 'archive', 'pipeline', 'backup', 'backfill'] as const;
+	const adminTabs = [
+		{ id: 'overview', label: 'Overview' },
+		{ id: 'workers', label: 'Workers' },
+		{ id: 'storage', label: 'Storage' },
+		{ id: 'jobs', label: 'Jobs' },
+		{ id: 'logs', label: 'Logs' },
+		{ id: 'health', label: 'Health' },
+		{ id: 'danger', label: 'Danger Zone' }
+	] as const;
 
 	const backfillEstimate = $derived.by(() => {
 		if (!backfillStart || !backfillEnd) return null;
@@ -119,11 +131,55 @@
 			return json;
 		}
 	}
+
+	function healthTone(value: number, warnAt: number): 'good' | 'warn' {
+		return value > warnAt ? 'warn' : 'good';
+	}
+
+	function humanError(message: string): { title: string; detail: string; actions: string[] } {
+		if (/database or disk is full|SQLITE_FULL|ENOSPC|no space left/i.test(message)) {
+			return {
+				title: 'Storage Full',
+				detail: 'Archive paused to protect preserved data.',
+				actions: ['Clean regenerable ZIP exports', 'Remove orphaned snapshots', 'Increase storage']
+			};
+		}
+		if (/rate limit/i.test(message)) {
+			return {
+				title: 'GitHub Rate Limit',
+				detail: 'GitHub temporarily slowed the archive worker.',
+				actions: ['Wait for reset', 'Reduce worker concurrency', 'Confirm token health']
+			};
+		}
+		if (/orphaned/i.test(message)) {
+			return {
+				title: 'Interrupted Job',
+				detail: 'The process restarted before the job could finish.',
+				actions: ['Resume the worker', 'Check recent logs', 'Review job history']
+			};
+		}
+		return {
+			title: 'Worker Error',
+			detail: message,
+			actions: ['Open job history', 'Check health', 'Review live logs']
+		};
+	}
 </script>
 
 <svelte:head>
 	<title>Admin — GithubArchive+</title>
 </svelte:head>
+
+<section class="admin-hero">
+	<div>
+		<p class="admin-kicker">Operations dashboard</p>
+		<h1>Admin Control Center</h1>
+		<p class="admin-lead">
+			Run ingest, enrichment, backups, archive workers, and recovery tasks without opening a terminal.
+		</p>
+	</div>
+	<a class="button-secondary" href="/admin/jobs">Job history</a>
+</section>
 
 <h1>Admin Control Center</h1>
 <p class="admin-lead">
@@ -136,6 +192,50 @@
 		<p class="admin-meta">Check that the database exists (<code>npm run db:init</code>) and retry.</p>
 	</div>
 {:else if status}
+<section class="health-banner" aria-label="System Health">
+	<div>
+		<p class="admin-kicker">System Health</p>
+		<h2>Archive operations</h2>
+	</div>
+	<div class="health-pills">
+		<span class={daemon.running || status.backgroundWorker?.running ? 'good' : 'warn'}>
+			{daemon.running || status.backgroundWorker?.running ? 'Archive worker running' : 'Archive worker stopped'}
+		</span>
+		<span class={healthTone(status.archive.indexedBytes, 4_500_000_000)}>
+			{healthTone(status.archive.indexedBytes, 4_500_000_000) === 'warn' ? 'Storage needs attention' : 'Disk healthy'}
+		</span>
+		<span class={status.stats.unenrichedRepos > 0 ? 'warn' : 'good'}>
+			{status.stats.unenrichedRepos.toLocaleString()} repositories waiting
+		</span>
+		<span class={status.rateLimit && status.rateLimit.remaining < 100 ? 'warn' : 'good'}>
+			{status.rateLimit ? 'GitHub rate limit healthy' : 'GitHub rate limit unknown'}
+		</span>
+	</div>
+	<p class="admin-meta">
+		Recommended action:
+		{#if status.stats.unenrichedRepos > 0}
+			Enrich and archive backlog from Workers.
+		{:else if !daemon.running && !status.backgroundWorker?.running}
+			Start Auto-Scan when you are ready to collect.
+		{:else}
+			Archive is healthy. Monitor jobs and storage.
+		{/if}
+	</p>
+</section>
+
+<nav class="admin-tabs" aria-label="Admin sections">
+	{#each adminTabs as tab}
+		<button
+			type="button"
+			class:active={activeAdminTab === tab.id}
+			onclick={() => (activeAdminTab = tab.id)}
+		>
+			{tab.label}
+		</button>
+	{/each}
+</nav>
+
+<div class={`admin-tab-panel tab-${activeAdminTab}`}>
 <section class="detail-section">
 	<h2 class="section-title">Auto-scan</h2>
 	<p class="admin-meta">Continuous ingest → enrich → refresh → archive loop. Starts automatically on Railway.</p>
@@ -630,13 +730,150 @@
 	{/if}
 </section>
 
+</div>
+
 <p class="api-hint"><a href="/">← Back to repos</a></p>
 {/if}
 
 <style>
+	.admin-hero,
+	.health-banner {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		align-items: center;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+		padding: 1rem;
+		margin-bottom: 1rem;
+		box-shadow: var(--shadow-soft);
+	}
+
+	.admin-hero + h1,
+	.admin-hero + h1 + .admin-lead {
+		display: none;
+	}
+
+	.admin-kicker {
+		margin: 0;
+		color: var(--green);
+		font-size: 0.74rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.admin-hero h1,
+	.health-banner h2 {
+		margin: 0.15rem 0 0;
+	}
+
 	.admin-lead {
 		color: var(--text-muted);
-		margin-top: -0.5rem;
+		margin: 0.35rem 0 0;
+		max-width: 66ch;
+	}
+
+	.health-banner {
+		display: grid;
+		grid-template-columns: 220px minmax(0, 1fr);
+		align-items: start;
+		box-shadow: none;
+	}
+
+	.health-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.55rem;
+	}
+
+	.health-pills span {
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		padding: 0.22rem 0.6rem;
+		font-size: 0.82rem;
+		font-weight: 700;
+	}
+
+	.health-pills .good {
+		border-color: color-mix(in srgb, var(--green) 62%, var(--border));
+		color: var(--green);
+	}
+
+	.health-pills .warn {
+		border-color: color-mix(in srgb, var(--orange) 62%, var(--border));
+		color: var(--orange);
+	}
+
+	.admin-tabs {
+		position: sticky;
+		top: 66px;
+		z-index: 30;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		margin: 1rem 0;
+		padding: 0.55rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: color-mix(in srgb, var(--bg) 92%, transparent);
+		backdrop-filter: blur(14px);
+	}
+
+	.admin-tabs button {
+		border: 1px solid transparent;
+		border-radius: 999px;
+		background: transparent;
+		color: var(--text-muted);
+		padding: 0.42rem 0.75rem;
+		font: inherit;
+		font-size: 0.85rem;
+		font-weight: 800;
+		cursor: pointer;
+	}
+
+	.admin-tabs button.active {
+		border-color: var(--accent);
+		background: var(--accent-dim);
+		color: var(--accent);
+	}
+
+	.admin-tab-panel > .detail-section {
+		display: none;
+	}
+
+	.tab-overview > .detail-section:nth-of-type(1),
+	.tab-overview > .detail-section:nth-of-type(2),
+	.tab-overview > .detail-section:nth-of-type(3),
+	.tab-overview > .detail-section:nth-of-type(6),
+	.tab-workers > .detail-section:nth-of-type(4),
+	.tab-workers > .detail-section:nth-of-type(5),
+	.tab-workers > .detail-section:nth-of-type(8),
+	.tab-workers > .detail-section:nth-of-type(9),
+	.tab-workers > .detail-section:nth-of-type(10),
+	.tab-workers > .detail-section:nth-of-type(11),
+	.tab-storage > .detail-section:nth-of-type(12),
+	.tab-storage > .detail-section:nth-of-type(13),
+	.tab-jobs > .detail-section:nth-of-type(15),
+	.tab-logs > .detail-section:nth-of-type(7),
+	.tab-logs > .detail-section:nth-of-type(14),
+	.tab-logs > .detail-section:nth-of-type(15),
+	.tab-health > .detail-section:nth-of-type(6),
+	.tab-health > .detail-section:nth-of-type(8),
+	.tab-health > .detail-section:nth-of-type(9),
+	.tab-health > .detail-section:nth-of-type(14),
+	.tab-danger > .detail-section:nth-of-type(12),
+	.tab-danger > .detail-section:nth-of-type(13),
+	.tab-danger > .detail-section:nth-of-type(14) {
+		display: block;
+	}
+
+	.detail-section {
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+		padding: 1rem;
 	}
 
 	.admin-meta {
@@ -727,8 +964,11 @@
 	}
 
 	.admin-errors li {
-		padding: 0.35rem 0;
-		border-bottom: 1px solid var(--border);
+		padding: 0.75rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		margin-bottom: 0.6rem;
+		background: var(--bg-subtle);
 	}
 
 	.admin-query {
@@ -736,5 +976,17 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	@media (max-width: 760px) {
+		.admin-hero,
+		.health-banner {
+			display: grid;
+			grid-template-columns: 1fr;
+		}
+
+		.admin-tabs {
+			position: static;
+		}
 	}
 </style>

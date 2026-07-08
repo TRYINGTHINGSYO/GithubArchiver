@@ -22,6 +22,13 @@ import type { SourceAnalysis } from '$lib/server/source-archive';
 import { getRepoZipDownloadUrl } from '$lib/server/source-zip';
 import { momentTag, velocityIndicator } from '$lib/server/intelligence';
 import {
+	evidenceGroupAnchor,
+	groupEvidenceReferences,
+	type EvidenceCategory,
+	type EvidenceExplorerGroup,
+	type EvidenceReference
+} from '$lib/evidence';
+import {
 	eventLabel,
 	listRepoEvents,
 	parseEventPayload,
@@ -314,6 +321,8 @@ export interface ArchiveEvidenceItem {
 	value: string;
 	detail: string;
 	status: 'saved' | 'partial' | 'missing';
+	evidenceIds: string[];
+	evidenceTarget: string;
 }
 
 export interface ArchiveScoreFactor {
@@ -321,6 +330,8 @@ export interface ArchiveScoreFactor {
 	weight: number;
 	earned: number;
 	detail: string;
+	evidenceIds: string[];
+	evidenceTarget: string;
 }
 
 export interface ArchiveScore {
@@ -335,6 +346,8 @@ export interface RecoverabilityItem {
 	label: string;
 	score: number;
 	detail: string;
+	evidenceIds: string[];
+	evidenceTarget: string;
 }
 
 export interface RecoverabilityReport {
@@ -347,6 +360,8 @@ export interface ArchiveStoryStep {
 	date: string;
 	detail: string;
 	tone: 'neutral' | 'saved' | 'warning';
+	evidenceIds: string[];
+	evidenceTarget: string;
 }
 
 export interface RepositoryIntelligenceReport {
@@ -360,6 +375,8 @@ export interface RepositoryIntelligenceReport {
 	story: string[];
 	storyTimeline: ArchiveStoryStep[];
 	storyTakeaway: string[];
+	evidenceReferences: EvidenceReference[];
+	evidenceGroups: EvidenceExplorerGroup[];
 }
 
 export interface MergedTimelineItem {
@@ -727,6 +744,24 @@ function durationBetween(from: string, to: string): string {
 	return `${days} day${days === 1 ? '' : 's'}`;
 }
 
+function evidenceIdsFor(references: EvidenceReference[], categories: EvidenceCategory[]): string[] {
+	const allowed = new Set(categories);
+	return references
+		.filter((reference) => allowed.has(reference.category))
+		.map((reference) => reference.id);
+}
+
+function evidenceMeta(
+	references: EvidenceReference[],
+	primary: EvidenceCategory,
+	categories: EvidenceCategory[] = [primary]
+): { evidenceIds: string[]; evidenceTarget: string } {
+	return {
+		evidenceIds: evidenceIdsFor(references, categories),
+		evidenceTarget: evidenceGroupAnchor(primary)
+	};
+}
+
 function historyCounts(repoId: number): { commits: number; licenses: number; topics: number } {
 	const db = getDb();
 	return {
@@ -746,6 +781,135 @@ function currentStatus(repo: RepoSummary, localArchive: LocalArchiveSummary): st
 	return 'Observed';
 }
 
+function buildEvidenceReferences(
+	repo: RepoSummary,
+	snapshots: ArchiveSnapshot[],
+	releases: ReleaseWithAssets[],
+	events: TimelineEvent[],
+	metrics: MetricSnapshotRow[],
+	technologies: TechnologyInsight[]
+): EvidenceReference[] {
+	const references: EvidenceReference[] = [];
+
+	for (const snapshot of snapshots) {
+		if (snapshot.snapshot_type === 'readme') {
+			references.push({
+				id: `snapshot-readme-${snapshot.id}`,
+				category: 'readme',
+				title: `README snapshot #${snapshot.id}`,
+				description: `${formatBytesCompact(snapshot.file_size)} captured locally.`,
+				confidence: 'direct',
+				target: snapshot.download_url,
+				timestamp: snapshot.archived_at,
+				artifactId: `snapshot:${snapshot.id}`
+			});
+		} else {
+			const isZip = snapshot.snapshot_type === 'zip';
+			references.push({
+				id: `snapshot-${snapshot.snapshot_type}-${snapshot.id}`,
+				category: 'source',
+				title: isZip ? `ZIP export snapshot #${snapshot.id}` : `Source snapshot #${snapshot.id}`,
+				description: `${formatBytesCompact(snapshot.file_size)} ${isZip ? 'export' : 'source archive'} captured locally.`,
+				confidence: 'direct',
+				target: snapshot.download_url,
+				timestamp: snapshot.archived_at,
+				artifactId: `snapshot:${snapshot.id}`
+			});
+		}
+	}
+
+	for (const release of releases) {
+		references.push({
+			id: `release-${release.id}`,
+			category: 'release',
+			title: release.name || release.tag,
+			description: `${release.assets.length.toLocaleString()} asset(s), tag ${release.tag}.`,
+			confidence: 'direct',
+			target: '#releases',
+			timestamp: release.published_at ?? release.first_seen_at,
+			artifactId: `release:${release.id}`
+		});
+	}
+
+	for (const event of events) {
+		references.push({
+			id: `event-${event.id}`,
+			category: 'timeline',
+			title: event.label,
+			description: event.event_type,
+			confidence: 'direct',
+			target: '#timeline',
+			timestamp: event.event_time,
+			artifactId: `event:${event.id}`
+		});
+	}
+
+	for (const metric of metrics) {
+		references.push({
+			id: `metric-${metric.id}`,
+			category: 'metric',
+			title: 'Metric observation',
+			description: `${metric.stars.toLocaleString()} stars, ${metric.forks.toLocaleString()} forks, ${metric.open_issues.toLocaleString()} open issue(s).`,
+			confidence: 'direct',
+			target: '#signal',
+			timestamp: metric.captured_at,
+			artifactId: `metric:${metric.id}`
+		});
+	}
+
+	references.push(
+		{
+			id: 'derived-archive-score',
+			category: 'derived',
+			title: 'Archive Score',
+			description: 'Deterministic score derived from preserved evidence, releases, events, and metrics.',
+			confidence: 'derived',
+			target: '#archive-score'
+		},
+		{
+			id: 'derived-recoverability',
+			category: 'derived',
+			title: 'Recoverability',
+			description: 'Deterministic recoverability estimate derived from preserved artifacts and history coverage.',
+			confidence: 'derived',
+			target: '#recoverability'
+		},
+		{
+			id: 'derived-archive-story',
+			category: 'derived',
+			title: 'Archive Story',
+			description: 'Narrative assembled from repository creation, discovery, snapshots, releases, and upstream status.',
+			confidence: 'derived',
+			target: '#archive-story'
+		},
+		{
+			id: 'derived-current-status',
+			category: 'derived',
+			title: 'Current archive status',
+			description: currentStatus(repo, buildLocalArchiveSummary(snapshots)),
+			confidence: 'derived',
+			target: '#intelligence'
+		}
+	);
+
+	if (technologies.length) {
+		references.push({
+			id: 'derived-technology-context',
+			category: 'derived',
+			title: 'Technology context',
+			description: technologies.slice(0, 6).map((tech) => tech.name).join(', '),
+			confidence: 'derived',
+			target: '#intelligence'
+		});
+	}
+
+	return references.sort((a, b) => {
+		const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+		const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+		return bTime - aTime || a.title.localeCompare(b.title);
+	});
+}
+
 function buildArchiveEvidence(
 	latestReadme: ArchiveSnapshot | null,
 	latestSource: ArchiveSnapshot | null,
@@ -753,7 +917,8 @@ function buildArchiveEvidence(
 	releases: ReleaseWithAssets[],
 	snapshots: ArchiveSnapshot[],
 	events: TimelineEvent[],
-	repo: RepoSummary
+	repo: RepoSummary,
+	evidenceReferences: EvidenceReference[]
 ): ArchiveEvidenceItem[] {
 	const eventTimes = events.map((event) => event.event_time);
 	const archiveTimes = snapshots.map((snapshot) => snapshot.archived_at);
@@ -766,13 +931,15 @@ function buildArchiveEvidence(
 			label: 'README',
 			value: latestReadme ? 'Captured' : 'Missing',
 			detail: latestReadme ? `${latestReadme.archived_at.slice(0, 10)} · ${formatBytesCompact(latestReadme.file_size)}` : 'No README snapshot saved yet',
-			status: latestReadme ? 'saved' : 'missing'
+			status: latestReadme ? 'saved' : 'missing',
+			...evidenceMeta(evidenceReferences, 'readme')
 		},
 		{
 			label: 'Source',
 			value: latestSource ? 'Captured' : 'Missing',
 			detail: latestSource ? `${latestSource.archived_at.slice(0, 10)} · ${formatBytesCompact(latestSource.file_size)}` : 'No source snapshot saved yet',
-			status: latestSource ? 'saved' : 'missing'
+			status: latestSource ? 'saved' : 'missing',
+			...evidenceMeta(evidenceReferences, 'source')
 		},
 		{
 			label: 'ZIP',
@@ -782,25 +949,29 @@ function buildArchiveEvidence(
 				: latestSource
 					? 'Generated from saved source when downloaded'
 					: 'ZIP export will appear after source archival',
-			status: latestZip ? 'saved' : latestSource ? 'partial' : 'missing'
+			status: latestZip ? 'saved' : latestSource ? 'partial' : 'missing',
+			...evidenceMeta(evidenceReferences, 'source')
 		},
 		{
 			label: 'Releases',
 			value: releases.length.toLocaleString(),
 			detail: releaseAssets ? `${releaseAssets.toLocaleString()} release asset(s) indexed` : 'Release/tag records saved when available',
-			status: releases.length ? 'saved' : 'partial'
+			status: releases.length ? 'saved' : 'partial',
+			...evidenceMeta(evidenceReferences, 'release')
 		},
 		{
 			label: 'Snapshots',
 			value: snapshots.filter((snapshot) => snapshot.snapshot_type !== 'zip').length.toLocaleString(),
 			detail: `${formatBytesCompact(snapshots.reduce((sum, snapshot) => sum + snapshot.file_size, 0))} stored locally`,
-			status: snapshots.length ? 'saved' : 'missing'
+			status: snapshots.length ? 'saved' : 'missing',
+			...evidenceMeta(evidenceReferences, 'source', ['readme', 'source'])
 		},
 		{
 			label: 'History Coverage',
 			value: `${coverageDays.toLocaleString()} day${coverageDays === 1 ? '' : 's'}`,
 			detail: `${events.length.toLocaleString()} event(s) reconstructed`,
-			status: events.length >= 5 ? 'saved' : events.length ? 'partial' : 'missing'
+			status: events.length >= 5 ? 'saved' : events.length ? 'partial' : 'missing',
+			...evidenceMeta(evidenceReferences, 'timeline')
 		}
 	];
 }
@@ -812,7 +983,8 @@ function buildArchiveScore(
 	events: TimelineEvent[],
 	metrics: MetricSnapshotRow[],
 	history: { commits: number; licenses: number; topics: number },
-	technologies: TechnologyInsight[]
+	technologies: TechnologyInsight[],
+	evidenceReferences: EvidenceReference[]
 ): ArchiveScore {
 	const hasSource = localArchive.source_archived;
 	const hasReadme = localArchive.readme_archived;
@@ -827,15 +999,15 @@ function buildArchiveScore(
 	const deletedButPreserved = Boolean(repo.deleted_at && localArchive.total_snapshots > 0);
 
 	const factors: ArchiveScoreFactor[] = [
-		{ label: 'README archived', weight: 10, earned: hasReadme ? 10 : 0, detail: hasReadme ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot yet' },
-		{ label: 'Source archived', weight: 25, earned: hasSource ? 25 : 0, detail: hasSource ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot yet' },
-		{ label: 'Releases archived', weight: 10, earned: hasReleases ? 10 : 0, detail: hasReleases ? `${releases.length} release/tag record(s)` : 'No release records yet' },
-		{ label: 'Commit history observed', weight: 10, earned: hasCommitHistory ? 10 : 0, detail: hasCommitHistory ? `${history.commits} commit observation(s)` : 'No commit history observations yet' },
-		{ label: 'Timeline depth', weight: 10, earned: timelineDepth >= 8 ? 10 : timelineDepth >= 3 ? 5 : 0, detail: `${timelineDepth} timeline evidence point(s)` },
-		{ label: 'Feature extraction', weight: 10, earned: hasFeatureExtraction ? 10 : 0, detail: hasFeatureExtraction ? 'Source-derived features detected' : 'Persistent feature scan not available yet' },
-		{ label: 'Dependency extraction', weight: 10, earned: hasDependencyExtraction ? 10 : 0, detail: 'Dependency scan is planned for v13' },
-		{ label: 'Active development', weight: 10, earned: activeDevelopment ? 10 : metrics.length >= 2 ? 5 : 0, detail: activeDevelopment ? 'Recent push activity observed' : 'No recent push activity observed' },
-		{ label: 'Deleted but preserved', weight: 5, earned: deletedButPreserved ? 5 : 0, detail: deletedButPreserved ? 'Upstream deleted; local archive remains' : 'Repo still exists upstream or no local archive yet' }
+		{ label: 'README archived', weight: 10, earned: hasReadme ? 10 : 0, detail: hasReadme ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot yet', ...evidenceMeta(evidenceReferences, 'readme') },
+		{ label: 'Source archived', weight: 25, earned: hasSource ? 25 : 0, detail: hasSource ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot yet', ...evidenceMeta(evidenceReferences, 'source') },
+		{ label: 'Releases archived', weight: 10, earned: hasReleases ? 10 : 0, detail: hasReleases ? `${releases.length} release/tag record(s)` : 'No release records yet', ...evidenceMeta(evidenceReferences, 'release') },
+		{ label: 'Commit history observed', weight: 10, earned: hasCommitHistory ? 10 : 0, detail: hasCommitHistory ? `${history.commits} commit observation(s)` : 'No commit history observations yet', ...evidenceMeta(evidenceReferences, 'timeline') },
+		{ label: 'Timeline depth', weight: 10, earned: timelineDepth >= 8 ? 10 : timelineDepth >= 3 ? 5 : 0, detail: `${timelineDepth} timeline evidence point(s)`, ...evidenceMeta(evidenceReferences, 'timeline', ['timeline', 'readme', 'source', 'release']) },
+		{ label: 'Feature extraction', weight: 10, earned: hasFeatureExtraction ? 10 : 0, detail: hasFeatureExtraction ? 'Source-derived features detected' : 'Persistent feature scan not available yet', ...evidenceMeta(evidenceReferences, 'source', ['source', 'derived']) },
+		{ label: 'Dependency extraction', weight: 10, earned: hasDependencyExtraction ? 10 : 0, detail: 'Dependency scan is planned for v13', ...evidenceMeta(evidenceReferences, 'derived') },
+		{ label: 'Active development', weight: 10, earned: activeDevelopment ? 10 : metrics.length >= 2 ? 5 : 0, detail: activeDevelopment ? 'Recent push activity observed' : 'No recent push activity observed', ...evidenceMeta(evidenceReferences, 'metric', ['metric', 'timeline']) },
+		{ label: 'Deleted but preserved', weight: 5, earned: deletedButPreserved ? 5 : 0, detail: deletedButPreserved ? 'Upstream deleted; local archive remains' : 'Repo still exists upstream or no local archive yet', ...evidenceMeta(evidenceReferences, 'timeline', ['timeline', 'readme', 'source']) }
 	];
 	const score = factors.reduce((sum, factor) => sum + factor.earned, 0);
 	const reasons = factors.filter((factor) => factor.earned > 0).map((factor) => factor.detail);
@@ -850,19 +1022,20 @@ function buildRecoverability(
 	localArchive: LocalArchiveSummary,
 	releases: ReleaseWithAssets[],
 	events: TimelineEvent[],
-	history: { commits: number; licenses: number; topics: number }
+	history: { commits: number; licenses: number; topics: number },
+	evidenceReferences: EvidenceReference[]
 ): RecoverabilityReport {
 	const metadataScore = repo.is_enriched ? 100 : 35;
 	const timelineScore = Math.min(100, Math.round((events.length / 12) * 100));
 	const commitScore = Math.min(100, history.commits * 25);
 	const historyScore = Math.min(100, history.licenses * 35 + history.topics * 35 + commitScore * 0.3);
 	const items: RecoverabilityItem[] = [
-		{ label: 'README', score: localArchive.readme_archived ? 100 : 0, detail: localArchive.readme_archived ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot' },
-		{ label: 'Source', score: localArchive.source_archived ? 100 : 0, detail: localArchive.source_archived ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot' },
-		{ label: 'Releases', score: releases.length ? 100 : 20, detail: releases.length ? `${releases.length} release/tag record(s)` : 'No release records found' },
-		{ label: 'Metadata', score: metadataScore, detail: repo.is_enriched ? 'GitHub metadata enriched' : 'Only discovery metadata available' },
-		{ label: 'History', score: Math.round(Math.max(timelineScore, historyScore)), detail: `${events.length} event(s), ${history.commits} commit observation(s)` },
-		{ label: 'Dependencies', score: 0, detail: 'Dependency extraction is not implemented yet' }
+		{ label: 'README', score: localArchive.readme_archived ? 100 : 0, detail: localArchive.readme_archived ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot', ...evidenceMeta(evidenceReferences, 'readme') },
+		{ label: 'Source', score: localArchive.source_archived ? 100 : 0, detail: localArchive.source_archived ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot', ...evidenceMeta(evidenceReferences, 'source') },
+		{ label: 'Releases', score: releases.length ? 100 : 20, detail: releases.length ? `${releases.length} release/tag record(s)` : 'No release records found', ...evidenceMeta(evidenceReferences, 'release') },
+		{ label: 'Metadata', score: metadataScore, detail: repo.is_enriched ? 'GitHub metadata enriched' : 'Only discovery metadata available', ...evidenceMeta(evidenceReferences, 'derived') },
+		{ label: 'History', score: Math.round(Math.max(timelineScore, historyScore)), detail: `${events.length} event(s), ${history.commits} commit observation(s)`, ...evidenceMeta(evidenceReferences, 'timeline') },
+		{ label: 'Dependencies', score: 0, detail: 'Dependency extraction is not implemented yet', ...evidenceMeta(evidenceReferences, 'derived') }
 	];
 	const weighted =
 		items[0].score * 0.2 +
@@ -923,20 +1096,23 @@ function buildArchiveStoryTimeline(
 	repo: RepoSummary,
 	snapshots: ArchiveSnapshot[],
 	releases: ReleaseWithAssets[],
-	localArchive: LocalArchiveSummary
+	localArchive: LocalArchiveSummary,
+	evidenceReferences: EvidenceReference[]
 ): ArchiveStoryStep[] {
 	const steps: ArchiveStoryStep[] = [
 		{
 			label: 'Created',
 			date: repo.created_at,
 			detail: 'Repository created on GitHub.',
-			tone: 'neutral'
+			tone: 'neutral',
+			...evidenceMeta(evidenceReferences, 'timeline')
 		},
 		{
 			label: 'First discovered',
 			date: repo.first_seen_at,
 			detail: `GithubArchive+ discovered it via ${repo.discovery_source}.`,
-			tone: 'neutral'
+			tone: 'neutral',
+			...evidenceMeta(evidenceReferences, 'timeline')
 		}
 	];
 	const firstReadme = firstSnapshotOfType(snapshots, 'readme');
@@ -949,7 +1125,8 @@ function buildArchiveStoryTimeline(
 			label: 'README archived',
 			date: firstReadme.archived_at,
 			detail: `${formatBytesCompact(firstReadme.file_size)} README evidence saved locally.`,
-			tone: 'saved'
+			tone: 'saved',
+			...evidenceMeta(evidenceReferences, 'readme')
 		});
 	}
 	if (firstSource) {
@@ -957,7 +1134,8 @@ function buildArchiveStoryTimeline(
 			label: 'Source preserved',
 			date: firstSource.archived_at,
 			detail: `${formatBytesCompact(firstSource.file_size)} source snapshot saved locally.`,
-			tone: 'saved'
+			tone: 'saved',
+			...evidenceMeta(evidenceReferences, 'source')
 		});
 	}
 	if (firstRelease) {
@@ -965,7 +1143,8 @@ function buildArchiveStoryTimeline(
 			label: 'Release detected',
 			date: firstRelease.published_at ?? firstRelease.first_seen_at,
 			detail: `${firstRelease.name || firstRelease.tag} recorded in release history.`,
-			tone: 'neutral'
+			tone: 'neutral',
+			...evidenceMeta(evidenceReferences, 'release')
 		});
 	}
 	if (repo.github_archived) {
@@ -973,7 +1152,8 @@ function buildArchiveStoryTimeline(
 			label: 'Archived upstream',
 			date: repo.last_checked_at ?? repo.enriched_at ?? repo.first_seen_at,
 			detail: 'GitHub marks this repository as archived.',
-			tone: localArchive.total_snapshots > 0 ? 'saved' : 'warning'
+			tone: localArchive.total_snapshots > 0 ? 'saved' : 'warning',
+			...evidenceMeta(evidenceReferences, 'timeline')
 		});
 	}
 	if (repo.deleted_at) {
@@ -984,7 +1164,8 @@ function buildArchiveStoryTimeline(
 				localArchive.total_snapshots > 0
 					? 'The upstream repository disappeared, but local archive evidence remains.'
 					: 'The upstream repository disappeared before local preservation was complete.',
-			tone: localArchive.total_snapshots > 0 ? 'saved' : 'warning'
+			tone: localArchive.total_snapshots > 0 ? 'saved' : 'warning',
+			...evidenceMeta(evidenceReferences, 'timeline', ['timeline', 'readme', 'source'])
 		});
 	}
 
@@ -1047,10 +1228,21 @@ function buildRepositoryIntelligenceReport(
 ): RepositoryIntelligenceReport {
 	const history = historyCounts(repo.id);
 	const status = currentStatus(repo, localArchive);
-	const evidence = buildArchiveEvidence(latestReadme, latestSource, latestZip, releases, snapshots, events, repo);
-	const archiveScore = buildArchiveScore(repo, localArchive, releases, events, metrics, history, technologies);
-	const recoverability = buildRecoverability(repo, localArchive, releases, events, history);
-	const storyTimeline = buildArchiveStoryTimeline(repo, snapshots, releases, localArchive);
+	const evidenceReferences = buildEvidenceReferences(repo, snapshots, releases, events, metrics, technologies);
+	const evidenceGroups = groupEvidenceReferences(evidenceReferences);
+	const evidence = buildArchiveEvidence(
+		latestReadme,
+		latestSource,
+		latestZip,
+		releases,
+		snapshots,
+		events,
+		repo,
+		evidenceReferences
+	);
+	const archiveScore = buildArchiveScore(repo, localArchive, releases, events, metrics, history, technologies, evidenceReferences);
+	const recoverability = buildRecoverability(repo, localArchive, releases, events, history, evidenceReferences);
+	const storyTimeline = buildArchiveStoryTimeline(repo, snapshots, releases, localArchive, evidenceReferences);
 	const storyTakeaway = buildArchiveStoryTakeaway(repo, localArchive, releases);
 	const technologyNames = technologies.slice(0, 5).map((tech) => tech.name);
 	const whyArchive =
@@ -1070,6 +1262,8 @@ function buildRepositoryIntelligenceReport(
 		recoverability,
 		storyTimeline,
 		storyTakeaway,
+		evidenceReferences,
+		evidenceGroups,
 		story: buildArchiveStory(repo, events, snapshots, releases, localArchive).concat(
 			technologyNames.length ? [`Detected technology context includes ${technologyNames.join(', ')}.`] : []
 		)

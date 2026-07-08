@@ -1,16 +1,16 @@
 <script lang="ts">
 	import RepoListItem from '$lib/components/RepoListItem.svelte';
-	import { timeAgo, formatDateShort } from '$lib/utils';
+	import { timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
 	const feeds = [
-		{ id: 'newest', label: '🔥 Newest' },
-		{ id: 'recently_archived', label: '📦 Recently Archived' },
-		{ id: 'recently_deleted', label: '💀 Recently Deleted' },
-		{ id: 'recently_released', label: '🚀 Recently Released' },
-		{ id: 'recently_updated', label: '📈 Recently Updated' }
+		{ id: 'newest', label: 'Newest' },
+		{ id: 'recently_archived', label: 'Recently archived' },
+		{ id: 'recently_deleted', label: 'Deleted but saved' },
+		{ id: 'recently_released', label: 'Recent releases' },
+		{ id: 'recently_updated', label: 'Recently updated' }
 	];
 
 	function buildUrl(overrides: Record<string, string | number | boolean | undefined>) {
@@ -29,7 +29,6 @@
 		if (f.neverEnriched) params.set('never_enriched', '1');
 		if (f.archivedOnly) params.set('archived_only', '1');
 		if (f.hasReadme) params.set('has_readme', '1');
-		if (f.hasRelease) params.set('has_release', '1');
 		if (f.hasRelease) params.set('has_release', '1');
 		if (f.deletedOnly) params.set('deleted_only', '1');
 		if (f.page && Number(f.page) > 1) params.set('page', String(f.page));
@@ -56,7 +55,6 @@
 			hasReadme: fd.get('has_readme') === 'on',
 			hasRelease: fd.get('has_release') === 'on',
 			deletedOnly: fd.get('deleted_only') === 'on',
-			minForks: (fd.get('min_forks') as string) ?? '',
 			page: 1
 		});
 	}
@@ -69,24 +67,28 @@
 	);
 	const pulseMetrics = $derived([
 		{
+			icon: 'A',
 			label: 'Preserved repos',
 			value: data.archivePulse.preservedRepos.toLocaleString(),
 			detail: `${preservationRate}% of discovered repos`
 		},
 		{
+			icon: 'R',
 			label: 'README saved',
 			value: data.archivePulse.readmeSaved.toLocaleString(),
 			detail: `${data.archivePulse.readmeChanges.toLocaleString()} README change events`
 		},
 		{
+			icon: 'S',
 			label: 'Source saved',
 			value: data.archivePulse.sourceSaved.toLocaleString(),
-			detail: `${data.archivePulse.zipAvailable.toLocaleString()} ZIP exports available`
+			detail: `${data.archivePulse.zipAvailable.toLocaleString()} exportable ZIPs`
 		},
 		{
+			icon: 'D',
 			label: 'Deleted but saved',
 			value: data.archivePulse.deletedButSaved.toLocaleString(),
-			detail: `${data.archivePulse.githubArchivedSaved.toLocaleString()} GitHub-archived repos preserved`
+			detail: `${data.archivePulse.githubArchivedSaved.toLocaleString()} archived-upstream repos preserved`
 		}
 	]);
 
@@ -109,188 +111,218 @@
 		)
 	);
 
+	const featuredRepos = $derived([
+		...data.archivePulse.recentDeletedSaved.map((repo) => ({
+			...repo,
+			label: 'Deleted but saved',
+			detailText: 'GitHub lost it; the archive still has evidence.'
+		})),
+		...data.archivePulse.recentPreserved.map((repo) => ({
+			...repo,
+			label: 'Newly preserved',
+			detailText: 'Fresh local evidence was captured.'
+		})),
+		...data.archivePulse.recentReadmeChanges.map((repo) => ({
+			...repo,
+			label: 'README memory',
+			detailText: 'Documentation changed and remains inspectable.'
+		}))
+	].slice(0, 6));
+
 	function repoPath(owner: string, name: string): string {
 		return `/repo/${owner}/${name}`;
-	}
-
-	function snapshotLabel(detail: string | null): string {
-		if (!detail) return 'local archive snapshot';
-		return detail
-			.split(',')
-			.map((part) => part.trim())
-			.filter(Boolean)
-			.sort()
-			.join(' + ');
 	}
 </script>
 
 <svelte:head>
-	<title>GithubArchive+ — {feedTitle}</title>
+	<title>GithubArchive+ - {feedTitle}</title>
 </svelte:head>
 
-<section class="archive-pulse" aria-label="Archive Pulse">
-	<div class="pulse-hero">
-		<p class="pulse-kicker">Archive Pulse</p>
-		<h1>GitHub Archive+ remembers what GitHub forgets.</h1>
-		<p class="pulse-copy">
-			Preserved READMEs, source snapshots, ZIP exports, releases, and repository events turn discovery into durable project memory and explainable software history.
+<section class="product-hero" aria-labelledby="home-title">
+	<div class="hero-copy">
+		<p class="eyebrow">Repository intelligence and preservation</p>
+		<h1 id="home-title">GitHub Archive+ remembers what GitHub forgets.</h1>
+		<p>
+			Preserve repositories, understand their evolution, and inspect the evidence behind every insight.
 		</p>
-		<div class="pulse-actions">
-			<a href="/birth-feed">Live feed</a>
-			<a href={buildUrl({ feed: 'recently_archived', page: 1 })}>Recently archived</a>
-			<a href="/admin">Control center</a>
+		<div class="hero-actions">
+			<a class="button" href="#repository-feed">Browse Archive</a>
+			<a class="button-secondary" href="/admin">Archive Repository</a>
 		</div>
 	</div>
-
-	<div class="pulse-metrics">
-		{#each pulseMetrics as metric}
-			<div class="pulse-metric">
-				<span>{metric.label}</span>
-				<strong>{metric.value}</strong>
-				<small>{metric.detail}</small>
-			</div>
-		{/each}
-	</div>
-
-	<div class="pulse-lanes">
-		<section>
-			<div class="pulse-lane-head">
-				<h2>Newly Preserved</h2>
-				<span>{data.archivePulse.lastSeenOnGithub ? `GitHub checked ${timeAgo(data.archivePulse.lastSeenOnGithub)}` : 'Awaiting GitHub checks'}</span>
-			</div>
-			{#if data.archivePulse.recentPreserved.length}
-				{#each data.archivePulse.recentPreserved as repo}
-					<a href={repoPath(repo.owner, repo.name)}>
-						<strong class="mono">{repo.full_name}</strong>
-						<span>{snapshotLabel(repo.detail)} saved {timeAgo(repo.at)}</span>
-					</a>
-				{/each}
-			{:else}
-				<p>No local snapshots yet.</p>
-			{/if}
-		</section>
-
-		<section>
-			<div class="pulse-lane-head">
-				<h2>Deleted But Saved</h2>
-				<span>{data.archivePulse.deletedButSaved.toLocaleString()} preserved</span>
-			</div>
-			{#if data.archivePulse.recentDeletedSaved.length}
-				{#each data.archivePulse.recentDeletedSaved as repo}
-					<a href={repoPath(repo.owner, repo.name)}>
-						<strong class="mono">{repo.full_name}</strong>
-						<span>Deleted on GitHub, archive retained {timeAgo(repo.at)}</span>
-					</a>
-				{/each}
-			{:else}
-				<p>No deleted preserved repos yet.</p>
-			{/if}
-		</section>
-
-		<section>
-			<div class="pulse-lane-head">
-				<h2>README Memory</h2>
-				<span>{data.archivePulse.readmeChanges.toLocaleString()} changes</span>
-			</div>
-			{#if data.archivePulse.recentReadmeChanges.length}
-				{#each data.archivePulse.recentReadmeChanges as repo}
-					<a href={repoPath(repo.owner, repo.name)}>
-						<strong class="mono">{repo.full_name}</strong>
-						<span>README changed {timeAgo(repo.at)}</span>
-					</a>
-				{/each}
-			{:else}
-				<p>No README changes captured yet.</p>
-			{/if}
-		</section>
+	<div class="hero-panel" aria-label="System summary">
+		<span>Archive Pulse</span>
+		<strong>{data.archivePulse.preservedRepos.toLocaleString()}</strong>
+		<p>repositories with preserved local evidence</p>
+		<a href={buildUrl({ feed: 'recently_archived', page: 1 })}>View preserved repos</a>
 	</div>
 </section>
 
-<div class="stats-bar" style="margin-bottom: 1.5rem">
-	<span>{data.stats.total.toLocaleString()} ingested</span>
-	<span>{data.stats.unenriched.toLocaleString()} awaiting enrichment</span>
-	<span>Page {data.page} of {data.totalPages}</span>
-</div>
-
-<nav class="feed-nav">
-	{#each feeds as f}
-		<a href={buildUrl({ feed: f.id, page: 1 })} class="feed-link" class:active={data.filters.feed === f.id}>
-			{f.label}
-		</a>
-	{/each}
-</nav>
-
-<form class="filters" onsubmit={onSubmit}>
-	<input
-		name="q"
-		type="search"
-		class="filter-input"
-		placeholder="Search name, owner, description…"
-		value={data.filters.q}
-	/>
-	<select name="sort" class="filter-select">
-		<option value="">Sort: default</option>
-		{#each data.sorts as sort}
-			<option value={sort} selected={data.filters.sort === sort}>{sort.replaceAll('_', ' ')}</option>
+<section class="section-block" aria-labelledby="pulse-title">
+	<div class="section-heading">
+		<div>
+			<p class="eyebrow">Archive Pulse</p>
+			<h2 id="pulse-title">What the archive has protected</h2>
+		</div>
+		<a href="/admin" class="button-ghost">System health</a>
+	</div>
+	<div class="pulse-grid">
+		{#each pulseMetrics as metric}
+			<article class="pulse-card">
+				<span class="metric-icon" aria-hidden="true">{metric.icon}</span>
+				<div>
+					<span>{metric.label}</span>
+					<strong>{metric.value}</strong>
+					<small>{metric.detail}</small>
+				</div>
+			</article>
 		{/each}
-	</select>
-	<select name="source" class="filter-select">
-		<option value="">All sources</option>
-		<option value="gharchive" selected={data.filters.source === 'gharchive'}>gharchive</option>
-		<option value="github_search" selected={data.filters.source === 'github_search'}>github_search</option>
-	</select>
-	<input name="year" type="number" class="filter-input" placeholder="Year" value={data.filters.year} min="2008" max="2099" />
-	<input name="date_from" type="date" class="filter-input" value={data.filters.dateFrom} />
-	<input name="date_to" type="date" class="filter-input" value={data.filters.dateTo} />
-	<input name="min_stars" type="number" class="filter-input" placeholder="Min ★" value={data.filters.minStars} min="0" />
-	<input name="min_forks" type="number" class="filter-input" placeholder="Min forks" value={data.filters.minForks} min="0" />
-	<select name="language" class="filter-select">
-		<option value="">All languages</option>
-		{#each data.languages as lang}
-			<option value={lang} selected={data.filters.language === lang}>{lang}</option>
-		{/each}
-	</select>
-	<label class="filter-check">
-		<input type="checkbox" name="archived_only" checked={data.filters.archivedOnly} />
-		Archived
-	</label>
-	<label class="filter-check">
-		<input type="checkbox" name="has_readme" checked={data.filters.hasReadme} />
-		Has README
-	</label>
-	<label class="filter-check">
-		<input type="checkbox" name="has_release" checked={data.filters.hasRelease} />
-		Has release
-	</label>
-	<label class="filter-check">
-		<input type="checkbox" name="deleted_only" checked={data.filters.deletedOnly} />
-		Deleted only
-	</label>
-	<label class="filter-check">
-		<input type="checkbox" name="never_enriched" checked={data.filters.neverEnriched} />
-		Never enriched
-	</label>
-	<button type="submit" class="filter-btn">Apply</button>
-	{#if hasActiveFilters}
-		<a href="/" class="filter-clear">Clear filters</a>
+	</div>
+</section>
+
+<section class="section-block" aria-labelledby="featured-title">
+	<div class="section-heading">
+		<div>
+			<p class="eyebrow">Featured</p>
+			<h2 id="featured-title">Interesting repositories</h2>
+		</div>
+		<a href={buildUrl({ feed: 'recently_archived', page: 1 })} class="button-ghost">See archive feed</a>
+	</div>
+
+	{#if featuredRepos.length}
+		<div class="featured-grid">
+			{#each featuredRepos as repo}
+				<a class="featured-card" href={repoPath(repo.owner, repo.name)}>
+					<span>{repo.label}</span>
+					<strong class="mono">{repo.full_name}</strong>
+					<p>{repo.detailText}</p>
+					<small>{timeAgo(repo.at)}</small>
+				</a>
+			{/each}
+		</div>
+	{:else}
+		<div class="empty-state action-empty">
+			<h3>No repositories archived yet.</h3>
+			<p>Start Auto-Scan or run GitHub Search ingest to begin preserving repositories.</p>
+			<div>
+				<a class="button" href="/admin">Open Control Center</a>
+				<a class="button-secondary" href="/birth-feed">View Live Feed</a>
+			</div>
+		</div>
 	{/if}
-</form>
+</section>
 
-<section>
-	<h2 class="section-title">{feedTitle}</h2>
+<section class="section-block activity-block" aria-labelledby="activity-title">
+	<div class="section-heading">
+		<div>
+			<p class="eyebrow">Recent activity</p>
+			<h2 id="activity-title">Archive activity</h2>
+		</div>
+		<a href="/birth-feed" class="button-ghost">Live feed</a>
+	</div>
+	<div class="activity-list">
+		{#if data.archivePulse.recentPreserved.length}
+			{#each data.archivePulse.recentPreserved.slice(0, 5) as repo}
+				<a href={repoPath(repo.owner, repo.name)}>
+					<span>Preserved</span>
+					<strong class="mono">{repo.full_name}</strong>
+					<small>{timeAgo(repo.at)}</small>
+				</a>
+			{/each}
+		{:else}
+			<p>No archive events yet. The next saved README or source snapshot will appear here.</p>
+		{/if}
+	</div>
+</section>
+
+<section class="section-block" id="repository-feed" aria-labelledby="feed-title">
+	<div class="section-heading">
+		<div>
+			<p class="eyebrow">Browse</p>
+			<h2 id="feed-title">{feedTitle}</h2>
+		</div>
+		<span class="feed-count">{data.total.toLocaleString()} repositories</span>
+	</div>
+
+	<form class="filters search-panel" onsubmit={onSubmit} aria-label="Repository search and filters">
+		<label class="search-field">
+			<span>Search repositories</span>
+			<input
+				name="q"
+				type="search"
+				class="filter-input"
+				placeholder="Search name, owner, description..."
+				value={data.filters.q}
+			/>
+		</label>
+		<label>
+			<span>Sort</span>
+			<select name="sort" class="filter-select">
+				<option value="">Default</option>
+				{#each data.sorts as sort}
+					<option value={sort} selected={data.filters.sort === sort}>{sort.replaceAll('_', ' ')}</option>
+				{/each}
+			</select>
+		</label>
+		<label>
+			<span>Language</span>
+			<select name="language" class="filter-select">
+				<option value="">All languages</option>
+				{#each data.languages as lang}
+					<option value={lang} selected={data.filters.language === lang}>{lang}</option>
+				{/each}
+			</select>
+		</label>
+		<button type="submit" class="filter-btn">Apply</button>
+		{#if hasActiveFilters}
+			<a href="/" class="filter-clear">Clear filters</a>
+		{/if}
+
+		<details class="advanced-filters">
+			<summary>Advanced filters</summary>
+			<div>
+				<label>
+					<span>Discovery source</span>
+					<select name="source" class="filter-select">
+						<option value="">All sources</option>
+						<option value="gharchive" selected={data.filters.source === 'gharchive'}>GH Archive</option>
+						<option value="github_search" selected={data.filters.source === 'github_search'}>GitHub Search</option>
+					</select>
+				</label>
+				<label><span>Year</span><input name="year" type="number" class="filter-input" value={data.filters.year} min="2008" max="2099" /></label>
+				<label><span>From</span><input name="date_from" type="date" class="filter-input" value={data.filters.dateFrom} /></label>
+				<label><span>To</span><input name="date_to" type="date" class="filter-input" value={data.filters.dateTo} /></label>
+				<label><span>Minimum stars</span><input name="min_stars" type="number" class="filter-input" value={data.filters.minStars} min="0" /></label>
+				<label><span>Minimum forks</span><input name="min_forks" type="number" class="filter-input" value={data.filters.minForks} min="0" /></label>
+				<label class="filter-check"><input type="checkbox" name="archived_only" checked={data.filters.archivedOnly} /> Archived only</label>
+				<label class="filter-check"><input type="checkbox" name="has_readme" checked={data.filters.hasReadme} /> Has README</label>
+				<label class="filter-check"><input type="checkbox" name="has_release" checked={data.filters.hasRelease} /> Has release</label>
+				<label class="filter-check"><input type="checkbox" name="deleted_only" checked={data.filters.deletedOnly} /> Deleted only</label>
+				<label class="filter-check"><input type="checkbox" name="never_enriched" checked={data.filters.neverEnriched} /> Never enriched</label>
+			</div>
+		</details>
+	</form>
+
+	<nav class="feed-nav" aria-label="Repository feeds">
+		{#each feeds as f}
+			<a href={buildUrl({ feed: f.id, page: 1 })} class="feed-link" class:active={data.filters.feed === f.id}>
+				{f.label}
+			</a>
+		{/each}
+	</nav>
 
 	{#if data.filters.q}
-		<p class="search-meta">{data.total.toLocaleString()} FTS result{data.total === 1 ? '' : 's'} for “{data.filters.q}”</p>
+		<p class="search-meta">{data.total.toLocaleString()} result{data.total === 1 ? '' : 's'} for "{data.filters.q}"</p>
 	{/if}
 
 	{#if data.repos.length === 0}
-		<div class="empty-state">
-			{#if data.filters.q}
-				<p>No results for “{data.filters.q}” with the current filters.</p>
-			{:else}
-				<p>No repositories match your filters.</p>
-			{/if}
-			<p class="empty-hint">No repos yet — open <a href="/admin">Admin</a> and click <strong>GitHub Search Ingest</strong> or start <strong>Auto-Scan</strong>.</p>
+		<div class="empty-state action-empty">
+			<h3>{data.filters.q ? `No results for "${data.filters.q}".` : 'No repositories match your filters.'}</h3>
+			<p>Clear filters, browse the live feed, or open the Control Center to ingest repositories.</p>
+			<div>
+				<a class="button" href="/">Clear filters</a>
+				<a class="button-secondary" href="/admin">Open Control Center</a>
+			</div>
 		</div>
 	{:else}
 		<ul class="repo-list">
@@ -299,198 +331,307 @@
 			{/each}
 		</ul>
 
-		<nav class="pagination">
+		<nav class="pagination" aria-label="Repository pages">
 			{#if data.page > 1}
-				<a href={buildUrl({ page: data.page - 1 })}>← Previous</a>
+				<a href={buildUrl({ page: data.page - 1 })}>Previous</a>
 			{:else}
-				<span class="disabled">← Previous</span>
+				<span class="disabled">Previous</span>
 			{/if}
-			<span class="page-info">{data.total.toLocaleString()} repos</span>
+			<span class="page-info">Page {data.page} of {data.totalPages}</span>
 			{#if data.page < data.totalPages}
-				<a href={buildUrl({ page: data.page + 1 })}>Next →</a>
+				<a href={buildUrl({ page: data.page + 1 })}>Next</a>
 			{:else}
-				<span class="disabled">Next →</span>
+				<span class="disabled">Next</span>
 			{/if}
 		</nav>
 	{/if}
 </section>
 
-<p class="api-hint">
-	API: <a href="/api/repos">/api/repos</a> · <a href="/api/search?q=cursor">/api/search</a> ·
-	<a href="/api/events">/api/events</a> ·
-	<a href="/api/releases/latest">/api/releases/latest</a>
-</p>
+<section class="developer-tools" aria-labelledby="developer-title">
+	<div>
+		<p class="eyebrow">Developer tools</p>
+		<h2 id="developer-title">Inspect the archive programmatically</h2>
+	</div>
+	<div>
+		<a href="/api/repos">/api/repos</a>
+		<a href="/api/search?q=cursor">/api/search</a>
+		<a href="/api/events">/api/events</a>
+		<a href="/api/releases/latest">/api/releases/latest</a>
+	</div>
+</section>
 
 <style>
-	.archive-pulse {
+	.product-hero,
+	.section-block,
+	.developer-tools {
+		margin-bottom: 2rem;
+	}
+
+	.product-hero {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 320px;
+		gap: 1.25rem;
+		align-items: stretch;
+		padding: 3rem 0 1rem;
+	}
+
+	.hero-copy {
 		display: grid;
 		gap: 1rem;
-		margin: 0 0 2rem;
-		padding-bottom: 1.5rem;
-		border-bottom: 1px solid var(--border);
+		align-content: center;
 	}
 
-	.pulse-hero {
-		display: grid;
-		gap: 0.75rem;
-	}
-
-	.pulse-kicker {
+	.eyebrow {
 		margin: 0;
 		color: var(--green);
-		font-size: 0.78rem;
-		font-weight: 700;
+		font-size: 0.76rem;
+		font-weight: 800;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
 
-	.pulse-hero h1 {
-		max-width: 820px;
+	.product-hero h1 {
+		max-width: 830px;
 		margin: 0;
-		font-size: clamp(2rem, 5vw, 4.2rem);
+		font-size: clamp(2.5rem, 6vw, 5rem);
 		line-height: 0.98;
 	}
 
-	.pulse-copy {
-		max-width: 760px;
+	.product-hero p {
+		max-width: 680px;
 		margin: 0;
 		color: var(--text-muted);
-		font-size: 1rem;
+		font-size: 1.08rem;
 	}
 
-	.pulse-actions,
-	.pulse-metrics,
-	.pulse-lanes {
-		display: grid;
+	.hero-actions {
+		display: flex;
+		flex-wrap: wrap;
 		gap: 0.75rem;
 	}
 
-	.pulse-actions {
-		display: flex;
-		flex-wrap: wrap;
-	}
-
-	.pulse-actions a {
+	.hero-panel,
+	.pulse-card,
+	.featured-card,
+	.activity-list,
+	.developer-tools {
 		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 0.45rem 0.7rem;
-		background: var(--bg-elevated);
-		color: var(--accent);
-		font-size: 0.9rem;
-		font-weight: 600;
-		text-decoration: none;
+		border-radius: var(--radius);
+		background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+		box-shadow: var(--shadow-soft);
 	}
 
-	.pulse-actions a:hover {
-		background: var(--bg-hover);
-	}
-
-	.pulse-metrics {
-		grid-template-columns: repeat(4, minmax(0, 1fr));
-	}
-
-	.pulse-metric {
+	.hero-panel {
 		display: grid;
-		gap: 0.15rem;
-		min-width: 0;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		padding: 0.85rem;
-		background: var(--bg-elevated);
+		align-content: end;
+		gap: 0.45rem;
+		padding: 1.25rem;
+		min-height: 260px;
 	}
 
-	.pulse-metric span,
-	.pulse-metric small,
-	.pulse-lane-head span,
-	.pulse-lanes p,
-	.pulse-lanes a span {
+	.hero-panel span,
+	.hero-panel p,
+	.feed-count {
 		color: var(--text-muted);
 	}
 
-	.pulse-metric span {
-		font-size: 0.8rem;
+	.hero-panel strong {
+		font-size: 3.4rem;
+		line-height: 1;
 	}
 
-	.pulse-metric strong {
-		font-size: 1.55rem;
+	.section-heading {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		align-items: end;
+		margin-bottom: 1rem;
+	}
+
+	.section-heading h2,
+	.developer-tools h2 {
+		margin: 0.15rem 0 0;
+		font-size: clamp(1.35rem, 3vw, 2rem);
+	}
+
+	.pulse-grid {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.85rem;
+	}
+
+	.pulse-card {
+		display: grid;
+		grid-template-columns: 42px minmax(0, 1fr);
+		gap: 0.8rem;
+		padding: 1rem;
+	}
+
+	.metric-icon {
+		display: grid;
+		place-items: center;
+		width: 38px;
+		height: 38px;
+		border-radius: var(--radius);
+		background: color-mix(in srgb, var(--accent) 18%, var(--bg-hover));
+		color: var(--accent);
+		font-weight: 800;
+	}
+
+	.pulse-card span:not(.metric-icon),
+	.pulse-card small,
+	.featured-card span,
+	.featured-card small,
+	.activity-list span,
+	.activity-list small {
+		color: var(--text-muted);
+	}
+
+	.pulse-card strong {
+		display: block;
+		font-size: 1.75rem;
 		line-height: 1.1;
 	}
 
-	.pulse-metric small {
-		font-size: 0.78rem;
-	}
-
-	.pulse-lanes {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-
-	.pulse-lanes section {
-		min-width: 0;
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		background: var(--bg-elevated);
-		padding: 0.9rem;
-	}
-
-	.pulse-lane-head {
-		display: flex;
-		justify-content: space-between;
-		gap: 0.75rem;
-		align-items: baseline;
-		margin-bottom: 0.65rem;
-	}
-
-	.pulse-lane-head h2 {
-		margin: 0;
-		font-size: 0.95rem;
-	}
-
-	.pulse-lane-head span {
-		font-size: 0.78rem;
-		text-align: right;
-	}
-
-	.pulse-lanes a {
+	.featured-grid {
 		display: grid;
-		gap: 0.1rem;
-		padding: 0.5rem 0;
-		border-top: 1px solid var(--border);
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.85rem;
+	}
+
+	.featured-card {
+		display: grid;
+		gap: 0.45rem;
+		padding: 1rem;
+		color: inherit;
 		text-decoration: none;
 	}
 
-	.pulse-lanes a strong {
-		color: var(--text);
-		font-size: 0.86rem;
+	.featured-card:hover {
+		border-color: var(--border-strong);
+		text-decoration: none;
+		transform: translateY(-1px);
+	}
+
+	.featured-card strong {
 		overflow-wrap: anywhere;
 	}
 
-	.pulse-lanes a span,
-	.pulse-lanes p {
+	.featured-card p {
 		margin: 0;
+		color: var(--text-muted);
+	}
+
+	.activity-list {
+		display: grid;
+		padding: 0.35rem 1rem;
+	}
+
+	.activity-list a {
+		display: grid;
+		grid-template-columns: 110px minmax(0, 1fr) auto;
+		gap: 1rem;
+		padding: 0.7rem 0;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.activity-list a:last-child {
+		border-bottom: 0;
+	}
+
+	.search-panel label {
+		display: grid;
+		gap: 0.25rem;
+		color: var(--text-muted);
+		font-size: 0.78rem;
+		font-weight: 700;
+	}
+
+	.search-field {
+		flex: 1 1 320px;
+	}
+
+	.advanced-filters {
+		flex-basis: 100%;
+		color: var(--text-muted);
+	}
+
+	.advanced-filters summary {
+		cursor: pointer;
+		font-weight: 700;
+	}
+
+	.advanced-filters > div {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		gap: 0.75rem;
+		margin-top: 0.8rem;
+	}
+
+	.action-empty h3 {
+		margin: 0 0 0.45rem;
+		color: var(--text);
+	}
+
+	.action-empty > div {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 0.7rem;
+		margin-top: 1rem;
+	}
+
+	.developer-tools {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		align-items: center;
+		padding: 1rem;
+		box-shadow: none;
+	}
+
+	.developer-tools > div:last-child {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+	}
+
+	.developer-tools a {
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: 0.35rem 0.55rem;
+		font-family: var(--font-mono);
 		font-size: 0.82rem;
 	}
 
-	.empty-hint {
-		font-size: 0.9rem;
-		color: var(--text-muted);
-		margin-top: 0.5rem;
-	}
+	@media (max-width: 920px) {
+		.product-hero,
+		.pulse-grid,
+		.featured-grid {
+			grid-template-columns: 1fr 1fr;
+		}
 
-	@media (max-width: 900px) {
-		.pulse-metrics,
-		.pulse-lanes {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+		.hero-panel {
+			min-height: 180px;
 		}
 	}
 
-	@media (max-width: 640px) {
-		.pulse-metrics,
-		.pulse-lanes {
+	@media (max-width: 680px) {
+		.product-hero,
+		.pulse-grid,
+		.featured-grid,
+		.activity-list a {
 			grid-template-columns: 1fr;
 		}
 
-		.pulse-hero h1 {
-			font-size: 2.15rem;
+		.section-heading,
+		.developer-tools {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.product-hero {
+			padding-top: 1.2rem;
 		}
 	}
 </style>

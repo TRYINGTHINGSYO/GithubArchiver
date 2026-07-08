@@ -232,6 +232,15 @@
 		</div>
 	</header>
 
+	<nav class="repo-section-nav" aria-label="Repository page sections">
+		<a href="#intelligence">Intelligence</a>
+		<a href="#archive-story">Archive Story</a>
+		<a href="#evidence">Evidence Explorer</a>
+		<a href="#readme">README</a>
+		<a href="#source">Source</a>
+		<a href="#timeline">Timeline</a>
+	</nav>
+
 	{#if data.truthNotices.length}
 		<div class="truth-notices">
 			{#each data.truthNotices as notice}
@@ -240,7 +249,7 @@
 		</div>
 	{/if}
 
-	<section class="intelligence-report" aria-label="Repository Intelligence Report">
+	<section class="intelligence-report" id="intelligence" aria-label="Repository Intelligence Report">
 		<div class="report-head">
 			<div>
 				<p class="report-kicker">Repository Intelligence</p>
@@ -265,7 +274,7 @@
 		</div>
 
 		<div class="score-row">
-			<div class="score-panel">
+			<div class="score-panel" id="archive-score">
 				<div class="score-ring" style={`--score: ${data.intelligenceReport.archiveScore.score}%`}>
 					<strong>{data.intelligenceReport.archiveScore.score}</strong>
 					<span>Archive Score</span>
@@ -278,19 +287,20 @@
 						{/each}
 					</ul>
 					<details class="score-details">
-						<summary>Score breakdown</summary>
+						<summary>Explain this score</summary>
 						{#each data.intelligenceReport.archiveScore.factors as factor}
 							<div class="factor-row">
 								<span>{factor.label}</span>
 								<strong>{factor.earned}/{factor.weight}</strong>
 								<small>{factor.detail}</small>
+								<a href={factor.evidenceTarget}>Inspect evidence</a>
 							</div>
 						{/each}
 					</details>
 				</div>
 			</div>
 
-			<div class="score-panel recoverability">
+			<div class="score-panel recoverability" id="recoverability">
 				<div class="score-ring" style={`--score: ${data.intelligenceReport.recoverability.overall}%`}>
 					<strong>{data.intelligenceReport.recoverability.overall}%</strong>
 					<span>Recoverability</span>
@@ -302,24 +312,65 @@
 							<span>{item.label}</span>
 							<div><i style={`width: ${item.score}%`}></i></div>
 							<strong>{item.score}%</strong>
-							<small>{item.detail}</small>
+							<small>{item.detail} · <a href={item.evidenceTarget}>Show proof</a></small>
 						</div>
 					{/each}
 				</div>
 			</div>
 		</div>
 
-		<div class="evidence-grid">
+		<div class="evidence-explorer" id="evidence" aria-labelledby="evidence-title">
+			<div class="evidence-head">
+				<div>
+					<p class="report-kicker">Evidence Explorer</p>
+					<h3 id="evidence-title">Show me the proof</h3>
+				</div>
+				<span>{data.intelligenceReport.evidenceReferences.length.toLocaleString()} references</span>
+			</div>
+
+			<div class="evidence-grid" aria-label="Preserved evidence summary">
 			{#each data.intelligenceReport.evidence as item}
 				<div class:missing={item.status === 'missing'} class:partial={item.status === 'partial'}>
 					<span>{item.label}</span>
 					<strong>{item.value}</strong>
 					<small>{item.detail}</small>
+					<a href={item.evidenceTarget}>Show proof</a>
 				</div>
 			{/each}
+			</div>
+
+			<div class="evidence-groups">
+				{#each data.intelligenceReport.evidenceGroups as group}
+					<details class="evidence-group" id={`evidence-${group.category}`} open={group.references.length > 0}>
+						<summary>
+							<span>{group.title}</span>
+							<small>{group.summary}</small>
+						</summary>
+						{#if group.references.length}
+							<ul>
+								{#each group.references as reference}
+									<li>
+										<div>
+											<strong>{reference.title}</strong>
+											{#if reference.timestamp}
+												<time datetime={reference.timestamp}>{dateLabel(reference.timestamp)}</time>
+											{/if}
+											{#if reference.description}<p>{reference.description}</p>{/if}
+											<small>{reference.confidence === 'direct' ? 'Direct evidence' : 'Derived from preserved evidence'}</small>
+										</div>
+										<a href={reference.target}>Open</a>
+									</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="empty-evidence">{group.emptyText}</p>
+						{/if}
+					</details>
+				{/each}
+			</div>
 		</div>
 
-		<div class="story-summary">
+		<div class="story-summary" id="archive-story">
 			<h3>Archive Story</h3>
 			<div class="story-timeline">
 				{#each data.intelligenceReport.storyTimeline as step}
@@ -329,6 +380,7 @@
 							<strong>{step.label}</strong>
 							<time datetime={step.date}>{dateLabel(step.date)}</time>
 							<p>{step.detail}</p>
+							<a class="evidence-link" href={step.evidenceTarget}>Evidence</a>
 						</div>
 					</div>
 				{/each}
@@ -357,7 +409,7 @@
 		{/each}
 	</section>
 
-	<section class="signal-card" class:soft-update={hasSectionUpdate('signal')} title={data.projectSignal.explanation}>
+	<section id="signal" class="signal-card" class:soft-update={hasSectionUpdate('signal')} title={data.projectSignal.explanation}>
 		<div class="signal-meter" style={`--score: ${data.projectSignal.score}%`}>
 			<strong>{data.projectSignal.score}</strong>
 			<span>Project Signal</span>
@@ -388,7 +440,7 @@
 	{/if}
 
 	{#if data.latestReadme && data.readmeHtml}
-		<section class="readme-section" class:soft-update={hasSectionUpdate('readme')} bind:this={readmeHost}>
+		<section class="readme-section" id="readme" class:soft-update={hasSectionUpdate('readme')} bind:this={readmeHost}>
 			<div class="section-title-row">
 				<h2>README</h2>
 				<p>Archived {timeAgo(data.latestReadme.archived_at)} · {formatBytes(data.latestReadme.file_size)}</p>
@@ -412,12 +464,14 @@
 		</section>
 	{/if}
 
-	<FileBrowser
-		owner={data.repo.owner}
-		name={data.repo.name}
-		hasSource={Boolean(data.latestSource?.file_exists)}
-		onArchive={() => runRepoAction('archive')}
-	/>
+	<section id="source" class="source-browser-section">
+		<FileBrowser
+			owner={data.repo.owner}
+			name={data.repo.name}
+			hasSource={Boolean(data.latestSource?.file_exists)}
+			onArchive={() => runRepoAction('archive')}
+		/>
+	</section>
 
 	{#if data.latestSource}
 		<details class="fold" class:soft-update={hasSectionUpdate('archive')} ontoggle={analyzeOnOpen}>
@@ -455,7 +509,7 @@
 	{/if}
 
 	{#if data.releases.length}
-		<details class="fold" class:soft-update={hasSectionUpdate('releases')} open={data.releases.length <= 2}>
+		<details id="releases" class="fold" class:soft-update={hasSectionUpdate('releases')} open={data.releases.length <= 2}>
 			<summary>
 				<span>Releases</span>
 				<small>{data.releases.length} release/tag record(s)</small>
@@ -472,7 +526,7 @@
 		</details>
 	{/if}
 
-	<details class="fold" class:soft-update={hasSectionUpdate('archive')}>
+	<details class="fold" id="timeline" class:soft-update={hasSectionUpdate('archive')}>
 		<summary>
 			<span>Archive timeline</span>
 			<small>{data.localArchive.total_snapshots.toLocaleString()} snapshots · {formatBytes(data.localArchive.total_bytes)}</small>
@@ -579,7 +633,35 @@
 
 	.repo-story {
 		display: grid;
-		gap: 1.25rem;
+		gap: 1.5rem;
+	}
+
+	.repo-section-nav {
+		position: sticky;
+		top: 66px;
+		z-index: 15;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		padding: 0.55rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: color-mix(in srgb, var(--bg) 92%, transparent);
+		backdrop-filter: blur(14px);
+	}
+
+	.repo-section-nav a {
+		border-radius: 999px;
+		padding: 0.28rem 0.62rem;
+		color: var(--text-muted);
+		font-size: 0.82rem;
+		font-weight: 700;
+	}
+
+	.repo-section-nav a:hover {
+		background: var(--bg-hover);
+		color: var(--text);
+		text-decoration: none;
 	}
 
 	.soft-update {
@@ -600,8 +682,11 @@
 		display: grid;
 		grid-template-columns: 86px minmax(0, 1fr);
 		gap: 1rem;
-		padding-bottom: 1.25rem;
-		border-bottom: 1px solid var(--border);
+		padding: 1.25rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: linear-gradient(135deg, color-mix(in srgb, var(--bg-elevated) 92%, transparent), var(--bg-subtle));
+		box-shadow: var(--shadow-soft);
 	}
 
 	.owner-avatar {
@@ -694,11 +779,12 @@
 
 	.intelligence-report {
 		display: grid;
-		gap: 1rem;
+		gap: 1.1rem;
 		border: 1px solid var(--border);
-		border-radius: 8px;
+		border-radius: var(--radius);
 		background: var(--bg-elevated);
-		padding: 1rem;
+		padding: 1.1rem;
+		box-shadow: var(--shadow-soft);
 	}
 
 	.report-head,
@@ -741,7 +827,51 @@
 		white-space: nowrap;
 	}
 
-	.report-grid,
+	.report-head {
+		order: 1;
+	}
+
+	.report-grid {
+		order: 2;
+	}
+
+	.score-row {
+		order: 3;
+	}
+
+	.story-summary {
+		order: 4;
+	}
+
+	.evidence-explorer {
+		order: 5;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg);
+		padding: 1rem;
+	}
+
+	.evidence-head {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		align-items: flex-start;
+		margin-bottom: 0.85rem;
+	}
+
+	.evidence-head h3 {
+		margin: 0;
+	}
+
+	.evidence-head > span {
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		padding: 0.2rem 0.6rem;
+		color: var(--text-muted);
+		font-size: 0.8rem;
+		white-space: nowrap;
+	}
+
 	.evidence-grid {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -885,6 +1015,14 @@
 		color: var(--text-muted);
 	}
 
+	.evidence-grid a,
+	.evidence-link {
+		display: inline-flex;
+		margin-top: 0.45rem;
+		font-size: 0.78rem;
+		font-weight: 700;
+	}
+
 	.evidence-grid .missing {
 		border-color: color-mix(in srgb, var(--red) 55%, var(--border));
 	}
@@ -893,9 +1031,80 @@
 		border-color: color-mix(in srgb, var(--orange) 55%, var(--border));
 	}
 
-	.story-summary {
+	.evidence-groups {
+		display: grid;
+		gap: 0.65rem;
+		margin-top: 0.85rem;
+	}
+
+	.evidence-group {
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--bg-elevated) 80%, transparent);
+		scroll-margin-top: 120px;
+	}
+
+	.evidence-group summary {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.75rem 0.85rem;
+		cursor: pointer;
+	}
+
+	.evidence-group summary span {
+		font-weight: 800;
+	}
+
+	.evidence-group summary small {
+		color: var(--text-muted);
+	}
+
+	.evidence-group ul {
+		list-style: none;
+		margin: 0;
+		padding: 0 0.85rem 0.8rem;
+		display: grid;
+		gap: 0.55rem;
+	}
+
+	.evidence-group li {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.65rem;
+		align-items: start;
 		border-top: 1px solid var(--border);
-		padding-top: 0.75rem;
+		padding-top: 0.6rem;
+	}
+
+	.evidence-group li p {
+		margin: 0.15rem 0;
+		color: var(--text-muted);
+		font-size: 0.84rem;
+	}
+
+	.evidence-group time,
+	.evidence-group li small,
+	.empty-evidence {
+		color: var(--text-muted);
+		font-size: 0.78rem;
+	}
+
+	.evidence-group time {
+		display: inline-block;
+		margin-left: 0.4rem;
+	}
+
+	.empty-evidence {
+		margin: 0;
+		padding: 0 0.85rem 0.85rem;
+	}
+
+	.story-summary {
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg);
+		padding: 1rem;
 	}
 
 	.story-timeline {
@@ -978,7 +1187,7 @@
 		gap: 0.45rem;
 		padding: 1rem;
 		border: 1px solid var(--border);
-		border-radius: 8px;
+		border-radius: var(--radius);
 		background: var(--bg-elevated);
 	}
 
@@ -997,8 +1206,23 @@
 	.fold,
 	.related {
 		border: 1px solid var(--border);
-		border-radius: 8px;
+		border-radius: var(--radius);
 		background: var(--bg-elevated);
+	}
+
+	.source-browser-section {
+		scroll-margin-top: 110px;
+	}
+
+	#intelligence,
+	#archive-story,
+	#evidence,
+	#readme,
+	#source,
+	#signal,
+	#releases,
+	#timeline {
+		scroll-margin-top: 110px;
 	}
 
 	.key-facts div {
@@ -1268,6 +1492,7 @@
 
 		.report-head,
 		.report-grid,
+		.evidence-head,
 		.evidence-grid {
 			grid-template-columns: 1fr;
 		}
@@ -1297,3 +1522,4 @@
 		}
 	}
 </style>
+

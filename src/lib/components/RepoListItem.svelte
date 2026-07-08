@@ -24,58 +24,106 @@
 	}
 
 	let { repo }: { repo: RepoListItemData } = $props();
+
+	const detailHref = $derived(repoDetailPath(repo.owner, repo.name));
+	const archiveSummary = $derived(
+		repo.archive_badges?.sourceSaved
+			? 'Source evidence saved locally'
+			: repo.archive_badges?.readmeSaved
+				? 'README evidence saved locally'
+				: 'Awaiting preserved evidence'
+	);
+	const storySummary = $derived(
+		repo.archive_badges?.storyReady
+			? 'Archive story ready'
+			: 'Story appears after snapshots and events'
+	);
+
+	function evidenceHref(group: 'readme' | 'source' | 'timeline'): string {
+		return `${detailHref}#evidence-${group}`;
+	}
 </script>
 
 <li>
-	<a class="repo-item" href={repoDetailPath(repo.owner, repo.name)}>
-		<div class="repo-dates">
-			<span class="repo-time" title={repo.first_seen_at}>
-				First seen by archive: {timeAgo(repo.first_seen_at)}
-			</span>
-			<span class="repo-time muted" title={repo.created_at}>
-				GitHub created: {timeAgo(repo.created_at)} ({formatDateShort(repo.created_at)})
-			</span>
+	<article class="repo-item">
+		<div class="repo-card-head">
+			<a class="repo-name" href={detailHref}>{repo.full_name}</a>
+			<span class="repo-time" title={repo.first_seen_at}>Seen {timeAgo(repo.first_seen_at)}</span>
 		</div>
-		<span class="repo-name">{repo.full_name}</span>
+
+		{#if repo.search_snippet}
+			<p class="repo-summary">{@html repo.search_snippet}</p>
+		{:else if repo.description}
+			<p class="repo-summary">{repo.description}</p>
+		{:else}
+			<p class="repo-summary muted">No description archived yet.</p>
+		{/if}
+
 		{#if repo.archive_badges?.preserved || repo.archive_badges?.readmeSaved || repo.archive_badges?.sourceSaved || repo.archive_badges?.storyReady || repo.archive_badges?.deletedButSaved}
 			<div class="archive-badges" aria-label="Archive badges">
-				{#if repo.archive_badges.deletedButSaved}<span class="archive-badge critical">Deleted but saved</span>{/if}
-				{#if repo.archive_badges.preserved}<span class="archive-badge saved">Preserved</span>{/if}
-				{#if repo.archive_badges.readmeSaved}<span class="archive-badge">README saved</span>{/if}
-				{#if repo.archive_badges.sourceSaved}<span class="archive-badge">Source saved</span>{/if}
-				{#if repo.archive_badges.storyReady}<span class="archive-badge story">Story ready</span>{/if}
+				{#if repo.archive_badges.deletedButSaved}<a class="archive-badge critical" href={evidenceHref('timeline')}>Deleted but saved</a>{/if}
+				{#if repo.archive_badges.preserved}<a class="archive-badge saved" href={`${detailHref}#evidence`}>Preserved</a>{/if}
+				{#if repo.archive_badges.readmeSaved}<a class="archive-badge" href={evidenceHref('readme')}>README saved</a>{/if}
+				{#if repo.archive_badges.sourceSaved}<a class="archive-badge" href={evidenceHref('source')}>Source saved</a>{/if}
+				{#if repo.archive_badges.storyReady}<a class="archive-badge story" href={`${detailHref}#archive-story`}>Story ready</a>{/if}
 			</div>
 		{/if}
-		<div class="repo-meta">
+
+		<div class="repo-intel" aria-label="Archive intelligence summary">
+			<span>{archiveSummary}</span>
+			<span>{storySummary}</span>
+		</div>
+
+		<div class="repo-meta" aria-label="Repository metadata">
 			{#if repo.language}<span>{repo.language}</span>{/if}
-			{#if repo.stars !== null}<span>★ {repo.stars}</span>{/if}
-			{#if repo.search_snippet}
-				<span class="search-snippet">{@html repo.search_snippet}</span>
-			{:else if repo.description}
-				<span>{repo.description}</span>
-			{/if}
+			{#if repo.stars !== null}<span>{repo.stars} stars</span>{/if}
+			<span title={repo.created_at}>Created {formatDateShort(repo.created_at)}</span>
 			{#if repo.deleted_at}<span class="badge deleted">deleted</span>{/if}
 			{#if !repo.enriched_at}<span class="badge pending">not enriched</span>{/if}
 		</div>
-	</a>
+	</article>
 </li>
 
 <style>
+	.repo-card-head {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		align-items: baseline;
+	}
+
+	.repo-summary {
+		margin: 0;
+		color: var(--text-muted);
+		font-size: 0.92rem;
+		line-height: 1.5;
+	}
+
+	.muted {
+		color: var(--text-muted);
+	}
+
 	.archive-badges {
-		grid-column: 1 / -1;
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.35rem;
-		margin-top: 0.15rem;
+		gap: 0.4rem;
 	}
 
 	.archive-badge {
+		display: inline-flex;
 		border: 1px solid var(--border);
 		border-radius: 999px;
-		padding: 0.08rem 0.45rem;
+		padding: 0.12rem 0.5rem;
 		color: var(--text-muted);
-		font-size: 0.74rem;
+		font-size: 0.75rem;
 		line-height: 1.35;
+		text-decoration: none;
+	}
+
+	.archive-badge:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+		text-decoration: none;
 	}
 
 	.archive-badge.saved,
@@ -87,5 +135,25 @@
 	.archive-badge.critical {
 		border-color: color-mix(in srgb, var(--orange) 70%, var(--border));
 		color: var(--orange);
+	}
+
+	.repo-intel {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		color: var(--text-muted);
+		font-size: 0.82rem;
+	}
+
+	.repo-intel span {
+		border-left: 2px solid var(--border-strong);
+		padding-left: 0.5rem;
+	}
+
+	@media (max-width: 640px) {
+		.repo-card-head {
+			display: grid;
+			gap: 0.25rem;
+		}
 	}
 </style>
