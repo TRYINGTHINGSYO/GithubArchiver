@@ -1,6 +1,5 @@
 import { createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { finished } from 'node:stream/promises';
 import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import {
@@ -11,6 +10,7 @@ import {
 import { getDb } from '$lib/server/db/connection';
 import type { RepoRow } from '$lib/server/db/types';
 import { getArchiveDir, resolveSafeSnapshotPath } from '$lib/server/snapshots';
+import { pipeArchiveToWriteStream } from '$lib/server/zip-stream';
 
 async function createZipArchive() {
 	const { ZipArchive } = await import('archiver');
@@ -43,7 +43,7 @@ export async function writeSourceZipFromTarball(tarball: Buffer, zipPath: string
 
 	const output = createWriteStream(zipPath);
 	const archive = await createZipArchive();
-	archive.pipe(output);
+	const finishZip = pipeArchiveToWriteStream(archive, output);
 
 	let offset = 0;
 	while (offset + 512 <= tar.length) {
@@ -67,8 +67,7 @@ export async function writeSourceZipFromTarball(tarball: Buffer, zipPath: string
 		offset += 512 + Math.ceil(size / 512) * 512;
 	}
 
-	await archive.finalize();
-	await finished(output);
+	await finishZip();
 
 	return statSync(zipPath).size;
 }

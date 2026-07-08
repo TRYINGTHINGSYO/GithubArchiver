@@ -1,11 +1,11 @@
-import { createWriteStream, existsSync, mkdirSync, statSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import { finished } from 'node:stream/promises';
 import { getLatestArchiveSnapshot } from '$lib/server/db/archive';
 import { getDb } from '$lib/server/db/connection';
 import { updateJobRun } from '$lib/server/db/jobs';
 import type { RepoRow } from '$lib/server/db/types';
 import { resolveSafeSnapshotPath } from '$lib/server/snapshots';
+import { pipeArchiveToWriteStream } from '$lib/server/zip-stream';
 
 async function createZipArchive() {
 	const { ZipArchive } = await import('archiver');
@@ -112,97 +112,101 @@ export async function runBulkExport(opts: {
 
 	const output = createWriteStream(zipPath);
 	const archive = await createZipArchive();
-	archive.pipe(output);
+	const finishZip = pipeArchiveToWriteStream(archive, output);
 
-	let processed = 0;
-	for (const repo of repos) {
-		const entries: BulkExportManifestEntry[] = [];
+	try {
+		let processed = 0;
+		for (const repo of repos) {
+			const entries: BulkExportManifestEntry[] = [];
 
-		for (const snapshotType of ['readme', 'source'] as const) {
-			if (snapshotType === 'source') {
-				const zipSnapshot = getLatestArchiveSnapshot(repo.id, 'zip');
-				if (zipSnapshot) {
-					let safeZipPath: string | null = null;
-					try {
-						safeZipPath = resolveSafeSnapshotPath(zipSnapshot.file_path);
-					} catch {
-						manifest.skipped_missing_files++;
-					}
+			for (const snapshotType of ['readme', 'source'] as const) {
+				if (snapshotType === 'source') {
+					const zipSnapshot = getLatestArchiveSnapshot(repo.id, 'zip');
+					if (zipSnapshot) {
+						let safeZipPath: string | null = null;
+						try {
+							safeZipPath = resolveSafeSnapshotPath(zipSnapshot.file_path);
+						} catch {
+							manifest.skipped_missing_files++;
+						}
 
-					if (safeZipPath && existsSync(safeZipPath)) {
-						const zipEntry = snapshotZipPath(repo.owner, repo.name, 'source', `${repo.name}.zip`);
-						archive.file(safeZipPath, { name: zipEntry });
-						entries.push({
-							type: 'zip',
-							capture_reason: zipSnapshot.capture_reason ?? 'daemon',
-							archived_at: zipSnapshot.archived_at,
-							zip_path: zipEntry,
-							snapshot_id: zipSnapshot.id,
-							file_size: zipSnapshot.file_size,
-							reused_existing_zip: true
-						});
-						manifest.snapshot_count++;
-						continue;
+						if (safeZipPath && existsSync(safeZipPath)) {
+							const zipEntry = snapshotZipPath(repo.owner, repo.name, 'source', `${repo.name}.zip`);
+							archive.file(safeZipPath, { name: zipEntry });
+							entries.push({
+								type: 'zip',
+								capture_reason: zipSnapshot.capture_reason ?? 'daemon',
+								archived_at: zipSnapshot.archived_at,
+								zip_path: zipEntry,
+								snapshot_id: zipSnapshot.id,
+								file_size: zipSnapshot.file_size,
+								reused_existing_zip: true
+							});
+							manifest.snapshot_count++;
+							continue;
+						}
 					}
 				}
+
+				const snapshot = getLatestArchiveSnapshot(repo.id, snapshotType);
+				if (!snapshot) continue;
+
+				let safePath: string | null = null;
+				try {
+					safePath = resolveSafeSnapshotPath(snapshot.file_path);
+				} catch {
+					manifest.skipped_missing_files++;
+					continue;
+				}
+
+				if (!safePath || !existsSync(safePath)) {
+					manifest.skipped_missing_files++;
+					continue;
+				}
+
+				const zipEntry = snapshotZipPath(repo.owner, repo.name, snapshotType, snapshot.file_path);
+				archive.file(safePath, { name: zipEntry });
+				entries.push({
+					type: snapshotType,
+					capture_reason: snapshot.capture_reason ?? 'daemon',
+					archived_at: snapshot.archived_at,
+					zip_path: zipEntry,
+					snapshot_id: snapshot.id,
+					file_size: snapshot.file_size
+				});
+				manifest.snapshot_count++;
 			}
 
-			const snapshot = getLatestArchiveSnapshot(repo.id, snapshotType);
-			if (!snapshot) continue;
-
-			let safePath: string | null = null;
-			try {
-				safePath = resolveSafeSnapshotPath(snapshot.file_path);
-			} catch {
-				manifest.skipped_missing_files++;
-				continue;
+			if (entries.length > 0) {
+				manifest.repos.push({
+					owner: repo.owner,
+					repo: repo.name,
+					full_name: repo.full_name,
+					deleted_at: repo.deleted_at,
+					snapshots: entries
+				});
+				manifest.repo_count++;
 			}
 
-			if (!safePath || !existsSync(safePath)) {
-				manifest.skipped_missing_files++;
-				continue;
+			processed++;
+			if (processed % 25 === 0) {
+				updateJobRun(opts.jobId, {
+					phase: 'building',
+					scope,
+					format,
+					processed_repos: processed,
+					total_repos: repos.length,
+					snapshot_count: manifest.snapshot_count
+				});
 			}
-
-			const zipEntry = snapshotZipPath(repo.owner, repo.name, snapshotType, snapshot.file_path);
-			archive.file(safePath, { name: zipEntry });
-			entries.push({
-				type: snapshotType,
-				capture_reason: snapshot.capture_reason ?? 'daemon',
-				archived_at: snapshot.archived_at,
-				zip_path: zipEntry,
-				snapshot_id: snapshot.id,
-				file_size: snapshot.file_size
-			});
-			manifest.snapshot_count++;
 		}
 
-		if (entries.length > 0) {
-			manifest.repos.push({
-				owner: repo.owner,
-				repo: repo.name,
-				full_name: repo.full_name,
-				deleted_at: repo.deleted_at,
-				snapshots: entries
-			});
-			manifest.repo_count++;
-		}
-
-		processed++;
-		if (processed % 25 === 0) {
-			updateJobRun(opts.jobId, {
-				phase: 'building',
-				scope,
-				format,
-				processed_repos: processed,
-				total_repos: repos.length,
-				snapshot_count: manifest.snapshot_count
-			});
-		}
+		archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
+		await finishZip();
+	} catch (err) {
+		if (existsSync(zipPath)) rmSync(zipPath, { force: true });
+		throw err;
 	}
-
-	archive.append(JSON.stringify(manifest, null, 2), { name: 'manifest.json' });
-	await archive.finalize();
-	await finished(output);
 
 	const zipBytes = statSync(zipPath).size;
 
