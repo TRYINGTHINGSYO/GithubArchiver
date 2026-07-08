@@ -69,8 +69,8 @@
 
 	function downloadCurrentPageList() {
 		const rows = [
-			['repo', 'github_url'],
-			...data.repos.map((repo) => [repo.full_name, repo.github_url])
+			['repo', 'github_url', 'download_zip_url'],
+			...data.repos.map((repo) => [repo.full_name, repo.github_url, repo.download_zip_url ?? ''])
 		];
 		const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
 		const blob = new Blob([`${csv}\n`], { type: 'text/csv;charset=utf-8' });
@@ -372,7 +372,7 @@
 	{:else}
 		<ul class="repo-list">
 			{#each data.repos as repo}
-				<RepoListItem {repo} />
+				<RepoListItem {repo} isAdmin={data.isAdmin} />
 			{/each}
 		</ul>
 

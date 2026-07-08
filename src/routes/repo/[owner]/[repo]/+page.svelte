@@ -76,7 +76,7 @@
 		return value ? formatDateShort(value) : 'Unknown';
 	}
 
-	async function runRepoAction(action: 'archive' | 'refresh' | 'reanalyze-source') {
+	async function runRepoAction(action: 'archive' | 'refresh' | 'reanalyze-source' | 'favorite' | 'unfavorite') {
 		actionRunning = action;
 		actionMessage = null;
 		try {
@@ -170,21 +170,35 @@
 </svelte:head>
 
 <div class="action-bar">
-	{#if data.metadataOnly}
-		<button type="button" disabled title="Archive storage is disabled in metadata-only mode">
-			Archive storage disabled
+	{#if data.isAdmin}
+		{#if data.metadataOnly}
+			<button type="button" disabled title="Archive storage is disabled in metadata-only mode">
+				Archive storage disabled
+			</button>
+		{:else}
+			<button type="button" onclick={() => runRepoAction('archive')} disabled={Boolean(actionRunning)}>
+				{actionRunning === 'archive' ? 'Archiving' : 'Archive'}
+			</button>
+		{/if}
+		<button type="button" onclick={() => runRepoAction('refresh')} disabled={Boolean(actionRunning)}>
+			{actionRunning === 'refresh' ? 'Refreshing' : 'Refresh'}
 		</button>
-	{:else}
-		<button type="button" onclick={() => runRepoAction('archive')} disabled={Boolean(actionRunning)}>
-			{actionRunning === 'archive' ? 'Archiving' : 'Archive'}
+		<button type="button" onclick={() => runRepoAction('reanalyze-source')} disabled={Boolean(actionRunning || !data.latestSource)}>
+			{actionRunning === 'reanalyze-source' ? 'Analyzing' : 'Re-analyze'}
+		</button>
+		<button
+			type="button"
+			class:favorited={data.repo.is_favorite}
+			onclick={() => runRepoAction(data.repo.is_favorite ? 'unfavorite' : 'favorite')}
+			disabled={Boolean(actionRunning)}
+		>
+			{actionRunning === 'favorite' || actionRunning === 'unfavorite'
+				? 'Saving favorite'
+				: data.repo.is_favorite
+					? 'Favorited'
+					: 'Favorite'}
 		</button>
 	{/if}
-	<button type="button" onclick={() => runRepoAction('refresh')} disabled={Boolean(actionRunning)}>
-		{actionRunning === 'refresh' ? 'Refreshing' : 'Refresh'}
-	</button>
-	<button type="button" onclick={() => runRepoAction('reanalyze-source')} disabled={Boolean(actionRunning || !data.latestSource)}>
-		{actionRunning === 'reanalyze-source' ? 'Analyzing' : 'Re-analyze'}
-	</button>
 	<a href={data.repo.github_url} target="_blank" rel="noopener noreferrer">View GitHub</a>
 	<a href="/repo/{data.repo.owner}/{data.repo.name}/timeline">Timeline</a>
 	{#if data.downloadZipUrl}
@@ -476,7 +490,7 @@
 			name={data.repo.name}
 			hasSource={Boolean(data.latestSource?.file_exists)}
 			archiveStorageDisabled={data.metadataOnly}
-			onArchive={data.metadataOnly ? undefined : () => runRepoAction('archive')}
+			onArchive={data.metadataOnly || !data.isAdmin ? undefined : () => runRepoAction('archive')}
 		/>
 	</section>
 
@@ -613,6 +627,11 @@
 
 	.action-bar .download-zip {
 		font-weight: 600;
+	}
+
+	.action-bar .favorited {
+		border-color: color-mix(in srgb, var(--green) 60%, var(--border));
+		color: var(--green);
 	}
 
 	.action-message {

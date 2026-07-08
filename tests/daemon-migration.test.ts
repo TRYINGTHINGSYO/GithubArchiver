@@ -11,7 +11,7 @@ describe('migration011', () => {
 		const db = getDb();
 		const version = (db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number }).v;
 		expect(version).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(13);
+		expect(CURRENT_SCHEMA_VERSION).toBe(14);
 
 		const jobCols = (db.prepare('PRAGMA table_info(job_runs)').all() as { name: string }[]).map(
 			(c) => c.name
@@ -26,11 +26,12 @@ describe('migration011', () => {
 
 		const tables = (
 			db
-				.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?)`)
-				.all('daemon_decisions', 'repo_category_daily') as { name: string }[]
+				.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?)`)
+				.all('daemon_decisions', 'repo_category_daily', 'repo_favorites') as { name: string }[]
 		).map((r) => r.name);
 		expect(tables).toContain('daemon_decisions');
 		expect(tables).toContain('repo_category_daily');
+		expect(tables).toContain('repo_favorites');
 
 		const ingestCols = (db.prepare('PRAGMA table_info(ingestion_state)').all() as { name: string }[]).map(
 			(c) => c.name

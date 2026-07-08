@@ -29,11 +29,11 @@ describe('source-zip', () => {
 		teardownTestDb();
 	});
 
-	it('applies migration 13 for zip snapshot index', () => {
+	it('applies current schema migrations for zip snapshot index', () => {
 		const db = getDb();
 		const version = (db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number }).v;
 		expect(version).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(13);
+		expect(CURRENT_SCHEMA_VERSION).toBe(14);
 	});
 
 	it('builds predictable zip paths under ARCHIVE_DIR/zips', () => {

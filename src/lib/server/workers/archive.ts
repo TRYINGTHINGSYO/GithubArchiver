@@ -7,6 +7,7 @@ import {
 } from '../archive-outcomes.js';
 import { archiveRepo, getArchiveConfigFromEnv } from '../archiver.js';
 import { GitHubRateLimitError } from '../github.js';
+import { enforceStoragePressureLimit } from '../storage.js';
 
 const MAX_REPOS = Number(process.env.ARCHIVE_MAX_REPOS ?? 50);
 const DELAY_MS = Number(process.env.ARCHIVE_DELAY_MS ?? 100);
@@ -92,6 +93,32 @@ async function runArchivePool(
 
 export async function runArchiveCycle(): Promise<ArchiveCycleResult> {
 	const config = getArchiveConfigFromEnv();
+	const pressure = enforceStoragePressureLimit();
+	if (
+		pressure.triggered &&
+		pressure.freeBytesAfter !== null &&
+		pressure.freeBytesAfter < pressure.minFreeBytes
+	) {
+		const jobId = startJobRun('archive', {
+			storage_pressure: true,
+			free_bytes_before: pressure.freeBytesBefore,
+			free_bytes_after: pressure.freeBytesAfter,
+			min_free_bytes: pressure.minFreeBytes,
+			cleanups: pressure.report?.cleanups ?? []
+		});
+		const result: ArchiveCycleResult = {
+			planned: 0,
+			saved: 0,
+			skipped: 0,
+			issues: 0,
+			blocked: 1,
+			rateLimited: false,
+			outcomes: []
+		};
+		finishJobRun(jobId, 'failed', result, 'Archive storage free space is below the safety threshold.');
+		return result;
+	}
+
 	const repos = listEnrichedReposForArchive(MAX_REPOS);
 	const jobId = startJobRun('archive', {
 		max_repos: MAX_REPOS,

@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 
-export const CURRENT_SCHEMA_VERSION = 13;
+export const CURRENT_SCHEMA_VERSION = 14;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -535,6 +535,19 @@ function migration013(database: Database.Database) {
 	`);
 }
 
+function migration014(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS repo_favorites (
+			repo_id INTEGER PRIMARY KEY,
+			favorited_at TEXT NOT NULL,
+			FOREIGN KEY (repo_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_repo_favorites_at
+		  ON repo_favorites(favorited_at DESC);
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -548,7 +561,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	10: migration010,
 	11: migration011,
 	12: migration012,
-	13: migration013
+	13: migration013,
+	14: migration014
 };
 
 export function runMigrations(database: Database.Database) {

@@ -4,7 +4,7 @@ import { parseRepoQueryParams, repoQueryFiltersForUi } from '$lib/server/repo-se
 import { REPO_SORTS } from '$lib/server/db/repo-query';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const opts = parseRepoQueryParams(url);
 	const result = listRepos(opts);
 	const stats = getRepoStats();
@@ -17,6 +17,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		archivePulse,
 		languages,
 		sorts: REPO_SORTS,
-		filters: repoQueryFiltersForUi(opts)
+		filters: repoQueryFiltersForUi(opts),
+		isAdmin: locals.isAdmin
 	};
 };

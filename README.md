@@ -28,6 +28,7 @@ GH Archive (.json.gz)          GitHub Search API
 - **Shard** search queries (hour → 15 min → 5 min → 1 min) when `total_count > 1000`
 - **Enrich** metadata, releases, rename/delete detection
 - **Archive** README and source snapshots to disk
+- **Favorite** important repos globally so storage cleanup protects their preserved artifacts
 - **Browse** search, feeds, timelines, birth feed, and per-repo detail pages
 - **Operate** entirely from the browser via `/admin` — no SSH or terminal required in production
 
@@ -71,6 +72,8 @@ Use `stop-githubarchive.bat` to stop the server. See [docs/LOCAL_DESKTOP.md](doc
 
 All operations run **in-process** inside the web server and are recorded in `job_runs` for recall.
 
+Admin routes and repo mutation actions require the shared admin login. Set `ADMIN_PASSWORD` in production; if it is not set, the default password is `GitHub`. Favorites are global across the site, not account-specific.
+
 | Tab | URL | Purpose |
 |-----|-----|---------|
 | **Control** | `/admin` | Auto-scan, search ingest, pipeline, enrich, archive, backup, backfill |
@@ -109,6 +112,7 @@ ARCHIVE_DIR=/data/archives
 BACKUPS_DIR=/data/backups
 GITHUB_TOKEN=ghp_...          # public_repo scope only
 METADATA_ONLY=1               # recommended for constrained Railway volumes
+ADMIN_PASSWORD=change-me      # default is GitHub if omitted
 ```
 
 ### Optional
@@ -116,7 +120,10 @@ METADATA_ONLY=1               # recommended for constrained Railway volumes
 ```
 BACKGROUND_WORKER=auto        # default on Railway; set 0 to disable auto-scan
 PORT=8080                     # Railway sets this automatically
+STORAGE_MIN_FREE_BYTES=1073741824
 ```
+
+When free archive volume space falls below `STORAGE_MIN_FREE_BYTES` (default: 1 GiB), archive cycles run storage cleanup before downloading more artifacts. Favorited repositories are protected during this pressure cleanup.
 
 Deploy flow: Docker build (`npm ci` + `npm run build`) → `npm run db:init` → `node build`.  
 First deploy typically takes **5–10 minutes** (native `better-sqlite3` compile + SvelteKit build).
@@ -161,7 +168,7 @@ Each shard fetches up to `SEARCH_MAX_PAGES` pages (100 repos/page). Stats per sh
 
 ## Database schema
 
-Migrations are versioned in `schema_version` (current: **v9**).
+Migrations are versioned in `schema_version` (current: **v14**).
 
 | Table | Purpose |
 |-------|---------|
@@ -172,6 +179,7 @@ Migrations are versioned in `schema_version` (current: **v9**).
 | `repo_metrics_snapshots` | Historical stars/forks/watchers per refresh |
 | `repo_aliases` | Rename history |
 | `releases` / `release_assets` | Release and tag records |
+| `repo_favorites` | Global protected favorites for storage cleanup |
 | `ingestion_state` | Per-hour GH Archive ingest checkpoint |
 | `job_runs` | Worker/daemon/maintenance job history |
 | `backfill_jobs` / `backfill_hours` | Resumable backfill progress |
@@ -228,6 +236,9 @@ Migrations are versioned in `schema_version` (current: **v9**).
 | `ARCHIVE_DIR` | `./data/archives` | Snapshot files |
 | `BACKUPS_DIR` | `./data/backups` | Backup output |
 | `METADATA_ONLY` | — | Set `1` to disable README/source/ZIP artifact downloads while preserving metadata intelligence |
+| `ADMIN_PASSWORD` | `GitHub` | Shared admin login password |
+| `ADMIN_SESSION_SECRET` | `ADMIN_PASSWORD` | HMAC secret for admin session cookies |
+| `STORAGE_MIN_FREE_BYTES` | `1073741824` | Free-space threshold that triggers cleanup before archive downloads |
 | `BACKGROUND_WORKER` | `auto` on Railway | In-process auto-scan on boot |
 | `SEARCH_SHARD_MAX_DEPTH` | `3` | Search sharding depth |
 | `SEARCH_FALLBACK_MIN_EVENTS` | `1000` | Min GH Archive events before search fallback |

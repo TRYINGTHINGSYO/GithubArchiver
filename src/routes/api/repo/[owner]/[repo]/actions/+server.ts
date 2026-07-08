@@ -1,12 +1,17 @@
 import { json } from '@sveltejs/kit';
 import { archiveRepo, getArchiveConfigFromEnv } from '$lib/server/archiver';
 import { getArchiveSnapshotById, getRepoBySlug, listArchiveSnapshots } from '$lib/server/db';
+import { setRepoFavorite } from '$lib/server/db/favorites';
 import { enrichRepo, refreshRepo } from '$lib/server/enrich';
 import { analyzeSourceSnapshot, clearSourceAnalysisCache } from '$lib/server/source-archive';
 import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ params, request }) => {
+export const POST: RequestHandler = async ({ locals, params, request }) => {
+	if (!locals.isAdmin) {
+		return json({ ok: false, error: 'Admin login required.' }, { status: 401 });
+	}
+
 	const repo = getRepoBySlug(params.owner, params.repo);
 	if (!repo) {
 		return json({ ok: false, error: `Repository ${params.owner}/${params.repo} not found` }, { status: 404 });
@@ -14,6 +19,17 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 	const body = (await request.json().catch(() => ({}))) as { action?: string };
 	const action = body.action ?? '';
+
+	if (action === 'favorite' || action === 'unfavorite') {
+		const favorite = setRepoFavorite(repo.id, action === 'favorite');
+		return json({
+			ok: true,
+			action,
+			message: action === 'favorite' ? 'Repository favorited.' : 'Repository removed from favorites.',
+			is_favorite: Boolean(favorite),
+			favorited_at: favorite?.favorited_at ?? null
+		});
+	}
 
 	if (action === 'refresh') {
 		if (repo.enriched_at) {

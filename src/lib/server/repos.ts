@@ -16,6 +16,7 @@ import {
 	type ReleaseRow,
 	type RepoRow
 } from '$lib/server/db';
+import { getRepoFavorite } from '$lib/server/db/favorites';
 import { renderMarkdownSafe } from '$lib/server/markdown';
 import { enrichSnapshotMeta, readSnapshotText } from '$lib/server/snapshots';
 import type { SourceAnalysis } from '$lib/server/source-archive';
@@ -90,6 +91,8 @@ export interface RepoSummary {
 	download_zip_url?: string | null;
 	archive_badges: RepoArchiveBadges;
 	archive_storage_disabled: boolean;
+	is_favorite: boolean;
+	favorited_at: string | null;
 }
 
 function getRepoArchiveBadges(repoId: number, deletedAt: string | null): RepoArchiveBadges {
@@ -123,6 +126,7 @@ function getRepoArchiveBadges(repoId: number, deletedAt: string | null): RepoArc
 }
 
 function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: number | null }): RepoSummary {
+	const favorite = getRepoFavorite(row.id);
 	return {
 		id: row.id,
 		owner: row.owner,
@@ -165,7 +169,9 @@ function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: numb
 		search_rank: row.fts_rank ?? null,
 		download_zip_url: getRepoZipDownloadUrl(row.owner, row.name, row.id),
 		archive_badges: getRepoArchiveBadges(row.id, row.deleted_at),
-		archive_storage_disabled: isMetadataOnlyMode()
+		archive_storage_disabled: isMetadataOnlyMode(),
+		is_favorite: Boolean(favorite),
+		favorited_at: favorite?.favorited_at ?? null
 	};
 }
 

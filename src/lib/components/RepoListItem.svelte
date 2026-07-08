@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
 	import { repoDetailPath } from '$lib/repo-nav';
 	import { formatDateShort, timeAgo } from '$lib/utils';
 
@@ -14,6 +15,8 @@
 		search_snippet?: string | null;
 		deleted_at?: string | null;
 		enriched_at?: string | null;
+		is_favorite?: boolean;
+		favorited_at?: string | null;
 		archive_badges?: {
 			preserved: boolean;
 			readmeSaved: boolean;
@@ -24,7 +27,9 @@
 		};
 	}
 
-	let { repo }: { repo: RepoListItemData } = $props();
+	let { repo, isAdmin = false }: { repo: RepoListItemData; isAdmin?: boolean } = $props();
+	let favoritePending = $state(false);
+	let favorited = $state(false);
 
 	const detailHref = $derived(repoDetailPath(repo.owner, repo.name));
 	const archiveSummary = $derived(
@@ -42,8 +47,30 @@
 			: 'Story appears after snapshots and events'
 	);
 
+	$effect(() => {
+		favorited = Boolean(repo.is_favorite);
+	});
+
 	function evidenceHref(group: 'readme' | 'source' | 'timeline'): string {
 		return `${detailHref}#evidence-${group}`;
+	}
+
+	async function toggleFavorite() {
+		favoritePending = true;
+		try {
+			const response = await fetch(`/api/repo/${repo.owner}/${repo.name}/actions`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: favorited ? 'unfavorite' : 'favorite' })
+			});
+			const body = (await response.json()) as { ok?: boolean; is_favorite?: boolean };
+			if (response.ok && body.ok) {
+				favorited = Boolean(body.is_favorite);
+				await invalidateAll();
+			}
+		} finally {
+			favoritePending = false;
+		}
 	}
 </script>
 
@@ -51,7 +78,23 @@
 	<article class="repo-item">
 		<div class="repo-card-head">
 			<a class="repo-name" href={detailHref}>{repo.full_name}</a>
-			<span class="repo-time" title={repo.first_seen_at}>Seen {timeAgo(repo.first_seen_at)}</span>
+			<div class="repo-card-tools">
+				{#if isAdmin}
+					<button
+						type="button"
+						class:favorited
+						onclick={toggleFavorite}
+						disabled={favoritePending}
+						aria-pressed={favorited}
+						title={favorited ? 'Protected during storage cleanup' : 'Protect this repo during storage cleanup'}
+					>
+						{favorited ? 'Favorited' : 'Favorite'}
+					</button>
+				{:else if favorited}
+					<span class="favorite-marker">Favorited</span>
+				{/if}
+				<span class="repo-time" title={repo.first_seen_at}>Seen {timeAgo(repo.first_seen_at)}</span>
+			</div>
 		</div>
 
 		{#if repo.search_snippet}
@@ -94,6 +137,46 @@
 		justify-content: space-between;
 		gap: 1rem;
 		align-items: baseline;
+	}
+
+	.repo-card-tools {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: flex-end;
+		gap: 0.45rem;
+		align-items: center;
+	}
+
+	.repo-card-tools button,
+	.favorite-marker {
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--bg-elevated);
+		color: var(--text-muted);
+		padding: 0.15rem 0.5rem;
+		font: inherit;
+		font-size: 0.75rem;
+		line-height: 1.3;
+	}
+
+	.repo-card-tools button {
+		cursor: pointer;
+	}
+
+	.repo-card-tools button:hover {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+
+	.repo-card-tools button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.repo-card-tools .favorited,
+	.favorite-marker {
+		border-color: color-mix(in srgb, var(--green) 58%, var(--border));
+		color: var(--green);
 	}
 
 	.repo-summary {

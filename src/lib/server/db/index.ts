@@ -18,3 +18,4 @@ export * from './repo-history';
 export * from './daemon-decisions';
 export * from './category-stats';
 export * from './archive-pulse';
+export * from './favorites';

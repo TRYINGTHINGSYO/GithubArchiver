@@ -1,6 +1,7 @@
-import { existsSync, readdirSync, rmSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { existsSync, readdirSync, rmSync, statSync, statfsSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { getDb } from './db/connection';
+import { listFavoriteRepoIds } from './db/favorites';
 import type { ArchiveSnapshotRow } from './db/types';
 import { getArchiveDir, resolveSafeSnapshotPath } from './snapshots';
 
@@ -54,6 +55,14 @@ export interface StorageReport {
 	cleanups: StorageCleanup[];
 }
 
+export interface StoragePressureResult {
+	triggered: boolean;
+	minFreeBytes: number;
+	freeBytesBefore: number | null;
+	freeBytesAfter: number | null;
+	report?: StorageReport;
+}
+
 export interface StorageOptions {
 	cleanup?: boolean;
 	deleteOrphans?: boolean;
@@ -63,6 +72,7 @@ export interface StorageOptions {
 }
 
 const SAMPLE_LIMIT = 20;
+const DEFAULT_MIN_FREE_BYTES = 1024 * 1024 * 1024;
 
 function envFlag(name: string): boolean {
 	const value = process.env[name];
@@ -73,6 +83,33 @@ function keepLastNValue(): number {
 	const raw = process.env.STORAGE_KEEP_LAST_N;
 	const n = raw === undefined || raw === '' ? 5 : Number(raw);
 	return Math.max(1, Number.isFinite(n) ? n : 5);
+}
+
+function storageMinFreeBytes(): number {
+	const raw = process.env.STORAGE_MIN_FREE_BYTES ?? process.env.STORAGE_PRESSURE_MIN_FREE_BYTES;
+	const parsed = raw === undefined || raw === '' ? DEFAULT_MIN_FREE_BYTES : Number(raw);
+	return Math.max(0, Number.isFinite(parsed) ? parsed : DEFAULT_MIN_FREE_BYTES);
+}
+
+function existingPathForStatfs(path: string): string | null {
+	let current = resolve(path);
+	while (!existsSync(current)) {
+		const parent = dirname(current);
+		if (parent === current) return null;
+		current = parent;
+	}
+	return current;
+}
+
+function freeBytesForPath(path: string): number | null {
+	const target = existingPathForStatfs(path);
+	if (!target) return null;
+	try {
+		const stats = statfsSync(target);
+		return Number(stats.bavail) * Number(stats.bsize);
+	} catch {
+		return null;
+	}
 }
 
 function ageTrimEnabled(cleanup: boolean): boolean {
@@ -109,9 +146,13 @@ function listAllSnapshots(): (ArchiveSnapshotRow & { full_name: string })[] {
 		.all() as (ArchiveSnapshotRow & { full_name: string })[];
 }
 
-function buildProtectedIds(snapshots: ArchiveSnapshotRow[]): Set<number> {
+function buildProtectedIds(snapshots: ArchiveSnapshotRow[], favoriteRepoIds = new Set<number>()): Set<number> {
 	const latest = new Map<string, ArchiveSnapshotRow>();
+	const protectedIds = new Set<number>();
 	for (const snapshot of snapshots) {
+		if (favoriteRepoIds.has(snapshot.repo_id)) {
+			protectedIds.add(snapshot.id);
+		}
 		const key = `${snapshot.repo_id}:${snapshot.snapshot_type}`;
 		const current = latest.get(key);
 		if (
@@ -122,7 +163,10 @@ function buildProtectedIds(snapshots: ArchiveSnapshotRow[]): Set<number> {
 			latest.set(key, snapshot);
 		}
 	}
-	return new Set([...latest.values()].map((s) => s.id));
+	for (const snapshot of latest.values()) {
+		protectedIds.add(snapshot.id);
+	}
+	return protectedIds;
 }
 
 function resolveSnapshotPath(snapshot: ArchiveSnapshotRow): string | null {
@@ -376,7 +420,8 @@ function cleanupDuplicates(
 }
 
 function cleanupZipSnapshots(
-	snapshots: (ArchiveSnapshotRow & { full_name: string })[]
+	snapshots: (ArchiveSnapshotRow & { full_name: string })[],
+	favoriteRepoIds = new Set<number>()
 ): { cleanup: StorageCleanup; remaining: ArchiveSnapshotRow[] } {
 	const refCounts = pathRefCounts(snapshots);
 	const reposWithSource = new Set(
@@ -388,6 +433,7 @@ function cleanupZipSnapshots(
 
 	for (const snapshot of snapshots) {
 		if (snapshot.snapshot_type !== 'zip') continue;
+		if (favoriteRepoIds.has(snapshot.repo_id)) continue;
 		if (!reposWithSource.has(snapshot.repo_id)) continue;
 		bytesFreed += deleteSnapshotFile(snapshot, refCounts);
 		deletedIds.add(snapshot.id);
@@ -401,7 +447,7 @@ function cleanupZipSnapshots(
 			applied: count > 0,
 			message:
 				count > 0
-					? `Removed ${count} ZIP snapshot(s); source archives remain and ZIPs can be regenerated on demand.`
+					? `Removed ${count} ZIP snapshot(s); favorite repos were protected and other ZIPs can be regenerated on demand.`
 					: 'No regenerable ZIP snapshots to remove.',
 			count,
 			bytes_freed: bytesFreed
@@ -468,7 +514,8 @@ export function runStorageAnalysis(opts: StorageOptions = {}): StorageReport {
 	const totalBytesOnDisk = diskFiles.reduce((sum, f) => sum + f.size, 0);
 
 	let snapshots = listAllSnapshots();
-	const protectedIds = buildProtectedIds(snapshots);
+	const favoriteRepoIds = listFavoriteRepoIds();
+	const protectedIds = buildProtectedIds(snapshots, favoriteRepoIds);
 	const cleanups: StorageCleanup[] = [];
 
 	if (cleanup && (opts.deleteOrphans || envFlag('STORAGE_DELETE_ORPHANS'))) {
@@ -482,7 +529,7 @@ export function runStorageAnalysis(opts: StorageOptions = {}): StorageReport {
 	}
 
 	if (cleanup && (opts.deleteZipSnapshots || envFlag('STORAGE_DELETE_ZIPS'))) {
-		const result = cleanupZipSnapshots(snapshots);
+		const result = cleanupZipSnapshots(snapshots, favoriteRepoIds);
 		cleanups.push(result.cleanup);
 		snapshots = result.remaining as (ArchiveSnapshotRow & { full_name: string })[];
 	}
@@ -519,4 +566,34 @@ export function runStorageAnalysis(opts: StorageOptions = {}): StorageReport {
 
 export function getStorageReport(): StorageReport {
 	return runStorageAnalysis({ cleanup: false });
+}
+
+export function enforceStoragePressureLimit(): StoragePressureResult {
+	const minFreeBytes = storageMinFreeBytes();
+	const archiveDir = getArchiveDir();
+	const freeBytesBefore = freeBytesForPath(archiveDir);
+	if (freeBytesBefore === null || freeBytesBefore >= minFreeBytes) {
+		return {
+			triggered: false,
+			minFreeBytes,
+			freeBytesBefore,
+			freeBytesAfter: freeBytesBefore
+		};
+	}
+
+	const report = runStorageAnalysis({
+		cleanup: true,
+		deleteOrphans: true,
+		deleteDuplicates: true,
+		deleteZipSnapshots: true,
+		trimOld: true
+	});
+	const freeBytesAfter = freeBytesForPath(archiveDir);
+	return {
+		triggered: true,
+		minFreeBytes,
+		freeBytesBefore,
+		freeBytesAfter,
+		report
+	};
 }
