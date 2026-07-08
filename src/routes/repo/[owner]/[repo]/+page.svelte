@@ -240,6 +240,107 @@
 		</div>
 	{/if}
 
+	<section class="intelligence-report" aria-label="Repository Intelligence Report">
+		<div class="report-head">
+			<div>
+				<p class="report-kicker">Repository Intelligence</p>
+				<h2>What this archive understands</h2>
+			</div>
+			<span class="status-pill">{data.intelligenceReport.currentStatus}</span>
+		</div>
+
+		<div class="report-grid">
+			<div class="report-answer">
+				<span>What is this?</span>
+				<p>{data.intelligenceReport.identity}</p>
+			</div>
+			<div class="report-answer">
+				<span>Who is it for?</span>
+				<p>{data.intelligenceReport.purpose}</p>
+			</div>
+			<div class="report-answer wide">
+				<span>Why archive it?</span>
+				<p>{data.intelligenceReport.whyArchive}</p>
+			</div>
+		</div>
+
+		<div class="score-row">
+			<div class="score-panel">
+				<div class="score-ring" style={`--score: ${data.intelligenceReport.archiveScore.score}%`}>
+					<strong>{data.intelligenceReport.archiveScore.score}</strong>
+					<span>Archive Score</span>
+				</div>
+				<div>
+					<h3>{data.intelligenceReport.archiveScore.label}</h3>
+					<ul>
+						{#each data.intelligenceReport.archiveScore.reasons.slice(0, 4) as reason}
+							<li>{reason}</li>
+						{/each}
+					</ul>
+					<details class="score-details">
+						<summary>Score breakdown</summary>
+						{#each data.intelligenceReport.archiveScore.factors as factor}
+							<div class="factor-row">
+								<span>{factor.label}</span>
+								<strong>{factor.earned}/{factor.weight}</strong>
+								<small>{factor.detail}</small>
+							</div>
+						{/each}
+					</details>
+				</div>
+			</div>
+
+			<div class="score-panel recoverability">
+				<div class="score-ring" style={`--score: ${data.intelligenceReport.recoverability.overall}%`}>
+					<strong>{data.intelligenceReport.recoverability.overall}%</strong>
+					<span>Recoverability</span>
+				</div>
+				<div class="recoverability-list">
+					<h3>If GitHub disappeared today</h3>
+					{#each data.intelligenceReport.recoverability.items as item}
+						<div class="recoverability-row">
+							<span>{item.label}</span>
+							<div><i style={`width: ${item.score}%`}></i></div>
+							<strong>{item.score}%</strong>
+							<small>{item.detail}</small>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</div>
+
+		<div class="evidence-grid">
+			{#each data.intelligenceReport.evidence as item}
+				<div class:missing={item.status === 'missing'} class:partial={item.status === 'partial'}>
+					<span>{item.label}</span>
+					<strong>{item.value}</strong>
+					<small>{item.detail}</small>
+				</div>
+			{/each}
+		</div>
+
+		<div class="story-summary">
+			<h3>Archive Story</h3>
+			<div class="story-timeline">
+				{#each data.intelligenceReport.storyTimeline as step}
+					<div class:saved={step.tone === 'saved'} class:warning={step.tone === 'warning'}>
+						<span class="story-dot"></span>
+						<div>
+							<strong>{step.label}</strong>
+							<time datetime={step.date}>{dateLabel(step.date)}</time>
+							<p>{step.detail}</p>
+						</div>
+					</div>
+				{/each}
+			</div>
+			<div class="story-takeaway">
+				{#each data.intelligenceReport.storyTakeaway as sentence}
+					<p>{sentence}</p>
+				{/each}
+			</div>
+		</div>
+	</section>
+
 	<section class="explanation" aria-label="Plain language project explanation">
 		<p>{data.summary.definition}</p>
 		<p>{data.summary.use_case}</p>
@@ -591,6 +692,287 @@
 		margin: 0.25rem 0;
 	}
 
+	.intelligence-report {
+		display: grid;
+		gap: 1rem;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		background: var(--bg-elevated);
+		padding: 1rem;
+	}
+
+	.report-head,
+	.score-row,
+	.score-panel,
+	.recoverability-row,
+	.factor-row {
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.report-head {
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: start;
+		border-bottom: 1px solid var(--border);
+		padding-bottom: 0.75rem;
+	}
+
+	.report-kicker {
+		margin: 0 0 0.2rem;
+		color: var(--green);
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.report-head h2,
+	.score-panel h3,
+	.story-summary h3 {
+		margin: 0;
+	}
+
+	.status-pill {
+		border: 1px solid var(--accent);
+		border-radius: 999px;
+		padding: 0.2rem 0.65rem;
+		color: var(--accent);
+		font-size: 0.82rem;
+		white-space: nowrap;
+	}
+
+	.report-grid,
+	.evidence-grid {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.75rem;
+	}
+
+	.report-answer,
+	.evidence-grid div {
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		background: var(--bg);
+		padding: 0.8rem;
+	}
+
+	.report-answer.wide {
+		grid-column: 1 / -1;
+	}
+
+	.report-answer span,
+	.evidence-grid span,
+	.recoverability-row span,
+	.factor-row span {
+		color: var(--text-muted);
+		font-size: 0.78rem;
+	}
+
+	.report-answer p,
+	.score-panel ul {
+		margin: 0.3rem 0 0;
+	}
+
+	.score-row {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.score-panel {
+		grid-template-columns: 108px minmax(0, 1fr);
+		align-items: start;
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		background: var(--bg);
+		padding: 0.9rem;
+	}
+
+	.score-ring {
+		width: 96px;
+		height: 96px;
+		border-radius: 50%;
+		display: grid;
+		place-items: center;
+		background: conic-gradient(var(--green) var(--score), var(--bg-hover) 0);
+		position: relative;
+	}
+
+	.score-ring::before {
+		content: '';
+		position: absolute;
+		inset: 9px;
+		border-radius: 50%;
+		background: var(--bg);
+	}
+
+	.score-ring strong,
+	.score-ring span {
+		position: relative;
+		line-height: 1;
+	}
+
+	.score-ring strong {
+		font-size: 1.45rem;
+	}
+
+	.score-ring span {
+		margin-top: 1.85rem;
+		color: var(--text-muted);
+		font-size: 0.62rem;
+		text-align: center;
+	}
+
+	.score-panel ul {
+		padding-left: 1.1rem;
+		color: var(--text-muted);
+		font-size: 0.86rem;
+	}
+
+	.score-details {
+		margin-top: 0.6rem;
+		color: var(--text-muted);
+		font-size: 0.85rem;
+	}
+
+	.factor-row {
+		grid-template-columns: minmax(0, 1fr) auto;
+		border-top: 1px solid var(--border);
+		padding: 0.45rem 0;
+	}
+
+	.factor-row small {
+		grid-column: 1 / -1;
+		color: var(--text-muted);
+	}
+
+	.recoverability-list {
+		display: grid;
+		gap: 0.45rem;
+	}
+
+	.recoverability-row {
+		grid-template-columns: 88px minmax(0, 1fr) 44px;
+		align-items: center;
+		gap: 0.45rem 0.65rem;
+	}
+
+	.recoverability-row div {
+		height: 8px;
+		border-radius: 999px;
+		background: var(--bg-hover);
+		overflow: hidden;
+	}
+
+	.recoverability-row i {
+		display: block;
+		height: 100%;
+		background: var(--accent);
+	}
+
+	.recoverability-row small {
+		grid-column: 1 / -1;
+		color: var(--text-muted);
+		font-size: 0.76rem;
+	}
+
+	.evidence-grid strong {
+		display: block;
+		margin-top: 0.2rem;
+	}
+
+	.evidence-grid small {
+		display: block;
+		margin-top: 0.2rem;
+		color: var(--text-muted);
+	}
+
+	.evidence-grid .missing {
+		border-color: color-mix(in srgb, var(--red) 55%, var(--border));
+	}
+
+	.evidence-grid .partial {
+		border-color: color-mix(in srgb, var(--orange) 55%, var(--border));
+	}
+
+	.story-summary {
+		border-top: 1px solid var(--border);
+		padding-top: 0.75rem;
+	}
+
+	.story-timeline {
+		display: grid;
+		gap: 0;
+		margin-top: 0.75rem;
+	}
+
+	.story-timeline > div {
+		position: relative;
+		display: grid;
+		grid-template-columns: 24px minmax(0, 1fr);
+		gap: 0.7rem;
+		padding-bottom: 0.9rem;
+	}
+
+	.story-timeline > div::before {
+		content: '';
+		position: absolute;
+		top: 17px;
+		bottom: 0;
+		left: 7px;
+		width: 1px;
+		background: var(--border);
+	}
+
+	.story-timeline > div:last-child {
+		padding-bottom: 0;
+	}
+
+	.story-timeline > div:last-child::before {
+		display: none;
+	}
+
+	.story-dot {
+		position: relative;
+		z-index: 1;
+		width: 15px;
+		height: 15px;
+		margin-top: 0.15rem;
+		border-radius: 50%;
+		border: 2px solid var(--accent);
+		background: var(--bg);
+	}
+
+	.story-timeline .saved .story-dot {
+		border-color: var(--green);
+		background: color-mix(in srgb, var(--green) 28%, var(--bg));
+	}
+
+	.story-timeline .warning .story-dot {
+		border-color: var(--orange);
+		background: color-mix(in srgb, var(--orange) 28%, var(--bg));
+	}
+
+	.story-timeline strong {
+		display: inline-block;
+		margin-right: 0.45rem;
+	}
+
+	.story-timeline time {
+		color: var(--text-muted);
+		font-size: 0.8rem;
+	}
+
+	.story-timeline p,
+	.story-takeaway p {
+		margin: 0.2rem 0 0;
+		color: var(--text-muted);
+	}
+
+	.story-takeaway {
+		margin-top: 0.85rem;
+		border-left: 3px solid var(--green);
+		padding: 0.2rem 0 0.2rem 0.8rem;
+	}
+
 	.explanation {
 		display: grid;
 		gap: 0.45rem;
@@ -878,8 +1260,21 @@
 
 		.hero,
 		.signal-card,
+		.score-row,
+		.score-panel,
 		.source-grid {
 			grid-template-columns: 1fr;
+		}
+
+		.report-head,
+		.report-grid,
+		.evidence-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.status-pill {
+			justify-self: start;
+			white-space: normal;
 		}
 
 		.key-facts {

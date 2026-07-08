@@ -28,6 +28,15 @@ import {
 	type RepoEventRow,
 	type RepoEventType
 } from '$lib/server/events';
+import { getDb } from '$lib/server/db/connection';
+
+export interface RepoArchiveBadges {
+	preserved: boolean;
+	readmeSaved: boolean;
+	sourceSaved: boolean;
+	storyReady: boolean;
+	deletedButSaved: boolean;
+}
 
 export interface RepoSummary {
 	id: number;
@@ -70,6 +79,35 @@ export interface RepoSummary {
 	search_snippet?: string | null;
 	search_rank?: number | null;
 	download_zip_url?: string | null;
+	archive_badges: RepoArchiveBadges;
+}
+
+function getRepoArchiveBadges(repoId: number, deletedAt: string | null): RepoArchiveBadges {
+	const db = getDb();
+	const row = db
+		.prepare(
+			`SELECT
+				EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = ?) AS preserved,
+				EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = ? AND a.snapshot_type = 'readme') AS readme_saved,
+				EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = ? AND a.snapshot_type = 'source') AS source_saved,
+				EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = ?)
+				  OR EXISTS (SELECT 1 FROM releases rl WHERE rl.repo_id = ?)
+				  OR EXISTS (SELECT 1 FROM repository_events e WHERE e.repo_id = ? AND e.event_type IN ('readme_changed', 'snapshot_created', 'release_detected', 'deleted'))
+				  AS story_ready`
+		)
+		.get(repoId, repoId, repoId, repoId, repoId, repoId) as {
+			preserved: 0 | 1;
+			readme_saved: 0 | 1;
+			source_saved: 0 | 1;
+			story_ready: 0 | 1;
+		};
+	return {
+		preserved: row.preserved === 1,
+		readmeSaved: row.readme_saved === 1,
+		sourceSaved: row.source_saved === 1,
+		storyReady: row.story_ready === 1,
+		deletedButSaved: Boolean(deletedAt && row.preserved === 1)
+	};
 }
 
 function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: number | null }): RepoSummary {
@@ -113,7 +151,8 @@ function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: numb
 		classified_at: row.classified_at ?? null,
 		search_snippet: row.fts_snippet ?? null,
 		search_rank: row.fts_rank ?? null,
-		download_zip_url: getRepoZipDownloadUrl(row.owner, row.name, row.id)
+		download_zip_url: getRepoZipDownloadUrl(row.owner, row.name, row.id),
+		archive_badges: getRepoArchiveBadges(row.id, row.deleted_at)
 	};
 }
 
@@ -268,6 +307,59 @@ export interface LocalArchiveSummary {
 	last_snapshot_at: string | null;
 	readme_count: number;
 	source_count: number;
+}
+
+export interface ArchiveEvidenceItem {
+	label: string;
+	value: string;
+	detail: string;
+	status: 'saved' | 'partial' | 'missing';
+}
+
+export interface ArchiveScoreFactor {
+	label: string;
+	weight: number;
+	earned: number;
+	detail: string;
+}
+
+export interface ArchiveScore {
+	score: number;
+	label: string;
+	reasons: string[];
+	warnings: string[];
+	factors: ArchiveScoreFactor[];
+}
+
+export interface RecoverabilityItem {
+	label: string;
+	score: number;
+	detail: string;
+}
+
+export interface RecoverabilityReport {
+	overall: number;
+	items: RecoverabilityItem[];
+}
+
+export interface ArchiveStoryStep {
+	label: string;
+	date: string;
+	detail: string;
+	tone: 'neutral' | 'saved' | 'warning';
+}
+
+export interface RepositoryIntelligenceReport {
+	identity: string;
+	purpose: string;
+	whyArchive: string;
+	currentStatus: string;
+	evidence: ArchiveEvidenceItem[];
+	archiveScore: ArchiveScore;
+	recoverability: RecoverabilityReport;
+	story: string[];
+	storyTimeline: ArchiveStoryStep[];
+	storyTakeaway: string[];
 }
 
 export interface MergedTimelineItem {
@@ -616,6 +708,370 @@ function buildLocalArchiveSummary(snapshots: ArchiveSnapshot[]): LocalArchiveSum
 	};
 }
 
+function formatBytesCompact(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024).toLocaleString()} KB`;
+	return `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
+}
+
+function daySpan(from: string, to: string): number {
+	return Math.max(0, Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / 86_400_000));
+}
+
+function durationBetween(from: string, to: string): string {
+	const minutes = Math.max(0, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 60_000));
+	if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+	const hours = Math.round(minutes / 60);
+	if (hours < 48) return `${hours} hour${hours === 1 ? '' : 's'}`;
+	const days = Math.round(hours / 24);
+	return `${days} day${days === 1 ? '' : 's'}`;
+}
+
+function historyCounts(repoId: number): { commits: number; licenses: number; topics: number } {
+	const db = getDb();
+	return {
+		commits: (db.prepare('SELECT COUNT(*) as c FROM repo_commit_snapshots WHERE repo_id = ?').get(repoId) as { c: number }).c,
+		licenses: (db.prepare('SELECT COUNT(*) as c FROM repo_license_history WHERE repo_id = ?').get(repoId) as { c: number }).c,
+		topics: (db.prepare('SELECT COUNT(*) as c FROM repo_topics_history WHERE repo_id = ?').get(repoId) as { c: number }).c
+	};
+}
+
+function currentStatus(repo: RepoSummary, localArchive: LocalArchiveSummary): string {
+	if (repo.deleted_at && localArchive.total_snapshots > 0) return 'Deleted but preserved';
+	if (repo.deleted_at) return 'Deleted upstream';
+	if (repo.github_archived && localArchive.total_snapshots > 0) return 'Archived on GitHub and preserved locally';
+	if (repo.github_archived) return 'Archived on GitHub';
+	if (repo.pushed_at && Date.now() - new Date(repo.pushed_at).getTime() < 90 * 86_400_000) return 'Active';
+	if (repo.pushed_at && Date.now() - new Date(repo.pushed_at).getTime() > 365 * 86_400_000) return 'Stale';
+	return 'Observed';
+}
+
+function buildArchiveEvidence(
+	latestReadme: ArchiveSnapshot | null,
+	latestSource: ArchiveSnapshot | null,
+	latestZip: ArchiveSnapshot | null,
+	releases: ReleaseWithAssets[],
+	snapshots: ArchiveSnapshot[],
+	events: TimelineEvent[],
+	repo: RepoSummary
+): ArchiveEvidenceItem[] {
+	const eventTimes = events.map((event) => event.event_time);
+	const archiveTimes = snapshots.map((snapshot) => snapshot.archived_at);
+	const allTimes = [...eventTimes, ...archiveTimes, repo.first_seen_at, repo.created_at].filter(Boolean).sort();
+	const coverageDays = allTimes.length >= 2 ? daySpan(allTimes[0], allTimes.at(-1) ?? allTimes[0]) : 0;
+	const releaseAssets = releases.reduce((sum, release) => sum + release.assets.length, 0);
+
+	return [
+		{
+			label: 'README',
+			value: latestReadme ? 'Captured' : 'Missing',
+			detail: latestReadme ? `${latestReadme.archived_at.slice(0, 10)} · ${formatBytesCompact(latestReadme.file_size)}` : 'No README snapshot saved yet',
+			status: latestReadme ? 'saved' : 'missing'
+		},
+		{
+			label: 'Source',
+			value: latestSource ? 'Captured' : 'Missing',
+			detail: latestSource ? `${latestSource.archived_at.slice(0, 10)} · ${formatBytesCompact(latestSource.file_size)}` : 'No source snapshot saved yet',
+			status: latestSource ? 'saved' : 'missing'
+		},
+		{
+			label: 'ZIP',
+			value: latestZip ? 'Available' : 'Not ready',
+			detail: latestZip ? `Export snapshot #${latestZip.id}` : 'ZIP export will appear after source archival',
+			status: latestZip ? 'saved' : 'partial'
+		},
+		{
+			label: 'Releases',
+			value: releases.length.toLocaleString(),
+			detail: releaseAssets ? `${releaseAssets.toLocaleString()} release asset(s) indexed` : 'Release/tag records saved when available',
+			status: releases.length ? 'saved' : 'partial'
+		},
+		{
+			label: 'Snapshots',
+			value: snapshots.filter((snapshot) => snapshot.snapshot_type !== 'zip').length.toLocaleString(),
+			detail: `${formatBytesCompact(snapshots.reduce((sum, snapshot) => sum + snapshot.file_size, 0))} stored locally`,
+			status: snapshots.length ? 'saved' : 'missing'
+		},
+		{
+			label: 'History Coverage',
+			value: `${coverageDays.toLocaleString()} day${coverageDays === 1 ? '' : 's'}`,
+			detail: `${events.length.toLocaleString()} event(s) reconstructed`,
+			status: events.length >= 5 ? 'saved' : events.length ? 'partial' : 'missing'
+		}
+	];
+}
+
+function buildArchiveScore(
+	repo: RepoSummary,
+	localArchive: LocalArchiveSummary,
+	releases: ReleaseWithAssets[],
+	events: TimelineEvent[],
+	metrics: MetricSnapshotRow[],
+	history: { commits: number; licenses: number; topics: number },
+	technologies: TechnologyInsight[]
+): ArchiveScore {
+	const hasSource = localArchive.source_archived;
+	const hasReadme = localArchive.readme_archived;
+	const hasReleases = releases.length > 0;
+	const hasCommitHistory = history.commits > 0;
+	const timelineDepth = events.length + localArchive.total_snapshots + releases.length;
+	const hasFeatureExtraction = technologies.some((tech) => tech.source === 'source');
+	const hasDependencyExtraction = false;
+	const activeDevelopment = repo.pushed_at
+		? Date.now() - new Date(repo.pushed_at).getTime() < 180 * 86_400_000
+		: false;
+	const deletedButPreserved = Boolean(repo.deleted_at && localArchive.total_snapshots > 0);
+
+	const factors: ArchiveScoreFactor[] = [
+		{ label: 'README archived', weight: 10, earned: hasReadme ? 10 : 0, detail: hasReadme ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot yet' },
+		{ label: 'Source archived', weight: 25, earned: hasSource ? 25 : 0, detail: hasSource ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot yet' },
+		{ label: 'Releases archived', weight: 10, earned: hasReleases ? 10 : 0, detail: hasReleases ? `${releases.length} release/tag record(s)` : 'No release records yet' },
+		{ label: 'Commit history observed', weight: 10, earned: hasCommitHistory ? 10 : 0, detail: hasCommitHistory ? `${history.commits} commit observation(s)` : 'No commit history observations yet' },
+		{ label: 'Timeline depth', weight: 10, earned: timelineDepth >= 8 ? 10 : timelineDepth >= 3 ? 5 : 0, detail: `${timelineDepth} timeline evidence point(s)` },
+		{ label: 'Feature extraction', weight: 10, earned: hasFeatureExtraction ? 10 : 0, detail: hasFeatureExtraction ? 'Source-derived features detected' : 'Persistent feature scan not available yet' },
+		{ label: 'Dependency extraction', weight: 10, earned: hasDependencyExtraction ? 10 : 0, detail: 'Dependency scan is planned for v13' },
+		{ label: 'Active development', weight: 10, earned: activeDevelopment ? 10 : metrics.length >= 2 ? 5 : 0, detail: activeDevelopment ? 'Recent push activity observed' : 'No recent push activity observed' },
+		{ label: 'Deleted but preserved', weight: 5, earned: deletedButPreserved ? 5 : 0, detail: deletedButPreserved ? 'Upstream deleted; local archive remains' : 'Repo still exists upstream or no local archive yet' }
+	];
+	const score = factors.reduce((sum, factor) => sum + factor.earned, 0);
+	const reasons = factors.filter((factor) => factor.earned > 0).map((factor) => factor.detail);
+	const warnings = factors.filter((factor) => factor.earned === 0).map((factor) => factor.detail);
+	const label = score >= 90 ? 'Excellent archive' : score >= 75 ? 'Strong archive' : score >= 55 ? 'Partial archive' : score >= 30 ? 'Thin archive' : 'Needs preservation';
+
+	return { score, label, reasons, warnings, factors };
+}
+
+function buildRecoverability(
+	repo: RepoSummary,
+	localArchive: LocalArchiveSummary,
+	releases: ReleaseWithAssets[],
+	events: TimelineEvent[],
+	history: { commits: number; licenses: number; topics: number }
+): RecoverabilityReport {
+	const metadataScore = repo.is_enriched ? 100 : 35;
+	const timelineScore = Math.min(100, Math.round((events.length / 12) * 100));
+	const commitScore = Math.min(100, history.commits * 25);
+	const historyScore = Math.min(100, history.licenses * 35 + history.topics * 35 + commitScore * 0.3);
+	const items: RecoverabilityItem[] = [
+		{ label: 'README', score: localArchive.readme_archived ? 100 : 0, detail: localArchive.readme_archived ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot' },
+		{ label: 'Source', score: localArchive.source_archived ? 100 : 0, detail: localArchive.source_archived ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot' },
+		{ label: 'Releases', score: releases.length ? 100 : 20, detail: releases.length ? `${releases.length} release/tag record(s)` : 'No release records found' },
+		{ label: 'Metadata', score: metadataScore, detail: repo.is_enriched ? 'GitHub metadata enriched' : 'Only discovery metadata available' },
+		{ label: 'History', score: Math.round(Math.max(timelineScore, historyScore)), detail: `${events.length} event(s), ${history.commits} commit observation(s)` },
+		{ label: 'Dependencies', score: 0, detail: 'Dependency extraction is not implemented yet' }
+	];
+	const weighted =
+		items[0].score * 0.2 +
+		items[1].score * 0.3 +
+		items[2].score * 0.1 +
+		items[3].score * 0.1 +
+		items[4].score * 0.25 +
+		items[5].score * 0.05;
+	return { overall: Math.round(weighted), items };
+}
+
+function buildArchiveStory(
+	repo: RepoSummary,
+	events: TimelineEvent[],
+	snapshots: ArchiveSnapshot[],
+	releases: ReleaseWithAssets[],
+	localArchive: LocalArchiveSummary
+): string[] {
+	const story: string[] = [
+		`Created on ${repo.created_at.slice(0, 10)}.`,
+		`First discovered by GithubArchive+ on ${repo.first_seen_at.slice(0, 10)} via ${repo.discovery_source}.`
+	];
+	const firstSnapshot = [...snapshots].sort((a, b) => a.archived_at.localeCompare(b.archived_at))[0];
+	if (firstSnapshot) {
+		story.push(`First archived ${durationBetween(repo.first_seen_at, firstSnapshot.archived_at)} after discovery.`);
+	}
+	const readmeChanges = events.filter((event) => event.event_type === 'readme_changed');
+	if (readmeChanges.length > 1) {
+		story.push(`README changed ${readmeChanges.length} times, suggesting the project documentation evolved after discovery.`);
+	} else if (readmeChanges.length === 1) {
+		story.push('README changed after the first archive snapshot.');
+	}
+	if (localArchive.source_archived) {
+		story.push(`Source was preserved locally in ${localArchive.source_count} snapshot${localArchive.source_count === 1 ? '' : 's'}.`);
+	}
+	if (releases.length) {
+		story.push(`Release history is represented by ${releases.length} release/tag record${releases.length === 1 ? '' : 's'}.`);
+	}
+	if (repo.github_archived) story.push('GitHub marks this repository as archived.');
+	if (repo.deleted_at && localArchive.total_snapshots > 0) {
+		story.push(`The repository was deleted upstream, but GithubArchive+ preserved local evidence before or during disappearance.`);
+	} else if (repo.deleted_at) {
+		story.push('The repository was deleted upstream before a complete local archive was available.');
+	}
+	return story;
+}
+
+function firstSnapshotOfType(
+	snapshots: ArchiveSnapshot[],
+	type: 'readme' | 'source' | 'zip'
+): ArchiveSnapshot | null {
+	return [...snapshots]
+		.filter((snapshot) => snapshot.snapshot_type === type)
+		.sort((a, b) => a.archived_at.localeCompare(b.archived_at))[0] ?? null;
+}
+
+function buildArchiveStoryTimeline(
+	repo: RepoSummary,
+	snapshots: ArchiveSnapshot[],
+	releases: ReleaseWithAssets[],
+	localArchive: LocalArchiveSummary
+): ArchiveStoryStep[] {
+	const steps: ArchiveStoryStep[] = [
+		{
+			label: 'Created',
+			date: repo.created_at,
+			detail: 'Repository created on GitHub.',
+			tone: 'neutral'
+		},
+		{
+			label: 'First discovered',
+			date: repo.first_seen_at,
+			detail: `GithubArchive+ discovered it via ${repo.discovery_source}.`,
+			tone: 'neutral'
+		}
+	];
+	const firstReadme = firstSnapshotOfType(snapshots, 'readme');
+	const firstSource = firstSnapshotOfType(snapshots, 'source');
+	const firstRelease = [...releases]
+		.sort((a, b) => (a.published_at ?? a.first_seen_at).localeCompare(b.published_at ?? b.first_seen_at))[0] ?? null;
+
+	if (firstReadme) {
+		steps.push({
+			label: 'README archived',
+			date: firstReadme.archived_at,
+			detail: `${formatBytesCompact(firstReadme.file_size)} README evidence saved locally.`,
+			tone: 'saved'
+		});
+	}
+	if (firstSource) {
+		steps.push({
+			label: 'Source preserved',
+			date: firstSource.archived_at,
+			detail: `${formatBytesCompact(firstSource.file_size)} source snapshot saved locally.`,
+			tone: 'saved'
+		});
+	}
+	if (firstRelease) {
+		steps.push({
+			label: 'Release detected',
+			date: firstRelease.published_at ?? firstRelease.first_seen_at,
+			detail: `${firstRelease.name || firstRelease.tag} recorded in release history.`,
+			tone: 'neutral'
+		});
+	}
+	if (repo.github_archived) {
+		steps.push({
+			label: 'Archived upstream',
+			date: repo.last_checked_at ?? repo.enriched_at ?? repo.first_seen_at,
+			detail: 'GitHub marks this repository as archived.',
+			tone: localArchive.total_snapshots > 0 ? 'saved' : 'warning'
+		});
+	}
+	if (repo.deleted_at) {
+		steps.push({
+			label: localArchive.total_snapshots > 0 ? 'Deleted but saved' : 'Deleted upstream',
+			date: repo.deleted_at,
+			detail:
+				localArchive.total_snapshots > 0
+					? 'The upstream repository disappeared, but local archive evidence remains.'
+					: 'The upstream repository disappeared before local preservation was complete.',
+			tone: localArchive.total_snapshots > 0 ? 'saved' : 'warning'
+		});
+	}
+
+	return steps.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
+
+function buildArchiveStoryTakeaway(
+	repo: RepoSummary,
+	localArchive: LocalArchiveSummary,
+	releases: ReleaseWithAssets[]
+): string[] {
+	const savedKinds = [
+		localArchive.readme_archived ? 'README' : null,
+		localArchive.source_archived ? 'source' : null,
+		releases.length ? 'release history' : null
+	].filter(Boolean);
+
+	if (repo.deleted_at && localArchive.total_snapshots > 0) {
+		return [
+			`This repository was preserved before upstream loss, with ${savedKinds.length ? savedKinds.join(', ') : 'archive'} evidence still available locally.`,
+			'GithubArchive+ can still show its preserved record even though the GitHub source is gone.'
+		];
+	}
+	if (repo.github_archived && localArchive.total_snapshots > 0) {
+		return [
+			`GitHub marks this repository as archived, but GithubArchive+ has preserved ${savedKinds.length ? savedKinds.join(', ') : 'local'} evidence.`,
+			'The archive keeps the project inspectable after upstream activity has stopped.'
+		];
+	}
+	if (localArchive.readme_archived && localArchive.source_archived) {
+		return [
+			'This repository has both README and source evidence saved locally.',
+			'Its preserved snapshots make the project recoverable beyond GitHub metadata.'
+		];
+	}
+	if (localArchive.total_snapshots > 0) {
+		return [
+			'This repository has partial local preservation.',
+			'Additional source, release, and dependency evidence would make the archive more complete.'
+		];
+	}
+	return [
+		'This repository is known to GithubArchive+ but still needs preservation work.',
+		'Archiving README and source snapshots would make its history recoverable.'
+	];
+}
+
+function buildRepositoryIntelligenceReport(
+	repo: RepoSummary,
+	summary: ProfileSummary,
+	localArchive: LocalArchiveSummary,
+	snapshots: ArchiveSnapshot[],
+	latestReadme: ArchiveSnapshot | null,
+	latestSource: ArchiveSnapshot | null,
+	latestZip: ArchiveSnapshot | null,
+	releases: ReleaseWithAssets[],
+	events: TimelineEvent[],
+	metrics: MetricSnapshotRow[],
+	technologies: TechnologyInsight[]
+): RepositoryIntelligenceReport {
+	const history = historyCounts(repo.id);
+	const status = currentStatus(repo, localArchive);
+	const evidence = buildArchiveEvidence(latestReadme, latestSource, latestZip, releases, snapshots, events, repo);
+	const archiveScore = buildArchiveScore(repo, localArchive, releases, events, metrics, history, technologies);
+	const recoverability = buildRecoverability(repo, localArchive, releases, events, history);
+	const storyTimeline = buildArchiveStoryTimeline(repo, snapshots, releases, localArchive);
+	const storyTakeaway = buildArchiveStoryTakeaway(repo, localArchive, releases);
+	const technologyNames = technologies.slice(0, 5).map((tech) => tech.name);
+	const whyArchive =
+		archiveScore.score >= 75
+			? 'This repository has enough preserved evidence to be useful as a historical software record.'
+			: localArchive.total_snapshots > 0
+				? 'This repository has partial local evidence and should be archived further to improve recoverability.'
+				: 'This repository is known to the archive but still needs preservation work.';
+
+	return {
+		identity: summary.definition,
+		purpose: summary.use_case.replace(/^Use-case:\s*/, ''),
+		whyArchive,
+		currentStatus: status,
+		evidence,
+		archiveScore,
+		recoverability,
+		storyTimeline,
+		storyTakeaway,
+		story: buildArchiveStory(repo, events, snapshots, releases, localArchive).concat(
+			technologyNames.length ? [`Detected technology context includes ${technologyNames.join(', ')}.`] : []
+		)
+	};
+}
+
 function buildMergedTimeline(
 	events: TimelineEvent[],
 	snapshots: ArchiveSnapshot[],
@@ -736,8 +1192,10 @@ export function getRepoWithSnapshots(owner: string, name: string) {
 	const snapshots = listArchiveSnapshots(row.id).map(toArchiveSnapshot);
 	const readmeSnapshots = snapshots.filter((s) => s.snapshot_type === 'readme');
 	const sourceSnapshots = snapshots.filter((s) => s.snapshot_type === 'source');
+	const zipSnapshots = snapshots.filter((s) => s.snapshot_type === 'zip');
 	const latestReadme = readmeSnapshots[0] ?? null;
 	const latestSource = sourceSnapshots[0] ?? null;
+	const latestZip = zipSnapshots[0] ?? null;
 
 	let readmeHtml: string | null = null;
 	let readmeText = '';
@@ -767,6 +1225,19 @@ export function getRepoWithSnapshots(owner: string, name: string) {
 	const summary = buildProfileSummary(repo, readmeText, releases, technologies);
 	const mergedTimeline = buildMergedTimeline(events, snapshots, releases, metrics, repo);
 	const truthNotices = buildTruthNotices(repo, latestSource, localArchive);
+	const intelligenceReport = buildRepositoryIntelligenceReport(
+		repo,
+		summary,
+		localArchive,
+		snapshots,
+		latestReadme,
+		latestSource,
+		latestZip,
+		releases,
+		events,
+		metrics,
+		technologies
+	);
 
 	return {
 		repo,
@@ -774,8 +1245,10 @@ export function getRepoWithSnapshots(owner: string, name: string) {
 		snapshots,
 		readmeSnapshots,
 		sourceSnapshots,
+		zipSnapshots,
 		latestReadme,
 		latestSource,
+		latestZip,
 		readmeHtml,
 		readmeImages,
 		readmeFeatures,
@@ -797,6 +1270,7 @@ export function getRepoWithSnapshots(owner: string, name: string) {
 			}))
 		},
 		summary,
+		intelligenceReport,
 		related: relatedProjects(repo),
 		mergedTimeline,
 		localArchive,

@@ -1,18 +1,19 @@
 # GithubArchive+ Roadmap
 
-**North star:** a repository intelligence platform built on append-only history — not a GitHub mirror.
+**North star:** a repository intelligence and preservation platform built on append-only history — not a GitHub mirror. GithubArchive+ should feel like a software museum: it remembers projects, explains why they matter, and shows how recoverable they are if GitHub disappears.
 
 **Design rules:**
 
 1. **Append-only everywhere** — history tables never update prior rows; latest row = current state.
 2. **One source of truth** — derived intelligence must be reproducible from historical data, not a competing store.
 3. **Compounding value** — each version answers a deeper question using what prior versions already preserved.
-4. **Layers, not monoliths** — raw facts → derived facts → ecosystem intelligence → state reconstruction.
+4. **Layers, not monoliths** — raw facts → derived facts → repository understanding → ecosystem intelligence → state reconstruction.
+5. **Explain significance** — raw events say what happened; intelligence reports explain why the change matters.
 
 **Progression:**
 
 ```
-Collect → Preserve → Derive → Reconstruct → Analyze
+Collect → Preserve → Derive → Reconstruct → Understand → Analyze
 ```
 
 | Stage | Question |
@@ -21,7 +22,16 @@ Collect → Preserve → Derive → Reconstruct → Analyze
 | Preserve | What changed, and when? |
 | Derive | What's growing / trending / notable? |
 | Reconstruct | What did this repo look like on date X? |
+| Understand | What is this, why preserve it, and what evidence do we have? |
 | Analyze | How does the ecosystem evolve? |
+
+Every repository page should answer five product questions:
+
+1. What is this?
+2. Why does it matter?
+3. What changed?
+4. What evidence do we have?
+5. Could this still exist if GitHub vanished?
 
 **Shipped (pre-v10):** schema v9, GH Archive + sharded Search ingest, enrichment, README/tarball snapshots, `repo_metrics_snapshots`, `repository_events`, FTS, `/admin` + job history, Railway auto-scan.
 
@@ -232,9 +242,120 @@ New features can be backfilled by re-scanning `repo_files` without re-downloadin
 
 ---
 
+## v12.5 — Repository Understanding
+
+Archive Intelligence indexes facts. Repository Understanding explains them.
+
+### Intelligence Report
+
+Each repo gets a structured, reproducible report generated from metadata, snapshots, events, metrics, features, dependencies, and repository state. The report should be readable by a human before they inspect raw data.
+
+| Section | Answers |
+|---------|---------|
+| Identity | What is this repository? |
+| Purpose | Who is it for and what job does it do? |
+| Significance | Why might it be worth preserving? |
+| Evidence | What has GithubArchive+ saved locally? |
+| Technology | What stack/features are detected from source and manifests? |
+| Timeline summary | What story do the events tell? |
+| Current status | Active, stale, archived, deleted, or deleted-but-preserved |
+| Recoverability | Could the repo be reconstructed from local evidence? |
+
+Example report fields:
+
+```text
+Identity:
+  A SvelteKit application for archiving GitHub repositories and reconstructing historical repository state.
+
+Purpose:
+  Designed for developers, researchers, and archivists tracking open-source evolution.
+
+Evidence:
+  README archived, source archived, ZIP available, releases archived, timeline reconstructed,
+  commit history observed, license history observed, topics history observed.
+
+Technology:
+  SvelteKit, SQLite, Node, GitHub Actions, Docker, Bun.
+```
+
+### Preservation Score
+
+Add a first-class score answering: *"Why archive this?"*
+
+Inputs should be derived from existing or planned facts:
+
+| Signal | Source |
+|--------|--------|
+| Rapid weekly growth | v11 metrics |
+| High growth percentile | v11 metrics |
+| First public release | releases |
+| README changed often | `repository_events` |
+| Source snapshot saved | `archive_snapshots` |
+| Deleted or GitHub-archived | repo metadata |
+| Uncommon or newly adopted technology | `repo_features` / dependencies |
+| Active contributor or release pattern | metrics, releases, events |
+
+Display as both a number and reasons:
+
+```text
+Archive Score: 98/100
+
+Reasons:
+- Rapid weekly growth
+- First public release
+- Documentation changed 8 times
+- Repository already archived by owner
+- Source snapshot preserved
+```
+
+### Recoverability
+
+Add a recoverability report answering: *"If GitHub disappeared tomorrow, how much could we reconstruct?"*
+
+Suggested dimensions:
+
+| Dimension | Evidence |
+|-----------|----------|
+| README | Latest README snapshot exists |
+| Source | Latest source snapshot exists and is readable |
+| ZIP | Exportable ZIP snapshot exists |
+| Releases | Releases/tags/assets archived |
+| Timeline | `repository_events` coverage |
+| Commits | `repo_commit_snapshots` coverage |
+| License/topics | v10 history tables |
+| Dependencies | v13 dependency rows |
+
+Example:
+
+```text
+Recoverability:
+  README 100%
+  Source 100%
+  Releases 100%
+  Timeline 95%
+  Commits 82%
+  Dependencies 91%
+  Overall 93%
+```
+
+### Significance Narratives
+
+Repository Understanding should turn raw events into interpretive statements:
+
+| Raw fact | Better explanation |
+|----------|--------------------|
+| `readme_changed` | Documentation was substantially rewritten after the first release, suggesting the project matured from prototype to production-ready application. |
+| `topics_changed` | The project shifted toward AI tooling by adding `mcp`, `agents`, and `claude` topics after creation. |
+| `license_changed` | The repository became more commercially friendly by switching from GPL to Apache-2.0. |
+| `deleted_at` with snapshots | The upstream repository disappeared from GitHub, but README/source/history remain preserved locally. |
+
+Implementation should keep a deterministic rule engine first, then allow optional LLM enrichment later. Generated prose must point back to evidence rows so it remains auditable.
+
+---
+
 ## v13 — Ecosystem Intelligence
 
-**Only after v12 file index exists.**
+**Only after v12 file index exists.** Feeds Repository Understanding with dependency-level context.
 
 ### `repo_dependencies` (append-only)
 
@@ -321,11 +442,46 @@ Render as vertical timeline on repo page.
 
 ---
 
+## v14 — Repository Memory
+
+Repository Memory is not a larger database; it is better explanation from evidence already preserved. It answers higher-order questions that make the archive feel like an intelligence platform instead of a mirror.
+
+### Questions
+
+- Why did this suddenly become popular?
+- Why is this repo important?
+- What actually changed?
+- Was this a rewrite or a minor edit?
+- Is this project abandoned or simply stable?
+- How has its purpose evolved?
+
+### Inputs
+
+| Input | Explanation use |
+|-------|-----------------|
+| README snapshots | Detect major documentation rewrites, positioning changes, install/setup maturity |
+| Topics/license history | Explain purpose or licensing shifts |
+| Metrics velocity/acceleration | Explain popularity changes |
+| Features/dependencies | Explain stack evolution and ecosystem adoption |
+| Releases | Explain maturity and production readiness |
+| Repository state | Compare what the repo meant at two points in time |
+
+### Outputs
+
+- Purpose evolution summary
+- Change significance labels: minor edit, docs rewrite, stack shift, release maturity, licensing shift
+- Popularity explanation: growing rapidly, emerging, sleeping giant, stable but maintained
+- Abandonment/stability explanation based on releases, pushes, issues, and archive evidence
+
+All memory claims must link back to evidence rows or reconstructed state so the explanation remains auditable.
+
+---
+
 ## Later versions (outline)
 
 | Version | Focus |
 |---------|-------|
-| v14 | README semantic diff (section/badge changes) |
+| v14 | Repository Memory: explanation of significance, popularity, purpose evolution |
 | v15 | Release analytics (frequency, abandoned score) |
 | v16 | Public paginated archive API (`/history`, `/state`, `/trending`) |
 | v17 | Performance: covering indexes, incremental FTS, worker queue table |
@@ -339,6 +495,7 @@ v10  repo_commit_snapshots, repo_license_history, repo_topics_history
 v11  (views only; optional repo_growth_daily materialized)
 v11-ops  migration011: summary, category, daemon_decisions, capture_reason, job_runs.reason
 v12  repo_files, repo_features
+v12.5  intelligence reports, preservation score, recoverability (derived, rebuildable)
 v13  repo_dependencies
 —    repo_milestones (optional, archaeology)
 ```
@@ -352,7 +509,10 @@ v13  repo_dependencies
 | Switched MIT → Apache | v10 |
 | Fastest growing this week | v11 |
 | Repos with AGENTS.md | v12 |
+| Why should this repo be archived? | v12.5 |
+| Could this repo be recovered if GitHub disappeared? | v12.5 |
 | SvelteKit + Bun + MCP | v12 + v13 |
+| Why did this repo become important? | v14 |
 | State on 2026-07-01 | v10 + state service |
 | Renamed after first release | v10 + archaeology + releases |
 
@@ -360,11 +520,13 @@ v13  repo_dependencies
 
 ## UI backlog (by version)
 
-**v10:** license/topic change badges on repo cards; history sections on repo page  
-**v11:** trending feeds API + velocity badges on cards; growth graphs  
-**v11.5:** discovery platform UI refresh — see [`UI.md`](./UI.md)  
-**v12:** feature filters on birth-feed and search  
-**v13:** dependency explorer  
+**v10:** license/topic change badges on repo cards; history sections on repo page
+**v11:** trending feeds API + velocity badges on cards; growth graphs
+**v11.5:** discovery platform UI refresh — see [`UI.md`](./UI.md)
+**v12:** feature filters on birth-feed and search
+**v12.5:** Intelligence Report, Archive Score, recoverability meter, significance narratives
+**v13:** dependency explorer
+**v14:** purpose evolution, popularity explanations, rewrite/stability summaries
 **Archaeology:** synthesized milestone timeline (uses state service)
 
 ---
@@ -376,10 +538,12 @@ v13  repo_dependencies
 3. **v11** — SQL views + `/api/trending` + minimal trending feed UI
 4. **v11-ops** — autonomous daemon, summaries, categories ([`PROPOSAL-autonomous-intelligence.md`](./PROPOSAL-autonomous-intelligence.md); `migration011`)
 5. **v11.5** — discovery UI refresh (hero, sidebar, cards — powered by v11 metrics)
-6. **Archaeology** — milestone detector + timeline UI
-7. **v12** — file index in archive worker + feature derivation
-8. **v13** — dependency parsers (npm first)
+6. **v12** — file index in archive worker + feature derivation
+7. **v12.5** — Repository Understanding: Intelligence Report, Archive Score, recoverability, significance narratives
+8. **Archaeology** — milestone detector + timeline UI
+9. **v13** — dependency parsers (npm first)
+10. **v14** — Repository Memory: purpose evolution, popularity explanations, significance summaries
 
 ---
 
-*Last updated: July 2026 — schema **v10** shipped (historical resolution). **v11** metric definitions locked in [`METRICS.md`](./METRICS.md); implementation next.*
+*Last updated: July 2026 — schema **v10** shipped (historical resolution). **v11** metric definitions locked in [`METRICS.md`](./METRICS.md); Repository Understanding added as the v12.5 product layer.*
