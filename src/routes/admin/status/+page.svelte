@@ -153,9 +153,15 @@
 		<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Enrich', () => postJson('/api/admin/workers', { action: 'enrich' }))}>
 			{actionLoading === 'Enrich' ? 'Starting…' : 'Enrich Now'}
 		</button>
-		<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Archive', () => postJson('/api/admin/workers', { action: 'archive' }))}>
-			{actionLoading === 'Archive' ? 'Starting…' : 'Archive Now'}
-		</button>
+		{#if status.archive.metadataOnly}
+			<button type="button" class="filter-btn" disabled title="Artifact archive storage is disabled by METADATA_ONLY=1">
+				Archive storage disabled
+			</button>
+		{:else}
+			<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Archive', () => postJson('/api/admin/workers', { action: 'archive' }))}>
+				{actionLoading === 'Archive' ? 'Starting…' : 'Archive Now'}
+			</button>
+		{/if}
 		<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Refresh', () => postJson('/api/admin/workers', { action: 'refresh' }))}>
 			{actionLoading === 'Refresh' ? 'Starting…' : 'Refresh Metadata'}
 		</button>
@@ -554,6 +560,9 @@
 
 <section class="detail-section">
 	<h2 class="section-title">Archive storage</h2>
+	{#if status.archive.metadataOnly}
+		<p class="admin-warning">Metadata-only mode is active. README, source, and ZIP archive downloads are disabled; discovery, enrichment, metrics, events, and summaries continue.</p>
+	{/if}
 	<dl class="detail-grid">
 		<div>
 			<dt>Snapshot files</dt>

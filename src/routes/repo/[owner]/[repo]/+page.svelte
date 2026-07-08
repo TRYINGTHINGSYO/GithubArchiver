@@ -170,9 +170,15 @@
 </svelte:head>
 
 <div class="action-bar">
-	<button type="button" onclick={() => runRepoAction('archive')} disabled={Boolean(actionRunning)}>
-		{actionRunning === 'archive' ? 'Archiving' : 'Archive'}
-	</button>
+	{#if data.metadataOnly}
+		<button type="button" disabled title="Archive storage is disabled in metadata-only mode">
+			Archive storage disabled
+		</button>
+	{:else}
+		<button type="button" onclick={() => runRepoAction('archive')} disabled={Boolean(actionRunning)}>
+			{actionRunning === 'archive' ? 'Archiving' : 'Archive'}
+		</button>
+	{/if}
 	<button type="button" onclick={() => runRepoAction('refresh')} disabled={Boolean(actionRunning)}>
 		{actionRunning === 'refresh' ? 'Refreshing' : 'Refresh'}
 	</button>
@@ -330,7 +336,7 @@
 
 			<div class="evidence-grid" aria-label="Preserved evidence summary">
 			{#each data.intelligenceReport.evidence as item}
-				<div class:missing={item.status === 'missing'} class:partial={item.status === 'partial'}>
+				<div class:missing={item.status === 'missing'} class:partial={item.status === 'partial'} class:disabled={item.status === 'disabled'}>
 					<span>{item.label}</span>
 					<strong>{item.value}</strong>
 					<small>{item.detail}</small>
@@ -469,7 +475,8 @@
 			owner={data.repo.owner}
 			name={data.repo.name}
 			hasSource={Boolean(data.latestSource?.file_exists)}
-			onArchive={() => runRepoAction('archive')}
+			archiveStorageDisabled={data.metadataOnly}
+			onArchive={data.metadataOnly ? undefined : () => runRepoAction('archive')}
 		/>
 	</section>
 
@@ -601,7 +608,7 @@
 
 	.action-bar button:disabled {
 		opacity: 0.55;
-		cursor: wait;
+		cursor: not-allowed;
 	}
 
 	.action-bar .download-zip {
@@ -1029,6 +1036,11 @@
 
 	.evidence-grid .partial {
 		border-color: color-mix(in srgb, var(--orange) 55%, var(--border));
+	}
+
+	.evidence-grid .disabled {
+		opacity: 0.75;
+		border-style: dashed;
 	}
 
 	.evidence-groups {

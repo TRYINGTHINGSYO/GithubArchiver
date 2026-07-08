@@ -23,11 +23,13 @@
 		owner,
 		name,
 		hasSource,
+		archiveStorageDisabled = false,
 		onArchive
 	}: {
 		owner: string;
 		name: string;
 		hasSource: boolean;
+		archiveStorageDisabled?: boolean;
 		onArchive?: () => void;
 	} = $props();
 
@@ -96,7 +98,13 @@
 	}
 </script>
 
-{#if !hasSource}
+{#if archiveStorageDisabled}
+	<section class="browse-files empty disabled">
+		<h2>Browse Files</h2>
+		<p class="empty-lead">Source archive storage is disabled in metadata-only mode.</p>
+		<p class="muted">Repository metadata, metrics, events, and intelligence continue to update without downloading source tarballs.</p>
+	</section>
+{:else if !hasSource}
 	<section class="browse-files empty">
 		<h2>Browse Files</h2>
 		<p class="empty-lead">Files not yet saved — click <strong>Archive</strong> to download and store this repository locally.</p>
@@ -193,6 +201,11 @@
 	.browse-files.empty {
 		border-color: var(--orange);
 		background: color-mix(in srgb, var(--orange) 8%, var(--bg-elevated));
+	}
+
+	.browse-files.disabled {
+		border-color: var(--border);
+		background: var(--bg-elevated);
 	}
 
 	.empty-lead {

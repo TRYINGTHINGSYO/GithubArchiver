@@ -14,6 +14,7 @@ import {
 	createZipSnapshotForSource,
 	ensureZipForLatestSource
 } from '$lib/server/source-zip';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import {
 	DownloadTooLargeError,
 	DownloadTimeoutError,
@@ -33,9 +34,9 @@ export interface ArchiveConfig {
 
 export interface ArchiveRepoResult {
 	repo: string;
-	readme: 'saved' | 'skipped' | 'missing';
-	source: 'saved' | 'skipped' | 'missing' | 'too_large' | 'timeout';
-	zip: 'saved' | 'skipped' | 'missing';
+	readme: 'saved' | 'skipped' | 'missing' | 'disabled';
+	source: 'saved' | 'skipped' | 'missing' | 'too_large' | 'timeout' | 'disabled';
+	zip: 'saved' | 'skipped' | 'missing' | 'disabled';
 	error?: string;
 }
 
@@ -65,6 +66,15 @@ export async function archiveRepo(
 		source: 'missing',
 		zip: 'missing'
 	};
+
+	if (isMetadataOnlyMode()) {
+		return {
+			repo: repo.full_name,
+			readme: 'disabled',
+			source: 'disabled',
+			zip: 'disabled'
+		};
+	}
 
 	const branch = repo.default_branch;
 	if (!branch) {

@@ -20,6 +20,7 @@
 			sourceSaved: boolean;
 			storyReady: boolean;
 			deletedButSaved: boolean;
+			metadataOnly?: boolean;
 		};
 	}
 
@@ -27,7 +28,9 @@
 
 	const detailHref = $derived(repoDetailPath(repo.owner, repo.name));
 	const archiveSummary = $derived(
-		repo.archive_badges?.sourceSaved
+		repo.archive_badges?.metadataOnly
+			? 'Metadata preserved; archive storage disabled'
+			: repo.archive_badges?.sourceSaved
 			? 'Source evidence saved locally'
 			: repo.archive_badges?.readmeSaved
 				? 'README evidence saved locally'
@@ -59,8 +62,9 @@
 			<p class="repo-summary muted">No description archived yet.</p>
 		{/if}
 
-		{#if repo.archive_badges?.preserved || repo.archive_badges?.readmeSaved || repo.archive_badges?.sourceSaved || repo.archive_badges?.storyReady || repo.archive_badges?.deletedButSaved}
+		{#if repo.archive_badges?.metadataOnly || repo.archive_badges?.preserved || repo.archive_badges?.readmeSaved || repo.archive_badges?.sourceSaved || repo.archive_badges?.storyReady || repo.archive_badges?.deletedButSaved}
 			<div class="archive-badges" aria-label="Archive badges">
+				{#if repo.archive_badges.metadataOnly}<a class="archive-badge story" href={`${detailHref}#intelligence`}>Metadata only</a>{/if}
 				{#if repo.archive_badges.deletedButSaved}<a class="archive-badge critical" href={evidenceHref('timeline')}>Deleted but saved</a>{/if}
 				{#if repo.archive_badges.preserved}<a class="archive-badge saved" href={`${detailHref}#evidence`}>Preserved</a>{/if}
 				{#if repo.archive_badges.readmeSaved}<a class="archive-badge" href={evidenceHref('readme')}>README saved</a>{/if}

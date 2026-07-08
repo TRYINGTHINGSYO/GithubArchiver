@@ -12,6 +12,7 @@ import { runArchiveCycle } from './workers/archive';
 import { runEnrichCycle } from './workers/enrich';
 import { runIngestCycle } from './workers/ingest';
 import { runRefreshCycle } from './workers/refresh';
+import { isMetadataOnlyMode } from './runtime-mode';
 
 const DATA_DIR = resolve(process.env.DATA_DIR ?? './data');
 const LOG_FILE = join(DATA_DIR, 'worker.log');
@@ -208,6 +209,10 @@ export function startBulkExportJob(
 	scope: BulkExportScope,
 	format: 'zip' = 'zip'
 ): { queued: boolean; jobId?: number; message: string } {
+	if (isMetadataOnlyMode()) {
+		return { queued: false, message: 'Bulk ZIP export is disabled in metadata-only mode' };
+	}
+
 	if (format !== 'zip') {
 		return { queued: false, message: 'Only zip format is supported' };
 	}

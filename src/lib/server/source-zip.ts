@@ -11,6 +11,7 @@ import { getDb } from '$lib/server/db/connection';
 import type { RepoRow } from '$lib/server/db/types';
 import { getArchiveDir, resolveSafeSnapshotPath } from '$lib/server/snapshots';
 import { pipeArchiveToWriteStream } from '$lib/server/zip-stream';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 
 async function createZipArchive() {
 	const { ZipArchive } = await import('archiver');
@@ -86,6 +87,8 @@ export async function createZipSnapshotForSource(
 	archivedAt: string,
 	captureReason: string
 ): Promise<number | null> {
+	if (isMetadataOnlyMode()) return null;
+
 	const zipDir = join(getArchiveDir(), 'zips');
 	mkdirSync(zipDir, { recursive: true });
 	const tempZip = join(zipDir, `.tmp-${sourceSnapshot.id}-${Date.now()}.zip`);
@@ -127,7 +130,9 @@ export async function createZipSnapshotForSource(
 export async function ensureZipForLatestSource(
 	repo: RepoRow,
 	captureReason = 'daemon'
-): Promise<'saved' | 'skipped' | 'missing'> {
+): Promise<'saved' | 'skipped' | 'missing' | 'disabled'> {
+	if (isMetadataOnlyMode()) return 'disabled';
+
 	const source = getLatestArchiveSnapshot(repo.id, 'source');
 	if (!source) return 'missing';
 
@@ -155,6 +160,8 @@ export async function ensureZipForLatestSource(
 }
 
 export function getRepoZipDownloadUrl(owner: string, name: string, repoId: number): string | null {
+	if (isMetadataOnlyMode()) return null;
+
 	const zip = getLatestArchiveSnapshot(repoId, 'zip');
 	if (zip) {
 		try {

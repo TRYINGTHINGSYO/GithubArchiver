@@ -3,6 +3,7 @@ import { getLatestArchiveSnapshot } from '$lib/server/db/archive';
 import { getRepoBySlug } from '$lib/server/db/repos';
 import { archiveRepo, getArchiveConfigFromEnv } from '$lib/server/archiver';
 import { ensureZipForLatestSource } from '$lib/server/source-zip';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, url }) => {
@@ -12,6 +13,13 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	if (!repo) {
 		return new Response(JSON.stringify({ error: 'Repository not found' }), {
 			status: 404,
+			headers: { 'Content-Type': 'application/json' }
+		});
+	}
+
+	if (isMetadataOnlyMode()) {
+		return new Response(JSON.stringify({ error: 'Archive storage is disabled in metadata-only mode' }), {
+			status: 409,
 			headers: { 'Content-Type': 'application/json' }
 		});
 	}

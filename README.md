@@ -31,6 +31,12 @@ GH Archive (.json.gz)          GitHub Search API
 - **Browse** search, feeds, timelines, birth feed, and per-repo detail pages
 - **Operate** entirely from the browser via `/admin` — no SSH or terminal required in production
 
+### Metadata-only mode
+
+Set `METADATA_ONLY=1` to keep GithubArchive+ running safely on small disks such as Railway volumes. In this mode the app continues discovery, GitHub Search ingest, GH Archive ingest, enrichment, metrics snapshots, repository events, summaries, categories, Archive Pulse, feeds, and repository intelligence, but it does not download or store README snapshots, source tarballs, ZIP exports, or archived file contents.
+
+Metadata-only mode lets Railway run safely without large artifact storage. It preserves repo intelligence and history while disabling heavy archive downloads.
+
 ---
 
 ## Quick start (local)
@@ -102,6 +108,7 @@ DATABASE_PATH=/data/githubarchive.db
 ARCHIVE_DIR=/data/archives
 BACKUPS_DIR=/data/backups
 GITHUB_TOKEN=ghp_...          # public_repo scope only
+METADATA_ONLY=1               # recommended for constrained Railway volumes
 ```
 
 ### Optional
@@ -193,7 +200,7 @@ Migrations are versioned in `schema_version` (current: **v9**).
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/repos` | List repos — FTS when `q` set; filters: `year`, `date_from`, `date_to`, `source`, `language`, `min_stars`, `min_forks`, `archived_only`, `has_readme`, `has_release`, `deleted_only`; `sort=` |
+| `GET /api/repos` | List repos — FTS when `q` set; filters: `year`, `date_from`, `date_to`, `source`, `language`, `min_stars`, `min_forks`, `archived_only`, `has_readme`, `has_release`, `deleted_only`; `sort=`, `page=`, `per_page=10\|25\|50\|75\|100` |
 | `GET /api/search` | FTS search (`q` required) |
 | `GET /api/birth-feed` | Birth feed JSON |
 | `GET /api/events` | Recent `repository_events` |
@@ -220,6 +227,7 @@ Migrations are versioned in `schema_version` (current: **v9**).
 | `DATA_DIR` | `./data` | PID/log files, worker output |
 | `ARCHIVE_DIR` | `./data/archives` | Snapshot files |
 | `BACKUPS_DIR` | `./data/backups` | Backup output |
+| `METADATA_ONLY` | — | Set `1` to disable README/source/ZIP artifact downloads while preserving metadata intelligence |
 | `BACKGROUND_WORKER` | `auto` on Railway | In-process auto-scan on boot |
 | `SEARCH_SHARD_MAX_DEPTH` | `3` | Search sharding depth |
 | `SEARCH_FALLBACK_MIN_EVENTS` | `1000` | Min GH Archive events before search fallback |

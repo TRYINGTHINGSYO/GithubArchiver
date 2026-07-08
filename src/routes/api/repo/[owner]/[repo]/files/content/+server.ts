@@ -2,11 +2,16 @@ import { error, json } from '@sveltejs/kit';
 import { getArchiveSnapshotById, getRepoBySlug, listArchiveSnapshots } from '$lib/server/db';
 import { readSourceFileFromSnapshot } from '$lib/server/source-archive';
 import { languageClassForPath } from '$lib/server/source-browser';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import type { RequestHandler } from './$types';
 
 const MAX_INLINE_BYTES = Number(process.env.SOURCE_FILE_MAX_BYTES ?? 512_000);
 
 export const GET: RequestHandler = async ({ params, url }) => {
+	if (isMetadataOnlyMode()) {
+		throw error(409, 'Source archive is disabled in metadata-only mode');
+	}
+
 	const filePath = url.searchParams.get('path')?.trim();
 	if (!filePath) throw error(400, 'Missing path query parameter');
 

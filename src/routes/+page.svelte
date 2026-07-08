@@ -12,6 +12,7 @@
 		{ id: 'recently_released', label: 'Recent releases' },
 		{ id: 'recently_updated', label: 'Recently updated' }
 	];
+	const pageSizes = [10, 25, 50, 75, 100];
 
 	function buildUrl(overrides: Record<string, string | number | boolean | undefined>) {
 		const params = new URLSearchParams();
@@ -31,6 +32,7 @@
 		if (f.hasReadme) params.set('has_readme', '1');
 		if (f.hasRelease) params.set('has_release', '1');
 		if (f.deletedOnly) params.set('deleted_only', '1');
+		if (f.perPage && Number(f.perPage) !== 50) params.set('per_page', String(f.perPage));
 		if (f.page && Number(f.page) > 1) params.set('page', String(f.page));
 		const qs = params.toString();
 		return qs ? `/?${qs}` : '/';
@@ -50,6 +52,7 @@
 			dateTo: (fd.get('date_to') as string) ?? '',
 			minStars: (fd.get('min_stars') as string) ?? '',
 			minForks: (fd.get('min_forks') as string) ?? '',
+			perPage: (fd.get('per_page') as string) ?? '50',
 			neverEnriched: fd.get('never_enriched') === 'on',
 			archivedOnly: fd.get('archived_only') === 'on',
 			hasReadme: fd.get('has_readme') === 'on',
@@ -57,6 +60,28 @@
 			deletedOnly: fd.get('deleted_only') === 'on',
 			page: 1
 		});
+	}
+
+	function csvEscape(value: string | number | null | undefined): string {
+		const text = String(value ?? '');
+		return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+	}
+
+	function downloadCurrentPageList() {
+		const rows = [
+			['repo', 'github_url'],
+			...data.repos.map((repo) => [repo.full_name, repo.github_url])
+		];
+		const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+		const blob = new Blob([`${csv}\n`], { type: 'text/csv;charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = `githubarchive-repos-page-${data.page}-per-${data.perPage}.csv`;
+		document.body.append(link);
+		link.click();
+		link.remove();
+		URL.revokeObjectURL(url);
 	}
 
 	const feedTitle = $derived(feeds.find((f) => f.id === data.filters.feed)?.label ?? 'Repositories');
@@ -68,21 +93,21 @@
 	const pulseMetrics = $derived([
 		{
 			icon: 'A',
-			label: 'Preserved repos',
-			value: data.archivePulse.preservedRepos.toLocaleString(),
-			detail: `${preservationRate}% of discovered repos`
+			label: data.archivePulse.metadataOnly ? 'Metadata tracked' : 'Preserved repos',
+			value: (data.archivePulse.metadataOnly ? data.archivePulse.totalRepos : data.archivePulse.preservedRepos).toLocaleString(),
+			detail: data.archivePulse.metadataOnly ? 'Artifact storage disabled' : `${preservationRate}% of discovered repos`
 		},
 		{
 			icon: 'R',
 			label: 'README saved',
 			value: data.archivePulse.readmeSaved.toLocaleString(),
-			detail: `${data.archivePulse.readmeChanges.toLocaleString()} README change events`
+			detail: data.archivePulse.metadataOnly ? 'Disabled by METADATA_ONLY=1' : `${data.archivePulse.readmeChanges.toLocaleString()} README change events`
 		},
 		{
 			icon: 'S',
 			label: 'Source saved',
 			value: data.archivePulse.sourceSaved.toLocaleString(),
-			detail: `${data.archivePulse.zipAvailable.toLocaleString()} exportable ZIPs`
+			detail: data.archivePulse.metadataOnly ? 'Source and ZIP storage disabled' : `${data.archivePulse.zipAvailable.toLocaleString()} exportable ZIPs`
 		},
 		{
 			icon: 'D',
@@ -110,6 +135,8 @@
 				(data.filters.sort && data.filters.sort !== 'newest_discovered' && data.filters.sort !== data.filters.feed)
 		)
 	);
+	const pageStart = $derived(data.total === 0 ? 0 : (data.page - 1) * data.perPage + 1);
+	const pageEnd = $derived(Math.min(data.total, data.page * data.perPage));
 
 	const featuredRepos = $derived([
 		...data.archivePulse.recentDeletedSaved.map((repo) => ({
@@ -152,8 +179,8 @@
 	</div>
 	<div class="hero-panel" aria-label="System summary">
 		<span>Archive Pulse</span>
-		<strong>{data.archivePulse.preservedRepos.toLocaleString()}</strong>
-		<p>repositories with preserved local evidence</p>
+		<strong>{data.archivePulse.metadataOnly ? data.archivePulse.totalRepos.toLocaleString() : data.archivePulse.preservedRepos.toLocaleString()}</strong>
+		<p>{data.archivePulse.metadataOnly ? 'repositories tracked in metadata-only mode' : 'repositories with preserved local evidence'}</p>
 		<a href={buildUrl({ feed: 'recently_archived', page: 1 })}>View preserved repos</a>
 	</div>
 </section>
@@ -202,8 +229,8 @@
 		</div>
 	{:else}
 		<div class="empty-state action-empty">
-			<h3>No repositories archived yet.</h3>
-			<p>Start Auto-Scan or run GitHub Search ingest to begin preserving repositories.</p>
+			<h3>{data.archivePulse.metadataOnly ? 'Metadata-only mode is active.' : 'No repositories archived yet.'}</h3>
+			<p>{data.archivePulse.metadataOnly ? 'The site is still discovering, enriching, scoring, and tracking repositories without downloading heavy artifacts.' : 'Start Auto-Scan or run GitHub Search ingest to begin preserving repositories.'}</p>
 			<div>
 				<a class="button" href="/admin">Open Control Center</a>
 				<a class="button-secondary" href="/birth-feed">View Live Feed</a>
@@ -273,6 +300,14 @@
 				{/each}
 			</select>
 		</label>
+		<label>
+			<span>Repos per page</span>
+			<select name="per_page" class="filter-select">
+				{#each pageSizes as size}
+					<option value={size} selected={data.perPage === size}>{size}</option>
+				{/each}
+			</select>
+		</label>
 		<button type="submit" class="filter-btn">Apply</button>
 		{#if hasActiveFilters}
 			<a href="/" class="filter-clear">Clear filters</a>
@@ -315,6 +350,16 @@
 		<p class="search-meta">{data.total.toLocaleString()} result{data.total === 1 ? '' : 's'} for "{data.filters.q}"</p>
 	{/if}
 
+	<div class="feed-tools" aria-label="Current page tools">
+		<p>
+			Showing {pageStart.toLocaleString()}-{pageEnd.toLocaleString()} of {data.total.toLocaleString()}
+			<span>({data.perPage} per page)</span>
+		</p>
+		<button type="button" class="button-ghost" onclick={downloadCurrentPageList} disabled={data.repos.length === 0}>
+			Download Page List
+		</button>
+	</div>
+
 	{#if data.repos.length === 0}
 		<div class="empty-state action-empty">
 			<h3>{data.filters.q ? `No results for "${data.filters.q}".` : 'No repositories match your filters.'}</h3>
@@ -337,7 +382,7 @@
 			{:else}
 				<span class="disabled">Previous</span>
 			{/if}
-			<span class="page-info">Page {data.page} of {data.totalPages}</span>
+			<span class="page-info">Page {data.page} of {data.totalPages} · {data.perPage} per page</span>
 			{#if data.page < data.totalPages}
 				<a href={buildUrl({ page: data.page + 1 })}>Next</a>
 			{:else}
@@ -566,6 +611,34 @@
 		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 		gap: 0.75rem;
 		margin-top: 0.8rem;
+	}
+
+	.feed-tools {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 0.75rem;
+		align-items: center;
+		margin: 0.85rem 0;
+		padding: 0.7rem 0.85rem;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+	}
+
+	.feed-tools p {
+		margin: 0;
+		color: var(--text-muted);
+		font-size: 0.88rem;
+	}
+
+	.feed-tools span {
+		margin-left: 0.35rem;
+	}
+
+	.feed-tools button:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
 	}
 
 	.action-empty h3 {

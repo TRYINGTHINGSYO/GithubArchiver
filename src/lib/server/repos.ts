@@ -36,6 +36,7 @@ import {
 	type RepoEventType
 } from '$lib/server/events';
 import { getDb } from '$lib/server/db/connection';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 
 export interface RepoArchiveBadges {
 	preserved: boolean;
@@ -43,6 +44,7 @@ export interface RepoArchiveBadges {
 	sourceSaved: boolean;
 	storyReady: boolean;
 	deletedButSaved: boolean;
+	metadataOnly: boolean;
 }
 
 export interface RepoSummary {
@@ -87,6 +89,7 @@ export interface RepoSummary {
 	search_rank?: number | null;
 	download_zip_url?: string | null;
 	archive_badges: RepoArchiveBadges;
+	archive_storage_disabled: boolean;
 }
 
 function getRepoArchiveBadges(repoId: number, deletedAt: string | null): RepoArchiveBadges {
@@ -107,13 +110,15 @@ function getRepoArchiveBadges(repoId: number, deletedAt: string | null): RepoArc
 			readme_saved: 0 | 1;
 			source_saved: 0 | 1;
 			story_ready: 0 | 1;
-		};
+	};
+	const metadataOnly = isMetadataOnlyMode();
 	return {
-		preserved: row.preserved === 1,
-		readmeSaved: row.readme_saved === 1,
-		sourceSaved: row.source_saved === 1,
+		preserved: metadataOnly ? false : row.preserved === 1,
+		readmeSaved: metadataOnly ? false : row.readme_saved === 1,
+		sourceSaved: metadataOnly ? false : row.source_saved === 1,
 		storyReady: row.story_ready === 1,
-		deletedButSaved: Boolean(deletedAt && row.preserved === 1)
+		deletedButSaved: metadataOnly ? false : Boolean(deletedAt && row.preserved === 1),
+		metadataOnly
 	};
 }
 
@@ -159,7 +164,8 @@ function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: numb
 		search_snippet: row.fts_snippet ?? null,
 		search_rank: row.fts_rank ?? null,
 		download_zip_url: getRepoZipDownloadUrl(row.owner, row.name, row.id),
-		archive_badges: getRepoArchiveBadges(row.id, row.deleted_at)
+		archive_badges: getRepoArchiveBadges(row.id, row.deleted_at),
+		archive_storage_disabled: isMetadataOnlyMode()
 	};
 }
 
@@ -309,6 +315,7 @@ export interface TechnologyInsight {
 export interface LocalArchiveSummary {
 	readme_archived: boolean;
 	source_archived: boolean;
+	metadata_only: boolean;
 	total_snapshots: number;
 	total_bytes: number;
 	last_snapshot_at: string | null;
@@ -320,7 +327,7 @@ export interface ArchiveEvidenceItem {
 	label: string;
 	value: string;
 	detail: string;
-	status: 'saved' | 'partial' | 'missing';
+	status: 'saved' | 'partial' | 'missing' | 'disabled';
 	evidenceIds: string[];
 	evidenceTarget: string;
 }
@@ -710,13 +717,27 @@ function buildActivitySummary(repo: RepoSummary, metrics: MetricSnapshotRow[]): 
 	};
 }
 
-function buildLocalArchiveSummary(snapshots: ArchiveSnapshot[]): LocalArchiveSummary {
+function buildLocalArchiveSummary(snapshots: ArchiveSnapshot[], metadataOnly = false): LocalArchiveSummary {
+	if (metadataOnly) {
+		return {
+			readme_archived: false,
+			source_archived: false,
+			metadata_only: true,
+			total_snapshots: 0,
+			total_bytes: 0,
+			last_snapshot_at: null,
+			readme_count: 0,
+			source_count: 0
+		};
+	}
+
 	const readme = snapshots.filter((s) => s.snapshot_type === 'readme');
 	const source = snapshots.filter((s) => s.snapshot_type === 'source');
 	const counted = snapshots.filter((s) => s.snapshot_type !== 'zip');
 	return {
 		readme_archived: readme.length > 0,
 		source_archived: source.length > 0,
+		metadata_only: false,
 		total_snapshots: counted.length,
 		total_bytes: counted.reduce((sum, snap) => sum + snap.file_size, 0),
 		last_snapshot_at: counted[0]?.archived_at ?? null,
@@ -772,6 +793,7 @@ function historyCounts(repoId: number): { commits: number; licenses: number; top
 }
 
 function currentStatus(repo: RepoSummary, localArchive: LocalArchiveSummary): string {
+	if (localArchive.metadata_only) return 'Metadata-only mode';
 	if (repo.deleted_at && localArchive.total_snapshots > 0) return 'Deleted but preserved';
 	if (repo.deleted_at) return 'Deleted upstream';
 	if (repo.github_archived && localArchive.total_snapshots > 0) return 'Archived on GitHub and preserved locally';
@@ -790,6 +812,19 @@ function buildEvidenceReferences(
 	technologies: TechnologyInsight[]
 ): EvidenceReference[] {
 	const references: EvidenceReference[] = [];
+
+	references.push({
+		id: 'metadata-repository-record',
+		category: 'derived',
+		title: 'Metadata preserved',
+		description: repo.is_enriched
+			? 'Repository metadata, status, topics, license, and metrics are stored locally.'
+			: 'Discovery metadata is stored locally; enrichment can add more repository facts.',
+		confidence: 'direct',
+		target: '#intelligence',
+		timestamp: repo.enriched_at ?? repo.first_seen_at,
+		artifactId: `repo:${repo.id}`
+	});
 
 	for (const snapshot of snapshots) {
 		if (snapshot.snapshot_type === 'readme') {
@@ -886,7 +921,7 @@ function buildEvidenceReferences(
 			id: 'derived-current-status',
 			category: 'derived',
 			title: 'Current archive status',
-			description: currentStatus(repo, buildLocalArchiveSummary(snapshots)),
+			description: currentStatus(repo, buildLocalArchiveSummary(snapshots, repo.archive_storage_disabled)),
 			confidence: 'derived',
 			target: '#intelligence'
 		}
@@ -918,7 +953,8 @@ function buildArchiveEvidence(
 	snapshots: ArchiveSnapshot[],
 	events: TimelineEvent[],
 	repo: RepoSummary,
-	evidenceReferences: EvidenceReference[]
+	evidenceReferences: EvidenceReference[],
+	metadataOnly = false
 ): ArchiveEvidenceItem[] {
 	const eventTimes = events.map((event) => event.event_time);
 	const archiveTimes = snapshots.map((snapshot) => snapshot.archived_at);
@@ -928,28 +964,41 @@ function buildArchiveEvidence(
 
 	return [
 		{
+			label: 'Metadata',
+			value: repo.is_enriched ? 'Preserved' : 'Discovered',
+			detail: repo.is_enriched ? 'Repository metadata and metrics are stored locally' : 'Discovery record is stored locally',
+			status: repo.is_enriched ? 'saved' : 'partial',
+			...evidenceMeta(evidenceReferences, 'derived')
+		},
+		{
 			label: 'README',
-			value: latestReadme ? 'Captured' : 'Missing',
-			detail: latestReadme ? `${latestReadme.archived_at.slice(0, 10)} · ${formatBytesCompact(latestReadme.file_size)}` : 'No README snapshot saved yet',
-			status: latestReadme ? 'saved' : 'missing',
+			value: metadataOnly ? 'Disabled' : latestReadme ? 'Captured' : 'Missing',
+			detail: metadataOnly
+				? 'README downloads are disabled by METADATA_ONLY=1'
+				: latestReadme ? `${latestReadme.archived_at.slice(0, 10)} · ${formatBytesCompact(latestReadme.file_size)}` : 'No README snapshot saved yet',
+			status: metadataOnly ? 'disabled' : latestReadme ? 'saved' : 'missing',
 			...evidenceMeta(evidenceReferences, 'readme')
 		},
 		{
 			label: 'Source',
-			value: latestSource ? 'Captured' : 'Missing',
-			detail: latestSource ? `${latestSource.archived_at.slice(0, 10)} · ${formatBytesCompact(latestSource.file_size)}` : 'No source snapshot saved yet',
-			status: latestSource ? 'saved' : 'missing',
+			value: metadataOnly ? 'Disabled' : latestSource ? 'Captured' : 'Missing',
+			detail: metadataOnly
+				? 'Source tarball downloads are disabled by METADATA_ONLY=1'
+				: latestSource ? `${latestSource.archived_at.slice(0, 10)} · ${formatBytesCompact(latestSource.file_size)}` : 'No source snapshot saved yet',
+			status: metadataOnly ? 'disabled' : latestSource ? 'saved' : 'missing',
 			...evidenceMeta(evidenceReferences, 'source')
 		},
 		{
 			label: 'ZIP',
-			value: latestZip || latestSource ? 'Available' : 'Not ready',
-			detail: latestZip
+			value: metadataOnly ? 'Disabled' : latestZip || latestSource ? 'Available' : 'Not ready',
+			detail: metadataOnly
+				? 'ZIP export is disabled while source archive storage is off'
+				: latestZip
 				? `Export snapshot #${latestZip.id}`
 				: latestSource
 					? 'Generated from saved source when downloaded'
 					: 'ZIP export will appear after source archival',
-			status: latestZip ? 'saved' : latestSource ? 'partial' : 'missing',
+			status: metadataOnly ? 'disabled' : latestZip ? 'saved' : latestSource ? 'partial' : 'missing',
 			...evidenceMeta(evidenceReferences, 'source')
 		},
 		{
@@ -984,7 +1033,8 @@ function buildArchiveScore(
 	metrics: MetricSnapshotRow[],
 	history: { commits: number; licenses: number; topics: number },
 	technologies: TechnologyInsight[],
-	evidenceReferences: EvidenceReference[]
+	evidenceReferences: EvidenceReference[],
+	metadataOnly = false
 ): ArchiveScore {
 	const hasSource = localArchive.source_archived;
 	const hasReadme = localArchive.readme_archived;
@@ -999,12 +1049,12 @@ function buildArchiveScore(
 	const deletedButPreserved = Boolean(repo.deleted_at && localArchive.total_snapshots > 0);
 
 	const factors: ArchiveScoreFactor[] = [
-		{ label: 'README archived', weight: 10, earned: hasReadme ? 10 : 0, detail: hasReadme ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot yet', ...evidenceMeta(evidenceReferences, 'readme') },
-		{ label: 'Source archived', weight: 25, earned: hasSource ? 25 : 0, detail: hasSource ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot yet', ...evidenceMeta(evidenceReferences, 'source') },
+		{ label: 'README archived', weight: 10, earned: hasReadme ? 10 : 0, detail: metadataOnly ? 'README archive disabled in metadata-only mode' : hasReadme ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot yet', ...evidenceMeta(evidenceReferences, 'readme') },
+		{ label: 'Source archived', weight: 25, earned: hasSource ? 25 : 0, detail: metadataOnly ? 'Source archive disabled in metadata-only mode' : hasSource ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot yet', ...evidenceMeta(evidenceReferences, 'source') },
 		{ label: 'Releases archived', weight: 10, earned: hasReleases ? 10 : 0, detail: hasReleases ? `${releases.length} release/tag record(s)` : 'No release records yet', ...evidenceMeta(evidenceReferences, 'release') },
 		{ label: 'Commit history observed', weight: 10, earned: hasCommitHistory ? 10 : 0, detail: hasCommitHistory ? `${history.commits} commit observation(s)` : 'No commit history observations yet', ...evidenceMeta(evidenceReferences, 'timeline') },
 		{ label: 'Timeline depth', weight: 10, earned: timelineDepth >= 8 ? 10 : timelineDepth >= 3 ? 5 : 0, detail: `${timelineDepth} timeline evidence point(s)`, ...evidenceMeta(evidenceReferences, 'timeline', ['timeline', 'readme', 'source', 'release']) },
-		{ label: 'Feature extraction', weight: 10, earned: hasFeatureExtraction ? 10 : 0, detail: hasFeatureExtraction ? 'Source-derived features detected' : 'Persistent feature scan not available yet', ...evidenceMeta(evidenceReferences, 'source', ['source', 'derived']) },
+		{ label: 'Feature extraction', weight: 10, earned: hasFeatureExtraction ? 10 : 0, detail: metadataOnly ? 'Source feature extraction disabled in metadata-only mode' : hasFeatureExtraction ? 'Source-derived features detected' : 'Persistent feature scan not available yet', ...evidenceMeta(evidenceReferences, 'source', ['source', 'derived']) },
 		{ label: 'Dependency extraction', weight: 10, earned: hasDependencyExtraction ? 10 : 0, detail: 'Dependency scan is planned for v13', ...evidenceMeta(evidenceReferences, 'derived') },
 		{ label: 'Active development', weight: 10, earned: activeDevelopment ? 10 : metrics.length >= 2 ? 5 : 0, detail: activeDevelopment ? 'Recent push activity observed' : 'No recent push activity observed', ...evidenceMeta(evidenceReferences, 'metric', ['metric', 'timeline']) },
 		{ label: 'Deleted but preserved', weight: 5, earned: deletedButPreserved ? 5 : 0, detail: deletedButPreserved ? 'Upstream deleted; local archive remains' : 'Repo still exists upstream or no local archive yet', ...evidenceMeta(evidenceReferences, 'timeline', ['timeline', 'readme', 'source']) }
@@ -1023,15 +1073,16 @@ function buildRecoverability(
 	releases: ReleaseWithAssets[],
 	events: TimelineEvent[],
 	history: { commits: number; licenses: number; topics: number },
-	evidenceReferences: EvidenceReference[]
+	evidenceReferences: EvidenceReference[],
+	metadataOnly = false
 ): RecoverabilityReport {
 	const metadataScore = repo.is_enriched ? 100 : 35;
 	const timelineScore = Math.min(100, Math.round((events.length / 12) * 100));
 	const commitScore = Math.min(100, history.commits * 25);
 	const historyScore = Math.min(100, history.licenses * 35 + history.topics * 35 + commitScore * 0.3);
 	const items: RecoverabilityItem[] = [
-		{ label: 'README', score: localArchive.readme_archived ? 100 : 0, detail: localArchive.readme_archived ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot', ...evidenceMeta(evidenceReferences, 'readme') },
-		{ label: 'Source', score: localArchive.source_archived ? 100 : 0, detail: localArchive.source_archived ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot', ...evidenceMeta(evidenceReferences, 'source') },
+		{ label: 'README', score: localArchive.readme_archived ? 100 : 0, detail: metadataOnly ? 'README archive disabled' : localArchive.readme_archived ? `${localArchive.readme_count} README snapshot(s)` : 'No README snapshot', ...evidenceMeta(evidenceReferences, 'readme') },
+		{ label: 'Source', score: localArchive.source_archived ? 100 : 0, detail: metadataOnly ? 'Source archive disabled' : localArchive.source_archived ? `${localArchive.source_count} source snapshot(s)` : 'No source snapshot', ...evidenceMeta(evidenceReferences, 'source') },
 		{ label: 'Releases', score: releases.length ? 100 : 20, detail: releases.length ? `${releases.length} release/tag record(s)` : 'No release records found', ...evidenceMeta(evidenceReferences, 'release') },
 		{ label: 'Metadata', score: metadataScore, detail: repo.is_enriched ? 'GitHub metadata enriched' : 'Only discovery metadata available', ...evidenceMeta(evidenceReferences, 'derived') },
 		{ label: 'History', score: Math.round(Math.max(timelineScore, historyScore)), detail: `${events.length} event(s), ${history.commits} commit observation(s)`, ...evidenceMeta(evidenceReferences, 'timeline') },
@@ -1044,7 +1095,7 @@ function buildRecoverability(
 		items[3].score * 0.1 +
 		items[4].score * 0.25 +
 		items[5].score * 0.05;
-	return { overall: Math.round(weighted), items };
+	return { overall: metadataOnly ? Math.min(55, Math.round(weighted)) : Math.round(weighted), items };
 }
 
 function buildArchiveStory(
@@ -1058,6 +1109,9 @@ function buildArchiveStory(
 		`Created on ${repo.created_at.slice(0, 10)}.`,
 		`First discovered by GithubArchive+ on ${repo.first_seen_at.slice(0, 10)} via ${repo.discovery_source}.`
 	];
+	if (localArchive.metadata_only) {
+		story.push('Metadata-only mode is enabled, so repository facts, metrics, events, and intelligence are preserved without downloading README or source artifacts.');
+	}
 	const firstSnapshot = [...snapshots].sort((a, b) => a.archived_at.localeCompare(b.archived_at))[0];
 	if (firstSnapshot) {
 		story.push(`First archived ${durationBetween(repo.first_seen_at, firstSnapshot.archived_at)} after discovery.`);
@@ -1177,6 +1231,13 @@ function buildArchiveStoryTakeaway(
 	localArchive: LocalArchiveSummary,
 	releases: ReleaseWithAssets[]
 ): string[] {
+	if (localArchive.metadata_only) {
+		return [
+			'This repository is being tracked in metadata-only mode.',
+			'GitHubArchive+ preserves its repository facts, metrics, events, and intelligence while heavy README/source storage is disabled.'
+		];
+	}
+
 	const savedKinds = [
 		localArchive.readme_archived ? 'README' : null,
 		localArchive.source_archived ? 'source' : null,
@@ -1238,15 +1299,18 @@ function buildRepositoryIntelligenceReport(
 		snapshots,
 		events,
 		repo,
-		evidenceReferences
+		evidenceReferences,
+		localArchive.metadata_only
 	);
-	const archiveScore = buildArchiveScore(repo, localArchive, releases, events, metrics, history, technologies, evidenceReferences);
-	const recoverability = buildRecoverability(repo, localArchive, releases, events, history, evidenceReferences);
+	const archiveScore = buildArchiveScore(repo, localArchive, releases, events, metrics, history, technologies, evidenceReferences, localArchive.metadata_only);
+	const recoverability = buildRecoverability(repo, localArchive, releases, events, history, evidenceReferences, localArchive.metadata_only);
 	const storyTimeline = buildArchiveStoryTimeline(repo, snapshots, releases, localArchive, evidenceReferences);
 	const storyTakeaway = buildArchiveStoryTakeaway(repo, localArchive, releases);
 	const technologyNames = technologies.slice(0, 5).map((tech) => tech.name);
 	const whyArchive =
-		archiveScore.score >= 75
+		localArchive.metadata_only
+			? 'This repository is tracked safely in metadata-only mode. Full recoverability is limited until README and source archive storage are enabled.'
+			: archiveScore.score >= 75
 			? 'This repository has enough preserved evidence to be useful as a historical software record.'
 			: localArchive.total_snapshots > 0
 				? 'This repository has partial local evidence and should be archived further to improve recoverability.'
@@ -1387,7 +1451,9 @@ export function getRepoWithSnapshots(owner: string, name: string) {
 	if (!row) return null;
 
 	const repo = toSummary(row);
-	const snapshots = listArchiveSnapshots(row.id).map(toArchiveSnapshot);
+	const metadataOnly = isMetadataOnlyMode();
+	const storedSnapshots = listArchiveSnapshots(row.id).map(toArchiveSnapshot);
+	const snapshots = metadataOnly ? [] : storedSnapshots;
 	const readmeSnapshots = snapshots.filter((s) => s.snapshot_type === 'readme');
 	const sourceSnapshots = snapshots.filter((s) => s.snapshot_type === 'source');
 	const zipSnapshots = snapshots.filter((s) => s.snapshot_type === 'zip');
@@ -1418,7 +1484,7 @@ export function getRepoWithSnapshots(owner: string, name: string) {
 	const readmeFeatures = readmeFeatureFlags(readmeText);
 	const technologies = buildTechnologyInsights(repo, readmeText, sourceAnalysis);
 	const activity = buildActivitySummary(repo, metrics);
-	const localArchive = buildLocalArchiveSummary(snapshots);
+	const localArchive = buildLocalArchiveSummary(snapshots, metadataOnly);
 	const projectSignal = buildProjectSignal(repo, readmeText, snapshots, releases, metrics);
 	const summary = buildProfileSummary(repo, readmeText, releases, technologies);
 	const mergedTimeline = buildMergedTimeline(events, snapshots, releases, metrics, repo);
@@ -1439,6 +1505,7 @@ export function getRepoWithSnapshots(owner: string, name: string) {
 
 	return {
 		repo,
+		metadataOnly,
 		downloadZipUrl: getRepoZipDownloadUrl(repo.owner, repo.name, row.id),
 		snapshots,
 		readmeSnapshots,

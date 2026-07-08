@@ -6,6 +6,7 @@ import { updateJobRun } from '$lib/server/db/jobs';
 import type { RepoRow } from '$lib/server/db/types';
 import { resolveSafeSnapshotPath } from '$lib/server/snapshots';
 import { pipeArchiveToWriteStream } from '$lib/server/zip-stream';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 
 async function createZipArchive() {
 	const { ZipArchive } = await import('archiver');
@@ -94,6 +95,9 @@ export async function runBulkExport(opts: {
 	const format = opts.format ?? 'zip';
 	if (format !== 'zip') {
 		throw new Error('Only zip format is supported');
+	}
+	if (isMetadataOnlyMode()) {
+		throw new Error('Bulk ZIP export is disabled in metadata-only mode');
 	}
 
 	mkdirSync(EXPORTS_DIR, { recursive: true });

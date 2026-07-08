@@ -1,4 +1,5 @@
 import { getDb } from './connection';
+import { isMetadataOnlyMode } from '../runtime-mode';
 
 export interface ArchivePulseRepo {
 	owner: string;
@@ -9,6 +10,7 @@ export interface ArchivePulseRepo {
 }
 
 export interface ArchivePulse {
+	metadataOnly: boolean;
 	totalRepos: number;
 	preservedRepos: number;
 	readmeSaved: number;
@@ -30,6 +32,7 @@ function count(sql: string): number {
 
 export function getArchivePulse(): ArchivePulse {
 	const db = getDb();
+	const metadataOnly = isMetadataOnlyMode();
 	const recentPreserved = db
 		.prepare(
 			`SELECT r.owner, r.name, r.full_name, MAX(a.archived_at) as at,
@@ -75,38 +78,39 @@ export function getArchivePulse(): ArchivePulse {
 		.get() as { at: string | null };
 
 	return {
+		metadataOnly,
 		totalRepos: count('SELECT COUNT(*) as c FROM repos'),
-		preservedRepos: count('SELECT COUNT(DISTINCT repo_id) as c FROM archive_snapshots'),
-		readmeSaved: count(
+		preservedRepos: metadataOnly ? 0 : count('SELECT COUNT(DISTINCT repo_id) as c FROM archive_snapshots'),
+		readmeSaved: metadataOnly ? 0 : count(
 			`SELECT COUNT(DISTINCT repo_id) as c FROM archive_snapshots WHERE snapshot_type = 'readme'`
 		),
-		sourceSaved: count(
+		sourceSaved: metadataOnly ? 0 : count(
 			`SELECT COUNT(DISTINCT repo_id) as c FROM archive_snapshots WHERE snapshot_type = 'source'`
 		),
-		zipAvailable: count(
+		zipAvailable: metadataOnly ? 0 : count(
 			`SELECT COUNT(DISTINCT repo_id) as c
 			 FROM archive_snapshots
 			 WHERE snapshot_type IN ('source', 'zip')`
 		),
-		deletedButSaved: count(
+		deletedButSaved: metadataOnly ? 0 : count(
 			`SELECT COUNT(DISTINCT r.id) as c
 			 FROM repos r
 			 JOIN archive_snapshots a ON a.repo_id = r.id
 			 WHERE r.deleted_at IS NOT NULL`
 		),
-		githubArchivedSaved: count(
+		githubArchivedSaved: metadataOnly ? 0 : count(
 			`SELECT COUNT(DISTINCT r.id) as c
 			 FROM repos r
 			 JOIN archive_snapshots a ON a.repo_id = r.id
 			 WHERE r.github_archived = 1`
 		),
-		readmeChanges: count(
+		readmeChanges: metadataOnly ? 0 : count(
 			`SELECT COUNT(*) as c FROM repository_events WHERE event_type = 'readme_changed'`
 		),
 		releasesSaved: count('SELECT COUNT(DISTINCT repo_id) as c FROM releases'),
 		lastSeenOnGithub: lastSeen.at,
-		recentPreserved,
-		recentDeletedSaved,
-		recentReadmeChanges
+		recentPreserved: metadataOnly ? [] : recentPreserved,
+		recentDeletedSaved: metadataOnly ? [] : recentDeletedSaved,
+		recentReadmeChanges: metadataOnly ? [] : recentReadmeChanges
 	};
 }

@@ -3,6 +3,7 @@ import { archiveRepo, getArchiveConfigFromEnv } from '$lib/server/archiver';
 import { getArchiveSnapshotById, getRepoBySlug, listArchiveSnapshots } from '$lib/server/db';
 import { enrichRepo, refreshRepo } from '$lib/server/enrich';
 import { analyzeSourceSnapshot, clearSourceAnalysisCache } from '$lib/server/source-archive';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ params, request }) => {
@@ -24,6 +25,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	}
 
 	if (action === 'archive') {
+		if (isMetadataOnlyMode()) {
+			return json({ ok: false, error: 'Archive storage is disabled in metadata-only mode.' }, { status: 409 });
+		}
 		if (!repo.enriched_at || !repo.default_branch) {
 			return json(
 				{ ok: false, error: 'Refresh metadata before archiving so the default branch is known.' },
@@ -35,6 +39,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	}
 
 	if (action === 'reanalyze-source') {
+		if (isMetadataOnlyMode()) {
+			return json({ ok: false, error: 'Source archive is disabled in metadata-only mode.' }, { status: 409 });
+		}
 		const latestSource = listArchiveSnapshots(repo.id).find((snapshot) => snapshot.snapshot_type === 'source');
 		if (!latestSource) {
 			return json({ ok: false, error: 'No source snapshot exists for this repository.' }, { status: 404 });

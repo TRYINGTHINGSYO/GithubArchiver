@@ -43,6 +43,7 @@ import { defaultHourKey } from '$lib/server/gharchive';
 import { getBackgroundDaemonState } from '$lib/server/background-daemon';
 import { getCurrentJobLabel, isJobRunnerBusy } from '$lib/server/job-runner';
 import { getDaemonUiStatus } from '$lib/server/worker-control';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 
 const REFRESH_INTERVAL_HOURS = Number(process.env.REFRESH_INTERVAL_HOURS ?? 24);
 
@@ -52,6 +53,7 @@ function startOfUtcDay(): string {
 }
 
 export async function getAdminStatus() {
+	const metadataOnly = isMetadataOnlyMode();
 	const daemon = getDaemonUiStatus();
 	const refreshJob = getLatestJobsByType().refresh;
 	const refreshDetail = refreshJob ? parseJobDetail(refreshJob) : null;
@@ -93,6 +95,7 @@ export async function getAdminStatus() {
 			reposToday: countReposFirstSeenSince(startOfUtcDay())
 		},
 		archive: {
+			metadataOnly,
 			fileCount: countArchiveSnapshotFiles(),
 			indexedBytes: sumArchiveSnapshotBytes()
 		},

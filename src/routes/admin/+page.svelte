@@ -202,7 +202,7 @@
 			{daemon.running || status.backgroundWorker?.running ? 'Archive worker running' : 'Archive worker stopped'}
 		</span>
 		<span class={healthTone(status.archive.indexedBytes, 4_500_000_000)}>
-			{healthTone(status.archive.indexedBytes, 4_500_000_000) === 'warn' ? 'Storage needs attention' : 'Disk healthy'}
+			{status.archive.metadataOnly ? 'Metadata-only mode' : healthTone(status.archive.indexedBytes, 4_500_000_000) === 'warn' ? 'Storage needs attention' : 'Disk healthy'}
 		</span>
 		<span class={status.stats.unenrichedRepos > 0 ? 'warn' : 'good'}>
 			{status.stats.unenrichedRepos.toLocaleString()} repositories waiting
@@ -218,7 +218,7 @@
 		{:else if !daemon.running && !status.backgroundWorker?.running}
 			Start Auto-Scan when you are ready to collect.
 		{:else}
-			Archive is healthy. Monitor jobs and storage.
+			{status.archive.metadataOnly ? 'Metadata-only mode is protecting disk while discovery and intelligence continue.' : 'Archive is healthy. Monitor jobs and storage.'}
 		{/if}
 	</p>
 </section>
@@ -274,9 +274,15 @@
 		<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Enrich', () => postJson('/api/admin/workers', { action: 'enrich' }))}>
 			{actionLoading === 'Enrich' ? 'Starting…' : 'Enrich Batch'}
 		</button>
-		<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Archive', () => postJson('/api/admin/workers', { action: 'archive' }))}>
-			{actionLoading === 'Archive' ? 'Starting…' : 'Archive Batch'}
-		</button>
+		{#if status.archive.metadataOnly}
+			<button type="button" class="filter-btn" disabled title="Artifact archive storage is disabled by METADATA_ONLY=1">
+				Archive storage disabled
+			</button>
+		{:else}
+			<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Archive', () => postJson('/api/admin/workers', { action: 'archive' }))}>
+				{actionLoading === 'Archive' ? 'Starting…' : 'Archive Batch'}
+			</button>
+		{/if}
 		<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Refresh', () => postJson('/api/admin/workers', { action: 'refresh' }))}>
 			{actionLoading === 'Refresh' ? 'Starting…' : 'Refresh Metadata'}
 		</button>
@@ -676,6 +682,9 @@
 
 <section class="detail-section">
 	<h2 class="section-title">Archive storage</h2>
+	{#if status.archive.metadataOnly}
+		<p class="admin-warning">Metadata-only mode is active. README, source, and ZIP archive downloads are disabled; discovery, enrichment, metrics, events, and summaries continue.</p>
+	{/if}
 	<dl class="detail-grid">
 		<div>
 			<dt>Snapshot files</dt>

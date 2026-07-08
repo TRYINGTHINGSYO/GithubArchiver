@@ -15,6 +15,7 @@ export interface ArchiveRepoOutcome {
 }
 
 export function archiveFailureReason(result: ArchiveRepoResult): string | null {
+	if (result.readme === 'disabled' && result.source === 'disabled') return 'metadata-only archive storage disabled';
 	if (result.error) return result.error;
 	if (result.source === 'too_large') return 'source tarball exceeds size limit';
 	if (result.source === 'timeout') return 'source tarball download timed out';
@@ -40,6 +41,19 @@ export function classifyArchiveRepoOutcome(
 ): ArchiveRepoOutcome {
 	const reason = archiveFailureReason(result);
 	const permanent = isPermanentArchiveFailure(result);
+
+	if (result.readme === 'disabled' && result.source === 'disabled') {
+		return {
+			repo: result.repo,
+			repoId,
+			bucket: 'skipped',
+			readme: result.readme,
+			source: result.source,
+			zip: result.zip,
+			reason,
+			permanent: false
+		};
+	}
 
 	if (result.readme === 'saved' || result.source === 'saved') {
 		return {

@@ -1,6 +1,14 @@
 import type { RepoQuery } from '$lib/server/db/types';
 import { parseRepoSort } from '$lib/server/db/repo-query';
 
+export const REPO_PAGE_SIZES = [10, 25, 50, 75, 100] as const;
+export type RepoPageSize = (typeof REPO_PAGE_SIZES)[number];
+
+export function parseRepoPageSize(value: string | number | null | undefined): RepoPageSize {
+	const parsed = Number(value ?? 50);
+	return REPO_PAGE_SIZES.includes(parsed as RepoPageSize) ? (parsed as RepoPageSize) : 50;
+}
+
 export function parseRepoQueryParams(url: URL): RepoQuery {
 	const q = url.searchParams.get('q') ?? undefined;
 	const language = url.searchParams.get('language') || undefined;
@@ -35,7 +43,7 @@ export function parseRepoQueryParams(url: URL): RepoQuery {
 		minStars: minStarsRaw ? Number(minStarsRaw) : undefined,
 		minForks: minForksRaw ? Number(minForksRaw) : undefined,
 		page: Number(url.searchParams.get('page') ?? 1),
-		perPage: Number(url.searchParams.get('per_page') ?? 50)
+		perPage: parseRepoPageSize(url.searchParams.get('per_page'))
 	};
 }
 
@@ -56,6 +64,7 @@ export function repoQueryFiltersForUi(opts: RepoQuery) {
 		deletedOnly: opts.deletedOnly ?? false,
 		minStars: opts.minStars ? String(opts.minStars) : '',
 		minForks: opts.minForks ? String(opts.minForks) : '',
-		page: opts.page ?? 1
+		page: opts.page ?? 1,
+		perPage: parseRepoPageSize(opts.perPage)
 	};
 }

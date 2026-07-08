@@ -1,7 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 import { getArchiveSnapshotById, getRepoBySlug, listArchiveSnapshots } from '$lib/server/db';
-import { analyzeSourceSnapshot, readSourceFileFromSnapshot } from '$lib/server/source-archive';
-import { buildFileTree, languageClassForPath } from '$lib/server/source-browser';
+import { analyzeSourceSnapshot } from '$lib/server/source-archive';
+import { buildFileTree } from '$lib/server/source-browser';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import type { RequestHandler } from './$types';
 
 function latestBrowsableSourceSnapshot(repoId: number) {
@@ -12,6 +13,17 @@ function latestBrowsableSourceSnapshot(repoId: number) {
 export const GET: RequestHandler = async ({ params }) => {
 	const repo = getRepoBySlug(params.owner, params.repo);
 	if (!repo) throw error(404, 'Repository not found');
+
+	if (isMetadataOnlyMode()) {
+		return json({
+			available: false,
+			disabled: true,
+			tree: [],
+			snapshot_id: null,
+			file_count: 0,
+			error: 'Source archive is disabled in metadata-only mode.'
+		});
+	}
 
 	const snapshot = latestBrowsableSourceSnapshot(repo.id);
 	if (!snapshot) {
