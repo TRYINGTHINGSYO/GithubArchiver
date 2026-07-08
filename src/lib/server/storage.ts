@@ -58,6 +58,7 @@ export interface StorageOptions {
 	cleanup?: boolean;
 	deleteOrphans?: boolean;
 	deleteDuplicates?: boolean;
+	deleteZipSnapshots?: boolean;
 	trimOld?: boolean;
 }
 
@@ -374,6 +375,41 @@ function cleanupDuplicates(
 	};
 }
 
+function cleanupZipSnapshots(
+	snapshots: (ArchiveSnapshotRow & { full_name: string })[]
+): { cleanup: StorageCleanup; remaining: ArchiveSnapshotRow[] } {
+	const refCounts = pathRefCounts(snapshots);
+	const reposWithSource = new Set(
+		snapshots.filter((snapshot) => snapshot.snapshot_type === 'source').map((snapshot) => snapshot.repo_id)
+	);
+	const deletedIds = new Set<number>();
+	let count = 0;
+	let bytesFreed = 0;
+
+	for (const snapshot of snapshots) {
+		if (snapshot.snapshot_type !== 'zip') continue;
+		if (!reposWithSource.has(snapshot.repo_id)) continue;
+		bytesFreed += deleteSnapshotFile(snapshot, refCounts);
+		deletedIds.add(snapshot.id);
+		count++;
+	}
+
+	return {
+		cleanup: {
+			id: 'delete_regenerable_zips',
+			name: 'Delete regenerable ZIP snapshots',
+			applied: count > 0,
+			message:
+				count > 0
+					? `Removed ${count} ZIP snapshot(s); source archives remain and ZIPs can be regenerated on demand.`
+					: 'No regenerable ZIP snapshots to remove.',
+			count,
+			bytes_freed: bytesFreed
+		},
+		remaining: snapshots.filter((snapshot) => !deletedIds.has(snapshot.id))
+	};
+}
+
 function cleanupOldSnapshots(
 	snapshots: (ArchiveSnapshotRow & { full_name: string })[],
 	protectedIds: Set<number>,
@@ -441,6 +477,12 @@ export function runStorageAnalysis(opts: StorageOptions = {}): StorageReport {
 
 	if (cleanup && (opts.deleteDuplicates || envFlag('STORAGE_DELETE_DUPLICATES'))) {
 		const result = cleanupDuplicates(snapshots, protectedIds);
+		cleanups.push(result.cleanup);
+		snapshots = result.remaining as (ArchiveSnapshotRow & { full_name: string })[];
+	}
+
+	if (cleanup && (opts.deleteZipSnapshots || envFlag('STORAGE_DELETE_ZIPS'))) {
+		const result = cleanupZipSnapshots(snapshots);
 		cleanups.push(result.cleanup);
 		snapshots = result.remaining as (ArchiveSnapshotRow & { full_name: string })[];
 	}

@@ -16,6 +16,7 @@ import { runEnrichCycle } from './workers/enrich';
 import { runIngestCycle, isIngestCycleFailure } from './workers/ingest';
 import { runRefreshCycle } from './workers/refresh';
 import { runSearchGapCycle } from './workers/search-gap';
+import { runStorageAnalysis } from './storage';
 
 const SLEEP_MIN_MS = Number(process.env.DAEMON_SLEEP_MIN_MS ?? 5 * 60 * 1000);
 const SLEEP_MAX_MS = Number(process.env.DAEMON_SLEEP_MAX_MS ?? 15 * 60 * 1000);
@@ -46,6 +47,34 @@ function appendLog(line: string) {
 
 function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
+}
+
+function isStorageFullError(message: string): boolean {
+	return /database or disk is full|SQLITE_FULL|ENOSPC|no space left/i.test(message);
+}
+
+function formatStorageBytes(bytes: number): string {
+	if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024).toLocaleString()} KB`;
+	return `${Math.round((bytes / (1024 * 1024)) * 10) / 10} MB`;
+}
+
+function recoverFromStoragePressure(): Record<string, unknown> {
+	const report = runStorageAnalysis({
+		cleanup: true,
+		deleteOrphans: true,
+		deleteDuplicates: true,
+		deleteZipSnapshots: true,
+		trimOld: true
+	});
+	const freed = report.cleanups.reduce((sum, item) => sum + (item.bytes_freed ?? 0), 0);
+	return {
+		storage_cleanup: true,
+		bytes_freed: freed,
+		bytes_freed_label: formatStorageBytes(freed),
+		total_bytes_on_disk: report.total_bytes_on_disk,
+		total_bytes_on_disk_label: formatStorageBytes(report.total_bytes_on_disk),
+		cleanups: report.cleanups
+	};
 }
 
 async function waitWithStop(ms: number): Promise<boolean> {
@@ -113,7 +142,7 @@ async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
 		}
 		case 'archive': {
 			const burstThreshold = Number(process.env.ARCHIVE_BURST_BACKLOG_MIN ?? 100);
-			const burstMax = Math.max(1, Number(process.env.ARCHIVE_BURST_CYCLES ?? 3));
+			const burstMax = Math.max(1, Number(process.env.ARCHIVE_BURST_CYCLES ?? 4));
 			const backlog = queryBacklogSnapshot({ rateLimitedUntil });
 			const cycles =
 				backlog.unarchivedSource >= burstThreshold
@@ -275,9 +304,24 @@ async function runLoop(): Promise<void> {
 		} catch (err) {
 			failureStreak++;
 			const message = err instanceof Error ? err.message : String(err);
+			let recovery: Record<string, unknown> | null = null;
+			if (isStorageFullError(message)) {
+				try {
+					recovery = recoverFromStoragePressure();
+					appendLog(
+						`[daemon] storage cleanup after full disk: ${recovery.bytes_freed_label} freed, ${recovery.total_bytes_on_disk_label} on disk`
+					);
+				} catch (cleanupErr) {
+					appendLog(
+						`[daemon] storage cleanup failed: ${
+							cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr)
+						}`
+					);
+				}
+			}
 			appendLog(`[daemon] error: ${message}`);
 			if (childJobId !== null) {
-				finishJobRun(childJobId, 'failed', {}, message, decision.reason);
+				finishJobRun(childJobId, 'failed', recovery ?? {}, message, decision.reason);
 			}
 			phase = 'error';
 			const backlogAfter = queryBacklogSnapshot({ rateLimitedUntil });

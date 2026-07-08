@@ -84,7 +84,9 @@ export function getArchivePulse(): ArchivePulse {
 			`SELECT COUNT(DISTINCT repo_id) as c FROM archive_snapshots WHERE snapshot_type = 'source'`
 		),
 		zipAvailable: count(
-			`SELECT COUNT(DISTINCT repo_id) as c FROM archive_snapshots WHERE snapshot_type = 'zip'`
+			`SELECT COUNT(DISTINCT repo_id) as c
+			 FROM archive_snapshots
+			 WHERE snapshot_type IN ('source', 'zip')`
 		),
 		deletedButSaved: count(
 			`SELECT COUNT(DISTINCT r.id) as c

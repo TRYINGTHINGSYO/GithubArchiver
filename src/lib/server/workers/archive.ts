@@ -8,9 +8,9 @@ import {
 import { archiveRepo, getArchiveConfigFromEnv } from '../archiver.js';
 import { GitHubRateLimitError } from '../github.js';
 
-const MAX_REPOS = Number(process.env.ARCHIVE_MAX_REPOS ?? 25);
-const DELAY_MS = Number(process.env.ARCHIVE_DELAY_MS ?? 300);
-const CONCURRENCY = Math.max(1, Number(process.env.ARCHIVE_CONCURRENCY ?? 3));
+const MAX_REPOS = Number(process.env.ARCHIVE_MAX_REPOS ?? 50);
+const DELAY_MS = Number(process.env.ARCHIVE_DELAY_MS ?? 100);
+const CONCURRENCY = Math.max(1, Number(process.env.ARCHIVE_CONCURRENCY ?? 5));
 
 function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));

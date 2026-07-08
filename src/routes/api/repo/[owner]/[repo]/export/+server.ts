@@ -2,6 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { getLatestArchiveSnapshot } from '$lib/server/db/archive';
 import { getRepoBySlug } from '$lib/server/db/repos';
 import { archiveRepo, getArchiveConfigFromEnv } from '$lib/server/archiver';
+import { ensureZipForLatestSource } from '$lib/server/source-zip';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, url }) => {
@@ -26,7 +27,16 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		let zipSnapshot = getLatestArchiveSnapshot(repo.id, 'zip');
 
 		if (!zipSnapshot) {
-			await archiveRepo(repo, getArchiveConfigFromEnv(), { captureReason: 'export' });
+			const sourceSnapshot = getLatestArchiveSnapshot(repo.id, 'source');
+			if (sourceSnapshot) {
+				await ensureZipForLatestSource(repo, 'export');
+			} else {
+				await archiveRepo(
+					repo,
+					{ ...getArchiveConfigFromEnv(), createZipSnapshot: true },
+					{ captureReason: 'export' }
+				);
+			}
 			zipSnapshot = getLatestArchiveSnapshot(repo.id, 'zip');
 		}
 

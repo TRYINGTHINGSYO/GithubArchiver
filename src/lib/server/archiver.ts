@@ -28,6 +28,7 @@ export interface ArchiveConfig {
 	archiveDir: string;
 	maxBytes: number;
 	timeoutMs: number;
+	createZipSnapshot: boolean;
 }
 
 export interface ArchiveRepoResult {
@@ -126,7 +127,9 @@ export async function archiveRepo(
 
 		if (latestHeadSha === headSha) {
 			result.source = 'skipped';
-			result.zip = await ensureZipForLatestSource(repo, captureReason);
+			result.zip = config.createZipSnapshot
+				? await ensureZipForLatestSource(repo, captureReason)
+				: 'skipped';
 			return result;
 		}
 
@@ -170,21 +173,25 @@ export async function archiveRepo(
 		}, archivedAt);
 		result.source = 'saved';
 
-		const zipSnapshotId = await createZipSnapshotForSource(
-			repo,
-			sourceSnapshot,
-			tarball,
-			archivedAt,
-			captureReason
-		);
-		if (zipSnapshotId) {
-			result.zip = 'saved';
-			appendRepoEvent(repo.id, 'snapshot_created', {
-				snapshot_type: 'zip',
-				snapshot_id: zipSnapshotId,
-				head_sha: headSha,
-				source_snapshot_id: snapshotId
-			}, archivedAt);
+		if (config.createZipSnapshot) {
+			const zipSnapshotId = await createZipSnapshotForSource(
+				repo,
+				sourceSnapshot,
+				tarball,
+				archivedAt,
+				captureReason
+			);
+			if (zipSnapshotId) {
+				result.zip = 'saved';
+				appendRepoEvent(repo.id, 'snapshot_created', {
+					snapshot_type: 'zip',
+					snapshot_id: zipSnapshotId,
+					head_sha: headSha,
+					source_snapshot_id: snapshotId
+				}, archivedAt);
+			}
+		} else {
+			result.zip = 'skipped';
 		}
 	} catch (err) {
 		if (err instanceof GitHubRateLimitError) throw err;
@@ -209,6 +216,9 @@ export function getArchiveConfigFromEnv(): ArchiveConfig {
 	return {
 		archiveDir: process.env.ARCHIVE_DIR ?? './data/archives',
 		maxBytes: Number(process.env.ARCHIVE_MAX_BYTES ?? 52_428_800),
-		timeoutMs: Number(process.env.ARCHIVE_TIMEOUT_MS ?? 120_000)
+		timeoutMs: Number(process.env.ARCHIVE_TIMEOUT_MS ?? 120_000),
+		createZipSnapshot:
+			process.env.ARCHIVE_CREATE_ZIP === '1' ||
+			process.env.ARCHIVE_CREATE_ZIP === 'true'
 	};
 }

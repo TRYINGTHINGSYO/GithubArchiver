@@ -776,9 +776,13 @@ function buildArchiveEvidence(
 		},
 		{
 			label: 'ZIP',
-			value: latestZip ? 'Available' : 'Not ready',
-			detail: latestZip ? `Export snapshot #${latestZip.id}` : 'ZIP export will appear after source archival',
-			status: latestZip ? 'saved' : 'partial'
+			value: latestZip || latestSource ? 'Available' : 'Not ready',
+			detail: latestZip
+				? `Export snapshot #${latestZip.id}`
+				: latestSource
+					? 'Generated from saved source when downloaded'
+					: 'ZIP export will appear after source archival',
+			status: latestZip ? 'saved' : latestSource ? 'partial' : 'missing'
 		},
 		{
 			label: 'Releases',
