@@ -94,9 +94,14 @@ export function buildRepoFilters(
 		where.push(`${alias}.deleted_at IS NULL`);
 	}
 
-	if (opts.minStars != null && opts.minStars > 0) {
+	const effectiveMinStars =
+		opts.feed === 'new_100_stars'
+			? Math.max(opts.minStars ?? 0, 100)
+			: opts.minStars;
+
+	if (effectiveMinStars != null && effectiveMinStars > 0) {
 		where.push(`${alias}.stars >= ?`);
-		params.push(opts.minStars);
+		params.push(effectiveMinStars);
 	}
 
 	if (opts.minForks != null && opts.minForks > 0) {

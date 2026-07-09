@@ -204,7 +204,7 @@
 			<p class="eyebrow">New discovery lanes</p>
 			<h2 id="discovery-title">New repos, with and without the 100-star filter</h2>
 		</div>
-		<a href={buildUrl({ feed: 'new_100_stars', minStars: 100, page: 1 })} class="button-ghost">Open 100+ star feed</a>
+		<a href={buildUrl({ feed: 'new_100_stars', sort: 'newest_discovered', minStars: 100, page: 1 })} class="button-ghost">Open 100+ star feed</a>
 	</div>
 
 	<div class="discovery-grid">
@@ -214,7 +214,7 @@
 					<span>New repos period</span>
 					<strong>Freshly discovered</strong>
 				</div>
-				<a href={buildUrl({ feed: 'newest', minStars: '', page: 1 })}>View all</a>
+				<a href={buildUrl({ feed: 'newest', sort: 'newest_discovered', minStars: '', page: 1 })}>View all</a>
 			</div>
 			{#if data.discoveryLanes.newRepos.length}
 				<div class="lane-list">
@@ -237,7 +237,7 @@
 					<span>New repos with 100+ stars</span>
 					<strong>Already getting attention</strong>
 				</div>
-				<a href={buildUrl({ feed: 'new_100_stars', minStars: 100, page: 1 })}>View 100+</a>
+				<a href={buildUrl({ feed: 'new_100_stars', sort: 'newest_discovered', minStars: 100, page: 1 })}>View 100+</a>
 			</div>
 			{#if data.discoveryLanes.newStarredRepos.length}
 				<div class="lane-list">
@@ -409,7 +409,7 @@
 
 	<nav class="feed-nav" aria-label="Repository feeds">
 		{#each feeds as f}
-			<a href={buildUrl({ feed: f.id, minStars: f.id === 'new_100_stars' ? 100 : '', page: 1 })} class="feed-link" class:active={data.filters.feed === f.id}>
+			<a href={buildUrl({ feed: f.id, sort: 'newest_discovered', minStars: f.id === 'new_100_stars' ? 100 : '', page: 1 })} class="feed-link" class:active={data.filters.feed === f.id}>
 				{f.label}
 			</a>
 		{/each}
