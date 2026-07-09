@@ -18,10 +18,12 @@ describe('bulk-export zip reuse', () => {
 		exportsDir = join(archiveDir, 'exports');
 		process.env.ARCHIVE_DIR = archiveDir;
 		process.env.EXPORTS_DIR = exportsDir;
+		process.env.ENABLE_ARTIFACT_ARCHIVE = '1';
 	});
 
 	afterEach(() => {
 		if (archiveDir) rmSync(archiveDir, { recursive: true, force: true });
+		delete process.env.ENABLE_ARTIFACT_ARCHIVE;
 		teardownTestDb();
 	});
 

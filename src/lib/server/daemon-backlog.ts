@@ -7,9 +7,12 @@ import { getDb } from '$lib/server/db/connection';
 import { countMissingGhArchiveHours } from '$lib/server/db/ingestion';
 import { countReposDueForRefresh, countUnenriched } from '$lib/server/db/repos';
 import { defaultHourKey } from '$lib/server/gharchive';
+import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import type { BacklogSnapshot } from '$lib/server/daemon-planner';
 
 export function countUnarchivedSourceSnapshots(): number {
+	if (isMetadataOnlyMode()) return 0;
+
 	const db = getDb();
 	return (
 		db

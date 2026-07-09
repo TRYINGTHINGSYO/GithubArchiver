@@ -980,7 +980,7 @@ function buildArchiveEvidence(
 			label: 'README',
 			value: metadataOnly ? 'Disabled' : latestReadme ? 'Captured' : 'Missing',
 			detail: metadataOnly
-				? 'README downloads are disabled by METADATA_ONLY=1'
+				? 'README downloads are disabled while artifact storage is off'
 				: latestReadme ? `${latestReadme.archived_at.slice(0, 10)} · ${formatBytesCompact(latestReadme.file_size)}` : 'No README snapshot saved yet',
 			status: metadataOnly ? 'disabled' : latestReadme ? 'saved' : 'missing',
 			...evidenceMeta(evidenceReferences, 'readme')
@@ -989,7 +989,7 @@ function buildArchiveEvidence(
 			label: 'Source',
 			value: metadataOnly ? 'Disabled' : latestSource ? 'Captured' : 'Missing',
 			detail: metadataOnly
-				? 'Source tarball downloads are disabled by METADATA_ONLY=1'
+				? 'Source tarball downloads are disabled while artifact storage is off'
 				: latestSource ? `${latestSource.archived_at.slice(0, 10)} · ${formatBytesCompact(latestSource.file_size)}` : 'No source snapshot saved yet',
 			status: metadataOnly ? 'disabled' : latestSource ? 'saved' : 'missing',
 			...evidenceMeta(evidenceReferences, 'source')

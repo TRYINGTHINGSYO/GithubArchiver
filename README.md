@@ -1,6 +1,6 @@
 # GithubArchive+
 
-An append-only archive for GitHub repositories — ingest from [GH Archive](https://www.gharchive.org/) and GitHub Search, enrich via the GitHub API, snapshot READMEs and source tarballs locally, and browse everything through a SvelteKit UI.
+An append-only metadata intelligence layer for GitHub repositories — ingest from [GH Archive](https://www.gharchive.org/) and GitHub Search, save lightweight repo records such as names, links, stars, languages, releases, and events, then refresh richer GitHub details on demand when people open a repository.
 
 **Live:** [new-production-9120.up.railway.app](https://new-production-9120.up.railway.app)  
 **Repo:** [github.com/TRYINGTHINGSYO/GithubArchiver](https://github.com/TRYINGTHINGSYO/GithubArchiver)
@@ -18,7 +18,7 @@ GH Archive (.json.gz)          GitHub Search API
                    │
          GitHub API (enrich / refresh)
                    ▼
-         Local archives (README + tarball)
+        Metadata intelligence + metrics
                    │
                    ▼
          SvelteKit UI + REST API
@@ -27,16 +27,18 @@ GH Archive (.json.gz)          GitHub Search API
 - **Discover** new repos from hourly GH Archive CreateEvents, with GitHub Search fallback when the archive is empty or unavailable
 - **Shard** search queries (hour → 15 min → 5 min → 1 min) when `total_count > 1000`
 - **Enrich** metadata, releases, rename/delete detection
-- **Archive** README and source snapshots to disk
+- **Store lightweight metadata by default**: repo names, GitHub links, stars, languages, descriptions, events, releases, summaries, and metrics
+- **Refresh on click**: repo pages can call GitHub for fresh metadata without storing source artifacts
+- **Optionally archive artifacts** only when `ENABLE_ARTIFACT_ARCHIVE=1`
 - **Favorite** important repos globally so storage cleanup protects their preserved artifacts
 - **Browse** search, feeds, timelines, birth feed, and per-repo detail pages
 - **Operate** entirely from the browser via `/admin` — no SSH or terminal required in production
 
-### Metadata-only mode
+### Metadata-first mode
 
-Set `METADATA_ONLY=1` to keep GithubArchive+ running safely on small disks such as Railway volumes. In this mode the app continues discovery, GitHub Search ingest, GH Archive ingest, enrichment, metrics snapshots, repository events, summaries, categories, Archive Pulse, feeds, and repository intelligence, but it does not download or store README snapshots, source tarballs, ZIP exports, or archived file contents.
+GithubArchive+ now defaults to metadata-only storage. It keeps discovery, GitHub Search ingest, GH Archive ingest, enrichment, metrics snapshots, repository events, releases, summaries, categories, Archive Pulse, feeds, and repository intelligence running, but it does not download or store README snapshots, source tarballs, ZIP exports, or archived file contents.
 
-Metadata-only mode lets Railway run safely without large artifact storage. It preserves repo intelligence and history while disabling heavy archive downloads.
+This lets Railway run safely without large artifact storage. The durable record is the repo name, GitHub URL, stars, metadata, metrics, releases, and history. Richer details are refreshed from GitHub when users open repos. To restore the older artifact archive behavior, set `ENABLE_ARTIFACT_ARCHIVE=1`.
 
 ---
 
@@ -56,7 +58,7 @@ Or run workers manually:
 ```bash
 npm run ingest:hour
 npm run enrich:repos
-npm run archive:repos
+npm run enrich:refresh
 ```
 
 Workers load `.env` automatically via `scripts/load-env.ts`.
@@ -76,7 +78,7 @@ Admin routes and repo mutation actions require the shared admin login. Set `ADMI
 
 | Tab | URL | Purpose |
 |-----|-----|---------|
-| **Control** | `/admin` | Auto-scan, search ingest, pipeline, enrich, archive, backup, backfill |
+| **Control** | `/admin` | Auto-scan, search ingest, pipeline, enrich, refresh, backup, backfill |
 | **Job history** | `/admin/jobs` | View past runs with full stored JSON results |
 | **Health** | `/admin/doctor` | DB/FTS/snapshot checks; one-click repairs |
 | **Storage** | `/admin/storage` | Disk usage, duplicates, orphan cleanup |
@@ -85,11 +87,11 @@ Admin routes and repo mutation actions require the shared admin login. Set `ADMI
 
 | Button | What it does |
 |--------|----------------|
-| **Start Auto-Scan** | Continuous ingest → enrich → refresh → archive loop |
+| **Start Auto-Scan** | Continuous ingest → enrich → refresh loop; archive is skipped unless artifact storage is enabled |
 | **GitHub Search Ingest** | Discover repos for the current hour via Search API |
 | **Ingest Missing Hours** | Backfill any GH Archive hours not yet ingested |
-| **Full Pipeline** | One-shot ingest + enrich + refresh + archive |
-| **Enrich / Archive / Refresh** | Run a single worker batch |
+| **Full Pipeline** | One-shot ingest + enrich + refresh; archive is skipped unless artifact storage is enabled |
+| **Enrich / Refresh** | Run a single worker batch |
 | **Create Backup** | SQLite + manifest backup to `BACKUPS_DIR` |
 | **Start backfill** | Resumable date-range backfill with progress bar |
 
@@ -111,7 +113,6 @@ DATABASE_PATH=/data/githubarchive.db
 ARCHIVE_DIR=/data/archives
 BACKUPS_DIR=/data/backups
 GITHUB_TOKEN=ghp_...          # public_repo scope only
-METADATA_ONLY=1               # recommended for constrained Railway volumes
 ADMIN_PASSWORD=change-me      # default is GitHub if omitted
 ```
 
@@ -121,6 +122,7 @@ ADMIN_PASSWORD=change-me      # default is GitHub if omitted
 BACKGROUND_WORKER=auto        # default on Railway; set 0 to disable auto-scan
 PORT=8080                     # Railway sets this automatically
 STORAGE_MIN_FREE_BYTES=1073741824
+ENABLE_ARTIFACT_ARCHIVE=1     # optional: enable README/source/ZIP artifact storage
 ```
 
 When free archive volume space falls below `STORAGE_MIN_FREE_BYTES` (default: 1 GiB), archive cycles run storage cleanup before downloading more artifacts. Favorited repositories are protected during this pressure cleanup.
@@ -139,9 +141,9 @@ First deploy typically takes **5–10 minutes** (native `better-sqlite3` compile
 | `ingest:search` | GitHub Search discovery only (current hour) |
 | `enrich:repos` | GitHub metadata for unenriched repos (batch 50) |
 | `enrich:refresh` | Re-check enriched repos when `last_checked_at` > 24h |
-| `archive:repos` | Local README + tarball snapshots |
+| `archive:repos` | No-op by default; local README + tarball snapshots only when `ENABLE_ARTIFACT_ARCHIVE=1` |
 | `db:init` | Run schema migrations |
-| `daemon` | Continuous ingest → enrich → refresh → archive loop |
+| `daemon` | Continuous ingest → enrich → refresh loop; archive skipped unless artifact storage is enabled |
 | `pipeline:once` | Single full cycle (no daemon loop) |
 | `backup` / `restore` | Local backup and restore |
 | `doctor` | Health checks; optional FTS rebuild / missing snapshot cleanup |
@@ -233,9 +235,10 @@ Migrations are versioned in `schema_version` (current: **v14**).
 | `GITHUB_TOKEN` | — | GitHub API (strongly recommended) |
 | `DATABASE_PATH` | `./data/githubarchive.db` | SQLite |
 | `DATA_DIR` | `./data` | PID/log files, worker output |
-| `ARCHIVE_DIR` | `./data/archives` | Snapshot files |
+| `ARCHIVE_DIR` | `./data/archives` | Snapshot files when artifact storage is enabled |
 | `BACKUPS_DIR` | `./data/backups` | Backup output |
-| `METADATA_ONLY` | — | Set `1` to disable README/source/ZIP artifact downloads while preserving metadata intelligence |
+| `METADATA_ONLY` | enabled | Legacy flag; metadata-only storage is the default |
+| `ENABLE_ARTIFACT_ARCHIVE` | — | Set `1` to opt into README/source/ZIP artifact downloads |
 | `ADMIN_PASSWORD` | `GitHub` | Shared admin login password |
 | `ADMIN_SESSION_SECRET` | `ADMIN_PASSWORD` | HMAC secret for admin session cookies |
 | `STORAGE_MIN_FREE_BYTES` | `1073741824` | Free-space threshold that triggers cleanup before archive downloads |
@@ -298,3 +301,4 @@ data/                  # SQLite DB, archives, backups (gitignored)
 ## License
 
 MIT
+

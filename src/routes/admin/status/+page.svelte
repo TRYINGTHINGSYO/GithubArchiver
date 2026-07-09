@@ -154,7 +154,7 @@
 			{actionLoading === 'Enrich' ? 'Starting…' : 'Enrich Now'}
 		</button>
 		{#if status.archive.metadataOnly}
-			<button type="button" class="filter-btn" disabled title="Artifact archive storage is disabled by METADATA_ONLY=1">
+			<button type="button" class="filter-btn" disabled title="Artifact archive storage is disabled">
 				Archive storage disabled
 			</button>
 		{:else}
@@ -561,7 +561,7 @@
 <section class="detail-section">
 	<h2 class="section-title">Archive storage</h2>
 	{#if status.archive.metadataOnly}
-		<p class="admin-warning">Metadata-only mode is active. README, source, and ZIP archive downloads are disabled; discovery, enrichment, metrics, events, and summaries continue.</p>
+		<p class="admin-warning">Metadata-only mode is active. README, source, and ZIP archive downloads are disabled by default; discovery, enrichment, metrics, events, and summaries continue.</p>
 	{/if}
 	<dl class="detail-grid">
 		<div>

@@ -22,10 +22,12 @@ describe('source-zip', () => {
 		setupTestDb();
 		archiveDir = mkdtempSync(join(tmpdir(), 'githubarchive-zip-'));
 		process.env.ARCHIVE_DIR = archiveDir;
+		process.env.ENABLE_ARTIFACT_ARCHIVE = '1';
 	});
 
 	afterEach(() => {
 		if (archiveDir) rmSync(archiveDir, { recursive: true, force: true });
+		delete process.env.ENABLE_ARTIFACT_ARCHIVE;
 		teardownTestDb();
 	});
 

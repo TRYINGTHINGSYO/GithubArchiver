@@ -7,6 +7,7 @@ import {
 } from '../archive-outcomes.js';
 import { archiveRepo, getArchiveConfigFromEnv } from '../archiver.js';
 import { GitHubRateLimitError } from '../github.js';
+import { isMetadataOnlyMode } from '../runtime-mode.js';
 import { enforceStoragePressureLimit } from '../storage.js';
 
 const MAX_REPOS = Number(process.env.ARCHIVE_MAX_REPOS ?? 50);
@@ -92,6 +93,27 @@ async function runArchivePool(
 }
 
 export async function runArchiveCycle(): Promise<ArchiveCycleResult> {
+	if (isMetadataOnlyMode()) {
+		const jobId = startJobRun('archive', {
+			metadata_only: true,
+			message: 'Artifact archive storage is disabled; metadata discovery continues.'
+		});
+		const result: ArchiveCycleResult = {
+			planned: 0,
+			saved: 0,
+			skipped: 0,
+			issues: 0,
+			blocked: 0,
+			rateLimited: false,
+			outcomes: []
+		};
+		finishJobRun(jobId, 'success', {
+			...result,
+			message: 'Archive worker skipped in metadata-only mode.'
+		});
+		return result;
+	}
+
 	const config = getArchiveConfigFromEnv();
 	const pressure = enforceStoragePressureLimit();
 	if (

@@ -1,4 +1,8 @@
 export function isMetadataOnlyMode(): boolean {
-	const value = process.env.METADATA_ONLY?.trim().toLowerCase();
-	return value === '1' || value === 'true' || value === 'yes' || value === 'on';
+	const archiveEnabled = process.env.ENABLE_ARTIFACT_ARCHIVE?.trim().toLowerCase();
+	if (archiveEnabled === '1' || archiveEnabled === 'true' || archiveEnabled === 'yes' || archiveEnabled === 'on') {
+		return false;
+	}
+
+	return true;
 }

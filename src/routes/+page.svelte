@@ -108,7 +108,7 @@
 			icon: 'M',
 			label: 'README saved',
 			value: data.archivePulse.readmeSaved.toLocaleString(),
-			detail: data.archivePulse.metadataOnly ? 'Disabled by METADATA_ONLY=1' : `${data.archivePulse.readmeChanges.toLocaleString()} README change events`
+			detail: data.archivePulse.metadataOnly ? 'Artifact storage disabled' : `${data.archivePulse.readmeChanges.toLocaleString()} README change events`
 		},
 		{
 			icon: 'S',
