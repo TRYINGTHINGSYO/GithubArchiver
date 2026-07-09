@@ -1,5 +1,7 @@
 # GithubArchive+ Roadmap
 
+**Governing philosophy:** See [Architecture Philosophy](ARCHITECTURE_PHILOSOPHY.md). Future roadmap items should preserve the architectural laws: evidence before intelligence, explain every conclusion, stable evidence identities, reproducibility, immutable evidence with versioned intelligence, and provenance over authority.
+
 **North star:** a repository intelligence and preservation platform built on append-only history — not a GitHub mirror. GithubArchive+ should feel like a software museum: it remembers projects, explains why they matter, and shows how recoverable they are if GitHub disappears.
 
 **Design rules:**
