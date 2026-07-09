@@ -7,6 +7,7 @@
 
 	const feeds = [
 		{ id: 'newest', label: 'Newest' },
+		{ id: 'new_100_stars', label: 'New 100+ stars' },
 		{ id: 'recently_archived', label: 'Recently archived' },
 		{ id: 'recently_deleted', label: 'Deleted but saved' },
 		{ id: 'recently_released', label: 'Recent releases' },
@@ -165,6 +166,10 @@
 	function repoPath(owner: string, name: string): string {
 		return `/repo/${owner}/${name}`;
 	}
+
+	function starsLabel(stars: number | null): string {
+		return `${(stars ?? 0).toLocaleString()} stars`;
+	}
 </script>
 
 <svelte:head>
@@ -190,6 +195,64 @@
 				</div>
 			</article>
 		{/each}
+	</div>
+</section>
+
+<section class="section-block discovery-lanes" aria-labelledby="discovery-title">
+	<div class="section-heading">
+		<div>
+			<p class="eyebrow">New discovery lanes</p>
+			<h2 id="discovery-title">New repos, with and without the 100-star filter</h2>
+		</div>
+		<a href={buildUrl({ feed: 'new_100_stars', minStars: 100, page: 1 })} class="button-ghost">Open 100+ star feed</a>
+	</div>
+
+	<div class="discovery-grid">
+		<article class="discovery-card">
+			<div class="lane-header">
+				<div>
+					<span>New repos period</span>
+					<strong>Freshly discovered</strong>
+				</div>
+				<a href={buildUrl({ feed: 'newest', minStars: '', page: 1 })}>View all</a>
+			</div>
+			{#if data.discoveryLanes.newRepos.length}
+				<div class="lane-list">
+					{#each data.discoveryLanes.newRepos as repo}
+						<a href={repoPath(repo.owner, repo.name)}>
+							<strong class="mono">{repo.full_name}</strong>
+							<span>{repo.language ?? 'Unknown'} · {starsLabel(repo.stars)}</span>
+							<small>{timeAgo(repo.first_seen_at)}</small>
+						</a>
+					{/each}
+				</div>
+			{:else}
+				<p class="lane-empty">No new repositories discovered yet.</p>
+			{/if}
+		</article>
+
+		<article class="discovery-card">
+			<div class="lane-header">
+				<div>
+					<span>New repos with 100+ stars</span>
+					<strong>Already getting attention</strong>
+				</div>
+				<a href={buildUrl({ feed: 'new_100_stars', minStars: 100, page: 1 })}>View 100+</a>
+			</div>
+			{#if data.discoveryLanes.newStarredRepos.length}
+				<div class="lane-list">
+					{#each data.discoveryLanes.newStarredRepos as repo}
+						<a href={repoPath(repo.owner, repo.name)}>
+							<strong class="mono">{repo.full_name}</strong>
+							<span>{repo.language ?? 'Unknown'} · {starsLabel(repo.stars)}</span>
+							<small>{timeAgo(repo.first_seen_at)}</small>
+						</a>
+					{/each}
+				</div>
+			{:else}
+				<p class="lane-empty">No newly discovered 100+ star repositories yet.</p>
+			{/if}
+		</article>
 	</div>
 </section>
 
@@ -346,7 +409,7 @@
 
 	<nav class="feed-nav" aria-label="Repository feeds">
 		{#each feeds as f}
-			<a href={buildUrl({ feed: f.id, page: 1 })} class="feed-link" class:active={data.filters.feed === f.id}>
+			<a href={buildUrl({ feed: f.id, minStars: f.id === 'new_100_stars' ? 100 : '', page: 1 })} class="feed-link" class:active={data.filters.feed === f.id}>
 				{f.label}
 			</a>
 		{/each}
@@ -467,6 +530,7 @@
 
 	.hero-panel,
 	.pulse-card,
+	.discovery-card,
 	.featured-card,
 	.activity-list,
 	.developer-tools {
@@ -552,6 +616,76 @@
 		display: block;
 		font-size: 1.75rem;
 		line-height: 1.1;
+	}
+
+	.discovery-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.85rem;
+	}
+
+	.discovery-card {
+		display: grid;
+		gap: 0.8rem;
+		padding: 1rem;
+	}
+
+	.lane-header {
+		display: flex;
+		justify-content: space-between;
+		gap: 0.85rem;
+		align-items: flex-start;
+	}
+
+	.lane-header span,
+	.lane-list span,
+	.lane-list small,
+	.lane-empty {
+		color: var(--text-muted);
+	}
+
+	.lane-header strong {
+		display: block;
+		margin-top: 0.1rem;
+	}
+
+	.lane-header a {
+		flex: 0 0 auto;
+		font-size: 0.85rem;
+		font-weight: 750;
+	}
+
+	.lane-list {
+		display: grid;
+	}
+
+	.lane-list a {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.2rem 0.7rem;
+		padding: 0.65rem 0;
+		border-top: 1px solid var(--border);
+		text-decoration: none;
+	}
+
+	.lane-list strong {
+		overflow-wrap: anywhere;
+	}
+
+	.lane-list span {
+		grid-column: 1;
+		font-size: 0.84rem;
+	}
+
+	.lane-list small {
+		grid-column: 2;
+		grid-row: 1 / 3;
+		align-self: center;
+		white-space: nowrap;
+	}
+
+	.lane-empty {
+		margin: 0;
 	}
 
 	.featured-grid {
@@ -695,6 +829,7 @@
 
 	@media (max-width: 920px) {
 		.product-hero,
+		.discovery-grid,
 		.featured-grid {
 			grid-template-columns: 1fr 1fr;
 		}
@@ -711,6 +846,7 @@
 	@media (max-width: 680px) {
 		.product-hero,
 		.pulse-grid,
+		.discovery-grid,
 		.featured-grid,
 		.activity-list a {
 			grid-template-columns: 1fr;
@@ -827,6 +963,24 @@
 			min-height: 2.65rem;
 			padding: 0.5rem;
 			font-size: 0.84rem;
+		}
+
+		.discovery-card {
+			padding: 0.8rem;
+			border-radius: 8px;
+		}
+
+		.lane-header {
+			display: grid;
+		}
+
+		.lane-list a {
+			grid-template-columns: 1fr;
+		}
+
+		.lane-list small {
+			grid-column: 1;
+			grid-row: auto;
 		}
 
 		.featured-grid {

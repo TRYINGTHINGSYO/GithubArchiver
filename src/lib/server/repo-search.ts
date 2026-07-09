@@ -23,6 +23,7 @@ export function parseRepoQueryParams(url: URL): RepoQuery {
 
 	const deletedOnly =
 		url.searchParams.get('deleted_only') === '1' || feed === 'recently_deleted';
+	const feedMinStars = feed === 'new_100_stars' ? 100 : undefined;
 
 	return {
 		q,
@@ -40,7 +41,7 @@ export function parseRepoQueryParams(url: URL): RepoQuery {
 		hasRelease: url.searchParams.get('has_release') === '1',
 		deletedOnly,
 		includeDeleted: deletedOnly,
-		minStars: minStarsRaw ? Number(minStarsRaw) : undefined,
+		minStars: minStarsRaw ? Number(minStarsRaw) : feedMinStars,
 		minForks: minForksRaw ? Number(minForksRaw) : undefined,
 		page: Number(url.searchParams.get('page') ?? 1),
 		perPage: parseRepoPageSize(url.searchParams.get('per_page'))
@@ -52,7 +53,7 @@ export function repoQueryFiltersForUi(opts: RepoQuery) {
 		q: opts.q ?? '',
 		language: opts.language ?? '',
 		source: opts.source ?? '',
-		sort: opts.sort ?? opts.feed ?? 'newest_discovered',
+		sort: opts.sort ?? 'newest_discovered',
 		feed: opts.feed ?? 'newest',
 		year: opts.year ? String(opts.year) : '',
 		dateFrom: opts.dateFrom ?? '',
