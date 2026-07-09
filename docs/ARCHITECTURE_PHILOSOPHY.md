@@ -30,6 +30,7 @@ User Experience
 4. Reproducibility
 5. Immutable evidence, versioned intelligence
 6. Provenance over authority
+7. Derived data is disposable; evidence is not
 
 ## Platform Models
 
@@ -86,6 +87,47 @@ Every intelligence artifact should expose:
 - the algorithm, ruleset, or model version that produced it
 - when it was computed
 - how it can be reproduced
+
+## Derived Data Is Disposable
+
+Derived data can be deleted and regenerated from preserved evidence.
+
+Archive scores, recoverability reports, risk assessments, Repository Memory summaries, and AI interpretations are analysis outputs. They are valuable, but they are not the archive.
+
+If an algorithm improves, its prior results may be recomputed from immutable evidence without losing the historical record.
+
+## Executable Contracts
+
+Every intelligence capability should fit the same pipeline:
+
+```ts
+interface EvidenceProducer {
+	produce(): EvidenceArtifact[];
+}
+
+interface AnalysisEngine {
+	analyze(dna: RepositoryDNA): IntelligenceResult;
+}
+
+interface ExplanationProvider {
+	explain(resultId: string): EvidenceGraph;
+}
+```
+
+An intelligence result is a reproducible analysis artifact, not a UI component:
+
+```ts
+interface IntelligenceResult {
+	id: string;
+	type: 'archive_score' | 'recoverability' | 'risk' | 'summary';
+	algorithmVersion: string;
+	evidenceIds: string[];
+	dnaVersion: string;
+	computedAt: string;
+	value: unknown;
+	confidence: number;
+}
+```
 
 ## Product Identity
 
