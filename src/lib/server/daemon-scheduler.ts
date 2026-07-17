@@ -12,7 +12,8 @@ const HOUR = 60 * MINUTE;
 
 export const DAEMON_JOB_INTERVALS: Record<ScheduledJobName, number> = {
 	ingest: Number(process.env.DAEMON_INGEST_INTERVAL_MS ?? 10 * MINUTE),
-	enrich: Number(process.env.DAEMON_ENRICH_INTERVAL_MS ?? 1 * MINUTE),
+	/** Immediately re-check; enrich cycle itself drains the backlog. */
+	enrich: Number(process.env.DAEMON_ENRICH_INTERVAL_MS ?? 5_000),
 	refresh: Number(process.env.DAEMON_REFRESH_INTERVAL_MS ?? 6 * HOUR),
 	classify: Number(process.env.DAEMON_CLASSIFY_INTERVAL_MS ?? 10 * MINUTE),
 	clusters: Number(process.env.DAEMON_CLUSTERS_INTERVAL_MS ?? 30 * MINUTE),
@@ -26,15 +27,15 @@ export const DAEMON_JOB_INTERVALS: Record<ScheduledJobName, number> = {
 };
 
 export const DAEMON_JOB_ORDER: ScheduledJobName[] = [
-	'ingest',
 	'enrich',
-	'refresh',
 	'classify',
 	'clusters',
 	'score',
 	'stories',
-	'emerging',
 	'discovery',
+	'ingest',
+	'refresh',
+	'emerging',
 	'archive',
 	'deletionCheck',
 	'backup'
@@ -44,8 +45,19 @@ export function initializeDaemonScheduler(): void {
 	ensureScheduledJobs(DAEMON_JOB_ORDER);
 }
 
-export function getDueDaemonJobs(now = Date.now()): ScheduledJobName[] {
-	return DAEMON_JOB_ORDER.filter((jobName) => isJobDue(jobName, now));
+/**
+ * Prefer clearing the enrichment backlog before discovering more repositories.
+ */
+export function getDueDaemonJobs(
+	now = Date.now(),
+	opts: { unenrichedCount?: number } = {}
+): ScheduledJobName[] {
+	const due = DAEMON_JOB_ORDER.filter((jobName) => isJobDue(jobName, now));
+	const unenriched = opts.unenrichedCount;
+	if (unenriched != null && unenriched > 0) {
+		return due.filter((jobName) => jobName !== 'ingest');
+	}
+	return due;
 }
 
 export async function runScheduledJob<T>(

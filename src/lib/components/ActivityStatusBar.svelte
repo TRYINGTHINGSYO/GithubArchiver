@@ -36,6 +36,12 @@
 		<span class="indicator" aria-hidden="true"></span>
 		<span class="label">What I'm doing</span>
 		<span class="message">{activity.message}</span>
+		{#if activity.progress && (activity.action === 'enrich' || activity.enrichment?.remaining > 0)}
+			<span class="counts">
+				{activity.progress.enrichedTotal.toLocaleString()} done ·
+				{activity.progress.remaining.toLocaleString()} left
+			</span>
+		{/if}
 	</div>
 {:else}
 	<div class="activity-bar error" role="status" aria-live="polite">
@@ -70,6 +76,13 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.counts {
+		flex-shrink: 0;
+		font-variant-numeric: tabular-nums;
+		color: var(--text);
+		font-weight: 600;
 	}
 
 	.indicator {

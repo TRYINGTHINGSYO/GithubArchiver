@@ -8,6 +8,7 @@ import {
 	getNewHighSignalRepos
 } from '$lib/server/discovery';
 import { getDiscoverySystemStatus } from '$lib/server/discovery-materialized';
+import { getEnrichmentProgress } from '$lib/server/enrichment-progress';
 import {
 	getLatestEmergingDetectionProvenance,
 	listEmergingNearMisses,
@@ -89,6 +90,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const readiness = getDataReadiness({ windowDays: 7 });
 	const archivePulse = getArchivePulse();
 	const discoveryStatus = getDiscoverySystemStatus();
+	const enrichmentProgress = getEnrichmentProgress();
 	const provenance = getLatestEmergingDetectionProvenance();
 	const highSignalRepos = getNewHighSignalRepos({ limit: 8, minScore: 55 });
 	const featuredRepo =
@@ -165,6 +167,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		filters: repoQueryFiltersForUi(opts),
 		discovery,
 		discoveryStatus,
+		enrichmentProgress,
 		readiness,
 		archivePulse,
 		provenance,

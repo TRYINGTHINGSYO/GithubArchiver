@@ -9,6 +9,7 @@ import {
 	runScheduledJob
 } from '../src/lib/server/daemon-scheduler.js';
 import { getDb } from '../src/lib/server/db/index.js';
+import { countUnenriched } from '../src/lib/server/db/repos.js';
 import { finishJobRun, startJobRun, updateJobRun } from '../src/lib/server/db/jobs.js';
 import { updateDiscoverySystemStatus } from '../src/lib/server/discovery-materialized.js';
 import { runArchiveCycle } from '../src/lib/server/workers/archive.js';
@@ -184,7 +185,7 @@ async function runLoop(): Promise<void> {
 			failure_streak: failureStreak
 		});
 
-		const dueJobs = getDueDaemonJobs();
+		const dueJobs = getDueDaemonJobs(Date.now(), { unenrichedCount: countUnenriched() });
 		let hadFailure = false;
 		let rateLimitResetAt: string | undefined;
 

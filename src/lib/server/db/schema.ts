@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 26;
+export const CURRENT_SCHEMA_VERSION = 27;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -981,6 +981,23 @@ function migration026(database: Database.Database) {
 	`);
 }
 
+function migration027(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS worker_progress (
+			worker_name TEXT PRIMARY KEY,
+			status TEXT NOT NULL,
+			current_item TEXT,
+			completed INTEGER NOT NULL DEFAULT 0,
+			failed INTEGER NOT NULL DEFAULT 0,
+			remaining INTEGER NOT NULL DEFAULT 0,
+			total INTEGER NOT NULL DEFAULT 0,
+			enriched_total INTEGER NOT NULL DEFAULT 0,
+			detail_json TEXT NOT NULL DEFAULT '{}',
+			updated_at TEXT NOT NULL
+		);
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -1007,7 +1024,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	23: migration023,
 	24: migration024,
 	25: migration025,
-	26: migration026
+	26: migration026,
+	27: migration027
 };
 
 export interface MigrationRunResult {

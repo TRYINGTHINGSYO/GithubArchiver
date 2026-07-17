@@ -6,6 +6,13 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const enrich = $derived(data.enrichmentProgress);
+	const enrichPercent = $derived.by(() => {
+		const total = enrich.enrichedTotal + enrich.remaining;
+		if (total <= 0) return 100;
+		return Math.min(100, Math.round((enrich.enrichedTotal / total) * 100));
+	});
+
 	const browseLinks = [
 		{ href: '/discover', label: 'All discoveries', why: 'Landing for every intelligence lane' },
 		{ href: '/discover#clusters', label: 'All clusters', why: 'Browse thematic repository groups' },
@@ -148,6 +155,54 @@
 			<a href="/admin/storage">System health</a>
 		</p>
 	{/if}
+</section>
+
+<section class="section-block enrich-progress" aria-labelledby="enrich-heading">
+	<div class="section-head">
+		<div>
+			<p class="eyebrow">Live enrichment</p>
+			<h2 id="enrich-heading">Voting repositories into the archive</h2>
+			<p class="section-why">
+				The worker enriches known repositories before hunting for more. New discovery resumes only
+				after this backlog is clear.
+			</p>
+		</div>
+	</div>
+	<div class="enrich-panel">
+		<div class="enrich-counts">
+			<div>
+				<span class="metric-value">{enrich.enrichedTotal.toLocaleString()}</span>
+				<span class="metric-label">Enriched</span>
+			</div>
+			<div>
+				<span class="metric-value">{enrich.remaining.toLocaleString()}</span>
+				<span class="metric-label">Waiting</span>
+			</div>
+			<div>
+				<span class="metric-value">{enrich.completed.toLocaleString()}</span>
+				<span class="metric-label">This run</span>
+			</div>
+			<div>
+				<span class="metric-value">{enrichPercent}%</span>
+				<span class="metric-label">Coverage</span>
+			</div>
+		</div>
+		<div class="enrich-bar" role="progressbar" aria-valuenow={enrichPercent} aria-valuemin="0" aria-valuemax="100">
+			<span style={`width: ${enrichPercent}%`}></span>
+		</div>
+		{#if enrich.currentRepo}
+			<p class="enrich-current">
+				Now enriching
+				<a href={`/repo/${enrich.currentRepo}`}>{enrich.currentRepo}</a>
+			</p>
+		{:else if enrich.remaining > 0}
+			<p class="enrich-current">
+				{enrich.remaining.toLocaleString()} repositories queued — enrichment continues automatically.
+			</p>
+		{:else}
+			<p class="enrich-current">Backlog clear. Worker will discover new repositories next.</p>
+		{/if}
+	</div>
 </section>
 
 <section class="section-block" aria-labelledby="emerging-heading">
@@ -735,6 +790,45 @@
 		color: var(--text-muted);
 		font-size: 0.86rem;
 		line-height: 1.45;
+	}
+
+	.enrich-panel {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.enrich-counts {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+		gap: 0.75rem;
+	}
+
+	.enrich-counts > div {
+		display: grid;
+		gap: 0.2rem;
+	}
+
+	.enrich-bar {
+		height: 0.55rem;
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--border) 80%, var(--bg));
+		overflow: hidden;
+	}
+
+	.enrich-bar span {
+		display: block;
+		height: 100%;
+		background: var(--accent);
+	}
+
+	.enrich-current {
+		margin: 0;
+		color: var(--text-muted);
+	}
+
+	.enrich-current a {
+		color: var(--text);
+		font-weight: 700;
 	}
 
 	.search-form {
