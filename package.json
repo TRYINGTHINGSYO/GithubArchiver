@@ -20,6 +20,7 @@
     "generate:archive-stories": "tsx scripts/generate-archive-stories.ts",
     "detect:emerging": "tsx scripts/detect-emerging-topics.ts",
     "audit:emerging": "tsx scripts/audit-emerging.ts",
+    "review:emerging": "tsx scripts/review-emerging.ts",
     "dataset:status": "tsx scripts/dataset-runs.ts status",
     "dataset:create": "tsx scripts/dataset-runs.ts create",
     "dataset:create-pair": "tsx scripts/dataset-runs.ts create-pair",

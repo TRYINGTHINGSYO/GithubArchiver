@@ -228,6 +228,126 @@ describe('emerging topic detection', () => {
 			.get('nextjs-dashboard-template') as { reason: string };
 		expect(exclusionRow.reason).toBe('template-flood');
 	});
+
+	it('atomic merge writes alias and dismisses the source topic together', () => {
+		seedRepos('router-kit-alpha', {
+			current: 11,
+			previous: 1,
+			owners: 7,
+			topic: 'router-kit-alpha',
+			description: 'Router kit alpha experiments'
+		});
+		runEmergingTopicDetection({ periodEnd: new Date('2026-07-15T00:00:00.000Z'), windowDays: 7 });
+
+		expect(mergeEmergingTopic('router-kit-alpha', 'router-kit')).toBe(true);
+		const detail = getEmergingTopicDetail('router-kit-alpha');
+		expect(detail?.topic.status).toBe('dismissed');
+		expect(detail?.topic.review_reason).toBe('alias-duplicate');
+		const alias = getDb()
+			.prepare('SELECT canonical_key FROM emerging_term_aliases WHERE alias = ?')
+			.get('router-kit-alpha') as { canonical_key: string };
+		expect(alias.canonical_key).toBe('router-kit');
+	});
+
+	it('merge with a nonexistent source topic performs no mutations', () => {
+		expect(mergeEmergingTopic('does-not-exist-topic', 'canonical-topic')).toBe(false);
+		const alias = getDb()
+			.prepare('SELECT alias FROM emerging_term_aliases WHERE alias = ?')
+			.get('does-not-exist-topic');
+		expect(alias).toBeUndefined();
+	});
+
+	it('failed merge rolls back the alias and leaves topic status unchanged', () => {
+		seedRepos('rollback-merge-topic', {
+			current: 11,
+			previous: 1,
+			owners: 7,
+			topic: 'rollback-merge-topic',
+			description: 'Rollback merge topic experiments'
+		});
+		runEmergingTopicDetection({ periodEnd: new Date('2026-07-15T00:00:00.000Z'), windowDays: 7 });
+
+		const before = getEmergingTopicDetail('rollback-merge-topic');
+		expect(before?.topic.status).toBe('detected');
+
+		const db = getDb();
+		db.exec(`
+			CREATE TRIGGER emerging_merge_force_fail
+			BEFORE UPDATE ON emerging_topics
+			BEGIN
+				SELECT RAISE(ABORT, 'forced merge failure');
+			END;
+		`);
+
+		expect(() => mergeEmergingTopic('rollback-merge-topic', 'rollback-canonical')).toThrow(
+			/forced merge failure/
+		);
+
+		db.exec('DROP TRIGGER emerging_merge_force_fail');
+
+		const after = getEmergingTopicDetail('rollback-merge-topic');
+		expect(after?.topic.status).toBe('detected');
+		expect(after?.topic.review_reason).toBeNull();
+		const alias = db
+			.prepare('SELECT alias FROM emerging_term_aliases WHERE alias = ?')
+			.get('rollback-merge-topic');
+		expect(alias).toBeUndefined();
+	});
+
+	it('conflicting alias fails cleanly without partial merge changes', () => {
+		seedRepos('conflict-merge-source', {
+			current: 11,
+			previous: 1,
+			owners: 7,
+			topic: 'conflict-merge-source',
+			description: 'Conflict merge source experiments'
+		});
+		runEmergingTopicDetection({ periodEnd: new Date('2026-07-15T00:00:00.000Z'), windowDays: 7 });
+		addEmergingTermAlias('conflict-merge-source', 'already-canonical');
+
+		expect(() => mergeEmergingTopic('conflict-merge-source', 'other-canonical')).toThrow(
+			/already maps to "already-canonical"/
+		);
+
+		const detail = getEmergingTopicDetail('conflict-merge-source');
+		expect(detail?.topic.status).toBe('detected');
+		const alias = getDb()
+			.prepare('SELECT canonical_key FROM emerging_term_aliases WHERE alias = ?')
+			.get('conflict-merge-source') as { canonical_key: string };
+		expect(alias.canonical_key).toBe('already-canonical');
+	});
+
+	it('does not treat system as a name-token emerging candidate', () => {
+		for (let i = 0; i < 12; i++) {
+			insertSeedRepo({
+				owner: `system-owner-${i}`,
+				name: `cash-fund-system-${i}`,
+				topic: 'unrelated-topic',
+				description: 'A cash fund management app',
+				createdAt: '2026-07-10T12:00:00.000Z',
+				score: 55
+			});
+		}
+		for (let i = 0; i < 4; i++) {
+			insertSeedRepo({
+				owner: `system-prev-${i}`,
+				name: `cash-fund-system-prev-${i}`,
+				topic: 'unrelated-topic',
+				description: 'A cash fund management app',
+				createdAt: '2026-07-03T12:00:00.000Z',
+				score: 55
+			});
+		}
+
+		const candidates = detectEmergingTopics({
+			periodEnd: new Date('2026-07-15T00:00:00.000Z'),
+			windowDays: 7
+		});
+		expect(candidates.some((row) => row.key === 'system')).toBe(false);
+		expect(
+			candidates.some((row) => row.key === 'system' && row.candidateType === 'name-token')
+		).toBe(false);
+	});
 });
 
 function seedRepos(

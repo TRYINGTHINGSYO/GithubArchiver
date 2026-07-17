@@ -209,6 +209,7 @@ const STOPWORDS = new Set([
 	'repo',
 	'site',
 	'starter',
+	'system',
 	'test',
 	'tool',
 	'tools',
@@ -1165,6 +1166,14 @@ export function addEmergingTermAlias(alias: string, canonicalKey: string): void 
 	).run(normalizedAlias, normalizedCanonical, new Date().toISOString());
 }
 
+export function removeEmergingTermAlias(alias: string): boolean {
+	const db = getDb();
+	const normalized = normalizeKey(alias);
+	if (!normalized) throw new Error('Alias must be non-empty');
+	const result = db.prepare('DELETE FROM emerging_term_aliases WHERE alias = ?').run(normalized);
+	return result.changes > 0;
+}
+
 export function addEmergingTermExclusion(term: string, reason: string): void {
 	const db = getDb();
 	const normalized = normalizeKey(term);
@@ -1191,10 +1200,54 @@ export function listEmergingTermExclusions(): Array<{ term: string; reason: stri
 /**
  * Merge one detected topic into another: records a permanent alias so future
  * detection runs bucket the terms together, and dismisses the duplicate row.
+ * Alias insert and status update run in one transaction — any failure rolls back.
  */
 export function mergeEmergingTopic(key: string, canonicalKey: string): boolean {
-	addEmergingTermAlias(key, canonicalKey);
-	return updateEmergingTopicStatus(key, 'dismissed', 'alias-duplicate');
+	const db = getDb();
+	const normalizedAlias = normalizeKey(key);
+	const normalizedCanonical = normalizeKey(canonicalKey);
+	if (!normalizedAlias || !normalizedCanonical || normalizedAlias === normalizedCanonical) {
+		throw new Error('Alias and canonical key must be distinct non-empty terms');
+	}
+
+	const mergeTx = db.transaction(() => {
+		const source = db
+			.prepare('SELECT key, status FROM emerging_topics WHERE key = ? LIMIT 1')
+			.get(normalizedAlias) as { key: string; status: string } | undefined;
+		if (!source) {
+			return false;
+		}
+
+		const existingAlias = db
+			.prepare('SELECT canonical_key FROM emerging_term_aliases WHERE alias = ?')
+			.get(normalizedAlias) as { canonical_key: string } | undefined;
+		if (existingAlias && existingAlias.canonical_key !== normalizedCanonical) {
+			throw new Error(
+				`Alias "${normalizedAlias}" already maps to "${existingAlias.canonical_key}"`
+			);
+		}
+
+		db.prepare(
+			`INSERT INTO emerging_term_aliases (alias, canonical_key, created_at)
+			 VALUES (?, ?, ?)
+			 ON CONFLICT(alias) DO UPDATE SET canonical_key = excluded.canonical_key`
+		).run(normalizedAlias, normalizedCanonical, new Date().toISOString());
+
+		const result = db
+			.prepare(
+				`UPDATE emerging_topics
+				 SET status = ?, review_reason = ?, reviewed_at = ?
+				 WHERE key = ?`
+			)
+			.run('dismissed', 'alias-duplicate', new Date().toISOString(), normalizedAlias);
+
+		if (result.changes === 0) {
+			throw new Error(`Could not update emerging topic status for: ${normalizedAlias}`);
+		}
+		return true;
+	});
+
+	return mergeTx();
 }
 
 /**
