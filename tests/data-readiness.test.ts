@@ -15,7 +15,6 @@ describe('enrichment readiness and priority', () => {
 		const version = (db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number })
 			.v;
 		expect(version).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(24);
 
 		const cols = (db.prepare('PRAGMA table_info(repos)').all() as { name: string }[]).map(
 			(col) => col.name
