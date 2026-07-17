@@ -252,7 +252,7 @@ describe('high-throughput enrichment architecture', () => {
 	it('migrates to schema version 29 with enrichment indexes', () => {
 		const db = getDb();
 		expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(29);
+		expect(CURRENT_SCHEMA_VERSION).toBe(30);
 		const indexes = (
 			db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`).all() as { name: string }[]
 		).map((r) => r.name);

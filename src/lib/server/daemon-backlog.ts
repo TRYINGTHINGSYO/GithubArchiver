@@ -36,17 +36,17 @@ export function countUnarchivedSourceSnapshots(): number {
 /**
  * Search gap only when the current hour still needs a Search pass.
  * Skip when Search already completed/reconciled, or when GH Archive alone
- * already matched repository births (no search_ingest_stats rows yet).
+ * matched repository births (`matched_repo_creates > 0` — not total `events`).
  */
 export function hasCurrentHourSearchGap(): boolean {
 	const db = getDb();
 	const hourKey = defaultHourKey();
 	const ghRow = db
 		.prepare(
-			`SELECT events, source FROM ingestion_state
+			`SELECT matched_repo_creates, source FROM ingestion_state
 			 WHERE hour_key = ? AND unavailable_at IS NULL`
 		)
-		.get(hourKey) as { events: number; source: string } | undefined;
+		.get(hourKey) as { matched_repo_creates: number; source: string } | undefined;
 	if (!ghRow) return false;
 
 	if (hasCompletedSearchForHour(hourKey) || isHourSearchReconciled(hourKey)) return false;
@@ -54,8 +54,12 @@ export function hasCurrentHourSearchGap(): boolean {
 	const anySearchAttempt = db
 		.prepare(`SELECT 1 AS ok FROM search_ingest_stats WHERE hour_key = ? LIMIT 1`)
 		.get(hourKey);
-	// Archive-only ingest with matched creates — Search is optional, not a gap.
-	if (!anySearchAttempt && ghRow.source === 'gharchive' && ghRow.events > 0) {
+	// Archive-only ingest with matched repo births — Search is optional, not a gap.
+	if (
+		!anySearchAttempt &&
+		ghRow.source === 'gharchive' &&
+		ghRow.matched_repo_creates > 0
+	) {
 		return false;
 	}
 

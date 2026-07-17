@@ -1,13 +1,14 @@
-import { describe, expect, it } from 'vitest';
-import { isRepositoryCreateEvent, type GhArchiveEvent } from '$lib/server/gharchive';
-import { shouldRunSearchFallback } from '$lib/server/repo-discovery';
-import { setupTestDb, teardownTestDb } from './helpers/db';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { hasCurrentHourSearchGap } from '$lib/server/daemon-backlog';
+import { recordHourIngested } from '$lib/server/db/ingestion';
 import {
 	completeSearchIngestStat,
 	isHourSearchReconciled,
 	startSearchIngestStat
 } from '$lib/server/db/search-ingest';
-import { afterEach, beforeEach } from 'vitest';
+import { isRepositoryCreateEvent, type GhArchiveEvent } from '$lib/server/gharchive';
+import { shouldRunSearchFallback } from '$lib/server/repo-discovery';
+import { setupTestDb, teardownTestDb } from './helpers/db';
 
 function createEvent(payload: Record<string, unknown>, repo = 'acme/demo'): GhArchiveEvent {
 	return {
@@ -101,5 +102,40 @@ describe('search fallback gating', () => {
 		});
 		expect(isHourSearchReconciled('2026-07-15-06')).toBe(true);
 		expect(shouldRunSearchFallback(163_279, 0, '2026-07-15-06')).toBe(false);
+	});
+});
+
+describe('hasCurrentHourSearchGap uses matched_repo_creates, not events', () => {
+	beforeEach(() => {
+		setupTestDb();
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-07-15T08:30:00.000Z'));
+	});
+	afterEach(() => {
+		vi.useRealTimers();
+		teardownTestDb();
+	});
+
+	it('keeps search gap open when events>0 but matched_repo_creates=0 (parser-miss case)', () => {
+		// defaultHourKey at 08:30 UTC → previous complete hour 2026-07-15-07
+		recordHourIngested('2026-07-15-07', {
+			events: 163_279,
+			matchedRepoCreates: 0,
+			inserted: 0,
+			skipped: 258,
+			source: 'gharchive'
+		});
+		expect(hasCurrentHourSearchGap()).toBe(true);
+	});
+
+	it('closes search gap when matched_repo_creates>0 even if Search never ran', () => {
+		recordHourIngested('2026-07-15-07', {
+			events: 163_279,
+			matchedRepoCreates: 3057,
+			inserted: 1200,
+			skipped: 1857,
+			source: 'gharchive'
+		});
+		expect(hasCurrentHourSearchGap()).toBe(false);
 	});
 });

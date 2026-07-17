@@ -21,30 +21,49 @@ export function getHourIngestionState(hourKey: string): IngestionStateRow | null
 
 export function recordHourIngested(
 	hourKey: string,
-	stats: { events: number; inserted: number; skipped: number; source?: string }
+	stats: {
+		events: number;
+		inserted: number;
+		skipped: number;
+		source?: string;
+		/** Matched repository births from GH Archive (not total parsed events). */
+		matchedRepoCreates?: number;
+	}
 ): void {
 	const db = getDb();
 	const source = stats.source ?? 'gharchive';
+	const matchedRepoCreates = stats.matchedRepoCreates ?? 0;
 	db.prepare(
-		`INSERT INTO ingestion_state (hour_key, ingested_at, events, inserted, skipped, source, unavailable_at, http_status)
-		 VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
+		`INSERT INTO ingestion_state
+		   (hour_key, ingested_at, events, matched_repo_creates, inserted, skipped, source, unavailable_at, http_status)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL)
 		 ON CONFLICT(hour_key) DO UPDATE SET
 		   ingested_at = excluded.ingested_at,
 		   events = excluded.events,
+		   matched_repo_creates = excluded.matched_repo_creates,
 		   inserted = excluded.inserted,
 		   skipped = excluded.skipped,
 		   source = excluded.source,
 		   unavailable_at = NULL,
 		   http_status = NULL`
-	).run(hourKey, new Date().toISOString(), stats.events, stats.inserted, stats.skipped, source);
+	).run(
+		hourKey,
+		new Date().toISOString(),
+		stats.events,
+		matchedRepoCreates,
+		stats.inserted,
+		stats.skipped,
+		source
+	);
 }
 
 export function recordHourUnavailable(hourKey: string, httpStatus: number): void {
 	const db = getDb();
 	const now = new Date().toISOString();
 	db.prepare(
-		`INSERT INTO ingestion_state (hour_key, ingested_at, events, inserted, skipped, source, unavailable_at, http_status)
-		 VALUES (?, ?, 0, 0, 0, 'gharchive', ?, ?)
+		`INSERT INTO ingestion_state
+		   (hour_key, ingested_at, events, matched_repo_creates, inserted, skipped, source, unavailable_at, http_status)
+		 VALUES (?, ?, 0, 0, 0, 0, 'gharchive', ?, ?)
 		 ON CONFLICT(hour_key) DO UPDATE SET
 		   ingested_at = excluded.ingested_at,
 		   unavailable_at = excluded.unavailable_at,

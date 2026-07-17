@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 29;
+export const CURRENT_SCHEMA_VERSION = 30;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1177,6 +1177,21 @@ function migration029(database: Database.Database) {
 	recomputeEnrichmentTiersSql(database);
 }
 
+/**
+ * Persist matched repository-create count separately from `events`.
+ * `events` has been overloaded (parsed totals vs creates+searchFound), which made
+ * search-gap logic unsafe. `matched_repo_creates` is the only signal that means
+ * GH Archive matcher found repository births.
+ */
+function migration030(database: Database.Database) {
+	const cols = columnNames(database, 'ingestion_state');
+	if (!cols.has('matched_repo_creates')) {
+		database.exec(
+			`ALTER TABLE ingestion_state ADD COLUMN matched_repo_creates INTEGER NOT NULL DEFAULT 0`
+		);
+	}
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -1206,7 +1221,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	26: migration026,
 	27: migration027,
 	28: migration028,
-	29: migration029
+	29: migration029,
+	30: migration030
 };
 
 export interface MigrationRunResult {
