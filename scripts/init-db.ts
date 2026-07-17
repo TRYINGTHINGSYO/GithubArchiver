@@ -1,5 +1,7 @@
+#!/usr/bin/env node
 import './load-env.js';
-import { getDb } from '../src/lib/server/db/index.js';
+import { logMigrationResult, migrateDatabase } from '../src/lib/server/db/migrate.js';
 
-getDb();
-console.log('Database initialized at', process.env.DATABASE_PATH ?? './data/githubarchive.db');
+const result = migrateDatabase();
+logMigrationResult(result);
+console.log('Database initialized at', result.sanitizedPath);

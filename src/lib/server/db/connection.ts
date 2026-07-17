@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { runMigrations } from './schema';
+import { markDatabaseReady, resetDatabaseReadyForTests } from './ready';
+import { repairSchemaDrift, runMigrations } from './schema';
 
 export function getDatabasePath(): string {
 	return process.env.DATABASE_PATH ?? './data/githubarchive.db';
@@ -19,6 +20,7 @@ export function getDb(): Database.Database {
 		db.close();
 		db = null;
 		dbPathOpened = null;
+		resetDatabaseReadyForTests();
 	}
 	if (!db) {
 		mkdirSync(dirname(path), { recursive: true });
@@ -27,6 +29,8 @@ export function getDb(): Database.Database {
 		db.pragma('journal_mode = WAL');
 		db.pragma('foreign_keys = ON');
 		runMigrations(db);
+		repairSchemaDrift(db);
+		markDatabaseReady();
 	}
 	return db;
 }
@@ -36,5 +40,11 @@ export function closeDb(): void {
 		db.close();
 		db = null;
 		dbPathOpened = null;
+		resetDatabaseReadyForTests();
 	}
+}
+
+/** Ensure the configured DB is opened, migrated, drift-repaired, and marked ready. */
+export function ensureDatabaseReady(): void {
+	getDb();
 }

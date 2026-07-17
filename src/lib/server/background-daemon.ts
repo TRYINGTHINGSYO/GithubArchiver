@@ -11,6 +11,7 @@ import {
 } from './daemon-planner';
 import { insertDaemonDecision } from './db/daemon-decisions';
 import { finishJobRun, reconcileOrphanedJobRuns, startJobRun, updateJobRun } from './db/jobs';
+import { assertDatabaseReady, isDatabaseReady } from './db/ready';
 import { runArchiveCycle } from './workers/archive';
 import { runEnrichCycle } from './workers/enrich';
 import { runIngestCycle, isIngestCycleFailure } from './workers/ingest';
@@ -402,6 +403,7 @@ export function getBackgroundDaemonState() {
 }
 
 export function startBackgroundDaemon(): { started: boolean; message: string } {
+	assertDatabaseReady();
 	if (running) {
 		return { started: false, message: 'Auto-scan is already running' };
 	}
@@ -439,6 +441,10 @@ function reconcileOrphanedJobsOnce(): void {
 /** Start auto-scan on boot when BACKGROUND_WORKER=auto|1 (default auto on Railway). */
 export function ensureBackgroundWorker(): void {
 	if (autoStartAttempted) return;
+	if (!isDatabaseReady()) {
+		console.log('[daemon] deferring auto-start until database migrations complete');
+		return;
+	}
 	autoStartAttempted = true;
 
 	reconcileOrphanedJobsOnce();

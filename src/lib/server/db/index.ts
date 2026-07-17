@@ -1,5 +1,12 @@
-export { getDb, getDatabasePath, closeDb } from './connection';
-export { CURRENT_SCHEMA_VERSION, runMigrations } from './schema';
+export { getDb, getDatabasePath, closeDb, ensureDatabaseReady } from './connection';
+export { CURRENT_SCHEMA_VERSION, runMigrations, runMigrationsThrough, getSchemaVersion } from './schema';
+export {
+	migrateDatabase,
+	logMigrationResult,
+	readDatabaseStatus,
+	sanitizeDatabasePath
+} from './migrate';
+export { isDatabaseReady, assertDatabaseReady, markDatabaseReady } from './ready';
 export * from './types';
 export * from './repos';
 export * from './archive';

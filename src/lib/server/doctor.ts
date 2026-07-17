@@ -155,7 +155,7 @@ function checkSchemaVersion(): DoctorCheck {
 		id: 'schema_version',
 		name: 'Schema version',
 		status: 'error',
-		message: `Schema v${applied} applied; expected v${CURRENT_SCHEMA_VERSION}. Run npm run db:init.`,
+		message: `Schema v${applied} applied; expected v${CURRENT_SCHEMA_VERSION}. Run npm run db:migrate.`,
 		count: CURRENT_SCHEMA_VERSION - applied
 	};
 }

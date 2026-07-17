@@ -216,7 +216,7 @@ function shutdown(signal: string) {
 }
 
 async function main() {
-	getDb();
+	getDb(); // opens DB, runs migrations + drift repair, marks ready
 	writePidFile();
 	process.on('SIGINT', () => shutdown('SIGINT'));
 	process.on('SIGTERM', () => shutdown('SIGTERM'));

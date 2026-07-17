@@ -127,7 +127,7 @@ ENABLE_ARTIFACT_ARCHIVE=1     # optional: enable README/source/ZIP artifact stor
 
 When free archive volume space falls below `STORAGE_MIN_FREE_BYTES` (default: 1 GiB), archive cycles run storage cleanup before downloading more artifacts. Favorited repositories are protected during this pressure cleanup.
 
-Deploy flow: Docker build (`npm ci` + `npm run build`) → `npm run db:init` → `node build`.  
+Deploy flow: Docker build (`npm ci` + `npm run build`) → `npm run db:migrate` → `npm run start:server`.  
 First deploy typically takes **5–10 minutes** (native `better-sqlite3` compile + SvelteKit build).
 
 ---
@@ -142,7 +142,9 @@ First deploy typically takes **5–10 minutes** (native `better-sqlite3` compile
 | `enrich:repos` | GitHub metadata for unenriched repos (batch 50) |
 | `enrich:refresh` | Re-check enriched repos when `last_checked_at` > 24h |
 | `archive:repos` | No-op by default; local README + tarball snapshots only when `ENABLE_ARTIFACT_ARCHIVE=1` |
-| `db:init` | Run schema migrations |
+| `db:init` | Alias for migrate (legacy) |
+| `db:migrate` | Apply missing schema migrations (required before serve) |
+| `db:status` | Report sanitized DB path, schema version, interesting_score, repo count |
 | `daemon` | Continuous ingest → enrich → refresh loop; archive skipped unless artifact storage is enabled |
 | `pipeline:once` | Single full cycle (no daemon loop) |
 | `backup` / `restore` | Local backup and restore |

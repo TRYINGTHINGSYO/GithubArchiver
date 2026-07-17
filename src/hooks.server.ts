@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 import { ensureBackgroundWorker } from '$lib/server/background-daemon';
 import { ADMIN_COOKIE, verifyAdminSessionValue } from '$lib/server/auth';
+import { ensureDatabaseReady } from '$lib/server/db/connection';
 
 /** Common bot/scanner paths — return quiet 404 without SSR. */
 const PROBE_RE =
@@ -11,6 +12,7 @@ let workerBooted = false;
 export const handle: Handle = async ({ event, resolve }) => {
 	if (!workerBooted) {
 		workerBooted = true;
+		ensureDatabaseReady();
 		ensureBackgroundWorker();
 	}
 

@@ -22,4 +22,4 @@ ENV BACKUPS_DIR=/data/backups
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npm run db:init && node build"]
+CMD ["sh", "-c", "npm run db:migrate && echo Starting web server && npm run start:server"]

@@ -20,16 +20,20 @@ const ENRICHMENT_COLUMNS = [
 	'github_archived INTEGER NOT NULL DEFAULT 0'
 ] as const;
 
-function getSchemaVersion(database: Database.Database): number {
+export function getSchemaVersion(database: Database.Database): number {
 	const row = database.prepare('SELECT MAX(version) as v FROM schema_version').get() as
 		| { v: number | null }
 		| undefined;
 	return row?.v ?? 0;
 }
 
-function columnNames(database: Database.Database, table: string): Set<string> {
+export function columnNames(database: Database.Database, table: string): Set<string> {
 	const columns = database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
 	return new Set(columns.map((c) => c.name));
+}
+
+export function hasRepoColumn(database: Database.Database, column: string): boolean {
+	return columnNames(database, 'repos').has(column);
 }
 
 function migration001(database: Database.Database) {
@@ -932,7 +936,24 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	25: migration025
 };
 
-export function runMigrations(database: Database.Database) {
+export interface MigrationRunResult {
+	before: number;
+	after: number;
+	applied: number[];
+}
+
+/**
+ * Apply migrations in order up to `targetVersion` (inclusive).
+ * Used by production migrate and by tests that need a frozen pre-014 schema.
+ */
+export function runMigrationsThrough(
+	database: Database.Database,
+	targetVersion: number
+): MigrationRunResult {
+	if (targetVersion < 0 || targetVersion > CURRENT_SCHEMA_VERSION) {
+		throw new Error(`targetVersion must be between 0 and ${CURRENT_SCHEMA_VERSION}`);
+	}
+
 	database.exec(`
 		CREATE TABLE IF NOT EXISTS schema_version (
 			version INTEGER PRIMARY KEY,
@@ -940,9 +961,11 @@ export function runMigrations(database: Database.Database) {
 		);
 	`);
 
-	let version = getSchemaVersion(database);
+	const before = getSchemaVersion(database);
+	let version = before;
+	const applied: number[] = [];
 
-	while (version < CURRENT_SCHEMA_VERSION) {
+	while (version < targetVersion) {
 		const next = version + 1;
 		const migrate = MIGRATIONS[next];
 		if (!migrate) {
@@ -952,6 +975,54 @@ export function runMigrations(database: Database.Database) {
 		database
 			.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)')
 			.run(next, new Date().toISOString());
+		applied.push(next);
 		version = next;
 	}
+
+	return { before, after: version, applied };
+}
+
+export function runMigrations(database: Database.Database): MigrationRunResult {
+	return runMigrationsThrough(database, CURRENT_SCHEMA_VERSION);
+}
+
+/**
+ * Repair known production drift where schema_version advanced without DDL
+ * (e.g. repos.interesting_score missing while version >= 14).
+ * Each repair is idempotent.
+ */
+export function repairSchemaDrift(database: Database.Database): string[] {
+	const repairs: string[] = [];
+	const repoCols = columnNames(database, 'repos');
+
+	if (
+		!repoCols.has('interesting_score') ||
+		!repoCols.has('signal_tier') ||
+		!repoCols.has('scored_at')
+	) {
+		migration014(database);
+		repairs.push('014:repos.interesting_score');
+	}
+
+	const refreshed = columnNames(database, 'repos');
+	if (!refreshed.has('cluster_version') || !refreshed.has('clustered_at')) {
+		migration015(database);
+		repairs.push('015:repos.cluster_columns');
+	}
+
+	const tables = new Set(
+		(
+			database
+				.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+				.all() as { name: string }[]
+		).map((row) => row.name)
+	);
+	if (!tables.has('repo_clusters') || !tables.has('repository_cluster_memberships')) {
+		migration015(database);
+		if (!repairs.includes('015:repos.cluster_columns')) {
+			repairs.push('015:cluster_tables');
+		}
+	}
+
+	return repairs;
 }
