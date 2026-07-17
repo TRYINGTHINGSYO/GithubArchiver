@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '$lib/server/db/connection';
 import { insertRepo } from '$lib/server/db/repos';
-import { CURRENT_SCHEMA_VERSION, getSchemaVersion } from '$lib/server/db/schema';
+import { CURRENT_SCHEMA_VERSION, getSchemaVersion, recomputeEnrichmentTiersSql } from '$lib/server/db/schema';
 import {
+	assignEnrichmentTier,
 	scoreEnrichmentPriority,
 	shouldDeepEnrich
 } from '$lib/server/enrichment-priority';
+import { countEnrichmentBacklogByTier } from '$lib/server/enrichment-queue';
 import {
 	claimEnrichmentBatch,
 	markEnrichmentSuccess,
@@ -80,8 +82,67 @@ describe('high-throughput enrichment architecture', () => {
 			full_name: 'student/homework-lab3'
 		});
 		expect(hot.priority).toBeGreaterThan(cold.priority);
-		expect(['urgent', 'high']).toContain(hot.tier);
+		expect(hot.tier).toBe('urgent');
 		expect(['low', 'deferred', 'normal']).toContain(cold.tier);
+	});
+
+	it('does not mark every zero-star CreateEvent as urgent', () => {
+		const freshCreate = scoreEnrichmentPriority({
+			stars: 0,
+			forks: 0,
+			created_at: new Date().toISOString(),
+			first_seen_at: new Date().toISOString(),
+			description: null,
+			full_name: 'someone/empty-new-repo'
+		});
+		expect(freshCreate.tier).toBe('high');
+
+		const oldLongTail = scoreEnrichmentPriority({
+			stars: 0,
+			forks: 0,
+			created_at: new Date(Date.now() - 400 * 86_400_000).toISOString(),
+			first_seen_at: new Date(Date.now() - 400 * 86_400_000).toISOString(),
+			description: null,
+			full_name: 'someone/ancient-empty'
+		});
+		expect(['low', 'deferred']).toContain(oldLongTail.tier);
+
+		expect(
+			assignEnrichmentTier({
+				priority: 80,
+				stars: 0,
+				createdAgeDays: 1,
+				seenAgeDays: 0,
+				hasSignal: false
+			})
+		).toBe('high');
+	});
+
+	it('recomputeEnrichmentTiersSql spreads backlog tiers instead of all-urgent', () => {
+		const ages = [1, 5, 20, 100, 200, 400];
+		for (const [i, days] of ages.entries()) {
+			const created = new Date(Date.now() - days * 86_400_000).toISOString();
+			insertRepo({
+				owner: 'tier',
+				name: `repo-${i}`,
+				full_name: `tier/repo-${i}`,
+				github_url: `https://github.com/tier/repo-${i}`,
+				event_id: `tier-${i}`,
+				created_at: created,
+				first_seen_at: created
+			});
+		}
+		// Simulate the v28 bug: everything forced to urgent.
+		getDb().prepare(`UPDATE repos SET enrichment_tier = 'urgent', enrichment_priority = 1`).run();
+		expect(getSchemaVersion(getDb())).toBe(CURRENT_SCHEMA_VERSION);
+
+		recomputeEnrichmentTiersSql(getDb());
+
+		const tiers = countEnrichmentBacklogByTier();
+		expect(tiers.urgent).toBe(0);
+		expect(tiers.high).toBeGreaterThan(0);
+		expect(tiers.normal + tiers.low + tiers.deferred).toBeGreaterThan(0);
+		expect(tiers.urgent + tiers.high + tiers.normal + tiers.low + tiers.deferred).toBe(ages.length);
 	});
 
 	it('claims enrichment queue in tier/priority order and recovers expired claims', () => {
@@ -188,10 +249,10 @@ describe('high-throughput enrichment architecture', () => {
 		expect(getMaterializedDiscoveryLanding({ limit: 5 })).not.toBeNull();
 	});
 
-	it('migrates to schema version 28 with enrichment indexes', () => {
+	it('migrates to schema version 29 with enrichment indexes', () => {
 		const db = getDb();
 		expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(28);
+		expect(CURRENT_SCHEMA_VERSION).toBe(29);
 		const indexes = (
 			db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`).all() as { name: string }[]
 		).map((r) => r.name);

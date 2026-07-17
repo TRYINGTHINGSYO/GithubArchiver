@@ -91,11 +91,26 @@ describe('daemon-planner', () => {
 			failureStreak: 0,
 			sleepMinMs: SLEEP_MIN,
 			sleepMaxMs: SLEEP_MAX,
+			backlogSleepMs: SLEEP_MIN,
 			backoffBaseMs: 60_000,
 			backoffMaxMs: SLEEP_MAX,
 			idleSleepMs: SLEEP_MAX
 		});
 		expect(ms).toBe(SLEEP_MIN);
+	});
+
+	it('lets ARCHIVE_BACKLOG_SLEEP_MS win over a stale 5-minute sleepMin', () => {
+		const ms = computeDaemonSleepMs({
+			backlog: emptyBacklog({ unenriched: 670_000 }),
+			hadFailure: false,
+			failureStreak: 0,
+			sleepMinMs: 300_000,
+			sleepMaxMs: 900_000,
+			backlogSleepMs: 60_000,
+			backoffBaseMs: 60_000,
+			backoffMaxMs: 900_000
+		});
+		expect(ms).toBe(60_000);
 	});
 
 	it('caps sleep when unarchived source backlog is large', () => {
@@ -120,6 +135,7 @@ describe('daemon-planner', () => {
 			failureStreak: 2,
 			sleepMinMs: SLEEP_MIN,
 			sleepMaxMs: SLEEP_MAX,
+			backlogSleepMs: SLEEP_MIN,
 			backoffBaseMs: 60_000,
 			backoffMaxMs: SLEEP_MAX,
 			idleSleepMs: SLEEP_MAX

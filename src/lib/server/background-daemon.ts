@@ -20,8 +20,16 @@ import { runSearchGapCycle } from './workers/search-gap';
 import { runTrendingIngestCycle } from './workers/trending';
 import { runStorageAnalysis } from './storage';
 
-const SLEEP_MIN_MS = Number(process.env.DAEMON_SLEEP_MIN_MS ?? 5 * 60 * 1000);
-const SLEEP_MAX_MS = Number(process.env.DAEMON_SLEEP_MAX_MS ?? 15 * 60 * 1000);
+/** Resolve at call time so Railway/env changes apply without relying on import-time defaults. */
+function sleepMinMs(): number {
+	return Number(process.env.DAEMON_SLEEP_MIN_MS ?? 30_000);
+}
+function sleepMaxMs(): number {
+	return Number(process.env.DAEMON_SLEEP_MAX_MS ?? 120_000);
+}
+function backlogSleepMs(): number {
+	return Number(process.env.ARCHIVE_BACKLOG_SLEEP_MS ?? 60_000);
+}
 const BACKOFF_BASE_MS = Number(process.env.DAEMON_BACKOFF_BASE_MS ?? 60_000);
 const BACKOFF_MAX_MS = Number(process.env.DAEMON_BACKOFF_MAX_MS ?? 15 * 60 * 1000);
 const TRENDING_IDLE_INTERVAL_MS = Number(
@@ -296,8 +304,9 @@ async function runLoop(): Promise<void> {
 				hadFailure,
 				rateLimitResetAt,
 				failureStreak,
-				sleepMinMs: SLEEP_MIN_MS,
-				sleepMaxMs: SLEEP_MAX_MS,
+				sleepMinMs: sleepMinMs(),
+				sleepMaxMs: sleepMaxMs(),
+				backlogSleepMs: backlogSleepMs(),
 				backoffBaseMs: BACKOFF_BASE_MS,
 				backoffMaxMs: BACKOFF_MAX_MS
 			});
@@ -347,8 +356,9 @@ async function runLoop(): Promise<void> {
 				backlog: backlogAfter,
 				hadFailure: true,
 				failureStreak,
-				sleepMinMs: SLEEP_MIN_MS,
-				sleepMaxMs: SLEEP_MAX_MS,
+				sleepMinMs: sleepMinMs(),
+				sleepMaxMs: sleepMaxMs(),
+				backlogSleepMs: backlogSleepMs(),
 				backoffBaseMs: BACKOFF_BASE_MS,
 				backoffMaxMs: BACKOFF_MAX_MS
 			});

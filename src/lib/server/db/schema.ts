@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 28;
+export const CURRENT_SCHEMA_VERSION = 29;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1115,6 +1115,68 @@ function migration028(database: Database.Database) {
 	`);
 }
 
+/** Normalize ISO-8601 (with T/Z) to a SQLite-friendly datetime for julianday(). */
+const SQL_TS = (column: string) =>
+	`julianday(replace(substr(replace(COALESCE(${column}, ''), 'Z', ''), 1, 19), 'T', ' '))`;
+
+/**
+ * Recompute enrichment tiers for the unenriched backlog.
+ * v28 marked nearly every CreateEvent as urgent via `created_at >= datetime('now', '-3 days')`.
+ */
+export function recomputeEnrichmentTiersSql(database: Database.Database): void {
+	const createdAge = `(julianday('now') - ${SQL_TS('created_at')})`;
+	const seenAge = `(julianday('now') - ${SQL_TS('first_seen_at')})`;
+
+	database.exec(`
+		UPDATE repos SET
+		  enrichment_priority = CASE
+		    WHEN enriched_at IS NOT NULL THEN 0
+		    ELSE (
+		      COALESCE(stars, 0) * 12.0 +
+		      COALESCE(forks, 0) * 4.0 +
+		      CASE WHEN ${createdAge} <= 3 THEN 55
+		           WHEN ${createdAge} <= 14 THEN 35
+		           WHEN ${createdAge} <= 45 THEN 20
+		           WHEN ${createdAge} >= 365 THEN -20
+		           ELSE 0 END +
+		      CASE WHEN ${seenAge} <= 1 THEN 20 ELSE 0 END +
+		      CASE WHEN description IS NOT NULL AND length(trim(description)) >= 20 THEN 15 ELSE 0 END +
+		      CASE WHEN language IS NOT NULL AND language != '' THEN 10 ELSE 0 END +
+		      CASE WHEN topics IS NOT NULL AND topics != '[]' AND topics != '' THEN 12 ELSE 0 END
+		    )
+		  END,
+		  enrichment_tier = CASE
+		    WHEN enriched_at IS NOT NULL THEN 'normal'
+		    WHEN COALESCE(stars, 0) >= 50 THEN 'urgent'
+		    WHEN COALESCE(stars, 0) >= 5 AND ${createdAge} <= 3 THEN 'urgent'
+		    WHEN COALESCE(stars, 0) >= 10 THEN 'high'
+		    WHEN ${createdAge} <= 14 THEN 'high'
+		    WHEN ${seenAge} <= 2 THEN 'high'
+		    WHEN ${createdAge} >= 365 AND COALESCE(stars, 0) = 0 THEN 'deferred'
+		    WHEN ${createdAge} >= 180 AND COALESCE(stars, 0) < 2 THEN 'low'
+		    ELSE 'normal'
+		  END,
+		  enrichment_status = CASE
+		    WHEN deleted_at IS NOT NULL THEN 'unavailable'
+		    WHEN enriched_at IS NOT NULL THEN 'done'
+		    WHEN ${createdAge} >= 365 AND COALESCE(stars, 0) = 0 THEN 'deferred'
+		    WHEN enrichment_status IN ('claimed', 'forbidden', 'terminal', 'unavailable') THEN enrichment_status
+		    ELSE 'pending'
+		  END,
+		  next_enrichment_at = CASE
+		    WHEN enriched_at IS NOT NULL THEN NULL
+		    WHEN deleted_at IS NOT NULL THEN NULL
+		    WHEN ${createdAge} >= 365 AND COALESCE(stars, 0) = 0 THEN datetime('now', '+7 days')
+		    ELSE COALESCE(next_enrichment_at, datetime('now'))
+		  END
+		WHERE enriched_at IS NULL;
+	`);
+}
+
+function migration029(database: Database.Database) {
+	recomputeEnrichmentTiersSql(database);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -1143,7 +1205,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	25: migration025,
 	26: migration026,
 	27: migration027,
-	28: migration028
+	28: migration028,
+	29: migration029
 };
 
 export interface MigrationRunResult {
