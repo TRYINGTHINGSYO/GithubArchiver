@@ -28,7 +28,7 @@ describe('production migration entry point from pre-014 schema', () => {
 		else process.env.DATABASE_PATH = previousPath;
 	});
 
-	it('migrates a populated schema-13 database to 25 and preserves repos', () => {
+	it('migrates a populated schema-13 database to current and preserves repos', () => {
 		previousPath = process.env.DATABASE_PATH;
 		tmpDir = mkdtempSync(join(tmpdir(), 'githubarchive-migrate-'));
 		const dbPath = join(tmpDir, 'legacy.db');
@@ -66,13 +66,13 @@ describe('production migration entry point from pre-014 schema', () => {
 
 		const first = migrateDatabase({ path: dbPath });
 		expect(first.before).toBe(13);
-		expect(first.applied).toEqual([14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]);
+		expect(first.applied).toEqual([14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26]);
 		expect(first.after).toBe(CURRENT_SCHEMA_VERSION);
 		expect(first.status.interestingScoreExists).toBe(true);
 		expect(first.status.repositoryCount).toBe(1);
 
 		const db = getDb();
-		expect(getSchemaVersion(db)).toBe(25);
+		expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
 		expect(hasRepoColumn(db, 'interesting_score')).toBe(true);
 
 		const preserved = db
@@ -98,9 +98,9 @@ describe('production migration entry point from pre-014 schema', () => {
 		expect(Array.isArray(landing.emergingTopics)).toBe(true);
 
 		const second = migrateDatabase({ path: dbPath });
-		expect(second.before).toBe(25);
+		expect(second.before).toBe(CURRENT_SCHEMA_VERSION);
 		expect(second.applied).toEqual([]);
-		expect(second.after).toBe(25);
+		expect(second.after).toBe(CURRENT_SCHEMA_VERSION);
 		expect(second.status.repositoryCount).toBe(1);
 		expect(second.status.interestingScoreExists).toBe(true);
 	});
@@ -134,7 +134,7 @@ describe('production migration entry point from pre-014 schema', () => {
 				.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)')
 				.run(version, new Date().toISOString());
 		}
-		expect(getSchemaVersion(drifted)).toBe(25);
+		expect(getSchemaVersion(drifted)).toBe(CURRENT_SCHEMA_VERSION);
 		expect(hasRepoColumn(drifted, 'interesting_score')).toBe(false);
 		drifted.close();
 
@@ -142,7 +142,7 @@ describe('production migration entry point from pre-014 schema', () => {
 		expect(result.applied).toEqual([]);
 		expect(result.repairs.length).toBeGreaterThan(0);
 		expect(result.status.interestingScoreExists).toBe(true);
-		expect(result.status.currentSchemaVersion).toBe(25);
+		expect(result.status.currentSchemaVersion).toBe(CURRENT_SCHEMA_VERSION);
 		expect(result.status.repositoryCount).toBe(1);
 	});
 });

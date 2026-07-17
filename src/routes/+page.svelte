@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DiscoveryRepoCard from '$lib/components/DiscoveryRepoCard.svelte';
 	import RepoListItem from '$lib/components/RepoListItem.svelte';
+	import { timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -193,8 +194,18 @@
 		</div>
 	{:else}
 		<p class="empty">
-			No detection run recorded yet. Run <code>npm run detect:emerging</code> after a comparable
-			matched-hour pair freezes.
+			{#if data.discoveryStatus.repositoriesDiscovered > 0}
+				Analyzing {data.discoveryStatus.repositoriesDiscovered.toLocaleString()} repositories for
+				emerging topics.
+				{#if data.discoveryStatus.lastEmergingAnalysisAt}
+					Last analysis completed {timeAgo(data.discoveryStatus.lastEmergingAnalysisAt)}.
+				{:else}
+					First analysis is scheduled by the discovery worker.
+				{/if}
+			{:else}
+				Discovery worker is indexing repositories. Emerging-topic analysis will begin once ingestion
+				produces comparable windows.
+			{/if}
 		</p>
 	{/if}
 
@@ -221,7 +232,7 @@
 		</div>
 	{:else if emergingIsValidatedZero}
 		<div class="validated-zero">
-			<strong>Validated zero</strong>
+			<strong>No emerging topics met the evidence requirements in the latest analysis.</strong>
 			<p>
 				Matched comparison produced no accepted candidates after review exclusions. Guardrails
 				rejected generic README language and broad project-name tokens rather than manufacturing
@@ -312,6 +323,9 @@
 			<p class="empty">No clusters meet quality thresholds yet.</p>
 		{/each}
 	</div>
+	{#if data.clusters.items.length === 0 && data.discovery.clusters.some((cluster) => cluster.repo_count > 0)}
+		<p class="evidence">Additional categories will appear as repositories are classified.</p>
+	{/if}
 </section>
 
 <section class="section-block" aria-labelledby="watch-heading">

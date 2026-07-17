@@ -30,3 +30,4 @@ export * from './archive-pulse';
 export * from './favorites';
 export * from './pipeline';
 export * from './dataset-runs';
+export * from './scheduled-jobs';

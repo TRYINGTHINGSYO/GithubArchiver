@@ -22,7 +22,9 @@
 		phrases. Candidates require at least 10 repositories, 3 normal/high-signal repositories, and
 		5 distinct owners.
 	</p>
-	<p class="hint">Run <code>npm run detect:emerging</code> to refresh these results.</p>
+	{#if data.readiness.emergingDetectionReady}
+		<p class="hint">Results refresh automatically as the discovery worker completes analysis runs.</p>
+	{/if}
 </section>
 
 {#if data.provenance?.comparisonMode === 'matched-hours'}
@@ -51,7 +53,7 @@
 		<p class="hint">
 			Backlog: {data.readiness.enrichmentBacklog.toLocaleString()} ·
 			Auth: {data.readiness.hasGitHubAuth ? 'token configured' : 'no token'} ·
-			Check <code>npm run status:enrichment</code>
+			Worker analysis runs on a scheduled cadence.
 		</p>
 	</section>
 {/if}

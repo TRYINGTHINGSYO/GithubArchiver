@@ -4,6 +4,7 @@ import { getDb } from '$lib/server/db/connection';
 import { parseTopics } from '$lib/server/db/repos';
 import type { RepoRow } from '$lib/server/db/types';
 import { DISCOVERY_PRESETS, type DiscoveryPreset } from '$lib/server/discovery-presets';
+import { getMaterializedDiscoveryLanding } from '$lib/server/discovery-materialized';
 import { listEmergingTopics, type EmergingTopicRow } from '$lib/server/emerging-topics';
 
 export type DiscoveryPeriod = '7d' | '14d' | '30d';
@@ -119,6 +120,13 @@ export function parseDiscoveryQuery(url: URL): DiscoveryQuery {
 
 export function getDiscoveryLanding(opts: Partial<DiscoveryQuery> = {}): DiscoveryLanding {
 	const query = normalizeQuery(opts);
+	const materialized = getMaterializedDiscoveryLanding(query);
+	if (materialized) {
+		return {
+			...materialized,
+			presets: DISCOVERY_PRESETS
+		};
+	}
 	return {
 		presets: DISCOVERY_PRESETS,
 		fastestGrowing: getFastestGrowingClusters({ ...query, limit: 6 }),
@@ -126,7 +134,7 @@ export function getDiscoveryLanding(opts: Partial<DiscoveryQuery> = {}): Discove
 		deletedGems: getDeletedGems({ ...query, limit: 6 }),
 		unusualFinds: getUnusualFinds({ ...query, limit: 6 }),
 		emergingTopics: listEmergingTopics({ limit: 6 }),
-		clusters: listClusterAnalytics().slice(0, 24)
+		clusters: listClusterAnalytics().filter((cluster) => cluster.repo_count > 0).slice(0, 24)
 	};
 }
 
@@ -194,6 +202,104 @@ export function getProjectsToWatch(opts: Partial<DiscoveryQuery> = {}): Projects
 		.sort((a, b) => b.discoveryScore - a.discoveryScore);
 
 	return dedupeByRepo(items).slice(0, query.limit);
+}
+
+const PRELIMINARY_MIN_SCORE = 40;
+const PRELIMINARY_MIN_STARS = 2;
+const PRELIMINARY_MIN_AGE_MS = 6 * 60 * 60 * 1000;
+const PRELIMINARY_MIN_SNAPSHOTS = 2;
+
+/** Cold-start Projects to Watch with relaxed evidence requirements. */
+export function getPreliminaryProjectsToWatch(opts: Partial<DiscoveryQuery> = {}): ProjectsToWatchItem[] {
+	const query = normalizeQuery({ ...opts, minScore: PRELIMINARY_MIN_SCORE });
+	const qualifiedIds = new Set(getProjectsToWatch(query).map((item) => item.id));
+	const db = getDb();
+	const minCreatedAt = new Date(Date.now() - PRELIMINARY_MIN_AGE_MS).toISOString();
+	const rows = db
+		.prepare(
+			`SELECT r.*,
+			        c.slug AS cluster_slug,
+			        c.name AS cluster_name,
+			        m.confidence AS cluster_confidence,
+			        EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'readme') AS has_readme,
+			        EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'source') AS has_source,
+			        EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id) AS has_any_archive,
+			        (SELECT MIN(c2.repo_count)
+			           FROM repository_cluster_memberships m2
+			           JOIN repo_clusters c2 ON c2.id = m2.cluster_id
+			          WHERE m2.repository_id = r.id) AS rarest_cluster_count
+			 FROM repos r
+			 JOIN repository_cluster_memberships m ON m.repository_id = r.id
+			 JOIN repo_clusters c ON c.id = m.cluster_id
+			 WHERE r.deleted_at IS NULL
+			   AND COALESCE(r.interesting_score, 0) >= ?
+			   AND COALESCE(r.stars, 0) >= ?
+			   AND r.created_at <= ?
+			   AND COALESCE(r.category, 'unknown') NOT IN ('school-assignment', 'spam-template')
+			   AND COALESCE(r.signal_tier, 'normal') != 'low'
+			   AND (SELECT COUNT(*) FROM repo_metrics_snapshots s WHERE s.repo_id = r.id) >= ?
+			 ORDER BY r.interesting_score DESC, m.confidence DESC, r.first_seen_at DESC
+			 LIMIT ?`
+		)
+		.all(
+			PRELIMINARY_MIN_SCORE,
+			PRELIMINARY_MIN_STARS,
+			minCreatedAt,
+			PRELIMINARY_MIN_SNAPSHOTS,
+			Math.max(query.limit * 4, 24)
+		) as DiscoveryRepoRow[];
+
+	const items = rows
+		.filter((row) => !qualifiedIds.has(row.id))
+		.map((row) => {
+			const interesting = row.interesting_score ?? 0;
+			const confidence = row.cluster_confidence ?? 0;
+			const discoveryScore = interesting * 0.7 + confidence * 100 * 0.3;
+			const card = toDiscoveryRepoCard(
+				row,
+				discoveryScore,
+				`Preliminary watch candidate: Interesting Score ${Math.round(interesting)}, ${Math.round(confidence * 100)}% cluster confidence — still gathering momentum evidence.`
+			);
+			return {
+				...card,
+				discoveryScore: Math.round(discoveryScore * 10) / 10,
+				cluster: {
+					slug: row.cluster_slug ?? 'unknown',
+					name: row.cluster_name ?? 'Unknown',
+					growthPercent: 0,
+					currentWeekCount: 0,
+					confidence
+				},
+				rankingReason: card.rankingReason
+			};
+		});
+
+	return dedupeByRepo(items).slice(0, query.limit);
+}
+
+/** Populated clusters with preliminary 24h activity when week-over-week growth is unavailable. */
+export function getPreliminaryGrowingClusters(opts: Partial<DiscoveryQuery> = {}): DiscoveryClusterCard[] {
+	const query = normalizeQuery(opts);
+	return listClusterAnalytics()
+		.filter((cluster) => cluster.repo_count > 0)
+		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
+		.sort((a, b) => b.new_24h - a.new_24h || b.repo_count - a.repo_count)
+		.slice(0, query.limit)
+		.map((cluster) => ({
+			slug: cluster.slug,
+			name: cluster.name,
+			description: cluster.description,
+			currentWeekCount: cluster.new_7d,
+			previousWeekCount: cluster.new_prev_7d,
+			growthPercent: cluster.growth_pct ?? 0,
+			avgInterestingScore: cluster.avg_interesting_score,
+			topLanguages: cluster.top_languages,
+			topRepos: listTopReposForCluster(cluster.slug, { ...query, minScore: 40, limit: 3 }),
+			rankingReason:
+				cluster.new_prev_7d < MIN_CLUSTER_PREVIOUS_COUNT
+					? `${cluster.name}: +${cluster.new_24h.toLocaleString()} repositories in the last 24 hours. Preliminary trend — limited week-over-week history.`
+					: `${cluster.name} grew ${Math.round(cluster.growth_pct ?? 0)}% over the previous week.`
+		}));
 }
 
 export function getDeletedGems(opts: Partial<DiscoveryQuery> = {}): DeletedGemItem[] {
@@ -291,7 +397,8 @@ export function getActiveQualityClusters(opts: Partial<DiscoveryQuery> = {}): Ac
 		}));
 }
 
-function getUnusualFinds(opts: DiscoveryQuery): DiscoveryRepoCard[] {
+export function getUnusualFinds(opts: Partial<DiscoveryQuery> = {}): DiscoveryRepoCard[] {
+	const query = normalizeQuery(opts);
 	const db = getDb();
 	const rows = db
 		.prepare(
@@ -311,7 +418,7 @@ function getUnusualFinds(opts: DiscoveryQuery): DiscoveryRepoCard[] {
 			 ORDER BY r.interesting_score DESC, r.first_seen_at DESC
 			 LIMIT ?`
 		)
-		.all(Math.max(40, opts.minScore - 10), opts.limit) as DiscoveryRepoRow[];
+		.all(Math.max(40, query.minScore - 10), query.limit) as DiscoveryRepoRow[];
 
 	return rows.map((row) =>
 		toDiscoveryRepoCard(

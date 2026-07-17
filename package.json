@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "start": "node build",
+    "start": "tsx scripts/start-production.ts",
     "start:server": "node build",
     "preview": "vite preview",
     "ingest:hour": "tsx scripts/ingest-hour.ts",

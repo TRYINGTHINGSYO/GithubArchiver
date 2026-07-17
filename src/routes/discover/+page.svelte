@@ -1,5 +1,6 @@
 <script lang="ts">
 	import DiscoveryRepoCard from '$lib/components/DiscoveryRepoCard.svelte';
+	import { timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -30,6 +31,51 @@
 	</nav>
 </section>
 
+<section class="section-block system-status" aria-labelledby="status-heading">
+	<div class="section-head">
+		<div>
+			<p class="eyebrow">System status</p>
+			<h2 id="status-heading">Discovery pipeline</h2>
+		</div>
+	</div>
+	<dl class="status-grid">
+		<div>
+			<dt>Repositories discovered</dt>
+			<dd>{data.discoveryStatus.repositoriesDiscovered.toLocaleString()}</dd>
+		</div>
+		<div>
+			<dt>Enriched</dt>
+			<dd>{data.discoveryStatus.enriched.toLocaleString()}</dd>
+		</div>
+		<div>
+			<dt>Classified</dt>
+			<dd>{data.discoveryStatus.classified.toLocaleString()}</dd>
+		</div>
+		<div>
+			<dt>Clustered</dt>
+			<dd>{data.discoveryStatus.clustered.toLocaleString()}</dd>
+		</div>
+		<div>
+			<dt>Last ingestion</dt>
+			<dd>
+				{data.discoveryStatus.lastIngestionAt
+					? timeAgo(data.discoveryStatus.lastIngestionAt)
+					: 'pending'}
+			</dd>
+		</div>
+		<div>
+			<dt>Last discovery analysis</dt>
+			<dd>{data.discoveryAnalysisAgo ?? 'pending'}</dd>
+		</div>
+		<div>
+			<dt>Worker status</dt>
+			<dd class:running={data.discoveryStatus.workerStatus === 'running'}>
+				{data.discoveryStatus.workerStatus === 'running' ? 'Running' : 'Idle'}
+			</dd>
+		</div>
+	</dl>
+</section>
+
 <section class="section-block">
 	<div class="section-head">
 		<div>
@@ -57,7 +103,17 @@
 				</div>
 			</article>
 		{:else}
-			<p class="empty">No emerging-topic candidates yet. Run <code>npm run detect:emerging</code>.</p>
+			<p class="empty">
+				{#if data.discoveryStatus.repositoriesDiscovered > 0}
+					Analyzing {data.discoveryStatus.repositoriesDiscovered.toLocaleString()} repositories for
+					emerging topics.
+					{#if data.emergingAnalysisAgo}
+						Last analysis completed {data.emergingAnalysisAgo}.
+					{/if}
+				{:else}
+					No emerging topics met the evidence requirements in the latest analysis.
+				{/if}
+			</p>
 		{/each}
 	</div>
 </section>
@@ -92,6 +148,9 @@
 			<p class="empty">No clusters meet the growth guardrails yet.</p>
 		{/each}
 	</div>
+	{#if data.discovery.fastestGrowing.length === 0}
+		<p class="evidence">Additional categories will appear as repositories are classified.</p>
+	{/if}
 </section>
 
 <section class="section-block">
@@ -158,6 +217,8 @@
 				<strong>{cluster.name}</strong>
 				<span>{cluster.repo_count.toLocaleString()} repos</span>
 			</a>
+		{:else}
+			<p class="empty">Additional categories will appear as repositories are classified.</p>
 		{/each}
 	</div>
 </section>
@@ -282,5 +343,29 @@
 	.browse-grid span,
 	.empty {
 		color: var(--text-muted);
+	}
+
+	.status-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		gap: 1rem;
+	}
+
+	.status-grid dt {
+		margin: 0;
+		color: var(--text-muted);
+		font-size: 0.78rem;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+	}
+
+	.status-grid dd {
+		margin: 0.25rem 0 0;
+		font-size: 1.1rem;
+		font-weight: 700;
+	}
+
+	.status-grid dd.running {
+		color: var(--accent);
 	}
 </style>

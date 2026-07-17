@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 25;
+export const CURRENT_SCHEMA_VERSION = 26;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -908,6 +908,79 @@ function migration025(database: Database.Database) {
 	`);
 }
 
+function migration026(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS scheduled_jobs (
+			job_name TEXT PRIMARY KEY,
+			last_started_at TEXT,
+			last_completed_at TEXT,
+			next_run_at TEXT,
+			status TEXT,
+			last_error TEXT,
+			consecutive_failures INTEGER NOT NULL DEFAULT 0
+		);
+
+		CREATE TABLE IF NOT EXISTS discovery_projects_to_watch (
+			rank INTEGER NOT NULL,
+			tier TEXT NOT NULL,
+			repo_id INTEGER NOT NULL,
+			discovery_score REAL NOT NULL DEFAULT 0,
+			payload_json TEXT NOT NULL,
+			materialized_at TEXT NOT NULL,
+			PRIMARY KEY (tier, rank)
+		);
+
+		CREATE TABLE IF NOT EXISTS discovery_emerging_topics (
+			rank INTEGER NOT NULL PRIMARY KEY,
+			tier TEXT NOT NULL,
+			topic_key TEXT NOT NULL,
+			payload_json TEXT NOT NULL,
+			materialized_at TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS discovery_fastest_clusters (
+			rank INTEGER NOT NULL PRIMARY KEY,
+			tier TEXT NOT NULL,
+			cluster_slug TEXT NOT NULL,
+			payload_json TEXT NOT NULL,
+			materialized_at TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS discovery_deleted_preserved (
+			rank INTEGER NOT NULL PRIMARY KEY,
+			tier TEXT NOT NULL,
+			repo_id INTEGER NOT NULL,
+			preservation_score REAL NOT NULL DEFAULT 0,
+			payload_json TEXT NOT NULL,
+			materialized_at TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS discovery_unusual_finds (
+			rank INTEGER NOT NULL PRIMARY KEY,
+			tier TEXT NOT NULL,
+			repo_id INTEGER NOT NULL,
+			payload_json TEXT NOT NULL,
+			materialized_at TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS discovery_system_status (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			repositories_discovered INTEGER NOT NULL DEFAULT 0,
+			enriched INTEGER NOT NULL DEFAULT 0,
+			classified INTEGER NOT NULL DEFAULT 0,
+			clustered INTEGER NOT NULL DEFAULT 0,
+			last_ingestion_at TEXT,
+			last_discovery_analysis_at TEXT,
+			last_emerging_analysis_at TEXT,
+			worker_status TEXT NOT NULL DEFAULT 'unknown',
+			updated_at TEXT NOT NULL
+		);
+
+		INSERT OR IGNORE INTO discovery_system_status (id, updated_at)
+		VALUES (1, datetime('now'));
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -933,7 +1006,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	22: migration022,
 	23: migration023,
 	24: migration024,
-	25: migration025
+	25: migration025,
+	26: migration026
 };
 
 export interface MigrationRunResult {
