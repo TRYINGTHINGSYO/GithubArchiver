@@ -69,13 +69,16 @@
 	{/if}
 
 	{#if storyLine}
-		<details class="story">
-			<summary>Why this is here</summary>
+		<div class="story">
+			<p class="story-label">Archive Story</p>
 			<p>{storyLine}</p>
 			<p class="rank-reason">{repo.rankingReason}</p>
-		</details>
+		</div>
 	{:else}
-		<p class="rank-reason">{repo.rankingReason}</p>
+		<div class="story">
+			<p class="story-label">Why surfaced</p>
+			<p class="rank-reason">{repo.rankingReason}</p>
+		</div>
 	{/if}
 </article>
 
@@ -171,10 +174,17 @@
 		margin-top: 0.85rem;
 	}
 
-	.story summary {
-		cursor: pointer;
+	.story-label {
+		margin: 0;
 		color: var(--text);
-		font-weight: 600;
+		font-size: 0.78rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+
+	.story .rank-reason {
+		margin-top: 0.35rem;
 	}
 
 	@media (max-width: 640px) {

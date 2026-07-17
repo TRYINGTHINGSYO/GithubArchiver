@@ -5,13 +5,15 @@
 </script>
 
 <header class="site-header">
-	<div class="container">
+	<div class="container header-bar">
 		<a href="/" class="logo">Github<span>Archive+</span></a>
-		<nav class="stats-bar" aria-label="Primary">
-			<span>Evidence-first repository intelligence</span>
-			<a href="/?sort=updated_at&min_stars=100&max_stars=1000" class="admin-link">Emerging</a>
+		<nav class="desktop-nav" aria-label="Primary">
+			<span class="nav-tagline">Evidence-first repository intelligence</span>
+			<a href="/discover" class="admin-link">Discover</a>
+			<a href="/discover/emerging" class="admin-link">Emerging</a>
+			<a href="/discover/fastest-growing" class="admin-link">Clusters</a>
 			<a href="/birth-feed" class="admin-link">Birth Feed</a>
-			<a href="/#repository-feed" class="admin-link">Search</a>
+			<a href="/#repository-search" class="admin-link">Search</a>
 			{#if data.isAdmin}
 				<a href="/admin" class="admin-link">Admin</a>
 				<a href="/logout" class="admin-link">Logout</a>
@@ -28,8 +30,8 @@
 
 <nav class="mobile-tabbar" aria-label="Primary mobile navigation">
 	<a href="/">Home</a>
-	<a href="/#repository-feed">Feed</a>
-	<a href="/birth-feed">Live</a>
+	<a href="/discover">Discover</a>
+	<a href="/discover/emerging">Emerging</a>
 	{#if data.isAdmin}
 		<a href="/admin">Admin</a>
 	{:else}

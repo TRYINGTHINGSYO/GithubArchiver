@@ -128,7 +128,7 @@
 	</div>
 </section>
 
-<section class="section-block">
+<section class="section-block" id="unusual">
 	<div class="section-head">
 		<div>
 			<p class="eyebrow">Unusual finds</p>
@@ -144,7 +144,7 @@
 	</div>
 </section>
 
-<section class="section-block">
+<section class="section-block" id="clusters">
 	<div class="section-head">
 		<div>
 			<p class="eyebrow">Browse</p>

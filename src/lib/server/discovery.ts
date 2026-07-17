@@ -84,6 +84,19 @@ export interface DiscoveryLanding {
 	clusters: ClusterAnalyticsRow[];
 }
 
+export interface ActiveClusterCard {
+	slug: string;
+	name: string;
+	description: string | null;
+	repoCount: number;
+	new7d: number;
+	avgInterestingScore: number | null;
+	topLanguages: { language: string; count: number }[];
+	topRepos: DiscoveryRepoCard[];
+	rankingReason: string;
+	metricLabel: 'week-over-week growth' | 'recent activity';
+}
+
 const MIN_CLUSTER_CURRENT_COUNT = 20;
 const MIN_CLUSTER_PREVIOUS_COUNT = 5;
 const MIN_PROJECT_GROWTH = 25;
@@ -209,6 +222,73 @@ export function getDeletedGems(opts: Partial<DiscoveryQuery> = {}): DeletedGemIt
 		.sort((a, b) => b.preservationScore - a.preservationScore);
 
 	return items.slice(0, query.limit);
+}
+
+/**
+ * Recently discovered repositories that clear the low-signal floor.
+ * Sorted by Interesting Score, then recency — not by star count.
+ */
+export function getNewHighSignalRepos(opts: Partial<DiscoveryQuery> = {}): DiscoveryRepoCard[] {
+	const query = normalizeQuery(opts);
+	const db = getDb();
+	const rows = db
+		.prepare(
+			`SELECT r.*,
+			        0 as cluster_confidence,
+			        NULL as cluster_slug,
+			        NULL as cluster_name,
+			        EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'readme') AS has_readme,
+			        EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'source') AS has_source,
+			        EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id) AS has_any_archive,
+			        NULL as rarest_cluster_count
+			 FROM repos r
+			 WHERE r.deleted_at IS NULL
+			   AND COALESCE(r.signal_tier, 'normal') IN ('normal', 'high')
+			   AND COALESCE(r.interesting_score, 0) >= ?
+			 ORDER BY r.interesting_score DESC, r.first_seen_at DESC
+			 LIMIT ?`
+		)
+		.all(Math.max(40, query.minScore - 10), query.limit) as DiscoveryRepoRow[];
+
+	return rows.map((row) =>
+		toDiscoveryRepoCard(
+			row,
+			row.interesting_score ?? 0,
+			`Shown because it is a normal/high-signal repository with an Interesting Score of ${Math.round(row.interesting_score ?? 0)}, sorted ahead of raw star-count feeds.`
+		)
+	);
+}
+
+/**
+ * Active/high-quality clusters when week-over-week growth is unavailable.
+ * Labels activity honestly rather than implying momentum.
+ */
+export function getActiveQualityClusters(opts: Partial<DiscoveryQuery> = {}): ActiveClusterCard[] {
+	const query = normalizeQuery(opts);
+	return listClusterAnalytics()
+		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
+		.filter((cluster) => cluster.repo_count > 0)
+		.filter((cluster) => (cluster.avg_interesting_score ?? 0) >= Math.max(0, query.minScore - 25))
+		.sort((a, b) => {
+			const activityDelta = b.new_7d - a.new_7d;
+			if (activityDelta !== 0) return activityDelta;
+			const scoreDelta = (b.avg_interesting_score ?? 0) - (a.avg_interesting_score ?? 0);
+			if (scoreDelta !== 0) return scoreDelta;
+			return b.repo_count - a.repo_count;
+		})
+		.slice(0, query.limit)
+		.map((cluster) => ({
+			slug: cluster.slug,
+			name: cluster.name,
+			description: cluster.description,
+			repoCount: cluster.repo_count,
+			new7d: cluster.new_7d,
+			avgInterestingScore: cluster.avg_interesting_score,
+			topLanguages: cluster.top_languages,
+			topRepos: listTopReposForCluster(cluster.slug, query),
+			metricLabel: 'recent activity' as const,
+			rankingReason: `${cluster.name} is shown for recent activity (${cluster.new_7d.toLocaleString()} repos in 7d) and average Interesting Score ${cluster.avg_interesting_score ?? '—'} — not because week-over-week growth cleared the momentum guardrails.`
+		}));
 }
 
 function getUnusualFinds(opts: DiscoveryQuery): DiscoveryRepoCard[] {

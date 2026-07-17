@@ -1,22 +1,21 @@
 <script lang="ts">
 	const discoverySections = [
-		{ emoji: '🔥', label: 'Exploding today', href: '/birth-feed?sort=stars' },
-		{ emoji: '⭐', label: 'Fastest growing', href: '/birth-feed?sort=stars' },
-		{ emoji: '🆕', label: 'Just created', href: '/?feed=newest' },
-		{ emoji: '🤖', label: 'AI repositories', href: '/?q=ai' },
-		{ emoji: '🚀', label: 'First releases', href: '/?feed=recently_released' },
-		{ emoji: '📈', label: 'Biggest movers', href: '/birth-feed?sort=stars' },
-		{ emoji: '📦', label: 'Recently archived', href: '/?feed=recently_archived' },
-		{ emoji: '⚠', label: 'Recently deleted', href: '/?deleted_only=1' }
+		{ label: 'Emerging topics', href: '/discover/emerging' },
+		{ label: 'Fastest-growing clusters', href: '/discover/fastest-growing' },
+		{ label: 'Projects to watch', href: '/discover/projects-to-watch' },
+		{ label: 'Deleted but preserved', href: '/discover/deleted-gems' },
+		{ label: 'Unusual finds', href: '/discover#unusual' },
+		{ label: 'All discoveries', href: '/discover' },
+		{ label: 'Birth Feed', href: '/birth-feed' },
+		{ label: 'Repository search', href: '/#repository-search' }
 	];
 </script>
 
 <section class="discovery" aria-label="Discovery feeds">
-	<h2 class="discovery-title">Discover what's happening on GitHub</h2>
+	<h2 class="discovery-title">Browse intelligence</h2>
 	<div class="discovery-grid">
 		{#each discoverySections as section}
 			<a href={section.href} class="discovery-card">
-				<span class="discovery-emoji">{section.emoji}</span>
 				<span class="discovery-label">{section.label}</span>
 			</a>
 		{/each}
@@ -64,8 +63,8 @@
 		text-decoration: none;
 	}
 
-	.discovery-emoji {
-		font-size: 1.1rem;
+	.discovery-label {
+		font-size: 0.88rem;
 	}
 
 	@media (max-width: 900px) {
