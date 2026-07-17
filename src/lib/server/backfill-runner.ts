@@ -39,6 +39,7 @@ async function ingestSearchOnly(hourKey: string) {
 		source: 'github_search' as const,
 		eventsParsed: search.found,
 		reposInserted: search.inserted,
+		repoCreates: 0,
 		error: undefined as string | undefined
 	};
 }
@@ -80,13 +81,33 @@ async function ingestHourForBackfill(hourKey: string, source: BackfillSource) {
 	if (source === 'gharchive') {
 		try {
 			const r = await ingestGhArchiveOnly(hourKey);
-			return { outcome: 'downloaded' as const, source: r.source, eventsParsed: r.eventsParsed, reposInserted: r.reposInserted };
+			return {
+				outcome: 'downloaded' as const,
+				source: r.source,
+				eventsParsed: r.eventsParsed,
+				reposInserted: r.reposInserted,
+				repoCreates: r.repoCreates
+			};
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			if (message.includes('unavailable') || message.includes('404')) {
-				return { outcome: 'unavailable' as const, error: message, eventsParsed: 0, reposInserted: 0, source: 'gharchive' as const };
+				return {
+					outcome: 'unavailable' as const,
+					error: message,
+					eventsParsed: 0,
+					reposInserted: 0,
+					repoCreates: 0,
+					source: 'gharchive' as const
+				};
 			}
-			return { outcome: 'failed' as const, error: message, eventsParsed: 0, reposInserted: 0, source: 'gharchive' as const };
+			return {
+				outcome: 'failed' as const,
+				error: message,
+				eventsParsed: 0,
+				reposInserted: 0,
+				repoCreates: 0,
+				source: 'gharchive' as const
+			};
 		}
 	}
 
@@ -94,6 +115,7 @@ async function ingestHourForBackfill(hourKey: string, source: BackfillSource) {
 	if (isIngestSuccess(result)) {
 		recordHourIngested(hourKey, {
 			events: result.parsedEvents + (result.searchFound ?? 0),
+			matchedRepoCreates: result.repoCreates,
 			inserted: result.inserted,
 			skipped: result.skipped,
 			source: ingestSourceForRecord(result)
@@ -102,13 +124,28 @@ async function ingestHourForBackfill(hourKey: string, source: BackfillSource) {
 			outcome: 'downloaded' as const,
 			source: ingestSourceForRecord(result) as string,
 			eventsParsed: result.parsedEvents,
-			reposInserted: result.inserted
+			reposInserted: result.inserted,
+			repoCreates: result.repoCreates
 		};
 	}
 	if (result.outcome === 'unavailable') {
-		return { outcome: 'unavailable' as const, error: result.error, eventsParsed: 0, reposInserted: 0, source: 'gharchive' as const };
+		return {
+			outcome: 'unavailable' as const,
+			error: result.error,
+			eventsParsed: 0,
+			reposInserted: 0,
+			repoCreates: 0,
+			source: 'gharchive' as const
+		};
 	}
-	return { outcome: 'failed' as const, error: result.error, eventsParsed: 0, reposInserted: 0, source: 'gharchive' as const };
+	return {
+		outcome: 'failed' as const,
+		error: result.error,
+		eventsParsed: 0,
+		reposInserted: 0,
+		repoCreates: 0,
+		source: 'gharchive' as const
+	};
 }
 
 export async function runBackfillBatch(jobId?: number, maxHours?: number): Promise<BackfillRunResult> {
@@ -147,6 +184,7 @@ export async function runBackfillBatch(jobId?: number, maxHours?: number): Promi
 				} else {
 					recordHourIngested(hour.hour_key, {
 						events: ingest.eventsParsed,
+						matchedRepoCreates: ingest.repoCreates ?? 0,
 						inserted: ingest.reposInserted,
 						skipped: 0,
 						source: ingest.source

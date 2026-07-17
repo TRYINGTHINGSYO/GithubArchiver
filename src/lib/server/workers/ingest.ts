@@ -88,6 +88,7 @@ export async function runIngestCycle(): Promise<IngestCycleResult> {
 		if (isIngestSuccess(hour)) {
 			recordHourIngested(hourKey, {
 				events: hour.repoCreates + (hour.searchFound ?? 0),
+				matchedRepoCreates: hour.repoCreates,
 				inserted: hour.inserted,
 				skipped: hour.skipped,
 				source: ingestSourceForRecord(hour)

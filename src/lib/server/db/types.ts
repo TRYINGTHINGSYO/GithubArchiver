@@ -231,6 +231,8 @@ export interface IngestionStateRow {
 	hour_key: string;
 	ingested_at: string;
 	events: number;
+	/** GH Archive matcher hits (repository births), not total parsed events. */
+	matched_repo_creates: number;
 	inserted: number;
 	skipped: number;
 	source: string;

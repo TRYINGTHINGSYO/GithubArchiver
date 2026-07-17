@@ -2,6 +2,7 @@ import { insertRepo } from '$lib/server/db';
 import {
 	completeSearchIngestStat,
 	failSearchIngestStat,
+	isHourSearchReconciled,
 	startSearchIngestStat
 } from '$lib/server/db/search-ingest';
 import { rollupCategoryDailyIfNeeded } from '$lib/server/db/category-stats';
@@ -77,8 +78,19 @@ function nextSubdivideMinutes(depth: number): number | null {
 	return null;
 }
 
-export function shouldRunSearchFallback(parsedEvents: number, repoCreates: number): boolean {
-	return repoCreates === 0 && parsedEvents >= SEARCH_FALLBACK_MIN_EVENTS;
+/**
+ * Search fallback is only for hours where GH Archive yielded no repository births.
+ * Skip when a prior Search pass already reconciled the hour (mostly duplicates).
+ */
+export function shouldRunSearchFallback(
+	parsedEvents: number,
+	repoCreates: number,
+	hourKey?: string
+): boolean {
+	if (repoCreates > 0) return false;
+	if (parsedEvents < SEARCH_FALLBACK_MIN_EVENTS) return false;
+	if (hourKey && isHourSearchReconciled(hourKey)) return false;
+	return true;
 }
 
 export interface SearchIngestResult {

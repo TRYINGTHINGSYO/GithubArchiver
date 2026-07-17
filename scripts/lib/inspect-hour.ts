@@ -1,6 +1,7 @@
 import type { GhArchiveEvent } from '../../src/lib/server/gharchive.js';
 import {
 	archiveUrlForKey,
+	isRepositoryCreateEvent,
 	streamHourEvents
 } from '../../src/lib/server/gharchive.js';
 
@@ -23,19 +24,7 @@ export function parseEventPayload(payload: GhArchiveEvent['payload']): ParsedPay
 }
 
 export function looksLikeRepoCreation(event: GhArchiveEvent): boolean {
-	if (event.type !== 'CreateEvent' || !event.repo?.name) return false;
-	const payload = parseEventPayload(event.payload);
-	if (!payload) return false;
-	if (payload.ref_type === 'repository' || payload.ref_type === 'repo') return true;
-	if (
-		(payload.ref === null || payload.ref === undefined) &&
-		payload.ref_type !== 'branch' &&
-		payload.ref_type !== 'tag' &&
-		event.repo.name.includes('/')
-	) {
-		return true;
-	}
-	return false;
+	return isRepositoryCreateEvent(event);
 }
 
 export interface HourInspection {
@@ -128,7 +117,10 @@ export function formatInspection(report: HourInspection): string {
 	lines.push('');
 	lines.push('Matcher comparison (CreateEvent + repo.name):');
 	lines.push(`  legacy (ref_type === "repository"): ${report.legacyMatcherCount}`);
-	lines.push(`  expanded looksLikeRepoCreation:     ${report.looksLikeRepoCreationCount}`);
+	lines.push(`  current isRepositoryCreateEvent:   ${report.looksLikeRepoCreationCount}`);
+	lines.push(
+		'  (current also matches default-branch creates where ref === master_branch)'
+	);
 	lines.push('');
 	lines.push('First 10 CreateEvent payloads:');
 	for (const [i, payload] of report.createEventPayloads.entries()) {

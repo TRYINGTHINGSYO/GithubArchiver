@@ -91,9 +91,14 @@ async function ingestHourOnce(hourKey: string, url: string): Promise<IngestResul
 	let searchQuery: string | undefined;
 	let source: IngestSource = 'gharchive';
 
-	if (shouldRunSearchFallback(stats.parsedEvents, stats.repoCreates)) {
+	const refTypeSummary = Object.entries(stats.createRefTypes)
+		.map(([k, v]) => `${k}=${v}`)
+		.join(', ');
+
+	if (shouldRunSearchFallback(stats.parsedEvents, stats.repoCreates, hourKey)) {
 		console.log(
-			`  ${hourKey}: GH Archive had ${stats.parsedEvents} events but 0 repo CreateEvents — Search fallback started`
+			`  ${hourKey}: GH Archive had ${stats.parsedEvents} events, CreateEvent=${stats.createEvents}` +
+				`${refTypeSummary ? ` (${refTypeSummary})` : ''}, matched repo creates=0 — Search fallback started`
 		);
 		if (!process.env.GITHUB_TOKEN) {
 			console.warn('  GITHUB_TOKEN recommended for Search API (30 req/min unauthenticated).');
@@ -109,10 +114,14 @@ async function ingestHourOnce(hourKey: string, url: string): Promise<IngestResul
 		);
 	} else if (stats.repoCreates === 0 && stats.parsedEvents > 0) {
 		console.log(
-			`  ${hourKey}: GH Archive had ${stats.parsedEvents} events, 0 repo CreateEvents (below search fallback threshold)`
+			`  ${hourKey}: GH Archive had ${stats.parsedEvents} events, CreateEvent=${stats.createEvents}` +
+				`${refTypeSummary ? ` (${refTypeSummary})` : ''}, matched repo creates=0 (search fallback skipped)`
 		);
 	} else if (stats.repoCreates > 0) {
-		console.log(`  ${hourKey}: [gharchive] ${stats.repoCreates} repo CreateEvents`);
+		console.log(
+			`  ${hourKey}: [gharchive] ${stats.repoCreates} repo CreateEvents` +
+				` (CreateEvent=${stats.createEvents}${refTypeSummary ? `, ${refTypeSummary}` : ''})`
+		);
 	}
 
 	return {
