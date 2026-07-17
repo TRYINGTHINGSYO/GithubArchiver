@@ -6,6 +6,10 @@ import { getActiveBackfillJob, getBackfillProgress } from '$lib/server/db/backfi
 import { getDb } from '$lib/server/db/connection';
 import { countMissingGhArchiveHours } from '$lib/server/db/ingestion';
 import { countReposDueForRefresh, countUnenriched } from '$lib/server/db/repos';
+import {
+	hasCompletedSearchForHour,
+	isHourSearchReconciled
+} from '$lib/server/db/search-ingest';
 import { defaultHourKey } from '$lib/server/gharchive';
 import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import type { BacklogSnapshot } from '$lib/server/daemon-planner';
@@ -29,26 +33,33 @@ export function countUnarchivedSourceSnapshots(): number {
 	).c;
 }
 
-/** GH Archive hour ingested but no completed search stat for the same hour. */
+/**
+ * Search gap only when the current hour still needs a Search pass.
+ * Skip when Search already completed/reconciled, or when GH Archive alone
+ * already matched repository births (no search_ingest_stats rows yet).
+ */
 export function hasCurrentHourSearchGap(): boolean {
 	const db = getDb();
 	const hourKey = defaultHourKey();
 	const ghRow = db
 		.prepare(
-			`SELECT 1 FROM ingestion_state
-			 WHERE hour_key = ? AND source = 'gharchive' AND unavailable_at IS NULL`
+			`SELECT events, source FROM ingestion_state
+			 WHERE hour_key = ? AND unavailable_at IS NULL`
 		)
-		.get(hourKey);
+		.get(hourKey) as { events: number; source: string } | undefined;
 	if (!ghRow) return false;
 
-	const searchRow = db
-		.prepare(
-			`SELECT 1 FROM search_ingest_stats
-			 WHERE hour_key = ? AND status = 'completed'
-			 LIMIT 1`
-		)
+	if (hasCompletedSearchForHour(hourKey) || isHourSearchReconciled(hourKey)) return false;
+
+	const anySearchAttempt = db
+		.prepare(`SELECT 1 AS ok FROM search_ingest_stats WHERE hour_key = ? LIMIT 1`)
 		.get(hourKey);
-	return !searchRow;
+	// Archive-only ingest with matched creates — Search is optional, not a gap.
+	if (!anySearchAttempt && ghRow.source === 'gharchive' && ghRow.events > 0) {
+		return false;
+	}
+
+	return true;
 }
 
 export function countBackfillPendingHours(): number {

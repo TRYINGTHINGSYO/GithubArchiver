@@ -2,7 +2,7 @@ import './load-env.js';
 import { defaultHourKey } from '../src/lib/server/gharchive.js';
 import { formatInspection, inspectHour } from './lib/inspect-hour.js';
 
-const hourKey = process.env.GH_ARCHIVE_HOUR ?? defaultHourKey();
+const hourKey = process.argv[2] ?? process.env.GH_ARCHIVE_HOUR ?? defaultHourKey();
 
 async function main() {
 	console.log(`Inspecting GH Archive hour: ${hourKey}\n`);

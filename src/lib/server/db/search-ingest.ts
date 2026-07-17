@@ -82,6 +82,42 @@ export function listRecentSearchIngestStats(limit = 20): SearchIngestStatRow[] {
 		.all(limit) as SearchIngestStatRow[];
 }
 
+/** True when a prior Search pass for this hour already reconciled mostly-known repos. */
+export function isHourSearchReconciled(
+	hourKey: string,
+	opts: { minFound?: number; minSkipRatio?: number } = {}
+): boolean {
+	const minFound = opts.minFound ?? 20;
+	const minSkipRatio = opts.minSkipRatio ?? 0.95;
+	const db = getDb();
+	const row = db
+		.prepare(
+			`SELECT
+			   COALESCE(SUM(found), 0) AS found,
+			   COALESCE(SUM(inserted), 0) AS inserted,
+			   COALESCE(SUM(skipped), 0) AS skipped
+			 FROM search_ingest_stats
+			 WHERE hour_key = ? AND status = 'completed'`
+		)
+		.get(hourKey) as { found: number; inserted: number; skipped: number };
+
+	if (!row || row.found < minFound) return false;
+	const skipRatio = row.skipped / row.found;
+	return skipRatio >= minSkipRatio;
+}
+
+export function hasCompletedSearchForHour(hourKey: string): boolean {
+	const db = getDb();
+	const row = db
+		.prepare(
+			`SELECT 1 AS ok FROM search_ingest_stats
+			 WHERE hour_key = ? AND status = 'completed'
+			 LIMIT 1`
+		)
+		.get(hourKey) as { ok: number } | undefined;
+	return Boolean(row);
+}
+
 export function getSearchIngestSummary() {
 	const db = getDb();
 	const latest = db

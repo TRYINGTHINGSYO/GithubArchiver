@@ -14,6 +14,8 @@ export interface GhArchiveEvent {
 export interface GhArchivePayload {
 	ref_type?: string;
 	ref?: string | null;
+	/** Default branch name on CreateEvent payloads (used after repo CreateEvents vanished). */
+	master_branch?: string | null;
 	[key: string]: unknown;
 }
 
@@ -29,6 +31,10 @@ export interface RepoCreateEvent {
 export interface HourStreamStats {
 	parsedEvents: number;
 	repoCreates: number;
+	/** Raw CreateEvent count (all ref_types), for diagnostics. */
+	createEvents: number;
+	/** CreateEvent payload.ref_type histogram. */
+	createRefTypes: Record<string, number>;
 }
 
 export class GhArchiveUnavailableError extends Error {
@@ -76,17 +82,36 @@ function parsePayload(payload: GhArchiveEvent['payload']): GhArchivePayload | nu
 	return payload;
 }
 
+/**
+ * Detect repository-birth CreateEvents in GH Archive.
+ *
+ * Historically GitHub emitted `ref_type: "repository"`. After ~2025-10 those
+ * payloads disappeared from GH Archive (only `ref_type: "branch"|"tag"` remain).
+ * New public repos still typically emit a CreateEvent for their default branch
+ * where `ref === master_branch` — treat that as the post-cutoff birth signal.
+ *
+ * Existing repos that recreate their default branch are INSERT OR IGNORE no-ops.
+ */
 export function isRepositoryCreateEvent(event: GhArchiveEvent): boolean {
-	if (event.type !== 'CreateEvent' || !event.repo?.name) return false;
+	if (event.type !== 'CreateEvent' || !event.repo?.name?.includes('/')) return false;
 	const payload = parsePayload(event.payload);
 	if (!payload) return false;
 	if (payload.ref_type === 'repository' || payload.ref_type === 'repo') return true;
-	// Repo creates use ref: null; branch/tag creates set ref to the branch/tag name.
+	// Legacy repo creates use ref: null; branch/tag creates set ref to the name.
 	if (
 		(payload.ref === null || payload.ref === undefined) &&
 		payload.ref_type !== 'branch' &&
-		payload.ref_type !== 'tag' &&
-		event.repo.name.includes('/')
+		payload.ref_type !== 'tag'
+	) {
+		return true;
+	}
+	// Post ~2025-10 GH Archive: default-branch CreateEvent ≈ repository birth.
+	if (
+		payload.ref_type === 'branch' &&
+		typeof payload.ref === 'string' &&
+		typeof payload.master_branch === 'string' &&
+		payload.ref.length > 0 &&
+		payload.ref === payload.master_branch
 	) {
 		return true;
 	}
@@ -200,7 +225,27 @@ export async function streamRepositoryCreates(
 	}
 
 	const combined = await readHourStream(url, res);
-	const stats: HourStreamStats = { parsedEvents: 0, repoCreates: 0 };
+	const stats: HourStreamStats = {
+		parsedEvents: 0,
+		repoCreates: 0,
+		createEvents: 0,
+		createRefTypes: {}
+	};
+
+	const observe = async (event: GhArchiveEvent) => {
+		stats.parsedEvents++;
+		if (event.type === 'CreateEvent') {
+			stats.createEvents++;
+			const payload = parsePayload(event.payload);
+			const refType = payload?.ref_type ?? '(missing)';
+			stats.createRefTypes[refType] = (stats.createRefTypes[refType] ?? 0) + 1;
+		}
+		const repo = toRepoCreateEvent(event);
+		if (repo) {
+			stats.repoCreates++;
+			if (onCreate) await onCreate(repo);
+		}
+	};
 
 	let buffer = '';
 	try {
@@ -212,13 +257,7 @@ export async function streamRepositoryCreates(
 			for (const line of lines) {
 				if (!line.trim()) continue;
 				try {
-					const event = JSON.parse(line) as GhArchiveEvent;
-					stats.parsedEvents++;
-					const repo = toRepoCreateEvent(event);
-					if (repo) {
-						stats.repoCreates++;
-						if (onCreate) await onCreate(repo);
-					}
+					await observe(JSON.parse(line) as GhArchiveEvent);
 				} catch {
 					// skip malformed lines
 				}
@@ -227,13 +266,7 @@ export async function streamRepositoryCreates(
 
 		if (buffer.trim()) {
 			try {
-				const event = JSON.parse(buffer) as GhArchiveEvent;
-				stats.parsedEvents++;
-				const repo = toRepoCreateEvent(event);
-				if (repo) {
-					stats.repoCreates++;
-					if (onCreate) await onCreate(repo);
-				}
+				await observe(JSON.parse(buffer) as GhArchiveEvent);
 			} catch {
 				// ignore trailing partial line
 			}
