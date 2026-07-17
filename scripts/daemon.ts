@@ -84,11 +84,26 @@ async function runJob(jobName: (typeof DAEMON_JOB_ORDER)[number]): Promise<void>
 		}
 		case 'enrich': {
 			const enrich = await runScheduledJob('enrich', () => runEnrichCycle());
-			console.log(`[daemon] enrich: ${enrich.enriched} enriched, ${enrich.failed} failed`);
+			console.log(
+				`[daemon] enrich: ${enrich.enriched} enriched, ${enrich.remaining} remaining` +
+					(enrich.yielded ? ' (yielding for cluster/discovery)' : '')
+			);
 			if (enrich.rateLimited) {
 				throw Object.assign(new Error('GitHub rate limit during enrich'), {
 					rateLimitResetAt: enrich.rateLimitResetAt
 				});
+			}
+			// After each enrich slice, materialize discovery so the homepage updates.
+			if (enrich.enriched > 0) {
+				try {
+					await runScheduledJob('clusters', () => runClusterCycle({ maxBatches: 1 }));
+					await runScheduledJob('discovery', () => runDiscoveryMaterializationCycle());
+				} catch (err) {
+					console.warn(
+						'[daemon] post-enrich discovery failed:',
+						err instanceof Error ? err.message : err
+					);
+				}
 			}
 			break;
 		}

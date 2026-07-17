@@ -9,8 +9,11 @@ const DELAY_MS = Number(process.env.ENRICH_DELAY_MS ?? 200);
 const SYNC_RELEASES = process.env.ENRICH_SYNC_RELEASES === '1';
 const CREATED_FROM = process.env.ENRICH_CREATED_FROM;
 const CREATED_TO = process.env.ENRICH_CREATED_TO;
-/** Keep enriching until the backlog is empty (or rate-limited). */
-const DRAIN = process.env.ENRICH_DRAIN !== '0';
+/**
+ * Enrich continuously across daemon loops, but yield after this many repos so
+ * clustering refresh, stories, and discovery materialization can run.
+ */
+const MAX_PER_CYCLE = Number(process.env.ENRICH_MAX_PER_CYCLE ?? 200);
 
 function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
@@ -27,20 +30,22 @@ export interface EnrichCycleResult {
 	rateLimitResetAt?: string;
 	remaining: number;
 	currentRepo: string | null;
+	yielded: boolean;
 }
 
 export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 	const backlogStart = countUnenriched();
+	const planned = Math.min(backlogStart, Math.max(BATCH_SIZE, MAX_PER_CYCLE));
 	const jobId = startJobRun('enrich', {
 		batch_size: BATCH_SIZE,
-		planned: backlogStart,
-		drain: DRAIN,
+		planned,
+		max_per_cycle: MAX_PER_CYCLE,
 		created_from: CREATED_FROM ?? null,
 		created_to: CREATED_TO ?? null
 	});
 
 	const result: EnrichCycleResult = {
-		planned: backlogStart,
+		planned,
 		enriched: 0,
 		failed: 0,
 		deleted: 0,
@@ -48,7 +53,8 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 		rateLimited: false,
 		secondaryRateLimited: false,
 		remaining: backlogStart,
-		currentRepo: null
+		currentRepo: null,
+		yielded: false
 	};
 
 	if (backlogStart === 0) {
@@ -75,7 +81,7 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 		enrichedTotal: countRepos() - countUnenriched()
 	});
 
-	for (;;) {
+	while (result.enriched + result.failed < MAX_PER_CYCLE) {
 		const pending = listUnenrichedRepos(BATCH_SIZE, {
 			createdFrom: CREATED_FROM,
 			createdTo: CREATED_TO
@@ -83,16 +89,21 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 		if (pending.length === 0) break;
 
 		for (const repo of pending) {
+			if (result.enriched + result.failed >= MAX_PER_CYCLE) {
+				result.yielded = true;
+				break;
+			}
+
 			result.currentRepo = repo.full_name;
-			const remaining = Math.max(0, backlogStart - result.enriched - result.failed);
+			const remaining = countUnenriched();
 			updateJobRun(jobId, {
 				batch_size: BATCH_SIZE,
-				planned: backlogStart,
+				planned,
 				enriched: result.enriched,
 				failed: result.failed,
 				remaining,
 				current_repo: repo.full_name,
-				drain: DRAIN
+				max_per_cycle: MAX_PER_CYCLE
 			});
 			setEnrichmentProgress({
 				status: 'running',
@@ -140,11 +151,10 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 				}
 			}
 		}
-
-		if (!DRAIN) break;
 	}
 
 	result.remaining = countUnenriched();
+	result.yielded = result.remaining > 0;
 	result.currentRepo = null;
 	setEnrichmentProgress({
 		status: result.remaining > 0 ? 'paused' : 'idle',

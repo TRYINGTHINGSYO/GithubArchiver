@@ -10,8 +10,11 @@
 	const enrichPercent = $derived.by(() => {
 		const total = enrich.enrichedTotal + enrich.remaining;
 		if (total <= 0) return 100;
-		return Math.min(100, Math.round((enrich.enrichedTotal / total) * 100));
+		return Math.round((enrich.enrichedTotal / total) * 1000) / 10;
 	});
+	const enrichPercentLabel = $derived(
+		Number.isInteger(enrichPercent) ? String(enrichPercent) : enrichPercent.toFixed(1)
+	);
 
 	const browseLinks = [
 		{ href: '/discover', label: 'All discoveries', why: 'Landing for every intelligence lane' },
@@ -183,12 +186,12 @@
 				<span class="metric-label">This run</span>
 			</div>
 			<div>
-				<span class="metric-value">{enrichPercent}%</span>
+				<span class="metric-value">{enrichPercentLabel}%</span>
 				<span class="metric-label">Coverage</span>
 			</div>
 		</div>
 		<div class="enrich-bar" role="progressbar" aria-valuenow={enrichPercent} aria-valuemin="0" aria-valuemax="100">
-			<span style={`width: ${enrichPercent}%`}></span>
+			<span style={`width: ${Math.min(100, enrichPercent)}%`}></span>
 		</div>
 		{#if enrich.currentRepo}
 			<p class="enrich-current">
@@ -375,7 +378,15 @@
 				<p class="evidence">{cluster.rankingReason}</p>
 			</article>
 		{:else}
-			<p class="empty">No clusters meet quality thresholds yet.</p>
+			<p class="empty">
+				{#if data.enrichmentProgress.remaining > 0}
+					Clusters will appear as enrichment assigns repositories. {data.enrichmentProgress.enrichedTotal.toLocaleString()}
+					enriched so far; {data.enrichmentProgress.remaining.toLocaleString()} still waiting.
+				{:else}
+					No clusters meet quality thresholds yet. Additional categories will appear as repositories
+					are classified.
+				{/if}
+			</p>
 		{/each}
 	</div>
 	{#if data.clusters.items.length === 0 && data.discovery.clusters.some((cluster) => cluster.repo_count > 0)}
@@ -400,8 +411,13 @@
 			<DiscoveryRepoCard {repo} />
 		{:else}
 			<p class="empty">
-				No repositories meet Projects to Watch thresholds yet—cluster momentum and Interesting
-				Score floors still apply.
+				{#if data.enrichmentProgress.remaining > 0}
+					Projects to Watch fills after repositories are enriched and clustered. Enrichment is
+					running now.
+				{:else}
+					No repositories meet Projects to Watch thresholds yet—cluster momentum and Interesting
+					Score floors still apply.
+				{/if}
 			</p>
 		{/each}
 	</div>

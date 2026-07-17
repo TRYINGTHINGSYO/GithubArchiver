@@ -11,6 +11,7 @@ import {
 	type RepoRow
 } from '$lib/server/db';
 import { enqueueRepoPipeline, setEnrichmentLevel } from '$lib/server/db/pipeline';
+import { getRepoById } from '$lib/server/db/repos';
 import { appendRepoEvent } from '$lib/server/events';
 import {
 	fetchReleases,
@@ -21,6 +22,7 @@ import {
 	recordRepoHistoryChanges,
 	stripHistoryTrackedChanges
 } from '$lib/server/record-repo-history';
+import { applyRepoClusters } from '$lib/server/apply-repo-clusters';
 import { applyRepoIntelligence } from '$lib/server/apply-repo-intelligence';
 
 /** Enrichment tiers — Level 1 is the default for backlog throughput. */
@@ -269,12 +271,15 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 	setEnrichmentLevel(repo.id, Math.max(1, level));
 	applyRepoIntelligence(repo, enrichment);
 
-	// Classification + scoring run inline; queue clustering and stories for
-	// changed IDs instead of rescanning the whole table later.
+	// Cluster immediately so discovery surfaces fill while enrichment runs.
+	const refreshed = getRepoById(repo.id) ?? repo;
+	applyRepoClusters(refreshed, enrichment);
+
+	// Stories stay queued — generation is heavier than classify/cluster.
 	enqueueRepoPipeline(repo.id, {
 		needsClassification: false,
 		needsScoring: false,
-		needsClustering: true,
+		needsClustering: false,
 		needsStory: true
 	});
 
@@ -310,10 +315,12 @@ export async function refreshRepo(repo: RepoRow): Promise<{ metricsChanged: bool
 	saveRefreshUpdate(repo.id, enrichment);
 	insertMetricSnapshot(repo.id, toMetricInput(enrichment));
 	applyRepoIntelligence(repo, enrichment);
+	const refreshed = getRepoById(repo.id) ?? repo;
+	applyRepoClusters(refreshed, enrichment);
 	enqueueRepoPipeline(repo.id, {
 		needsClassification: false,
 		needsScoring: false,
-		needsClustering: true,
+		needsClustering: false,
 		needsStory: true
 	});
 
