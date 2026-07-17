@@ -107,9 +107,14 @@ function enrichMessage(progress: EnrichmentProgress): string {
 		return `Enriching ${progress.currentRepo} — ${progress.completed.toLocaleString()} done, ${progress.remaining.toLocaleString()} left`;
 	}
 	if (progress.remaining > 0) {
-		return `Enriching repositories — ${progress.enrichedTotal.toLocaleString()} done, ${progress.remaining.toLocaleString()} waiting`;
+		return `Building repository intelligence — ${progress.enrichedTotal.toLocaleString()} done, ${progress.remaining.toLocaleString()} waiting`;
 	}
 	return 'Enrichment caught up — ready for new discoveries.';
+}
+
+/** True when the public status bar will show enrichment backlog counts. */
+export function shouldSurfaceEnrichmentProgress(enrichment: EnrichmentProgress): boolean {
+	return enrichment.remaining > 0 || Boolean(enrichment.currentRepo);
 }
 
 export function formatActivityMessage(
@@ -118,16 +123,23 @@ export function formatActivityMessage(
 	hasBacklog: boolean,
 	enrichment?: EnrichmentProgress
 ): string {
+	// Counts in the activity bar are enrichment totals whenever a backlog remains.
+	// Prefer enrichment copy so the banner never says "Scanning GitHub..." next to those numbers.
+	if (enrichment && shouldSurfaceEnrichmentProgress(enrichment) && action !== 'rate_limited') {
+		if (action === 'enrich' || action === 'idle' || action === 'ingest') {
+			return enrichMessage(enrichment);
+		}
+	}
 	if (action === 'enrich' && enrichment) {
 		return enrichMessage(enrichment);
 	}
 	switch (action) {
 		case 'ingest':
-			return 'Scanning GitHub for new repos...';
+			return 'Discovering repositories from the archive...';
 		case 'enrich':
 			return count != null
-				? `Enriching repositories — working through ${count.toLocaleString()}...`
-				: 'Enriching repositories...';
+				? `Building repository intelligence — working through ${count.toLocaleString()}...`
+				: 'Building repository intelligence...';
 		case 'archive':
 			return count != null
 				? `Saving snapshots for ${count} repositories...`
@@ -192,14 +204,14 @@ export function resolveDaemonActivity(input: DaemonActivityInput): DaemonActivit
 		input.daemonRunning && input.phase && WORK_PHASES.has(input.phase) ? input.phase : null;
 
 	if (activeWorker) {
-		const action = workerJobToAction(activeWorker.jobType);
+		const workerAction = workerJobToAction(activeWorker.jobType);
 		const count = plannedCount(activeWorker.jobType, activeWorker.detail);
 		const currentFromJob =
 			typeof activeWorker.detail.current_repo === 'string'
 				? activeWorker.detail.current_repo
 				: input.enrichment.currentRepo;
 		const enrichment =
-			action === 'enrich'
+			workerAction === 'enrich'
 				? {
 						...input.enrichment,
 						currentRepo: currentFromJob,
@@ -213,6 +225,11 @@ export function resolveDaemonActivity(input: DaemonActivityInput): DaemonActivit
 								: input.enrichment.remaining
 					}
 				: input.enrichment;
+		// When the bar shows enrichment counts, surface enrich as the public action.
+		const action =
+			workerAction === 'ingest' && shouldSurfaceEnrichmentProgress(enrichment)
+				? 'enrich'
+				: workerAction;
 		return {
 			action,
 			message: formatActivityMessage(action, count, input.hasBacklog, enrichment),
@@ -224,10 +241,14 @@ export function resolveDaemonActivity(input: DaemonActivityInput): DaemonActivit
 	}
 
 	if (activePhase) {
-		const action = phaseToAction(activePhase);
+		const phaseAction = phaseToAction(activePhase);
 		const count = defaultBatchSize(activePhase);
+		const action =
+			phaseAction === 'ingest' && shouldSurfaceEnrichmentProgress(input.enrichment)
+				? 'enrich'
+				: phaseAction;
 		const message =
-			activePhase === 'backfill'
+			activePhase === 'backfill' && !shouldSurfaceEnrichmentProgress(input.enrichment)
 				? 'Catching up on historical data...'
 				: formatActivityMessage(action, count, input.hasBacklog, input.enrichment);
 		return {
