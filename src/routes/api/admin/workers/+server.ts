@@ -7,6 +7,7 @@ import {
 	runPipelineJob,
 	runRefreshJob,
 	runSearchIngestJob,
+	runTrendingIngestJob,
 	runBackupJob
 } from '$lib/server/job-runner';
 import type { RequestHandler } from './$types';
@@ -36,6 +37,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 		case 'search-ingest': {
 			const result = runSearchIngestJob(body.hour_key);
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'trending-ingest': {
+			const result = runTrendingIngestJob();
 			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
 		}
 		case 'enrich': {

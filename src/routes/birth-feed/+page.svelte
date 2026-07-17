@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { timeAgo, formatDateShort } from '$lib/utils';
 	import { repoDetailPath } from '$lib/repo-nav';
 	import type { PageData } from './$types';
@@ -63,21 +63,24 @@
 		e.preventDefault();
 		const form = e.target as HTMLFormElement;
 		const fd = new FormData(form);
-		window.location.href = buildUrl({
-			sort: (fd.get('sort') as string) ?? '',
-			source: (fd.get('source') as string) ?? '',
-			language: (fd.get('language') as string) ?? '',
-			year: (fd.get('year') as string) ?? '',
-			dateFrom: (fd.get('date_from') as string) ?? '',
-			dateTo: (fd.get('date_to') as string) ?? '',
-			minStars: (fd.get('min_stars') as string) ?? '',
-			minForks: (fd.get('min_forks') as string) ?? '',
-			archivedOnly: fd.get('archived_only') === 'on',
-			hasReadme: fd.get('has_readme') === 'on',
-			hasRelease: fd.get('has_release') === 'on',
-			deletedOnly: fd.get('deleted_only') === 'on',
-			page: 1
-		});
+		void goto(
+			buildUrl({
+				sort: (fd.get('sort') as string) ?? '',
+				source: (fd.get('source') as string) ?? '',
+				language: (fd.get('language') as string) ?? '',
+				year: (fd.get('year') as string) ?? '',
+				dateFrom: (fd.get('date_from') as string) ?? '',
+				dateTo: (fd.get('date_to') as string) ?? '',
+				minStars: (fd.get('min_stars') as string) ?? '',
+				minForks: (fd.get('min_forks') as string) ?? '',
+				archivedOnly: fd.get('archived_only') === 'on',
+				hasReadme: fd.get('has_readme') === 'on',
+				hasRelease: fd.get('has_release') === 'on',
+				deletedOnly: fd.get('deleted_only') === 'on',
+				page: 1
+			}),
+			{ keepFocus: true, noScroll: true }
+		);
 	}
 
 	function sourceLabel(source: string): string {

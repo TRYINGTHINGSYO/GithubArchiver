@@ -197,6 +197,20 @@
 </section>
 
 <section class="detail-section">
+	<h2 class="section-title">Repo names for AI</h2>
+	<p class="storage-meta">
+		Download every repository name with a ready-to-paste prompt so an AI model can infer what
+		projects are. Includes description/language/stars when available.
+	</p>
+	<div class="storage-actions">
+		<a class="filter-btn" href="/api/export/names?scope=all&format=txt" download>All names (.txt)</a>
+		<a class="filter-btn" href="/api/export/names?scope=all&format=json" download>All names (.json)</a>
+		<a class="filter-btn" href="/api/export/names?scope=active&format=txt" download>Active only</a>
+		<a class="filter-btn" href="/api/export/names?scope=deleted&format=txt" download>Deleted only</a>
+	</div>
+</section>
+
+<section class="detail-section">
 	<h2 class="section-title">Bulk export</h2>
 	<p class="storage-meta">
 		Builds a zip from on-disk <code>archive_snapshots</code> (no GitHub re-fetch). Includes
@@ -279,5 +293,11 @@
 		flex-wrap: wrap;
 		gap: 0.5rem;
 		margin-bottom: 0.75rem;
+	}
+
+	.storage-actions a.filter-btn {
+		display: inline-flex;
+		align-items: center;
+		text-decoration: none;
 	}
 </style>

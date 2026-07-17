@@ -1,5 +1,52 @@
 import type { RepoQuery } from './types';
 
+function appendClusterFilters(
+	opts: RepoQuery,
+	alias: string,
+	where: string[],
+	params: (string | number)[]
+): void {
+	const slugs = resolveClusterSlugs(opts);
+	if (slugs.length === 0) return;
+
+	const minConfidence = opts.minClusterConfidence ?? 0;
+	const matchAll = opts.clusterMatch === 'all';
+
+	if (matchAll) {
+		for (const slug of slugs) {
+			where.push(
+				`EXISTS (
+				  SELECT 1 FROM repository_cluster_memberships m
+				  JOIN repo_clusters c ON c.id = m.cluster_id
+				  WHERE m.repository_id = ${alias}.id
+				    AND c.slug = ?
+				    AND m.confidence >= ?
+				)`
+			);
+			params.push(slug, minConfidence);
+		}
+		return;
+	}
+
+	const placeholders = slugs.map(() => '?').join(', ');
+	where.push(
+		`EXISTS (
+		  SELECT 1 FROM repository_cluster_memberships m
+		  JOIN repo_clusters c ON c.id = m.cluster_id
+		  WHERE m.repository_id = ${alias}.id
+		    AND c.slug IN (${placeholders})
+		    AND m.confidence >= ?
+		)`
+	);
+	params.push(...slugs, minConfidence);
+}
+
+function resolveClusterSlugs(opts: RepoQuery): string[] {
+	if (opts.clusters?.length) return opts.clusters;
+	if (opts.cluster) return [opts.cluster];
+	return [];
+}
+
 export type RepoSort =
 	| 'newest_discovered'
 	| 'created_at'
@@ -9,7 +56,8 @@ export type RepoSort =
 	| 'updated_at'
 	| 'pushed_at'
 	| 'recently_archived'
-	| 'recently_released';
+	| 'recently_released'
+	| 'interesting_score';
 
 export const REPO_SORTS: RepoSort[] = [
 	'newest_discovered',
@@ -20,7 +68,8 @@ export const REPO_SORTS: RepoSort[] = [
 	'updated_at',
 	'pushed_at',
 	'recently_archived',
-	'recently_released'
+	'recently_released',
+	'interesting_score'
 ];
 
 export function parseRepoSort(value: string | null | undefined): RepoSort {
@@ -104,10 +153,32 @@ export function buildRepoFilters(
 		params.push(effectiveMinStars);
 	}
 
+	if (opts.maxStars != null && opts.maxStars > 0) {
+		where.push(`${alias}.stars <= ?`);
+		params.push(opts.maxStars);
+	}
+
 	if (opts.minForks != null && opts.minForks > 0) {
 		where.push(`${alias}.forks >= ?`);
 		params.push(opts.minForks);
 	}
+
+	if (opts.category) {
+		where.push(`${alias}.category = ?`);
+		params.push(opts.category);
+	}
+
+	if (opts.signalTier) {
+		where.push(`${alias}.signal_tier = ?`);
+		params.push(opts.signalTier);
+	}
+
+	if (opts.minInterestingScore != null && opts.minInterestingScore > 0) {
+		where.push(`${alias}.interesting_score >= ?`);
+		params.push(opts.minInterestingScore);
+	}
+
+	appendClusterFilters(opts, alias, where, params);
 
 	// legacy feed filters when sort not explicitly set
 	const sort = resolveSort(opts);
@@ -149,6 +220,8 @@ export function buildRepoOrderBy(opts: RepoQuery, alias = 'repos'): string {
 			return `(SELECT MAX(a.archived_at) FROM archive_snapshots a WHERE a.repo_id = ${alias}.id) DESC`;
 		case 'recently_released':
 			return `(SELECT MAX(COALESCE(rl.published_at, rl.first_seen_at)) FROM releases rl WHERE rl.repo_id = ${alias}.id) DESC`;
+		case 'interesting_score':
+			return `${alias}.interesting_score IS NULL, ${alias}.interesting_score DESC`;
 		default:
 			return `${alias}.first_seen_at DESC`;
 	}

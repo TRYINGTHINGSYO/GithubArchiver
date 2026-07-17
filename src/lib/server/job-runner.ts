@@ -13,6 +13,7 @@ import { runEnrichCycle } from './workers/enrich';
 import { runIngestCycle } from './workers/ingest';
 import { runRefreshCycle } from './workers/refresh';
 import { isMetadataOnlyMode } from './runtime-mode';
+import { runTrendingIngestCycle } from './workers/trending';
 
 const DATA_DIR = resolve(process.env.DATA_DIR ?? './data');
 const LOG_FILE = join(DATA_DIR, 'worker.log');
@@ -73,11 +74,33 @@ export function runPipelineJob(): EnqueueResult {
 	return enqueue('pipeline', async () => {
 		const jobId = startJobRun('pipeline', {});
 		try {
+			const trending = await runTrendingIngestCycle();
 			const ingest = await runIngestCycle();
 			const enrich = await runEnrichCycle();
 			const refresh = await runRefreshCycle();
 			const archive = await runArchiveCycle();
-			finishJobRun(jobId, 'success', { ingest, enrich, refresh, archive });
+			finishJobRun(jobId, 'success', { trending, ingest, enrich, refresh, archive });
+		} catch (err) {
+			finishJobRun(
+				jobId,
+				'failed',
+				{},
+				err instanceof Error ? err.message : String(err)
+			);
+			throw err;
+		}
+	});
+}
+
+export function runTrendingIngestJob(): EnqueueResult {
+	return enqueue('trending-ingest', async () => {
+		const jobId = startJobRun('ingest', { mode: 'trending' });
+		try {
+			const result = await runTrendingIngestCycle();
+			finishJobRun(jobId, result.rateLimited ? 'failed' : 'success', { ...result });
+			if (result.rateLimited) {
+				throw new Error(`Trending ingest rate limited until ${result.rateLimitResetAt}`);
+			}
 		} catch (err) {
 			finishJobRun(
 				jobId,

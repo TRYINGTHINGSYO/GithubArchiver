@@ -33,9 +33,19 @@ export interface RepoRow {
 	category: string | null;
 	category_confidence: number | null;
 	classified_at: string | null;
+	interesting_score: number | null;
+	signal_tier: string | null;
+	scored_at: string | null;
+	cluster_version: number | null;
+	clustered_at: string | null;
+	story_facts_json: string | null;
+	story_text: string | null;
+	story_version: number | null;
+	story_generated_at: string | null;
+	enrichment_level: number;
 }
 
-export type DiscoverySource = 'gharchive' | 'github_search';
+export type DiscoverySource = 'gharchive' | 'github_search' | 'manual' | 'trending';
 
 export interface NewRepo {
 	owner: string;
@@ -83,7 +93,15 @@ export interface RepoQuery {
 	deletedOnly?: boolean;
 	includeDeleted?: boolean;
 	minStars?: number;
+	maxStars?: number;
 	minForks?: number;
+	category?: string;
+	signalTier?: string;
+	minInterestingScore?: number;
+	cluster?: string;
+	clusters?: string[];
+	clusterMatch?: 'any' | 'all';
+	minClusterConfidence?: number;
 	page?: number;
 	perPage?: number;
 }

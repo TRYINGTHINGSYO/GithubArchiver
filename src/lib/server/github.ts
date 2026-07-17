@@ -25,6 +25,7 @@ export interface GitHubRepo {
 	size: number;
 	language: string | null;
 	topics?: string[];
+	created_at: string;
 	pushed_at: string | null;
 	updated_at: string;
 	license: { spdx_id: string | null } | null;
@@ -68,10 +69,48 @@ export class GitHubNotFoundError extends Error {
 }
 
 export class GitHubRateLimitError extends Error {
-	constructor(public resetAt: Date) {
-		super(`GitHub rate limit exceeded until ${resetAt.toISOString()}`);
+	constructor(
+		public resetAt: Date,
+		public secondary = false,
+		public retryAfterSeconds: number | null = null
+	) {
+		super(
+			secondary
+				? `GitHub secondary rate limit; retry after ${retryAfterSeconds ?? 60}s`
+				: `GitHub rate limit exceeded until ${resetAt.toISOString()}`
+		);
 		this.name = 'GitHubRateLimitError';
 	}
+}
+
+/** True when a token is configured. Never returns or logs the token value. */
+export function hasGitHubToken(): boolean {
+	return Boolean(process.env.GITHUB_TOKEN?.trim());
+}
+
+function sanitizeGitHubErrorBody(body: string): string {
+	// Never echo credentials if a misconfigured proxy or error page included them.
+	return body
+		.replace(/Bearer\s+[A-Za-z0-9._\-]+/gi, 'Bearer [redacted]')
+		.replace(/github_pat_[A-Za-z0-9_]+/gi, '[redacted]')
+		.replace(/ghp_[A-Za-z0-9_]+/gi, '[redacted]')
+		.slice(0, 500);
+}
+
+function rateLimitErrorFromResponse(res: Response): never {
+	const remaining = res.headers.get('x-ratelimit-remaining');
+	const reset = res.headers.get('x-ratelimit-reset');
+	const retryAfter = res.headers.get('retry-after');
+	const retryAfterSeconds = retryAfter ? Number(retryAfter) : null;
+	// Secondary limits often return 403/429 while the primary quota still has remaining.
+	const secondary =
+		res.status === 429 ||
+		(remaining != null && remaining !== '0') ||
+		Boolean(retryAfter && remaining !== '0');
+	const resetAt = reset
+		? new Date(Number(reset) * 1000)
+		: new Date(Date.now() + (retryAfterSeconds && Number.isFinite(retryAfterSeconds) ? retryAfterSeconds * 1000 : 60_000));
+	throw new GitHubRateLimitError(resetAt, secondary, Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : null);
 }
 
 export class DownloadTooLargeError extends Error {
@@ -100,14 +139,12 @@ async function ghFetch<T>(path: string): Promise<T> {
 	}
 
 	if (res.status === 403 || res.status === 429) {
-		const reset = res.headers.get('x-ratelimit-reset');
-		const resetAt = reset ? new Date(Number(reset) * 1000) : new Date(Date.now() + 60_000);
-		throw new GitHubRateLimitError(resetAt);
+		rateLimitErrorFromResponse(res);
 	}
 
 	if (!res.ok) {
 		const body = await res.text();
-		throw new Error(`GitHub API ${res.status}: ${body}`);
+		throw new Error(`GitHub API ${res.status}: ${sanitizeGitHubErrorBody(body)}`);
 	}
 
 	return res.json() as Promise<T>;
@@ -133,6 +170,7 @@ export async function fetchRepoMetadata(owner: string, repo: string) {
 		size: gh.size,
 		license: gh.license?.spdx_id ?? null,
 		topics: gh.topics ?? [],
+		created_at: gh.created_at,
 		pushed_at: gh.pushed_at,
 		updated_at: gh.updated_at,
 		archived: gh.archived
@@ -282,6 +320,9 @@ export interface GitHubSearchRepoItem {
 	owner: { login: string };
 	html_url: string;
 	created_at: string;
+	description?: string | null;
+	stargazers_count?: number;
+	language?: string | null;
 }
 
 export interface GitHubSearchRepoResponse {
@@ -290,32 +331,29 @@ export interface GitHubSearchRepoResponse {
 	items: GitHubSearchRepoItem[];
 }
 
-function rateLimitFromResponse(res: Response): never {
-	const reset = res.headers.get('x-ratelimit-reset');
-	const resetAt = reset ? new Date(Number(reset) * 1000) : new Date(Date.now() + 60_000);
-	throw new GitHubRateLimitError(resetAt);
-}
+export type GitHubSearchSort = 'created' | 'stars' | 'updated';
 
 export async function searchRepositories(
 	query: string,
 	page: number,
-	perPage = 100
+	perPage = 100,
+	opts: { sort?: GitHubSearchSort; order?: 'asc' | 'desc' } = {}
 ): Promise<GitHubSearchRepoResponse> {
 	const params = new URLSearchParams({
 		q: query,
-		sort: 'created',
-		order: 'asc',
+		sort: opts.sort ?? 'created',
+		order: opts.order ?? (opts.sort === 'stars' || opts.sort === 'updated' ? 'desc' : 'asc'),
 		per_page: String(perPage),
 		page: String(page)
 	});
 	const res = await fetch(`${GITHUB_API}/search/repositories?${params}`, { headers: headers() });
 
 	if (res.status === 403 || res.status === 429) {
-		rateLimitFromResponse(res);
+		rateLimitErrorFromResponse(res);
 	}
 	if (!res.ok) {
 		const body = await res.text();
-		throw new Error(`GitHub Search API ${res.status}: ${body}`);
+		throw new Error(`GitHub Search API ${res.status}: ${sanitizeGitHubErrorBody(body)}`);
 	}
 
 	return res.json() as Promise<GitHubSearchRepoResponse>;

@@ -2,12 +2,18 @@ import type { RepoCategory } from '$lib/server/classify-repo';
 import { getLatestCategoryDaily } from '$lib/server/db/category-stats';
 
 const CATEGORY_SEARCH_QUALIFIERS: Partial<Record<RepoCategory, string>> = {
-	'cli-tool': 'topic:cli',
+	'school-assignment': 'topic:github-classroom',
+	'ai-project': 'topic:mcp',
 	game: 'topic:game',
-	'data-ml': 'topic:machine-learning',
 	devops: 'topic:devops',
-	'web-app': 'topic:frontend',
-	'library': 'topic:library'
+	'data-science': 'topic:machine-learning',
+	framework: 'topic:framework',
+	library: 'topic:library',
+	product: 'topic:saas',
+	security: 'topic:security',
+	'mobile-app': 'topic:android',
+	'hardware-iot': 'topic:arduino',
+	portfolio: 'topic:portfolio'
 };
 
 export function categorySearchQualifier(category: string): string | null {

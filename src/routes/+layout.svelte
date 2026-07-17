@@ -7,16 +7,18 @@
 <header class="site-header">
 	<div class="container">
 		<a href="/" class="logo">Github<span>Archive+</span></a>
-		<div class="stats-bar">
+		<nav class="stats-bar" aria-label="Primary">
 			<span>Evidence-first repository intelligence</span>
+			<a href="/?sort=updated_at&min_stars=100&max_stars=1000" class="admin-link">Emerging</a>
 			<a href="/birth-feed" class="admin-link">Birth Feed</a>
+			<a href="/#repository-feed" class="admin-link">Search</a>
 			{#if data.isAdmin}
 				<a href="/admin" class="admin-link">Admin</a>
 				<a href="/logout" class="admin-link">Logout</a>
 			{:else}
 				<a href="/login" class="admin-link">Login</a>
 			{/if}
-		</div>
+		</nav>
 	</div>
 </header>
 

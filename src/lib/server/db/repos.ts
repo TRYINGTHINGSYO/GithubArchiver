@@ -63,14 +63,94 @@ export function getRepoBySlug(owner: string, name: string): RepoRow | null {
 	return alias ?? null;
 }
 
-export function listUnenrichedRepos(limit: number): RepoRow[] {
+export function listUnenrichedRepos(
+	limit: number,
+	opts: { createdFrom?: string; createdTo?: string } = {}
+): RepoRow[] {
+	const database = getDb();
+	const where = ['enriched_at IS NULL', 'deleted_at IS NULL'];
+	const params: (string | number)[] = [];
+
+	if (opts.createdFrom) {
+		where.push('created_at >= ?');
+		params.push(opts.createdFrom);
+	}
+	if (opts.createdTo) {
+		where.push('created_at < ?');
+		params.push(opts.createdTo);
+	}
+
+	const orderBy = opts.createdFrom || opts.createdTo
+		? 'COALESCE(stars, 0) DESC, created_at DESC'
+		: `CASE
+			     WHEN created_at >= datetime('now', '-30 days') THEN 0
+			     WHEN created_at >= datetime('now', '-90 days') THEN 1
+			     ELSE 2
+			   END,
+			   COALESCE(stars, 0) DESC,
+			   created_at DESC`;
+
+	params.push(limit);
+	return database
+		.prepare(
+			`SELECT * FROM repos
+			 WHERE ${where.join(' AND ')}
+			 ORDER BY ${orderBy}
+			 LIMIT ?`
+		)
+		.all(...params) as RepoRow[];
+}
+
+export function countReposInCreatedRange(start: string, end: string): {
+	total: number;
+	enriched: number;
+	unenriched: number;
+	distinctOwners: number;
+	distinctEnrichedOwners: number;
+} {
+	const database = getDb();
+	const row = database
+		.prepare(
+			`SELECT
+			   COUNT(*) AS total,
+			   SUM(CASE WHEN enriched_at IS NOT NULL THEN 1 ELSE 0 END) AS enriched,
+			   SUM(CASE WHEN enriched_at IS NULL AND deleted_at IS NULL THEN 1 ELSE 0 END) AS unenriched,
+			   COUNT(DISTINCT owner) AS distinctOwners,
+			   COUNT(DISTINCT CASE WHEN enriched_at IS NOT NULL THEN owner END) AS distinctEnrichedOwners
+			 FROM repos
+			 WHERE created_at >= ? AND created_at < ?`
+		)
+		.get(start, end) as {
+		total: number;
+		enriched: number;
+		unenriched: number;
+		distinctOwners: number;
+		distinctEnrichedOwners: number;
+	};
+	return row;
+}
+
+/** Repos that have Level 1 metadata but still need a higher enrichment tier. */
+export function listReposBelowEnrichmentLevel(level: number, limit: number): RepoRow[] {
 	const database = getDb();
 	return database
 		.prepare(
-			`SELECT * FROM repos WHERE enriched_at IS NULL AND deleted_at IS NULL
-			 ORDER BY first_seen_at DESC LIMIT ?`
+			`SELECT * FROM repos
+			 WHERE deleted_at IS NULL
+			   AND enrichment_level < ?
+			   AND enriched_at IS NOT NULL
+			 ORDER BY
+			   CASE
+			     WHEN created_at >= datetime('now', '-30 days') THEN 0
+			     WHEN created_at >= datetime('now', '-90 days') THEN 1
+			     ELSE 2
+			   END,
+			   COALESCE(interesting_score, 0) DESC,
+			   COALESCE(stars, 0) DESC,
+			   created_at DESC
+			 LIMIT ?`
 		)
-		.all(limit) as RepoRow[];
+		.all(level, limit) as RepoRow[];
 }
 
 export function saveEnrichment(id: number, data: EnrichmentData): void {
@@ -96,6 +176,7 @@ export function saveEnrichment(id: number, data: EnrichmentData): void {
 				pushed_at = ?,
 				updated_at = ?,
 				enriched_at = COALESCE(enriched_at, ?),
+				enrichment_level = MAX(COALESCE(enrichment_level, 0), 1),
 				last_checked_at = ?
 			WHERE id = ?`
 		)

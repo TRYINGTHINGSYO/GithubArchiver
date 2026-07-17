@@ -1,5 +1,7 @@
 import { getDb } from './connection.js';
 import type { RepoCategory } from '$lib/server/classify-repo';
+import type { SignalTier } from '$lib/server/score-repo';
+import type { RepoRow } from './types.js';
 
 export interface CategoryDailyRow {
 	id: number;
@@ -41,10 +43,10 @@ export function countReposByCategory(): { category: string; count: number }[] {
 	const db = getDb();
 	return db
 		.prepare(
-			`SELECT COALESCE(category, 'other') as category, COUNT(*) as count
+			`SELECT COALESCE(category, 'unknown') as category, COUNT(*) as count
 			 FROM repos
 			 WHERE enriched_at IS NOT NULL AND deleted_at IS NULL
-			 GROUP BY COALESCE(category, 'other')
+			 GROUP BY COALESCE(category, 'unknown')
 			 ORDER BY count DESC`
 		)
 		.all() as { category: string; count: number }[];
@@ -56,6 +58,8 @@ export function saveRepoIntelligence(
 		summary: string;
 		category: RepoCategory;
 		category_confidence: number;
+		interesting_score: number;
+		signal_tier: SignalTier;
 	}
 ): void {
 	const db = getDb();
@@ -66,9 +70,34 @@ export function saveRepoIntelligence(
 		   summary_generated_at = ?,
 		   category = ?,
 		   category_confidence = ?,
-		   classified_at = ?
+		   classified_at = ?,
+		   interesting_score = ?,
+		   signal_tier = ?,
+		   scored_at = ?
 		 WHERE id = ?`
-	).run(data.summary, now, data.category, data.category_confidence, now, repoId);
+	).run(
+		data.summary,
+		now,
+		data.category,
+		data.category_confidence,
+		now,
+		data.interesting_score,
+		data.signal_tier,
+		now,
+		repoId
+	);
+}
+
+export function listEnrichedReposForReclassification(limit: number, afterId = 0): RepoRow[] {
+	const db = getDb();
+	return db
+		.prepare(
+			`SELECT * FROM repos
+			 WHERE enriched_at IS NOT NULL AND id > ?
+			 ORDER BY id ASC
+			 LIMIT ?`
+		)
+		.all(afterId, limit) as RepoRow[];
 }
 
 export function rollupCategoryDailyIfNeeded(): string | null {

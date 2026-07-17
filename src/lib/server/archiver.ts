@@ -6,6 +6,7 @@ import {
 	getLatestSourceHeadSha,
 	indexRepoFtsById,
 	insertArchiveSnapshot,
+	setEnrichmentLevel,
 	type RepoRow
 } from '$lib/server/db';
 import { appendRepoEvent } from '$lib/server/events';
@@ -124,6 +125,7 @@ export async function archiveRepo(
 				indexRepoFtsById(repo.id, readme);
 				result.readme = 'saved';
 			}
+			setEnrichmentLevel(repo.id, 2);
 		}
 	} catch (err) {
 		if (err instanceof GitHubRateLimitError) throw err;
@@ -137,6 +139,7 @@ export async function archiveRepo(
 
 		if (latestHeadSha === headSha) {
 			result.source = 'skipped';
+			setEnrichmentLevel(repo.id, 3);
 			result.zip = config.createZipSnapshot
 				? await ensureZipForLatestSource(repo, captureReason)
 				: 'skipped';
@@ -182,6 +185,7 @@ export async function archiveRepo(
 			file_path: tarPath
 		}, archivedAt);
 		result.source = 'saved';
+		setEnrichmentLevel(repo.id, 3);
 
 		if (config.createZipSnapshot) {
 			const zipSnapshotId = await createZipSnapshotForSource(

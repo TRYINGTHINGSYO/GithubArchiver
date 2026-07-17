@@ -6,8 +6,9 @@ import {
 
 describe('category-discovery', () => {
 	it('maps categories to search qualifiers', () => {
-		expect(categorySearchQualifier('cli-tool')).toBe('topic:cli');
-		expect(categorySearchQualifier('other')).toBeNull();
+		expect(categorySearchQualifier('library')).toBe('topic:library');
+		expect(categorySearchQualifier('ai-project')).toBe('topic:mcp');
+		expect(categorySearchQualifier('unknown')).toBeNull();
 	});
 
 	it('rotates gap categories by hour key', () => {

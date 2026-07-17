@@ -86,6 +86,11 @@ export interface RepoSummary {
 	category: string | null;
 	category_confidence: number | null;
 	classified_at: string | null;
+	interesting_score: number | null;
+	signal_tier: string | null;
+	scored_at: string | null;
+	cluster_version: number | null;
+	clustered_at: string | null;
 	search_snippet?: string | null;
 	search_rank?: number | null;
 	download_zip_url?: string | null;
@@ -125,7 +130,125 @@ function getRepoArchiveBadges(repoId: number, deletedAt: string | null): RepoArc
 	};
 }
 
-function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: number | null }): RepoSummary {
+type ListArchiveMeta = {
+	badges: RepoArchiveBadges;
+	downloadZipUrl: string | null;
+};
+
+/** Batch badge + download URL lookups for list pages (avoids N+1 per row). */
+function loadListArchiveMeta(
+	repos: Array<Pick<RepoRow, 'id' | 'owner' | 'name' | 'deleted_at'>>
+): Map<number, ListArchiveMeta> {
+	const out = new Map<number, ListArchiveMeta>();
+	if (repos.length === 0) return out;
+
+	const metadataOnly = isMetadataOnlyMode();
+
+	for (const repo of repos) {
+		out.set(repo.id, {
+			badges: {
+				preserved: false,
+				readmeSaved: false,
+				sourceSaved: false,
+				storyReady: false,
+				deletedButSaved: false,
+				metadataOnly
+			},
+			downloadZipUrl: null
+		});
+	}
+
+	const db = getDb();
+	const ids = repos.map((r) => r.id);
+	const placeholders = ids.map(() => '?').join(',');
+
+	const badgeRows = db
+		.prepare(
+			`SELECT
+				r.id AS repo_id,
+				r.deleted_at AS deleted_at,
+				EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id) AS preserved,
+				EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'readme') AS readme_saved,
+				EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'source') AS source_saved,
+				(
+					EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id)
+					OR EXISTS (SELECT 1 FROM releases rl WHERE rl.repo_id = r.id)
+					OR EXISTS (
+						SELECT 1 FROM repository_events e
+						WHERE e.repo_id = r.id
+						  AND e.event_type IN ('readme_changed', 'snapshot_created', 'release_detected', 'deleted')
+					)
+				) AS story_ready
+			 FROM repos r
+			 WHERE r.id IN (${placeholders})`
+		)
+		.all(...ids) as Array<{
+			repo_id: number;
+			deleted_at: string | null;
+			preserved: 0 | 1;
+			readme_saved: 0 | 1;
+			source_saved: 0 | 1;
+			story_ready: 0 | 1;
+		}>;
+
+	for (const row of badgeRows) {
+		const meta = out.get(row.repo_id);
+		if (!meta) continue;
+		meta.badges = {
+			preserved: metadataOnly ? false : row.preserved === 1,
+			readmeSaved: metadataOnly ? false : row.readme_saved === 1,
+			sourceSaved: metadataOnly ? false : row.source_saved === 1,
+			storyReady: row.story_ready === 1,
+			deletedButSaved: metadataOnly ? false : Boolean(row.deleted_at && row.preserved === 1),
+			metadataOnly
+		};
+	}
+
+	if (!metadataOnly) {
+		const snapRows = db
+			.prepare(
+				`SELECT a.repo_id, a.id, a.snapshot_type
+				 FROM archive_snapshots a
+				 INNER JOIN (
+					SELECT repo_id, snapshot_type, MAX(archived_at) AS max_at
+					FROM archive_snapshots
+					WHERE repo_id IN (${placeholders})
+					  AND snapshot_type IN ('zip', 'source')
+					GROUP BY repo_id, snapshot_type
+				 ) latest
+				   ON latest.repo_id = a.repo_id
+				  AND latest.snapshot_type = a.snapshot_type
+				  AND latest.max_at = a.archived_at`
+			)
+			.all(...ids) as Array<{ repo_id: number; id: number; snapshot_type: string }>;
+
+		const byRepo = new Map<number, { zipId: number | null; hasSource: boolean }>();
+		for (const snap of snapRows) {
+			const cur = byRepo.get(snap.repo_id) ?? { zipId: null, hasSource: false };
+			if (snap.snapshot_type === 'zip') cur.zipId = snap.id;
+			if (snap.snapshot_type === 'source') cur.hasSource = true;
+			byRepo.set(snap.repo_id, cur);
+		}
+
+		for (const repo of repos) {
+			const meta = out.get(repo.id);
+			const snaps = byRepo.get(repo.id);
+			if (!meta || !snaps) continue;
+			if (snaps.zipId != null) {
+				meta.downloadZipUrl = `/api/snapshots/${snaps.zipId}`;
+			} else if (snaps.hasSource) {
+				meta.downloadZipUrl = `/api/repo/${repo.owner}/${repo.name}/export?type=source`;
+			}
+		}
+	}
+
+	return out;
+}
+
+function toSummary(
+	row: RepoRow & { fts_snippet?: string | null; fts_rank?: number | null },
+	listMeta?: ListArchiveMeta
+): RepoSummary {
 	const favorite = getRepoFavorite(row.id);
 	return {
 		id: row.id,
@@ -165,10 +288,16 @@ function toSummary(row: RepoRow & { fts_snippet?: string | null; fts_rank?: numb
 		category: row.category ?? null,
 		category_confidence: row.category_confidence ?? null,
 		classified_at: row.classified_at ?? null,
+		interesting_score: row.interesting_score ?? null,
+		signal_tier: row.signal_tier ?? null,
+		scored_at: row.scored_at ?? null,
+		cluster_version: row.cluster_version ?? null,
+		clustered_at: row.clustered_at ?? null,
 		search_snippet: row.fts_snippet ?? null,
 		search_rank: row.fts_rank ?? null,
-		download_zip_url: getRepoZipDownloadUrl(row.owner, row.name, row.id),
-		archive_badges: getRepoArchiveBadges(row.id, row.deleted_at),
+		download_zip_url:
+			listMeta?.downloadZipUrl ?? getRepoZipDownloadUrl(row.owner, row.name, row.id),
+		archive_badges: listMeta?.badges ?? getRepoArchiveBadges(row.id, row.deleted_at),
 		archive_storage_disabled: isMetadataOnlyMode(),
 		is_favorite: Boolean(favorite),
 		favorited_at: favorite?.favorited_at ?? null
@@ -190,7 +319,15 @@ export interface ListReposOptions {
 	hasRelease?: boolean;
 	deletedOnly?: boolean;
 	minStars?: number;
+	maxStars?: number;
 	minForks?: number;
+	category?: string;
+	signalTier?: string;
+	minInterestingScore?: number;
+	cluster?: string;
+	clusters?: string[];
+	clusterMatch?: 'any' | 'all';
+	minClusterConfidence?: number;
 	page?: number;
 	perPage?: number;
 }
@@ -212,14 +349,24 @@ export function listRepos(opts: ListReposOptions = {}) {
 		deletedOnly: opts.deletedOnly,
 		includeDeleted: opts.deletedOnly,
 		minStars: opts.minStars,
+		maxStars: opts.maxStars,
 		minForks: opts.minForks,
+		category: opts.category,
+		signalTier: opts.signalTier,
+		minInterestingScore: opts.minInterestingScore,
+		cluster: opts.cluster,
+		clusters: opts.clusters,
+		clusterMatch: opts.clusterMatch,
+		minClusterConfidence: opts.minClusterConfidence,
 		page: opts.page,
 		perPage: opts.perPage
 	});
 
+	const listMeta = loadListArchiveMeta(result.repos);
+
 	return {
 		...result,
-		repos: result.repos.map(toSummary),
+		repos: result.repos.map((row) => toSummary(row, listMeta.get(row.id))),
 		search_mode: opts.q?.trim() ? ('fts' as const) : ('list' as const)
 	};
 }
@@ -1398,7 +1545,7 @@ function relatedProjects(repo: RepoSummary): RepoSummary[] {
 	const sourceTopics = new Set(repo.topics);
 	return result.repos
 		.filter((row) => row.id !== repo.id)
-		.map(toSummary)
+		.map((row) => toSummary(row))
 		.map((candidate) => {
 			const sharedTopics = candidate.topics.filter((topic) => sourceTopics.has(topic)).length;
 			const language = repo.language && candidate.language === repo.language ? 2 : 0;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { repoDetailPath } from '$lib/repo-nav';
-	import { formatDateShort, timeAgo } from '$lib/utils';
+	import { formatDateShort, formatStarCount, timeAgo } from '$lib/utils';
 
 	export interface RepoListItemData {
 		owner: string;
@@ -12,6 +12,11 @@
 		description?: string | null;
 		language?: string | null;
 		stars?: number | null;
+		forks?: number | null;
+		license?: string | null;
+		topics?: string[];
+		summary?: string | null;
+		category?: string | null;
 		search_snippet?: string | null;
 		deleted_at?: string | null;
 		enriched_at?: string | null;
@@ -30,6 +35,7 @@
 	let { repo, isAdmin = false }: { repo: RepoListItemData; isAdmin?: boolean } = $props();
 	let favoritePending = $state(false);
 	let favorited = $state(false);
+	const topicChips = $derived((repo.topics ?? []).slice(0, 4));
 
 	const detailHref = $derived(repoDetailPath(repo.owner, repo.name));
 	const archiveSummary = $derived(
@@ -99,10 +105,21 @@
 
 		{#if repo.search_snippet}
 			<p class="repo-summary">{@html repo.search_snippet}</p>
+		{:else if repo.summary}
+			<p class="repo-summary">{repo.summary}</p>
 		{:else if repo.description}
 			<p class="repo-summary">{repo.description}</p>
 		{:else}
-			<p class="repo-summary muted">No description archived yet.</p>
+			<p class="repo-summary muted">No description yet — open it to fetch the full story from GitHub.</p>
+		{/if}
+
+		{#if repo.category || topicChips.length}
+			<div class="repo-tags" aria-label="Topics">
+				{#if repo.category}<span class="topic-chip category">{repo.category}</span>{/if}
+				{#each topicChips as topic}
+					<span class="topic-chip">{topic}</span>
+				{/each}
+			</div>
 		{/if}
 
 		{#if repo.archive_badges?.metadataOnly || repo.archive_badges?.preserved || repo.archive_badges?.readmeSaved || repo.archive_badges?.sourceSaved || repo.archive_badges?.storyReady || repo.archive_badges?.deletedButSaved}
@@ -123,10 +140,12 @@
 
 		<div class="repo-meta" aria-label="Repository metadata">
 			{#if repo.language}<span>{repo.language}</span>{/if}
-			{#if repo.stars !== null}<span>{repo.stars} stars</span>{/if}
+			{#if repo.stars != null}<span title={`${repo.stars} stars`}>★ {formatStarCount(repo.stars)}</span>{/if}
+			{#if repo.forks != null}<span>{formatStarCount(repo.forks)} forks</span>{/if}
+			{#if repo.license}<span>{repo.license}</span>{/if}
 			<span title={repo.created_at}>Created {formatDateShort(repo.created_at)}</span>
 			{#if repo.deleted_at}<span class="badge deleted">deleted</span>{/if}
-			{#if !repo.enriched_at}<span class="badge pending">not enriched</span>{/if}
+			{#if !repo.enriched_at}<span class="badge pending">details pending</span>{/if}
 		</div>
 	</article>
 </li>
@@ -188,6 +207,27 @@
 
 	.muted {
 		color: var(--text-muted);
+	}
+
+	.repo-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+	}
+
+	.topic-chip {
+		display: inline-flex;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		padding: 0.1rem 0.5rem;
+		font-size: 0.72rem;
+		color: var(--text-muted);
+		background: color-mix(in srgb, var(--bg-elevated, transparent) 80%, transparent);
+	}
+
+	.topic-chip.category {
+		color: var(--text);
+		border-color: color-mix(in srgb, var(--accent, #3b82f6) 40%, var(--border));
 	}
 
 	.archive-badges {

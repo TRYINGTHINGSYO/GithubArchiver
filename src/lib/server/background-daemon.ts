@@ -16,12 +16,16 @@ import { runEnrichCycle } from './workers/enrich';
 import { runIngestCycle, isIngestCycleFailure } from './workers/ingest';
 import { runRefreshCycle } from './workers/refresh';
 import { runSearchGapCycle } from './workers/search-gap';
+import { runTrendingIngestCycle } from './workers/trending';
 import { runStorageAnalysis } from './storage';
 
 const SLEEP_MIN_MS = Number(process.env.DAEMON_SLEEP_MIN_MS ?? 5 * 60 * 1000);
 const SLEEP_MAX_MS = Number(process.env.DAEMON_SLEEP_MAX_MS ?? 15 * 60 * 1000);
 const BACKOFF_BASE_MS = Number(process.env.DAEMON_BACKOFF_BASE_MS ?? 60_000);
 const BACKOFF_MAX_MS = Number(process.env.DAEMON_BACKOFF_MAX_MS ?? 15 * 60 * 1000);
+const TRENDING_IDLE_INTERVAL_MS = Number(
+	process.env.TRENDING_IDLE_INTERVAL_MS ?? 30 * 60 * 1000
+);
 const DATA_DIR = resolve(process.env.DATA_DIR ?? './data');
 const LOG_FILE = join(DATA_DIR, 'worker.log');
 
@@ -34,6 +38,7 @@ let phase = 'stopped' as string;
 let sleepUntil: string | null = null;
 let startedAt: string | null = null;
 let rateLimitedUntil: string | null = null;
+let lastTrendingAt = 0;
 
 function ensureDataDir() {
 	mkdirSync(DATA_DIR, { recursive: true });
@@ -183,8 +188,20 @@ async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
 				detail: combined
 			};
 		}
-		case 'idle':
-			return { hadFailure: false };
+		case 'idle': {
+			const due = Date.now() - lastTrendingAt >= TRENDING_IDLE_INTERVAL_MS;
+			if (!due) return { hadFailure: false };
+			const trending = await runTrendingIngestCycle();
+			lastTrendingAt = Date.now();
+			appendLog(
+				`[daemon] trending: +${trending.inserted} repos (found ${trending.found}, ${trending.minStars}..${trending.maxStars}★)`
+			);
+			return {
+				hadFailure: trending.rateLimited,
+				rateLimitResetAt: trending.rateLimitResetAt,
+				detail: { ...trending }
+			};
+		}
 	}
 }
 

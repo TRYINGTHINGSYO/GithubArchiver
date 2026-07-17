@@ -102,6 +102,11 @@ export function hourKey(date: Date): string {
 }
 
 export function archiveUrlForKey(key: string): string {
+	// GH Archive filenames use non-padded hours (…-5.json.gz, not …-05.json.gz).
+	const match = key.match(/^(\d{4}-\d{2}-\d{2})-(\d{1,2})$/);
+	if (match) {
+		return `${GH_ARCHIVE_BASE}/${match[1]}-${Number(match[2])}.json.gz`;
+	}
 	return `${GH_ARCHIVE_BASE}/${key}.json.gz`;
 }
 

@@ -27,6 +27,7 @@
 		if (f.dateFrom) params.set('date_from', String(f.dateFrom));
 		if (f.dateTo) params.set('date_to', String(f.dateTo));
 		if (f.minStars) params.set('min_stars', String(f.minStars));
+		if (f.maxStars) params.set('max_stars', String(f.maxStars));
 		if (f.minForks) params.set('min_forks', String(f.minForks));
 		if (f.neverEnriched) params.set('never_enriched', '1');
 		if (f.archivedOnly) params.set('archived_only', '1');
@@ -52,6 +53,7 @@
 			dateFrom: (fd.get('date_from') as string) ?? '',
 			dateTo: (fd.get('date_to') as string) ?? '',
 			minStars: (fd.get('min_stars') as string) ?? '',
+			maxStars: (fd.get('max_stars') as string) ?? '',
 			minForks: (fd.get('min_forks') as string) ?? '',
 			perPage: (fd.get('per_page') as string) ?? '50',
 			neverEnriched: fd.get('never_enriched') === 'on',
@@ -133,6 +135,7 @@
 				data.filters.dateFrom ||
 				data.filters.dateTo ||
 				data.filters.minStars ||
+				data.filters.maxStars ||
 				data.filters.minForks ||
 				data.filters.neverEnriched ||
 				data.filters.archivedOnly ||
@@ -173,7 +176,7 @@
 </script>
 
 <svelte:head>
-	<title>GithubArchive+ - {feedTitle}</title>
+	<title>GithubArchive+ — Find, understand, and save GitHub repos</title>
 </svelte:head>
 
 <section class="section-block archive-inventory" aria-labelledby="pulse-title">
@@ -337,7 +340,12 @@
 			<p class="eyebrow">Browse</p>
 			<h2 id="feed-title">{feedTitle}</h2>
 		</div>
-		<span class="feed-count">{data.total.toLocaleString()} repositories</span>
+		<div class="feed-heading-actions">
+			<span class="feed-count">{data.total.toLocaleString()} repositories</span>
+			<a class="button-ghost" href="/api/export/names?scope=all&format=txt" download>
+				Download names for AI
+			</a>
+		</div>
 	</div>
 
 	<form class="filters search-panel" onsubmit={onSubmit} aria-label="Repository search and filters">
@@ -391,12 +399,15 @@
 						<option value="">All sources</option>
 						<option value="gharchive" selected={data.filters.source === 'gharchive'}>GH Archive</option>
 						<option value="github_search" selected={data.filters.source === 'github_search'}>GitHub Search</option>
+						<option value="trending" selected={data.filters.source === 'trending'}>Trending</option>
+						<option value="manual" selected={data.filters.source === 'manual'}>Saved by you</option>
 					</select>
 				</label>
 				<label><span>Year</span><input name="year" type="number" class="filter-input" value={data.filters.year} min="2008" max="2099" /></label>
 				<label><span>From</span><input name="date_from" type="date" class="filter-input" value={data.filters.dateFrom} /></label>
 				<label><span>To</span><input name="date_to" type="date" class="filter-input" value={data.filters.dateTo} /></label>
 				<label><span>Minimum stars</span><input name="min_stars" type="number" class="filter-input" value={data.filters.minStars} min="0" /></label>
+				<label><span>Maximum stars</span><input name="max_stars" type="number" class="filter-input" value={data.filters.maxStars} min="0" /></label>
 				<label><span>Minimum forks</span><input name="min_forks" type="number" class="filter-input" value={data.filters.minForks} min="0" /></label>
 				<label class="filter-check"><input type="checkbox" name="archived_only" checked={data.filters.archivedOnly} /> Archived only</label>
 				<label class="filter-check"><input type="checkbox" name="has_readme" checked={data.filters.hasReadme} /> Has README</label>
@@ -571,6 +582,14 @@
 		margin: 0.15rem 0 0;
 		font-size: clamp(1.75rem, 4vw, 3rem);
 		line-height: 1;
+	}
+
+	.feed-heading-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		align-items: center;
+		justify-content: flex-end;
 	}
 
 	.section-heading h2,

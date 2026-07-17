@@ -1,6 +1,8 @@
 import { getDb } from './connection';
 import { isMetadataOnlyMode } from '../runtime-mode';
 
+const PULSE_CACHE_TTL_MS = 5 * 60 * 1000;
+
 export interface ArchivePulseRepo {
 	owner: string;
 	name: string;
@@ -26,11 +28,13 @@ export interface ArchivePulse {
 	recentReadmeChanges: ArchivePulseRepo[];
 }
 
+let pulseCache: { value: ArchivePulse; expiresAt: number } | null = null;
+
 function count(sql: string): number {
 	return (getDb().prepare(sql).get() as { c: number }).c;
 }
 
-export function getArchivePulse(): ArchivePulse {
+function computeArchivePulse(): ArchivePulse {
 	const db = getDb();
 	const metadataOnly = isMetadataOnlyMode();
 	const recentPreserved = db
@@ -113,4 +117,12 @@ export function getArchivePulse(): ArchivePulse {
 		recentDeletedSaved: metadataOnly ? [] : recentDeletedSaved,
 		recentReadmeChanges: metadataOnly ? [] : recentReadmeChanges
 	};
+}
+
+export function getArchivePulse(): ArchivePulse {
+	const now = Date.now();
+	if (pulseCache && pulseCache.expiresAt > now) return pulseCache.value;
+	const value = computeArchivePulse();
+	pulseCache = { value, expiresAt: now + PULSE_CACHE_TTL_MS };
+	return value;
 }

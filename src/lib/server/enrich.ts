@@ -10,6 +10,7 @@ import {
 	type MetricSnapshotInput,
 	type RepoRow
 } from '$lib/server/db';
+import { enqueueRepoPipeline, setEnrichmentLevel } from '$lib/server/db/pipeline';
 import { appendRepoEvent } from '$lib/server/events';
 import {
 	fetchReleases,
@@ -22,6 +23,24 @@ import {
 } from '$lib/server/record-repo-history';
 import { applyRepoIntelligence } from '$lib/server/apply-repo-intelligence';
 
+/** Enrichment tiers — Level 1 is the default for backlog throughput. */
+export type EnrichmentLevel = 1 | 2 | 3;
+
+export interface EnrichRepoOptions {
+	/** Target enrichment level. Level 1 = GitHub metadata only. */
+	level?: EnrichmentLevel;
+	/**
+	 * Sync releases/tags (2 extra API calls). Off by default for Level 1
+	 * to keep requests-per-repo near 1.
+	 */
+	syncReleases?: boolean;
+}
+
+export interface EnrichRepoResult {
+	level: number;
+	requests: number;
+	syncedReleases: boolean;
+}
 const IMPORTANT_METADATA_FIELDS: (keyof EnrichmentData)[] = [
 	'default_branch',
 	'description',
@@ -154,7 +173,7 @@ async function applyRenameAndArchive(
 	return repo;
 }
 
-async function syncReleases(repo: RepoRow): Promise<number> {
+async function syncReleasesForRepo(repo: RepoRow): Promise<number> {
 	const [releases, tags] = await Promise.all([
 		fetchReleases(repo.owner, repo.name),
 		fetchTags(repo.owner, repo.name)
@@ -229,8 +248,13 @@ async function syncReleases(repo: RepoRow): Promise<number> {
 	return newCount;
 }
 
-export async function enrichRepo(repo: RepoRow): Promise<void> {
+export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): Promise<EnrichRepoResult> {
+	const level = opts.level ?? 1;
+	const syncReleases = opts.syncReleases ?? false;
+	let requests = 0;
+
 	const data = await fetchRepoMetadata(repo.owner, repo.name);
+	requests += 1;
 	repo = await applyRenameAndArchive(repo, data);
 
 	const enrichment = toEnrichmentData(data);
@@ -242,7 +266,17 @@ export async function enrichRepo(repo: RepoRow): Promise<void> {
 	const metadataDelta = metadataChangesForEvent(repo, enrichment);
 
 	saveEnrichment(repo.id, enrichment);
+	setEnrichmentLevel(repo.id, Math.max(1, level));
 	applyRepoIntelligence(repo, enrichment);
+
+	// Classification + scoring run inline; queue clustering and stories for
+	// changed IDs instead of rescanning the whole table later.
+	enqueueRepoPipeline(repo.id, {
+		needsClassification: false,
+		needsScoring: false,
+		needsClustering: true,
+		needsStory: true
+	});
 
 	if (wasEnriched && Object.keys(metadataDelta).length > 0) {
 		appendRepoEvent(repo.id, 'metadata_updated', {
@@ -251,7 +285,14 @@ export async function enrichRepo(repo: RepoRow): Promise<void> {
 		});
 	}
 
-	await syncReleases(repo);
+	if (syncReleases) {
+		await syncReleasesForRepo(repo);
+		requests += 2;
+	}
+
+	// Levels 2–3 (README / source) stay in the archive worker so Level 1
+	// enrichment can run at ~1 request per repository.
+	return { level: Math.max(1, level), requests, syncedReleases: syncReleases };
 }
 
 export async function refreshRepo(repo: RepoRow): Promise<{ metricsChanged: boolean }> {
@@ -269,6 +310,12 @@ export async function refreshRepo(repo: RepoRow): Promise<{ metricsChanged: bool
 	saveRefreshUpdate(repo.id, enrichment);
 	insertMetricSnapshot(repo.id, toMetricInput(enrichment));
 	applyRepoIntelligence(repo, enrichment);
+	enqueueRepoPipeline(repo.id, {
+		needsClassification: false,
+		needsScoring: false,
+		needsClustering: true,
+		needsStory: true
+	});
 
 	if (Object.keys(metadataDelta).length > 0) {
 		appendRepoEvent(repo.id, 'metadata_updated', {
@@ -284,7 +331,7 @@ export async function refreshRepo(repo: RepoRow): Promise<{ metricsChanged: bool
 		});
 	}
 
-	await syncReleases(repo);
+	await syncReleasesForRepo(repo);
 	return { metricsChanged: Object.keys(metricsDelta).length > 0 };
 }
 

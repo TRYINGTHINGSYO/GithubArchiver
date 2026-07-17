@@ -1,7 +1,8 @@
 import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
+import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 14;
+export const CURRENT_SCHEMA_VERSION = 25;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -536,6 +537,361 @@ function migration013(database: Database.Database) {
 }
 
 function migration014(database: Database.Database) {
+	const repoCols = columnNames(database, 'repos');
+	for (const def of [
+		'interesting_score REAL',
+		'signal_tier TEXT',
+		'scored_at TEXT'
+	]) {
+		const name = def.split(' ')[0];
+		if (!repoCols.has(name)) {
+			database.exec(`ALTER TABLE repos ADD COLUMN ${def}`);
+		}
+	}
+
+	database.exec(`
+		CREATE INDEX IF NOT EXISTS idx_repos_interesting_score
+		  ON repos(interesting_score DESC)
+		  WHERE interesting_score IS NOT NULL;
+
+		CREATE INDEX IF NOT EXISTS idx_repos_signal_tier
+		  ON repos(signal_tier)
+		  WHERE signal_tier IS NOT NULL;
+	`);
+}
+
+function migration015(database: Database.Database) {
+	const repoCols = columnNames(database, 'repos');
+	for (const def of ['cluster_version INTEGER', 'clustered_at TEXT']) {
+		const name = def.split(' ')[0];
+		if (!repoCols.has(name)) {
+			database.exec(`ALTER TABLE repos ADD COLUMN ${def}`);
+		}
+	}
+
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS repo_clusters (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			slug TEXT NOT NULL UNIQUE,
+			name TEXT NOT NULL,
+			description TEXT,
+			cluster_type TEXT NOT NULL DEFAULT 'curated',
+			repo_count INTEGER NOT NULL DEFAULT 0,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS repository_cluster_memberships (
+			repository_id INTEGER NOT NULL,
+			cluster_id INTEGER NOT NULL,
+			confidence REAL NOT NULL,
+			evidence_json TEXT NOT NULL DEFAULT '{}',
+			clustered_at TEXT NOT NULL,
+			PRIMARY KEY (repository_id, cluster_id),
+			FOREIGN KEY (repository_id) REFERENCES repos(id) ON DELETE CASCADE,
+			FOREIGN KEY (cluster_id) REFERENCES repo_clusters(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_cluster_memberships_cluster
+		  ON repository_cluster_memberships(cluster_id, confidence DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_cluster_memberships_repo
+		  ON repository_cluster_memberships(repository_id);
+
+		CREATE INDEX IF NOT EXISTS idx_repos_cluster_version
+		  ON repos(cluster_version)
+		  WHERE cluster_version IS NOT NULL;
+	`);
+
+	const now = new Date().toISOString();
+	const seedCluster = database.prepare(
+		`INSERT INTO repo_clusters (slug, name, description, cluster_type, repo_count, created_at, updated_at)
+		 VALUES (?, ?, ?, 'curated', 0, ?, ?)
+		 ON CONFLICT(slug) DO UPDATE SET
+		   name = excluded.name,
+		   description = excluded.description,
+		   updated_at = excluded.updated_at`
+	);
+	for (const def of CLUSTER_DEFINITIONS) {
+		seedCluster.run(def.slug, def.name, def.description ?? null, now, now);
+	}
+}
+
+function migration016(database: Database.Database) {
+	const repoCols = columnNames(database, 'repos');
+	for (const def of [
+		'story_facts_json TEXT',
+		'story_text TEXT',
+		'story_version INTEGER',
+		'story_generated_at TEXT'
+	]) {
+		const name = def.split(' ')[0];
+		if (!repoCols.has(name)) {
+			database.exec(`ALTER TABLE repos ADD COLUMN ${def}`);
+		}
+	}
+
+	database.exec(`
+		CREATE INDEX IF NOT EXISTS idx_repos_story_version
+		  ON repos(story_version)
+		  WHERE story_version IS NOT NULL;
+	`);
+}
+
+function migration017(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS emerging_topics (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			key TEXT NOT NULL,
+			label TEXT NOT NULL,
+			candidate_type TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'detected',
+			period_start TEXT NOT NULL,
+			period_end TEXT NOT NULL,
+			current_count INTEGER NOT NULL,
+			previous_count INTEGER NOT NULL,
+			distinct_owner_count INTEGER NOT NULL,
+			average_interesting_score REAL,
+			novelty_score REAL NOT NULL,
+			momentum_score REAL NOT NULL,
+			quality_score REAL NOT NULL,
+			emerging_score REAL NOT NULL,
+			evidence_json TEXT NOT NULL,
+			detection_version INTEGER NOT NULL,
+			generated_at TEXT NOT NULL,
+			UNIQUE(key, period_start, detection_version)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_emerging_topics_period_score
+		  ON emerging_topics(period_start DESC, emerging_score DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_emerging_topics_status
+		  ON emerging_topics(status, period_start DESC);
+
+		CREATE TABLE IF NOT EXISTS emerging_topic_repositories (
+			emerging_topic_id INTEGER NOT NULL,
+			repository_id INTEGER NOT NULL,
+			relevance REAL NOT NULL,
+			evidence_json TEXT,
+			PRIMARY KEY (emerging_topic_id, repository_id),
+			FOREIGN KEY (emerging_topic_id) REFERENCES emerging_topics(id) ON DELETE CASCADE,
+			FOREIGN KEY (repository_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_emerging_topic_repos_repo
+		  ON emerging_topic_repositories(repository_id);
+	`);
+}
+
+function migration018(database: Database.Database) {
+	const topicCols = columnNames(database, 'emerging_topics');
+	for (const def of ['review_reason TEXT', 'reviewed_at TEXT', 'history_json TEXT']) {
+		const name = def.split(' ')[0];
+		if (!topicCols.has(name)) {
+			database.exec(`ALTER TABLE emerging_topics ADD COLUMN ${def}`);
+		}
+	}
+
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS emerging_term_aliases (
+			alias TEXT PRIMARY KEY,
+			canonical_key TEXT NOT NULL,
+			created_at TEXT NOT NULL
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_emerging_aliases_canonical
+		  ON emerging_term_aliases(canonical_key);
+
+		CREATE TABLE IF NOT EXISTS emerging_term_exclusions (
+			term TEXT PRIMARY KEY,
+			reason TEXT NOT NULL,
+			created_at TEXT NOT NULL
+		);
+	`);
+}
+
+function migration019(database: Database.Database) {
+	const repoCols = columnNames(database, 'repos');
+	if (!repoCols.has('enrichment_level')) {
+		database.exec(`ALTER TABLE repos ADD COLUMN enrichment_level INTEGER NOT NULL DEFAULT 0`);
+	}
+
+	database.exec(`
+		UPDATE repos
+		SET enrichment_level = 1
+		WHERE enriched_at IS NOT NULL AND enrichment_level < 1;
+
+		UPDATE repos
+		SET enrichment_level = MAX(enrichment_level, 2)
+		WHERE id IN (
+			SELECT DISTINCT repo_id FROM archive_snapshots WHERE snapshot_type = 'readme'
+		);
+
+		UPDATE repos
+		SET enrichment_level = MAX(enrichment_level, 3)
+		WHERE id IN (
+			SELECT DISTINCT repo_id FROM archive_snapshots
+			WHERE snapshot_type IN ('source', 'zip')
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_repos_enrichment_level
+		  ON repos(enrichment_level);
+
+		CREATE INDEX IF NOT EXISTS idx_repos_unenriched_priority
+		  ON repos(created_at DESC)
+		  WHERE enriched_at IS NULL AND deleted_at IS NULL;
+
+		CREATE TABLE IF NOT EXISTS repo_pipeline_queue (
+			repository_id INTEGER PRIMARY KEY,
+			needs_classification INTEGER NOT NULL DEFAULT 0,
+			needs_scoring INTEGER NOT NULL DEFAULT 0,
+			needs_clustering INTEGER NOT NULL DEFAULT 0,
+			needs_story INTEGER NOT NULL DEFAULT 0,
+			updated_at TEXT NOT NULL,
+			FOREIGN KEY (repository_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_repo_pipeline_clustering
+		  ON repo_pipeline_queue(needs_clustering)
+		  WHERE needs_clustering = 1;
+
+		CREATE INDEX IF NOT EXISTS idx_repo_pipeline_story
+		  ON repo_pipeline_queue(needs_story)
+		  WHERE needs_story = 1;
+	`);
+}
+
+function migration020(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS emerging_detection_runs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			period_start TEXT NOT NULL,
+			period_end TEXT NOT NULL,
+			detection_version INTEGER NOT NULL,
+			candidates_detected INTEGER NOT NULL DEFAULT 0,
+			growth_suppressed_reason TEXT,
+			current_window_json TEXT NOT NULL,
+			previous_window_json TEXT NOT NULL,
+			generated_at TEXT NOT NULL
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_emerging_detection_runs_period
+		  ON emerging_detection_runs(period_start DESC, generated_at DESC);
+	`);
+}
+
+function migration021(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS backfill_dataset_runs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			source TEXT NOT NULL DEFAULT 'github-search',
+			window_start TEXT NOT NULL,
+			window_end TEXT NOT NULL,
+			query_version INTEGER NOT NULL,
+			sharding_version INTEGER NOT NULL,
+			deduplication_version INTEGER NOT NULL,
+			sampling_version INTEGER NOT NULL,
+			max_per_hour INTEGER NOT NULL,
+			target_sample_size INTEGER NOT NULL DEFAULT 1500,
+			expected_shards INTEGER NOT NULL DEFAULT 0,
+			completed_shards INTEGER NOT NULL DEFAULT 0,
+			partial_shards INTEGER NOT NULL DEFAULT 0,
+			failed_shards INTEGER NOT NULL DEFAULT 0,
+			observed_repos INTEGER NOT NULL DEFAULT 0,
+			sampled_repos INTEGER NOT NULL DEFAULT 0,
+			enriched_repos INTEGER NOT NULL DEFAULT 0,
+			status TEXT NOT NULL DEFAULT 'pending',
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			completed_at TEXT
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_backfill_dataset_runs_window
+		  ON backfill_dataset_runs(window_start, window_end, status);
+
+		CREATE TABLE IF NOT EXISTS backfill_dataset_repositories (
+			run_id INTEGER NOT NULL,
+			repository_id INTEGER NOT NULL,
+			time_bucket TEXT NOT NULL,
+			sample_rank INTEGER,
+			inclusion_reason TEXT NOT NULL,
+			PRIMARY KEY (run_id, repository_id),
+			FOREIGN KEY (run_id) REFERENCES backfill_dataset_runs(id) ON DELETE CASCADE,
+			FOREIGN KEY (repository_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_backfill_dataset_repos_bucket
+		  ON backfill_dataset_repositories(run_id, time_bucket);
+
+		CREATE TABLE IF NOT EXISTS backfill_dataset_shards (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			run_id INTEGER NOT NULL,
+			time_bucket TEXT NOT NULL,
+			shard_key TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending',
+			found INTEGER NOT NULL DEFAULT 0,
+			inserted INTEGER NOT NULL DEFAULT 0,
+			incomplete INTEGER NOT NULL DEFAULT 0,
+			error TEXT,
+			updated_at TEXT NOT NULL,
+			UNIQUE(run_id, time_bucket, shard_key),
+			FOREIGN KEY (run_id) REFERENCES backfill_dataset_runs(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_backfill_dataset_shards_run
+		  ON backfill_dataset_shards(run_id, status);
+	`);
+
+	const detectionCols = columnNames(database, 'emerging_detection_runs');
+	if (!detectionCols.has('current_dataset_id')) {
+		database.exec(`ALTER TABLE emerging_detection_runs ADD COLUMN current_dataset_id INTEGER`);
+	}
+	if (!detectionCols.has('previous_dataset_id')) {
+		database.exec(`ALTER TABLE emerging_detection_runs ADD COLUMN previous_dataset_id INTEGER`);
+	}
+}
+
+function migration022(database: Database.Database) {
+	const cols = columnNames(database, 'backfill_dataset_runs');
+	if (!cols.has('target_sample_size')) {
+		database.exec(
+			`ALTER TABLE backfill_dataset_runs ADD COLUMN target_sample_size INTEGER NOT NULL DEFAULT 1500`
+		);
+	}
+}
+
+function migration023(database: Database.Database) {
+	const cols = columnNames(database, 'backfill_dataset_runs');
+	if (!cols.has('comparison_mode')) {
+		database.exec(
+			`ALTER TABLE backfill_dataset_runs ADD COLUMN comparison_mode TEXT NOT NULL DEFAULT 'absolute'`
+		);
+	}
+	if (!cols.has('matched_hour_offsets_json')) {
+		database.exec(
+			`ALTER TABLE backfill_dataset_runs ADD COLUMN matched_hour_offsets_json TEXT NOT NULL DEFAULT '[]'`
+		);
+	}
+	if (!cols.has('paired_run_id')) {
+		database.exec(`ALTER TABLE backfill_dataset_runs ADD COLUMN paired_run_id INTEGER`);
+	}
+}
+
+function migration024(database: Database.Database) {
+	const cols = columnNames(database, 'backfill_dataset_runs');
+	if (!cols.has('construction_version')) {
+		database.exec(
+			`ALTER TABLE backfill_dataset_runs ADD COLUMN construction_version INTEGER NOT NULL DEFAULT 1`
+		);
+	}
+	if (!cols.has('candidate_pool_size')) {
+		database.exec(
+			`ALTER TABLE backfill_dataset_runs ADD COLUMN candidate_pool_size INTEGER NOT NULL DEFAULT 100`
+		);
+	}
+}
+
+function migration025(database: Database.Database) {
 	database.exec(`
 		CREATE TABLE IF NOT EXISTS repo_favorites (
 			repo_id INTEGER PRIMARY KEY,
@@ -562,7 +918,18 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	11: migration011,
 	12: migration012,
 	13: migration013,
-	14: migration014
+	14: migration014,
+	15: migration015,
+	16: migration016,
+	17: migration017,
+	18: migration018,
+	19: migration019,
+	20: migration020,
+	21: migration021,
+	22: migration022,
+	23: migration023,
+	24: migration024,
+	25: migration025
 };
 
 export function runMigrations(database: Database.Database) {

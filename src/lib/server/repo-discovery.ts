@@ -91,6 +91,7 @@ export interface SearchIngestResult {
 	pages: number;
 	shards: number;
 	incomplete: boolean;
+	repoFullNames: string[];
 }
 
 interface Accumulator {
@@ -100,6 +101,7 @@ interface Accumulator {
 	pages: number;
 	shards: number;
 	incomplete: boolean;
+	repoFullNames: Set<string>;
 }
 
 function insertSearchItem(
@@ -170,6 +172,7 @@ async function paginateShard(
 
 			for (const item of response.items) {
 				found++;
+				acc.repoFullNames.add(item.full_name.toLowerCase());
 				if (insertSearchItem(item, firstSeenAt) === 'inserted') inserted++;
 				else skipped++;
 			}
@@ -265,14 +268,25 @@ async function ingestTimeWindow(
 	}
 }
 
-export async function ingestReposFromSearch(hourKey: string): Promise<SearchIngestResult> {
+export async function ingestReposFromSearch(
+	hourKey: string,
+	opts: { includeGapSearch?: boolean } = {}
+): Promise<SearchIngestResult> {
 	rollupCategoryDailyIfNeeded();
 
 	console.log(`  Search fallback started for ${hourKey}`);
 	const hourStart = parseHourKey(hourKey);
 	const hourEndDate = hourEnd(hourStart);
 	const query = hourCreatedSearchQuery(hourKey);
-	const acc: Accumulator = { found: 0, inserted: 0, skipped: 0, pages: 0, shards: 0, incomplete: false };
+	const acc: Accumulator = {
+		found: 0,
+		inserted: 0,
+		skipped: 0,
+		pages: 0,
+		shards: 0,
+		incomplete: false,
+		repoFullNames: new Set()
+	};
 
 	const probe = await searchRepositories(query, 1, SEARCH_PER_PAGE);
 	console.log(
@@ -291,10 +305,10 @@ export async function ingestReposFromSearch(hourKey: string): Promise<SearchInge
 		await paginateShard(hourKey, query, 0, null, probe, acc);
 	}
 
-	const gaps = getUnderrepresentedCategories();
-	const gapCategory = pickGapCategoryForHour(hourKey, gaps);
+	const gaps = opts.includeGapSearch === false ? [] : getUnderrepresentedCategories();
+	const gapCategory = opts.includeGapSearch === false ? null : pickGapCategoryForHour(hourKey, gaps);
 	const qualifier = gapCategory ? categorySearchQualifier(gapCategory) : null;
-	if (qualifier) {
+	if (opts.includeGapSearch !== false && qualifier) {
 		const gapQuery = `${hourCreatedSearchQuery(hourKey)} ${qualifier}`;
 		console.log(`  Gap-aware supplementary search for underrepresented category ${gapCategory}: ${gapQuery}`);
 		try {
@@ -320,7 +334,8 @@ export async function ingestReposFromSearch(hourKey: string): Promise<SearchInge
 		skipped: acc.skipped,
 		pages: acc.pages,
 		shards: acc.shards,
-		incomplete: acc.incomplete
+		incomplete: acc.incomplete,
+		repoFullNames: [...acc.repoFullNames]
 	};
 }
 
