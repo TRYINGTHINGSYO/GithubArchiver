@@ -44,6 +44,8 @@ import { getBackgroundDaemonState } from '$lib/server/background-daemon';
 import { getCurrentJobLabel, isJobRunnerBusy } from '$lib/server/job-runner';
 import { getDaemonUiStatus } from '$lib/server/worker-control';
 import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
+import { getDiscoverySystemStatus } from '$lib/server/discovery-materialized';
+import { listScheduledJobs } from '$lib/server/db/scheduled-jobs';
 
 const REFRESH_INTERVAL_HOURS = Number(process.env.REFRESH_INTERVAL_HOURS ?? 24);
 
@@ -128,7 +130,11 @@ export async function getAdminStatus() {
 		rateLimit,
 		latestErrors: listLatestErrors(10),
 		backup: getBackupSummary(),
-		daemonDecisions: summarizeDaemonDecisions(24)
+		daemonDecisions: summarizeDaemonDecisions(24),
+		pipeline: {
+			discoveryStatus: getDiscoverySystemStatus(),
+			scheduledJobs: listScheduledJobs()
+		}
 	};
 }
 

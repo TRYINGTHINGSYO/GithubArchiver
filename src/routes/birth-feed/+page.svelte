@@ -199,7 +199,7 @@
 	{#if data.repos.length === 0}
 		<div class="empty-state">
 			<p>No repositories match your filters.</p>
-			<p class="empty-hint">Try clearing filters or run <code>npm run ingest:hour</code> to discover new repos.</p>
+			<p class="empty-hint">Try clearing filters. New repositories appear as the discovery worker ingests GitHub Archive hours.</p>
 		</div>
 	{:else}
 		<ul class="repo-list birth-list">

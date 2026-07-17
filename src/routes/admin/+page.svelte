@@ -315,6 +315,66 @@
 	{/if}
 </section>
 
+{#if status.pipeline}
+	<section class="detail-section">
+		<h2 class="section-title">Discovery pipeline</h2>
+		<dl class="detail-grid">
+			<div>
+				<dt>Discovered</dt>
+				<dd>{status.pipeline.discoveryStatus.repositoriesDiscovered.toLocaleString()}</dd>
+			</div>
+			<div>
+				<dt>Enriched</dt>
+				<dd>{status.pipeline.discoveryStatus.enriched.toLocaleString()}</dd>
+			</div>
+			<div>
+				<dt>Classified</dt>
+				<dd>{status.pipeline.discoveryStatus.classified.toLocaleString()}</dd>
+			</div>
+			<div>
+				<dt>Clustered</dt>
+				<dd>{status.pipeline.discoveryStatus.clustered.toLocaleString()}</dd>
+			</div>
+			<div>
+				<dt>Worker</dt>
+				<dd>{status.pipeline.discoveryStatus.workerStatus}</dd>
+			</div>
+			<div>
+				<dt>Last discovery analysis</dt>
+				<dd>
+					{status.pipeline.discoveryStatus.lastDiscoveryAnalysisAt
+						? timeAgo(status.pipeline.discoveryStatus.lastDiscoveryAnalysisAt)
+						: '—'}
+				</dd>
+			</div>
+		</dl>
+		{#if status.pipeline.scheduledJobs.length > 0}
+			<table class="admin-table">
+				<thead>
+					<tr>
+						<th>Job</th>
+						<th>Status</th>
+						<th>Last completed</th>
+						<th>Next run</th>
+						<th>Failures</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each status.pipeline.scheduledJobs as job}
+						<tr>
+							<td>{job.job_name}</td>
+							<td>{job.status ?? '—'}</td>
+							<td>{job.last_completed_at ? timeAgo(job.last_completed_at) : '—'}</td>
+							<td>{job.next_run_at ? timeAgo(job.next_run_at) : '—'}</td>
+							<td>{job.consecutive_failures}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		{/if}
+	</section>
+{/if}
+
 <section class="detail-section">
 	<h2 class="section-title">Backfill</h2>
 	{#if backfillEstimate && backfillEstimate.days >= 365}
