@@ -14,9 +14,11 @@ import { enqueueRepoPipeline, setEnrichmentLevel } from '$lib/server/db/pipeline
 import { getRepoById } from '$lib/server/db/repos';
 import { appendRepoEvent } from '$lib/server/events';
 import {
+	fetchReadme,
 	fetchReleases,
 	fetchRepoMetadata,
-	fetchTags
+	fetchTags,
+	type FetchedRepoMetadata
 } from '$lib/server/github';
 import {
 	recordRepoHistoryChanges,
@@ -27,21 +29,32 @@ import { applyRepoIntelligence } from '$lib/server/apply-repo-intelligence';
 
 /** Enrichment tiers — Level 1 is the default for backlog throughput. */
 export type EnrichmentLevel = 1 | 2 | 3;
+export type EnrichDepth = 'fast' | 'deep';
 
 export interface EnrichRepoOptions {
 	/** Target enrichment level. Level 1 = GitHub metadata only. */
 	level?: EnrichmentLevel;
+	/** Fast = metadata+classify/score/cluster; deep = also README/history signals. */
+	depth?: EnrichDepth;
+	/** Prior ETag for conditional GET (refresh / re-enrich). */
+	etag?: string | null;
 	/**
 	 * Sync releases/tags (2 extra API calls). Off by default for Level 1
 	 * to keep requests-per-repo near 1.
 	 */
 	syncReleases?: boolean;
+	/** Skip commit-history probe (used for fast path). */
+	skipHistory?: boolean;
 }
 
 export interface EnrichRepoResult {
 	level: number;
 	requests: number;
 	syncedReleases: boolean;
+	etag: string | null;
+	httpStatus: number;
+	depth: EnrichDepth;
+	notModified: boolean;
 }
 const IMPORTANT_METADATA_FIELDS: (keyof EnrichmentData)[] = [
 	'default_branch',
@@ -118,7 +131,7 @@ function metricChanges(
 	);
 }
 
-function toEnrichmentData(data: Awaited<ReturnType<typeof fetchRepoMetadata>>): EnrichmentData {
+function toEnrichmentData(data: FetchedRepoMetadata): EnrichmentData {
 	return {
 		default_branch: data.default_branch,
 		description: data.description,
@@ -151,8 +164,9 @@ function toMetricInput(data: EnrichmentData): MetricSnapshotInput {
 
 async function applyRenameAndArchive(
 	repo: RepoRow,
-	data: Awaited<ReturnType<typeof fetchRepoMetadata>>
+	data: FetchedRepoMetadata
 ): Promise<RepoRow> {
+	if (data.notModified) return repo;
 	if (data.full_name !== repo.full_name) {
 		const [newOwner, newName] = data.full_name.split('/');
 		recordRepoRename(repo.id, repo.full_name, data.full_name, newOwner, newName);
@@ -252,30 +266,52 @@ async function syncReleasesForRepo(repo: RepoRow): Promise<number> {
 
 export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): Promise<EnrichRepoResult> {
 	const level = opts.level ?? 1;
+	const depth: EnrichDepth = opts.depth ?? (level >= 2 ? 'deep' : 'fast');
 	const syncReleases = opts.syncReleases ?? false;
+	const skipHistory = opts.skipHistory ?? depth === 'fast';
 	let requests = 0;
 
-	const data = await fetchRepoMetadata(repo.owner, repo.name);
+	const data = await fetchRepoMetadata(repo.owner, repo.name, { etag: opts.etag });
 	requests += 1;
+
+	if (data.notModified && repo.enriched_at) {
+		return {
+			level: Math.max(1, level),
+			requests,
+			syncedReleases: false,
+			etag: data.etag,
+			httpStatus: 304,
+			depth,
+			notModified: true
+		};
+	}
+
 	repo = await applyRenameAndArchive(repo, data);
 
 	const enrichment = toEnrichmentData(data);
 	const wasEnriched = repo.enriched_at !== null;
 	const observedAt = new Date().toISOString();
 
-	await recordRepoHistoryChanges(repo, enrichment, observedAt);
+	if (!skipHistory) {
+		await recordRepoHistoryChanges(repo, enrichment, observedAt);
+		requests += 1;
+	}
 
 	const metadataDelta = metadataChangesForEvent(repo, enrichment);
 
 	saveEnrichment(repo.id, enrichment);
-	setEnrichmentLevel(repo.id, Math.max(1, level));
+	setEnrichmentLevel(repo.id, Math.max(depth === 'deep' ? 2 : 1, level));
 	applyRepoIntelligence(repo, enrichment);
 
-	// Cluster immediately so discovery surfaces fill while enrichment runs.
 	const refreshed = getRepoById(repo.id) ?? repo;
 	applyRepoClusters(refreshed, enrichment);
 
-	// Stories stay queued — generation is heavier than classify/cluster.
+	if (depth === 'deep') {
+		// README fetch improves classification evidence without full source archive.
+		await fetchReadme(repo.owner, repo.name);
+		requests += 1;
+	}
+
 	enqueueRepoPipeline(repo.id, {
 		needsClassification: false,
 		needsScoring: false,
@@ -295,13 +331,23 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 		requests += 2;
 	}
 
-	// Levels 2–3 (README / source) stay in the archive worker so Level 1
-	// enrichment can run at ~1 request per repository.
-	return { level: Math.max(1, level), requests, syncedReleases: syncReleases };
+	return {
+		level: Math.max(depth === 'deep' ? 2 : 1, level),
+		requests,
+		syncedReleases: syncReleases,
+		etag: data.etag,
+		httpStatus: data.status,
+		depth,
+		notModified: false
+	};
 }
 
 export async function refreshRepo(repo: RepoRow): Promise<{ metricsChanged: boolean }> {
-	const data = await fetchRepoMetadata(repo.owner, repo.name);
+	const etag = (repo as RepoRow & { enrichment_etag?: string | null }).enrichment_etag ?? null;
+	const data = await fetchRepoMetadata(repo.owner, repo.name, { etag });
+	if (data.notModified) {
+		return { metricsChanged: false };
+	}
 	repo = await applyRenameAndArchive(repo, data);
 
 	const enrichment = toEnrichmentData(data);

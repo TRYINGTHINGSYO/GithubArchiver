@@ -27,13 +27,13 @@ export const DAEMON_JOB_INTERVALS: Record<ScheduledJobName, number> = {
 };
 
 export const DAEMON_JOB_ORDER: ScheduledJobName[] = [
+	'ingest',
 	'enrich',
 	'classify',
 	'clusters',
 	'score',
 	'stories',
 	'discovery',
-	'ingest',
 	'refresh',
 	'emerging',
 	'archive',
@@ -46,18 +46,14 @@ export function initializeDaemonScheduler(): void {
 }
 
 /**
- * Prefer clearing the enrichment backlog before discovering more repositories.
+ * Prefer clearing high-value enrichment work, but never block discovery forever.
+ * Ingest remains available while a large long-tail backlog exists.
  */
 export function getDueDaemonJobs(
 	now = Date.now(),
-	opts: { unenrichedCount?: number } = {}
+	_opts: { unenrichedCount?: number } = {}
 ): ScheduledJobName[] {
-	const due = DAEMON_JOB_ORDER.filter((jobName) => isJobDue(jobName, now));
-	const unenriched = opts.unenrichedCount;
-	if (unenriched != null && unenriched > 0) {
-		return due.filter((jobName) => jobName !== 'ingest');
-	}
-	return due;
+	return DAEMON_JOB_ORDER.filter((jobName) => isJobDue(jobName, now));
 }
 
 export async function runScheduledJob<T>(

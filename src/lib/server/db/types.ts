@@ -43,6 +43,18 @@ export interface RepoRow {
 	story_version: number | null;
 	story_generated_at: string | null;
 	enrichment_level: number;
+	enrichment_status?: string;
+	enrichment_priority?: number;
+	enrichment_tier?: string;
+	enrichment_depth?: string;
+	next_enrichment_at?: string | null;
+	enrichment_attempts?: number;
+	last_enrichment_error?: string | null;
+	enrichment_claimed_by?: string | null;
+	enrichment_claimed_at?: string | null;
+	enrichment_claim_expires_at?: string | null;
+	enrichment_etag?: string | null;
+	last_enrichment_http_status?: number | null;
 }
 
 export type DiscoverySource = 'gharchive' | 'github_search' | 'manual' | 'trending';

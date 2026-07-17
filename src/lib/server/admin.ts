@@ -46,6 +46,7 @@ import { getDaemonUiStatus } from '$lib/server/worker-control';
 import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import { getDiscoverySystemStatus } from '$lib/server/discovery-materialized';
 import { listScheduledJobs } from '$lib/server/db/scheduled-jobs';
+import { getEnrichmentOpsSnapshot } from '$lib/server/workers/enrich';
 
 const REFRESH_INTERVAL_HOURS = Number(process.env.REFRESH_INTERVAL_HOURS ?? 24);
 
@@ -133,7 +134,8 @@ export async function getAdminStatus() {
 		daemonDecisions: summarizeDaemonDecisions(24),
 		pipeline: {
 			discoveryStatus: getDiscoverySystemStatus(),
-			scheduledJobs: listScheduledJobs()
+			scheduledJobs: listScheduledJobs(),
+			enrichment: getEnrichmentOpsSnapshot()
 		}
 	};
 }

@@ -9,9 +9,13 @@ import {
 	runScheduledJob
 } from '../src/lib/server/daemon-scheduler.js';
 import { getDb } from '../src/lib/server/db/index.js';
-import { countUnenriched } from '../src/lib/server/db/repos.js';
 import { finishJobRun, startJobRun, updateJobRun } from '../src/lib/server/db/jobs.js';
 import { updateDiscoverySystemStatus } from '../src/lib/server/discovery-materialized.js';
+import {
+	acquireWorkerLease,
+	releaseWorkerLease,
+	startLeaseHeartbeat
+} from '../src/lib/server/worker-lease.js';
 import { runArchiveCycle } from '../src/lib/server/workers/archive.js';
 import { runBackupCycle } from '../src/lib/server/workers/backup.js';
 import { runClassifyCycle } from '../src/lib/server/workers/classify.js';
@@ -85,25 +89,14 @@ async function runJob(jobName: (typeof DAEMON_JOB_ORDER)[number]): Promise<void>
 		case 'enrich': {
 			const enrich = await runScheduledJob('enrich', () => runEnrichCycle());
 			console.log(
-				`[daemon] enrich: ${enrich.enriched} enriched, ${enrich.remaining} remaining` +
-					(enrich.yielded ? ' (yielding for cluster/discovery)' : '')
+				`[daemon] enrich: ${enrich.enriched} enriched (${enrich.enrichedFast} fast / ${enrich.enrichedDeep} deep), ` +
+					`${enrich.remaining} remaining, concurrency=${enrich.concurrency}` +
+					(enrich.yielded ? ' (budget yield)' : '')
 			);
 			if (enrich.rateLimited) {
 				throw Object.assign(new Error('GitHub rate limit during enrich'), {
 					rateLimitResetAt: enrich.rateLimitResetAt
 				});
-			}
-			// After each enrich slice, materialize discovery so the homepage updates.
-			if (enrich.enriched > 0) {
-				try {
-					await runScheduledJob('clusters', () => runClusterCycle({ maxBatches: 1 }));
-					await runScheduledJob('discovery', () => runDiscoveryMaterializationCycle());
-				} catch (err) {
-					console.warn(
-						'[daemon] post-enrich discovery failed:',
-						err instanceof Error ? err.message : err
-					);
-				}
 			}
 			break;
 		}
@@ -200,7 +193,7 @@ async function runLoop(): Promise<void> {
 			failure_streak: failureStreak
 		});
 
-		const dueJobs = getDueDaemonJobs(Date.now(), { unenrichedCount: countUnenriched() });
+		const dueJobs = getDueDaemonJobs(Date.now());
 		let hadFailure = false;
 		let rateLimitResetAt: string | undefined;
 
@@ -273,11 +266,23 @@ function shutdown(signal: string) {
 
 async function main() {
 	getDb();
+	const lease = acquireWorkerLease('discovery-daemon');
+	if (!lease) {
+		console.error('Another discovery daemon holds the worker lease — exiting.');
+		process.exit(0);
+	}
+	const stopHeartbeat = startLeaseHeartbeat(lease.leaseName, lease.ownerId);
 	writePidFile();
 	process.on('SIGINT', () => shutdown('SIGINT'));
 	process.on('SIGTERM', () => shutdown('SIGTERM'));
-	process.on('exit', () => removePidFile());
+	process.on('exit', () => {
+		stopHeartbeat();
+		releaseWorkerLease(lease.leaseName, lease.ownerId);
+		removePidFile();
+	});
 	await runLoop();
+	stopHeartbeat();
+	releaseWorkerLease(lease.leaseName, lease.ownerId);
 }
 
 main().catch((err) => {

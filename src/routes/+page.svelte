@@ -166,8 +166,8 @@
 			<p class="eyebrow">Live enrichment</p>
 			<h2 id="enrich-heading">Voting repositories into the archive</h2>
 			<p class="section-why">
-				The worker enriches known repositories before hunting for more. New discovery resumes only
-				after this backlog is clear.
+				High-value repositories are enriched first (urgent/high tiers). Discovery continues while the
+				long-tail archive is processed progressively — a large backlog does not pause ingestion.
 			</p>
 		</div>
 	</div>
@@ -203,7 +203,10 @@
 				{enrich.remaining.toLocaleString()} repositories queued — enrichment continues automatically.
 			</p>
 		{:else}
-			<p class="enrich-current">Backlog clear. Worker will discover new repositories next.</p>
+			<p class="enrich-current">
+				Backlog clear for currently eligible tiers. Long-tail deferred repos enrich on a slower
+				cadence while discovery continues.
+			</p>
 		{/if}
 	</div>
 </section>

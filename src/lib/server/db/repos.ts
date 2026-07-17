@@ -8,6 +8,7 @@ import type {
 	RepoQueryResult,
 	RepoRow
 } from './types';
+import { seedEnrichmentPriorityForInsert } from '../enrichment-queue.js';
 
 export function parseTopics(topics: string | null): string[] {
 	if (!topics) return [];
@@ -40,6 +41,7 @@ export function insertRepo(repo: NewRepo): { status: 'inserted' | 'skipped'; id?
 	if (result.changes > 0) {
 		const id = Number(result.lastInsertRowid);
 		indexRepoFtsById(id);
+		seedEnrichmentPriorityForInsert(id);
 		return { status: 'inserted', id };
 	}
 	return { status: 'skipped' };

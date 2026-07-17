@@ -348,6 +348,62 @@
 				</dd>
 			</div>
 		</dl>
+		{#if status.pipeline.enrichment}
+			<h3 class="section-title" style="margin-top:1.25rem">Enrichment throughput</h3>
+			<p class="admin-meta">
+				High-value tiers are processed first. A large long-tail backlog does not block discovery.
+			</p>
+			<dl class="detail-grid">
+				<div>
+					<dt>Fast enriched</dt>
+					<dd>{status.pipeline.enrichment.depths.fast.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Deep enriched</dt>
+					<dd>{status.pipeline.enrichment.depths.deep.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Throughput</dt>
+					<dd>{status.pipeline.enrichment.throughputPerMin.toFixed(1)}/min</dd>
+				</div>
+				<div>
+					<dt>Concurrency</dt>
+					<dd>{status.pipeline.enrichment.concurrency}</dd>
+				</div>
+				<div>
+					<dt>API remaining</dt>
+					<dd>{status.pipeline.enrichment.quota.remaining ?? '—'}</dd>
+				</div>
+				<div>
+					<dt>ETA urgent+high</dt>
+					<dd>
+						{status.pipeline.enrichment.etaUrgentHighMinutes != null
+							? `${status.pipeline.enrichment.etaUrgentHighMinutes} min`
+							: '—'}
+					</dd>
+				</div>
+				<div>
+					<dt>Backlog urgent</dt>
+					<dd>{status.pipeline.enrichment.tiers.urgent.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Backlog high</dt>
+					<dd>{status.pipeline.enrichment.tiers.high.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Backlog normal</dt>
+					<dd>{status.pipeline.enrichment.tiers.normal.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Backlog low/deferred</dt>
+					<dd>
+						{(
+							status.pipeline.enrichment.tiers.low + status.pipeline.enrichment.tiers.deferred
+						).toLocaleString()}
+					</dd>
+				</div>
+			</dl>
+		{/if}
 		{#if status.pipeline.scheduledJobs.length > 0}
 			<table class="admin-table">
 				<thead>

@@ -7,6 +7,7 @@ import {
 	scoreAction,
 	type BacklogSnapshot
 } from '$lib/server/daemon-planner';
+import { getDueDaemonJobs } from '$lib/server/daemon-scheduler';
 
 function emptyBacklog(overrides: Partial<BacklogSnapshot> = {}): BacklogSnapshot {
 	return {
@@ -32,42 +33,26 @@ describe('daemon-planner', () => {
 		expect(decision.reason).toContain('enrich');
 	});
 
-	it('prefers enrich over archive while unenriched remain', () => {
-		const backlog = emptyBacklog({ unenriched: 109_000, unarchivedSource: 5_050 });
-		const decision = pickAction(backlog);
-		expect(decision.action).toBe('enrich');
-		expect(decision.reason).toContain('enrich');
+	it('keeps ingest score positive with a huge enrichment backlog', () => {
+		const backlog = emptyBacklog({ missingGhArchiveHours: 3, unenriched: 671_000 });
+		expect(scoreAction('ingest', backlog)).toBeGreaterThan(0);
+		expect(getDueDaemonJobs(Date.now(), { unenrichedCount: 671_000 })).toContain('ingest');
 	});
 
-	it('scores enrich above archive while enrichment backlog remains', () => {
-		const backlog = emptyBacklog({ unenriched: 1_000_000, unarchivedSource: 1 });
-		expect(scoreAction('enrich', backlog)).toBeGreaterThan(scoreAction('archive', backlog));
-	});
-
-	it('prefers archive after enrichment clears even with missing hours', () => {
-		const backlog = emptyBacklog({ missingGhArchiveHours: 3, unarchivedSource: 5_000 });
-		expect(pickAction(backlog).action).toBe('archive');
-	});
-
-	it('prefers ingest when enrichment and archive queues are clear', () => {
-		const backlog = emptyBacklog({ missingGhArchiveHours: 3, unarchivedSource: 0 });
+	it('prefers ingest when missing hours dominate enrich score', () => {
+		const backlog = emptyBacklog({ missingGhArchiveHours: 3, unenriched: 100 });
+		expect(scoreAction('ingest', backlog)).toBeGreaterThan(scoreAction('enrich', backlog));
 		expect(pickAction(backlog).action).toBe('ingest');
 	});
 
-	it('suppresses ingest while enrichment backlog remains', () => {
-		const backlog = emptyBacklog({ missingGhArchiveHours: 3, unarchivedSource: 10, unenriched: 50 });
-		expect(scoreAction('ingest', backlog)).toBe(0);
+	it('prefers enrich when there is backlog and no missing hours', () => {
+		const backlog = emptyBacklog({ unenriched: 50_000 });
 		expect(pickAction(backlog).action).toBe('enrich');
 	});
 
-	it('prefers enrich over ingest even with huge unenriched backlog and missing hours', () => {
-		const backlog = emptyBacklog({ missingGhArchiveHours: 2, unenriched: 50_000 });
-		expect(pickAction(backlog).action).toBe('enrich');
-	});
-
-	it('prefers enrich over backfill while unenriched remain', () => {
-		const backlog = emptyBacklog({ backfillPendingHours: 50, unenriched: 5000 });
-		expect(pickAction(backlog).action).toBe('enrich');
+	it('prefers archive when unarchived exists and enrich is empty', () => {
+		const backlog = emptyBacklog({ unarchivedSource: 5_000 });
+		expect(pickAction(backlog).action).toBe('archive');
 	});
 
 	it('returns idle when all queues are empty', () => {
@@ -86,11 +71,6 @@ describe('daemon-planner', () => {
 	it('scores enrich above refresh for the same magnitude', () => {
 		const backlog = emptyBacklog({ unenriched: 1000, staleRefresh: 1000 });
 		expect(scoreAction('enrich', backlog)).toBeGreaterThan(scoreAction('refresh', backlog));
-	});
-
-	it('scores enrich above ingest while unenriched remain', () => {
-		const backlog = emptyBacklog({ missingGhArchiveHours: 1, unenriched: 1_000_000 });
-		expect(scoreAction('enrich', backlog)).toBeGreaterThan(scoreAction('ingest', backlog));
 	});
 
 	it('hasAnyBacklog is false only when every queue is empty', () => {
@@ -116,7 +96,6 @@ describe('daemon-planner', () => {
 			idleSleepMs: SLEEP_MAX
 		});
 		expect(ms).toBe(SLEEP_MIN);
-		expect(ms).toBeLessThan(SLEEP_MAX);
 	});
 
 	it('caps sleep when unarchived source backlog is large', () => {

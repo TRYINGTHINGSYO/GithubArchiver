@@ -1,13 +1,19 @@
+import {
+	markSecondaryRateLimit,
+	observeGitHubResponse
+} from './github-quota.js';
+
 const GITHUB_API = 'https://api.github.com';
 
-function headers(): HeadersInit {
+function headers(extra?: HeadersInit): HeadersInit {
 	const h: HeadersInit = {
 		Accept: 'application/vnd.github+json',
 		'User-Agent': 'GithubArchivePlus/0.3',
-		'X-GitHub-Api-Version': '2022-11-28'
+		'X-GitHub-Api-Version': '2022-11-28',
+		...extra
 	};
 	const token = process.env.GITHUB_TOKEN;
-	if (token) h.Authorization = `Bearer ${token}`;
+	if (token) (h as Record<string, string>).Authorization = `Bearer ${token}`;
 	return h;
 }
 
@@ -83,6 +89,27 @@ export class GitHubRateLimitError extends Error {
 	}
 }
 
+export class GitHubForbiddenError extends Error {
+	constructor(
+		public owner: string,
+		public repo: string,
+		public status = 403
+	) {
+		super(`Repository ${owner}/${repo} forbidden (${status})`);
+		this.name = 'GitHubForbiddenError';
+	}
+}
+
+export class GitHubHttpError extends Error {
+	constructor(
+		public status: number,
+		message: string
+	) {
+		super(message);
+		this.name = 'GitHubHttpError';
+	}
+}
+
 /** True when a token is configured. Never returns or logs the token value. */
 export function hasGitHubToken(): boolean {
 	return Boolean(process.env.GITHUB_TOKEN?.trim());
@@ -102,15 +129,22 @@ function rateLimitErrorFromResponse(res: Response): never {
 	const reset = res.headers.get('x-ratelimit-reset');
 	const retryAfter = res.headers.get('retry-after');
 	const retryAfterSeconds = retryAfter ? Number(retryAfter) : null;
-	// Secondary limits often return 403/429 while the primary quota still has remaining.
 	const secondary =
 		res.status === 429 ||
 		(remaining != null && remaining !== '0') ||
 		Boolean(retryAfter && remaining !== '0');
 	const resetAt = reset
 		? new Date(Number(reset) * 1000)
-		: new Date(Date.now() + (retryAfterSeconds && Number.isFinite(retryAfterSeconds) ? retryAfterSeconds * 1000 : 60_000));
-	throw new GitHubRateLimitError(resetAt, secondary, Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : null);
+		: new Date(
+				Date.now() +
+					(retryAfterSeconds && Number.isFinite(retryAfterSeconds) ? retryAfterSeconds * 1000 : 60_000)
+			);
+	if (secondary) markSecondaryRateLimit(resetAt);
+	throw new GitHubRateLimitError(
+		resetAt,
+		secondary,
+		Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : null
+	);
 }
 
 export class DownloadTooLargeError extends Error {
@@ -130,8 +164,31 @@ export class DownloadTimeoutError extends Error {
 	}
 }
 
-async function ghFetch<T>(path: string): Promise<T> {
-	const res = await fetch(`${GITHUB_API}${path}`, { headers: headers() });
+export interface GhFetchResult<T> {
+	data: T;
+	etag: string | null;
+	notModified: boolean;
+	status: number;
+}
+
+async function ghFetchRaw(
+	path: string,
+	opts: { etag?: string | null } = {}
+): Promise<Response> {
+	const started = Date.now();
+	const res = await fetch(`${GITHUB_API}${path}`, {
+		headers: headers(opts.etag ? { 'If-None-Match': opts.etag } : undefined)
+	});
+	observeGitHubResponse(res, Date.now() - started);
+	return res;
+}
+
+async function ghFetch<T>(path: string, opts: { etag?: string | null } = {}): Promise<GhFetchResult<T>> {
+	const res = await ghFetchRaw(path, opts);
+
+	if (res.status === 304) {
+		return { data: null as T, etag: opts.etag ?? res.headers.get('etag'), notModified: true, status: 304 };
+	}
 
 	if (res.status === 404) {
 		const parts = path.replace('/repos/', '').split('/');
@@ -139,19 +196,95 @@ async function ghFetch<T>(path: string): Promise<T> {
 	}
 
 	if (res.status === 403 || res.status === 429) {
-		rateLimitErrorFromResponse(res);
+		const body = await res.text().catch(() => '');
+		const remaining = res.headers.get('x-ratelimit-remaining');
+		if (remaining === '0' || res.status === 429 || /rate limit/i.test(body)) {
+			rateLimitErrorFromResponse(res);
+		}
+		const parts = path.replace('/repos/', '').split('/');
+		throw new GitHubForbiddenError(parts[0], parts[1], res.status);
+	}
+
+	if (res.status === 422) {
+		const body = await res.text();
+		throw new GitHubHttpError(422, `GitHub API 422: ${sanitizeGitHubErrorBody(body)}`);
 	}
 
 	if (!res.ok) {
 		const body = await res.text();
-		throw new Error(`GitHub API ${res.status}: ${sanitizeGitHubErrorBody(body)}`);
+		throw new GitHubHttpError(res.status, `GitHub API ${res.status}: ${sanitizeGitHubErrorBody(body)}`);
 	}
 
-	return res.json() as Promise<T>;
+	return {
+		data: (await res.json()) as T,
+		etag: res.headers.get('etag'),
+		notModified: false,
+		status: res.status
+	};
 }
 
-export async function fetchRepoMetadata(owner: string, repo: string) {
-	const gh = await ghFetch<GitHubRepo>(`/repos/${owner}/${repo}`);
+export type FetchedRepoMetadata = {
+	owner: string;
+	name: string;
+	full_name: string;
+	default_branch: string;
+	description: string | null;
+	homepage: string | null;
+	visibility: string;
+	owner_avatar_url: string | null;
+	owner_type: string | null;
+	language: string | null;
+	stars: number;
+	forks: number;
+	watchers: number;
+	open_issues: number;
+	size: number;
+	license: string | null;
+	topics: string[];
+	created_at: string;
+	pushed_at: string | null;
+	updated_at: string;
+	archived: boolean;
+	etag: string | null;
+	status: number;
+	notModified: boolean;
+};
+
+export async function fetchRepoMetadata(
+	owner: string,
+	repo: string,
+	opts: { etag?: string | null } = {}
+): Promise<FetchedRepoMetadata> {
+	const result = await ghFetch<GitHubRepo>(`/repos/${owner}/${repo}`, opts);
+	if (result.notModified) {
+		return {
+			owner,
+			name: repo,
+			full_name: `${owner}/${repo}`,
+			default_branch: 'main',
+			description: null,
+			homepage: null,
+			visibility: 'public',
+			owner_avatar_url: null,
+			owner_type: null,
+			language: null,
+			stars: 0,
+			forks: 0,
+			watchers: 0,
+			open_issues: 0,
+			size: 0,
+			license: null,
+			topics: [],
+			created_at: new Date(0).toISOString(),
+			pushed_at: null,
+			updated_at: new Date(0).toISOString(),
+			archived: false,
+			etag: result.etag,
+			status: 304,
+			notModified: true
+		};
+	}
+	const gh = result.data;
 	return {
 		owner: gh.owner.login,
 		name: gh.name,
@@ -173,13 +306,17 @@ export async function fetchRepoMetadata(owner: string, repo: string) {
 		created_at: gh.created_at,
 		pushed_at: gh.pushed_at,
 		updated_at: gh.updated_at,
-		archived: gh.archived
+		archived: gh.archived,
+		etag: result.etag,
+		status: result.status,
+		notModified: false
 	};
 }
 
 export async function fetchReleases(owner: string, repo: string): Promise<GitHubRelease[]> {
 	try {
-		return await ghFetch<GitHubRelease[]>(`/repos/${owner}/${repo}/releases?per_page=30`);
+		const result = await ghFetch<GitHubRelease[]>(`/repos/${owner}/${repo}/releases?per_page=30`);
+		return result.notModified ? [] : result.data;
 	} catch (err) {
 		if (err instanceof GitHubNotFoundError) throw err;
 		return [];
@@ -188,7 +325,8 @@ export async function fetchReleases(owner: string, repo: string): Promise<GitHub
 
 export async function fetchTags(owner: string, repo: string): Promise<GitHubTag[]> {
 	try {
-		return await ghFetch<GitHubTag[]>(`/repos/${owner}/${repo}/tags?per_page=30`);
+		const result = await ghFetch<GitHubTag[]>(`/repos/${owner}/${repo}/tags?per_page=30`);
+		return result.notModified ? [] : result.data;
 	} catch (err) {
 		if (err instanceof GitHubNotFoundError) throw err;
 		return [];
@@ -234,7 +372,7 @@ export async function fetchBranchHeadSha(
 	const commit = await ghFetch<GitHubCommitRef>(
 		`/repos/${owner}/${repo}/commits/${encodeURIComponent(branch)}`
 	);
-	return commit.sha;
+	return commit.data.sha;
 }
 
 export async function fetchBranchCommit(
@@ -246,12 +384,12 @@ export async function fetchBranchCommit(
 		`/repos/${owner}/${repo}/commits/${encodeURIComponent(branch)}`
 	);
 	return {
-		sha: data.sha,
-		tree_sha: data.commit.tree.sha,
-		parent_sha: data.parents[0]?.sha ?? null,
-		committed_at: data.commit.author.date,
-		author_name: data.commit.author.name,
-		author_email: data.commit.author.email
+		sha: data.data.sha,
+		tree_sha: data.data.commit.tree.sha,
+		parent_sha: data.data.parents[0]?.sha ?? null,
+		committed_at: data.data.commit.author.date,
+		author_name: data.data.commit.author.name,
+		author_email: data.data.commit.author.email
 	};
 }
 

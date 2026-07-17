@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 27;
+export const CURRENT_SCHEMA_VERSION = 28;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -998,6 +998,123 @@ function migration027(database: Database.Database) {
 	`);
 }
 
+function migration028(database: Database.Database) {
+	const cols = columnNames(database, 'repos');
+	const additions = [
+		"enrichment_status TEXT NOT NULL DEFAULT 'pending'",
+		'enrichment_priority REAL NOT NULL DEFAULT 0',
+		"enrichment_tier TEXT NOT NULL DEFAULT 'normal'",
+		"enrichment_depth TEXT NOT NULL DEFAULT 'none'",
+		'next_enrichment_at TEXT',
+		'enrichment_attempts INTEGER NOT NULL DEFAULT 0',
+		'last_enrichment_error TEXT',
+		'enrichment_claimed_by TEXT',
+		'enrichment_claimed_at TEXT',
+		'enrichment_claim_expires_at TEXT',
+		'enrichment_etag TEXT',
+		'last_enrichment_http_status INTEGER'
+	] as const;
+
+	for (const def of additions) {
+		const name = def.split(' ')[0];
+		if (!cols.has(name)) {
+			database.exec(`ALTER TABLE repos ADD COLUMN ${def}`);
+		}
+	}
+
+	database.exec(`
+		UPDATE repos SET
+		  enrichment_status = CASE
+		    WHEN deleted_at IS NOT NULL THEN 'unavailable'
+		    WHEN enriched_at IS NOT NULL THEN 'done'
+		    ELSE 'pending'
+		  END,
+		  enrichment_depth = CASE
+		    WHEN enrichment_level >= 2 THEN 'deep'
+		    WHEN enriched_at IS NOT NULL THEN 'fast'
+		    ELSE 'none'
+		  END,
+		  enrichment_priority = CASE
+		    WHEN enriched_at IS NOT NULL THEN 0
+		    ELSE (
+		      COALESCE(stars, 0) * 12.0 +
+		      COALESCE(forks, 0) * 4.0 +
+		      CASE WHEN created_at >= datetime('now', '-7 days') THEN 80
+		           WHEN created_at >= datetime('now', '-30 days') THEN 45
+		           WHEN created_at >= datetime('now', '-90 days') THEN 20
+		           ELSE 0 END +
+		      CASE WHEN description IS NOT NULL AND length(trim(description)) >= 20 THEN 15 ELSE 0 END +
+		      CASE WHEN language IS NOT NULL AND language != '' THEN 10 ELSE 0 END +
+		      CASE WHEN topics IS NOT NULL AND topics != '[]' AND topics != '' THEN 12 ELSE 0 END
+		    )
+		  END,
+		  enrichment_tier = CASE
+		    WHEN enriched_at IS NOT NULL THEN 'normal'
+		    WHEN COALESCE(stars, 0) >= 50 OR created_at >= datetime('now', '-3 days') THEN 'urgent'
+		    WHEN COALESCE(stars, 0) >= 10 OR created_at >= datetime('now', '-14 days') THEN 'high'
+		    WHEN created_at < datetime('now', '-365 days') AND COALESCE(stars, 0) = 0 THEN 'deferred'
+		    WHEN created_at < datetime('now', '-180 days') AND COALESCE(stars, 0) < 2 THEN 'low'
+		    ELSE 'normal'
+		  END,
+		  next_enrichment_at = CASE
+		    WHEN enriched_at IS NOT NULL THEN NULL
+		    WHEN deleted_at IS NOT NULL THEN NULL
+		    ELSE datetime('now')
+		  END
+		WHERE enrichment_status = 'pending' OR enrichment_priority = 0 OR next_enrichment_at IS NULL;
+
+		CREATE TABLE IF NOT EXISTS worker_leases (
+			lease_name TEXT PRIMARY KEY,
+			owner_id TEXT NOT NULL,
+			acquired_at TEXT NOT NULL,
+			expires_at TEXT NOT NULL,
+			heartbeat_at TEXT NOT NULL,
+			detail_json TEXT NOT NULL DEFAULT '{}'
+		);
+
+		CREATE TABLE IF NOT EXISTS enrichment_metrics (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			cycle_started_at TEXT,
+			cycle_finished_at TEXT,
+			enriched_fast INTEGER NOT NULL DEFAULT 0,
+			enriched_deep INTEGER NOT NULL DEFAULT 0,
+			failed INTEGER NOT NULL DEFAULT 0,
+			requests INTEGER NOT NULL DEFAULT 0,
+			avg_latency_ms REAL NOT NULL DEFAULT 0,
+			concurrency INTEGER NOT NULL DEFAULT 0,
+			quota_remaining INTEGER,
+			quota_reset_at TEXT,
+			throughput_per_min REAL NOT NULL DEFAULT 0,
+			updated_at TEXT NOT NULL
+		);
+
+		INSERT OR IGNORE INTO enrichment_metrics (id, updated_at)
+		VALUES (1, datetime('now'));
+
+		CREATE INDEX IF NOT EXISTS idx_repos_enrich_queue
+		  ON repos(enrichment_tier, enrichment_priority DESC, next_enrichment_at)
+		  WHERE enriched_at IS NULL AND deleted_at IS NULL;
+
+		CREATE INDEX IF NOT EXISTS idx_repos_enrichment_status
+		  ON repos(enrichment_status);
+
+		CREATE INDEX IF NOT EXISTS idx_repos_enrichment_tier
+		  ON repos(enrichment_tier);
+
+		CREATE INDEX IF NOT EXISTS idx_repos_enrichment_priority
+		  ON repos(enrichment_priority DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_repos_next_enrichment_at
+		  ON repos(next_enrichment_at);
+
+		CREATE INDEX IF NOT EXISTS idx_repos_enrichment_depth
+		  ON repos(enrichment_depth);
+
+		CREATE INDEX IF NOT EXISTS idx_repos_claim_expires
+		  ON repos(enrichment_claim_expires_at);
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -1025,7 +1142,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	24: migration024,
 	25: migration025,
 	26: migration026,
-	27: migration027
+	27: migration027,
+	28: migration028
 };
 
 export interface MigrationRunResult {
