@@ -2,6 +2,7 @@ import './load-env.js';
 import { getDb } from '../src/lib/server/db/index.js';
 import {
 	EMERGING_REVIEW_REASONS,
+	addEmergingTermExclusion,
 	excludeEmergingTopic,
 	getEmergingTopicDetail,
 	listEmergingTermAliases,
@@ -19,6 +20,7 @@ const ACTIONS = [
 	'merge',
 	'show',
 	'remove-alias',
+	'exclude-term',
 	'list-aliases',
 	'list-exclusions'
 ] as const;
@@ -33,6 +35,7 @@ function usage(message?: string): never {
   npm run review:emerging -- merge <from-key> <canonical-key>
   npm run review:emerging -- show <key>
   npm run review:emerging -- remove-alias <alias>
+  npm run review:emerging -- exclude-term <term> <reason>
   npm run review:emerging -- list-aliases
   npm run review:emerging -- list-exclusions
 
@@ -129,6 +132,15 @@ function main() {
 			throw new Error(`Alias not found: ${alias}`);
 		}
 		console.log(`Removed alias ${alias}`);
+		return;
+	}
+
+	if (action === 'exclude-term') {
+		const [term, reasonRaw] = args;
+		if (!term) usage('Term is required for exclude-term');
+		const reason = parseReason(reasonRaw);
+		addEmergingTermExclusion(term, reason);
+		console.log(`Excluded term ${term} (${reason})`);
 		return;
 	}
 

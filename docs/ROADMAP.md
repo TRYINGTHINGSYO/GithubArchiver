@@ -533,6 +533,22 @@ v13  repo_dependencies
 
 ---
 
+## Emerging topic detection — operational record
+
+### Validated zero (2026-07-17)
+
+> Matched 28-hour comparison, datasets #7/#8, zero accepted candidates after review exclusions.
+
+After enriching and comparing frozen matched-hour datasets **#7** (2026-06-22→06-29) and **#8** (2026-06-29→07-06), detection initially surfaced two candidates (`built-with`, `system`). Manual review classified both as detector noise (README template language and generic project-name tokens). A rerun on the same immutable evidence frame with review exclusions applied produced **zero** accepted candidates; absolute gates (`current ≥ 10`, owners ≥ 5, high-signal ≥ 3) rejected all near-misses.
+
+**Watch list (not promoted):** `claude-code` (topic, current=3), `tracker` (name-token, current=7).
+
+**Do not rerun detection on #7/#8** — preserve this pair as evidence that guardrails reject generic language rather than manufacturing trends.
+
+**Next operation:** create a new matched-hour pair for the following weekly window (same methodology versions and sampling settings), then compare whether watch-list terms gain real prevalence.
+
+---
+
 ## Implementation order
 
 1. **v10** — one migration, enrich hooks, event types, basic repo page history

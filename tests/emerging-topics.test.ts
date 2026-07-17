@@ -348,6 +348,56 @@ describe('emerging topic detection', () => {
 			candidates.some((row) => row.key === 'system' && row.candidateType === 'name-token')
 		).toBe(false);
 	});
+
+	it('does not treat platform or backend as name-token emerging candidates', () => {
+		for (let i = 0; i < 12; i++) {
+			insertSeedRepo({
+				owner: `platform-owner-${i}`,
+				name: `analytics-platform-${i}`,
+				topic: 'unrelated-topic',
+				description: 'Analytics platform experiments',
+				createdAt: '2026-07-10T12:00:00.000Z',
+				score: 55
+			});
+			insertSeedRepo({
+				owner: `backend-owner-${i}`,
+				name: `api-backend-${i}`,
+				topic: 'unrelated-topic',
+				description: 'API backend service',
+				createdAt: '2026-07-10T12:00:00.000Z',
+				score: 55
+			});
+		}
+
+		const candidates = detectEmergingTopics({
+			periodEnd: new Date('2026-07-15T00:00:00.000Z'),
+			windowDays: 7
+		});
+		expect(candidates.some((row) => row.key === 'platform')).toBe(false);
+		expect(candidates.some((row) => row.key === 'backend')).toBe(false);
+	});
+
+	it('drops excluded generic phrases from future detection runs', () => {
+		addEmergingTermExclusion('with-python', 'generic-term');
+		addEmergingTermExclusion('real-time', 'generic-term');
+		for (let i = 0; i < 12; i++) {
+			insertSeedRepo({
+				owner: `phrase-owner-${i}`,
+				name: `data-pipeline-${i}`,
+				topic: 'unrelated-topic',
+				description: 'Built with Python for real-time analytics pipelines',
+				createdAt: '2026-07-10T12:00:00.000Z',
+				score: 55
+			});
+		}
+
+		const candidates = detectEmergingTopics({
+			periodEnd: new Date('2026-07-15T00:00:00.000Z'),
+			windowDays: 7
+		});
+		expect(candidates.some((row) => row.key === 'with-python')).toBe(false);
+		expect(candidates.some((row) => row.key === 'real-time')).toBe(false);
+	});
 });
 
 function seedRepos(
