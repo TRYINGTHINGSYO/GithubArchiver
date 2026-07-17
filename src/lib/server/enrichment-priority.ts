@@ -40,6 +40,10 @@ export interface PriorityResult {
 	tier: EnrichmentTier;
 }
 
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function ageDays(iso: string | null | undefined): number {
 	if (!iso) return 9999;
 	const ms = Date.now() - Date.parse(iso);
@@ -72,7 +76,9 @@ function clusterHintScore(input: PriorityInput): number {
 	let score = 0;
 	for (const cluster of CLUSTER_DEFINITIONS) {
 		for (const topic of cluster.topicPatterns ?? []) {
-			if (hay.includes(topic.toLowerCase())) {
+			// Word-boundary match — plain includes("rag") falsely hits "storage"/"average".
+			const re = new RegExp(`\\b${escapeRegExp(topic.toLowerCase())}\\b`, 'i');
+			if (re.test(hay)) {
 				score = Math.max(score, 35);
 			}
 		}
@@ -90,6 +96,40 @@ function spamPenalty(input: PriorityInput): number {
 	return 0;
 }
 
+function hasHighValueSignal(input: PriorityInput, clusterScore: number): boolean {
+	if (clusterScore >= 30) return true;
+	const hay = `${input.full_name ?? ''} ${input.description ?? ''} ${input.topics ?? ''}`;
+	return HIGH_VALUE_KEYWORDS.test(hay);
+}
+
+/**
+ * Tier rules (deliberately NOT "every CreateEvent is urgent"):
+ * - urgent: clear demand (stars) or strong signal on a brand-new repo
+ * - high: worth enriching soon (recent, modest stars, or newly discovered)
+ * - normal / low / deferred: long-tail backlog
+ */
+export function assignEnrichmentTier(input: {
+	priority: number;
+	stars: number;
+	createdAgeDays: number;
+	seenAgeDays: number;
+	hasSignal: boolean;
+}): EnrichmentTier {
+	const { priority, stars, createdAgeDays, seenAgeDays, hasSignal } = input;
+
+	if (stars >= 50 || priority >= 160) return 'urgent';
+	if (createdAgeDays <= 3 && (stars >= 5 || (hasSignal && priority >= 110))) return 'urgent';
+
+	if (stars >= 10 || priority >= 100) return 'high';
+	if (createdAgeDays <= 14 || seenAgeDays <= 2) return 'high';
+
+	if (createdAgeDays > 400 && stars === 0 && priority < 40) return 'deferred';
+	if (priority < 25 || (createdAgeDays > 365 && stars === 0)) return 'deferred';
+	if (priority < 45 || (createdAgeDays > 180 && stars < 2)) return 'low';
+
+	return 'normal';
+}
+
 export function scoreEnrichmentPriority(input: PriorityInput): PriorityResult {
 	const stars = input.stars ?? 0;
 	const forks = input.forks ?? 0;
@@ -97,6 +137,11 @@ export function scoreEnrichmentPriority(input: PriorityInput): PriorityResult {
 	const seenAge = ageDays(input.first_seen_at ?? input.created_at);
 	const pushAge = ageDays(input.pushed_at);
 	const attempts = input.enrichment_attempts ?? 0;
+	const clusterScore = clusterHintScore(input);
+	const keywordHit = HIGH_VALUE_KEYWORDS.test(
+		`${input.full_name ?? ''} ${input.description ?? ''} ${input.topics ?? ''}`
+	);
+	const signal = hasHighValueSignal(input, clusterScore) || keywordHit;
 
 	let priority =
 		Math.log10(stars + 1) * 40 +
@@ -104,28 +149,30 @@ export function scoreEnrichmentPriority(input: PriorityInput): PriorityResult {
 		descriptionQuality(input.description) +
 		topicsScore(input.topics) +
 		(input.language ? 10 : 0) +
-		clusterHintScore(input) +
-		(HIGH_VALUE_KEYWORDS.test(`${input.full_name ?? ''} ${input.description ?? ''}`) ? 25 : 0) +
+		clusterScore +
+		(keywordHit ? 25 : 0) +
 		spamPenalty(input) +
 		Math.min(40, (input.event_count ?? 0) * 4);
 
-	if (createdAge <= 3) priority += 90;
-	else if (createdAge <= 14) priority += 55;
-	else if (createdAge <= 45) priority += 25;
+	if (createdAge <= 3) priority += 55;
+	else if (createdAge <= 14) priority += 35;
+	else if (createdAge <= 45) priority += 20;
 	else if (createdAge > 365) priority -= 20;
 
-	if (seenAge <= 1) priority += 30;
+	if (seenAge <= 1) priority += 20;
 	if (pushAge <= 14) priority += 15;
 	if (attempts > 0) priority -= Math.min(50, attempts * 12);
 	if (input.last_enrichment_error) priority -= 8;
 
 	priority = Math.round(priority * 10) / 10;
 
-	let tier: EnrichmentTier = 'normal';
-	if (priority >= 140 || stars >= 50 || createdAge <= 3) tier = 'urgent';
-	else if (priority >= 90 || stars >= 10 || createdAge <= 14) tier = 'high';
-	else if (priority < 25 || (createdAge > 400 && stars === 0)) tier = 'deferred';
-	else if (priority < 45 || (createdAge > 180 && stars < 2)) tier = 'low';
+	const tier = assignEnrichmentTier({
+		priority,
+		stars,
+		createdAgeDays: createdAge,
+		seenAgeDays: seenAge,
+		hasSignal: signal
+	});
 
 	return { priority, tier };
 }

@@ -156,17 +156,19 @@ export function computeDaemonSleepMs(opts: {
 	nowMs?: number;
 	/** Test hook: fixed idle sleep instead of random */
 	idleSleepMs?: number;
-	/** When unarchived source backlog exceeds threshold, cap sleep at this value */
+	/**
+	 * Sleep while any work backlog remains. Defaults to ARCHIVE_BACKLOG_SLEEP_MS.
+	 * Always wins over a larger sleepMinMs so stale 5-minute defaults cannot stall the loop.
+	 */
+	backlogSleepMs?: number;
+	/** @deprecated Use backlogSleepMs — kept for call-site compatibility */
 	archiveBacklogSleepMs?: number;
 	archiveBacklogSleepThreshold?: number;
 }): number {
 	if (hasAnyBacklog(opts.backlog)) {
-		const threshold = opts.archiveBacklogSleepThreshold ?? Number(process.env.ARCHIVE_BACKLOG_SLEEP_THRESHOLD ?? 1000);
-		const archiveSleep = opts.archiveBacklogSleepMs ?? Number(process.env.ARCHIVE_BACKLOG_SLEEP_MS ?? 60_000);
-		if (opts.backlog.unarchivedSource >= threshold) {
-			return Math.min(opts.sleepMinMs, archiveSleep);
-		}
-		return opts.sleepMinMs;
+		const backlogSleep = resolveBacklogSleepMs(opts);
+		// Prefer the explicit backlog sleep when the configured min is longer (common misconfig).
+		return Math.min(opts.sleepMinMs, backlogSleep);
 	}
 
 	const now = opts.nowMs ?? Date.now();
@@ -179,6 +181,25 @@ export function computeDaemonSleepMs(opts: {
 	}
 
 	return opts.idleSleepMs ?? randomSleepMs(opts.sleepMinMs, opts.sleepMaxMs);
+}
+
+function resolveBacklogSleepMs(opts: {
+	backlogSleepMs?: number;
+	archiveBacklogSleepMs?: number;
+	archiveBacklogSleepThreshold?: number;
+	backlog: BacklogSnapshot;
+	sleepMinMs: number;
+}): number {
+	const fromEnv = Number(process.env.ARCHIVE_BACKLOG_SLEEP_MS ?? 60_000);
+	const configured =
+		opts.backlogSleepMs ?? opts.archiveBacklogSleepMs ?? (Number.isFinite(fromEnv) ? fromEnv : 60_000);
+	const threshold =
+		opts.archiveBacklogSleepThreshold ?? Number(process.env.ARCHIVE_BACKLOG_SLEEP_THRESHOLD ?? 1000);
+	// Large archive backlog: never exceed the dedicated archive/backlog sleep.
+	if (opts.backlog.unarchivedSource >= threshold) {
+		return configured;
+	}
+	return configured;
 }
 
 export function daemonActionJobType(action: DaemonAction): JobType | null {
