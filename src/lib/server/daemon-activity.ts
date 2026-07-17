@@ -3,6 +3,10 @@ import { hasAnyBacklog } from '$lib/server/daemon-planner';
 import { queryBacklogSnapshot } from '$lib/server/daemon-backlog';
 import { getRunningJobByType, getLatestDaemonJob, parseJobDetail } from '$lib/server/db/jobs';
 import type { JobType } from '$lib/server/db/types';
+import {
+	getEnrichmentProgress,
+	type EnrichmentProgress
+} from '$lib/server/enrichment-progress';
 import { getDaemonUiStatus } from '$lib/server/worker-control';
 
 const WORK_PHASES = new Set([
@@ -22,8 +26,16 @@ export interface DaemonActivity {
 	action: ActivityAction;
 	message: string;
 	startedAt: string | null;
-	progress: null;
+	progress: {
+		completed: number;
+		failed: number;
+		remaining: number;
+		total: number;
+		currentRepo: string | null;
+		enrichedTotal: number;
+	} | null;
 	nextCheckIn: string | null;
+	enrichment: EnrichmentProgress;
 }
 
 export interface DaemonActivityInput {
@@ -38,6 +50,7 @@ export interface DaemonActivityInput {
 		detail: Record<string, unknown>;
 	} | null;
 	loopStartedAt: string | null;
+	enrichment: EnrichmentProgress;
 	nowMs?: number;
 }
 
@@ -86,14 +99,35 @@ function workerJobToAction(jobType: string): ActivityAction {
 	}
 }
 
-export function formatActivityMessage(action: ActivityAction, count: number | null, hasBacklog: boolean): string {
+function enrichMessage(progress: EnrichmentProgress): string {
+	if (progress.status === 'rate_limited') {
+		return 'Pausing briefly (GitHub rate limit)...';
+	}
+	if (progress.currentRepo) {
+		return `Enriching ${progress.currentRepo} — ${progress.completed.toLocaleString()} done, ${progress.remaining.toLocaleString()} left`;
+	}
+	if (progress.remaining > 0) {
+		return `Enriching repositories — ${progress.enrichedTotal.toLocaleString()} done, ${progress.remaining.toLocaleString()} waiting`;
+	}
+	return 'Enrichment caught up — ready for new discoveries.';
+}
+
+export function formatActivityMessage(
+	action: ActivityAction,
+	count: number | null,
+	hasBacklog: boolean,
+	enrichment?: EnrichmentProgress
+): string {
+	if (action === 'enrich' && enrichment) {
+		return enrichMessage(enrichment);
+	}
 	switch (action) {
 		case 'ingest':
 			return 'Scanning GitHub for new repos...';
 		case 'enrich':
 			return count != null
-				? `Reading READMEs and tagging ${count} repositories...`
-				: 'Reading READMEs and tagging repositories...';
+				? `Enriching repositories — working through ${count.toLocaleString()}...`
+				: 'Enriching repositories...';
 		case 'archive':
 			return count != null
 				? `Saving snapshots for ${count} repositories...`
@@ -106,6 +140,9 @@ export function formatActivityMessage(action: ActivityAction, count: number | nu
 			return 'Pausing briefly (GitHub rate limit)...';
 		case 'idle':
 		default:
+			if (enrichment && enrichment.remaining > 0) {
+				return enrichMessage(enrichment);
+			}
 			return hasBacklog ? 'Waiting for next check...' : 'Caught up — waiting for new activity.';
 	}
 }
@@ -114,10 +151,24 @@ function plannedCount(action: string, detail: Record<string, unknown>): number |
 	if (detail.planned != null && Number.isFinite(Number(detail.planned))) {
 		return Number(detail.planned);
 	}
+	if (detail.remaining != null && Number.isFinite(Number(detail.remaining))) {
+		return Number(detail.remaining);
+	}
 	if (action === 'ingest' && detail.hours_planned != null) {
 		return Number(detail.hours_planned);
 	}
 	return defaultBatchSize(action);
+}
+
+function progressFromEnrichment(enrichment: EnrichmentProgress): DaemonActivity['progress'] {
+	return {
+		completed: enrichment.completed,
+		failed: enrichment.failed,
+		remaining: enrichment.remaining,
+		total: enrichment.backlogTotal,
+		currentRepo: enrichment.currentRepo,
+		enrichedTotal: enrichment.enrichedTotal
+	};
 }
 
 export function resolveDaemonActivity(input: DaemonActivityInput): DaemonActivity {
@@ -125,13 +176,14 @@ export function resolveDaemonActivity(input: DaemonActivityInput): DaemonActivit
 	const rateLimited =
 		Boolean(input.rateLimitedUntil) && Date.parse(input.rateLimitedUntil!) > nowMs;
 
-	if (rateLimited) {
+	if (rateLimited || input.enrichment.status === 'rate_limited') {
 		return {
 			action: 'rate_limited',
-			message: formatActivityMessage('rate_limited', null, input.hasBacklog),
+			message: formatActivityMessage('rate_limited', null, input.hasBacklog, input.enrichment),
 			startedAt: null,
-			progress: null,
-			nextCheckIn: input.sleepUntil
+			progress: progressFromEnrichment(input.enrichment),
+			nextCheckIn: input.sleepUntil ?? input.enrichment.rateLimitResetAt ?? null,
+			enrichment: input.enrichment
 		};
 	}
 
@@ -142,12 +194,32 @@ export function resolveDaemonActivity(input: DaemonActivityInput): DaemonActivit
 	if (activeWorker) {
 		const action = workerJobToAction(activeWorker.jobType);
 		const count = plannedCount(activeWorker.jobType, activeWorker.detail);
+		const currentFromJob =
+			typeof activeWorker.detail.current_repo === 'string'
+				? activeWorker.detail.current_repo
+				: input.enrichment.currentRepo;
+		const enrichment =
+			action === 'enrich'
+				? {
+						...input.enrichment,
+						currentRepo: currentFromJob,
+						completed:
+							typeof activeWorker.detail.enriched === 'number'
+								? activeWorker.detail.enriched
+								: input.enrichment.completed,
+						remaining:
+							typeof activeWorker.detail.remaining === 'number'
+								? activeWorker.detail.remaining
+								: input.enrichment.remaining
+					}
+				: input.enrichment;
 		return {
 			action,
-			message: formatActivityMessage(action, count, input.hasBacklog),
+			message: formatActivityMessage(action, count, input.hasBacklog, enrichment),
 			startedAt: activeWorker.startedAt,
-			progress: null,
-			nextCheckIn: null
+			progress: progressFromEnrichment(enrichment),
+			nextCheckIn: null,
+			enrichment
 		};
 	}
 
@@ -157,22 +229,35 @@ export function resolveDaemonActivity(input: DaemonActivityInput): DaemonActivit
 		const message =
 			activePhase === 'backfill'
 				? 'Catching up on historical data...'
-				: formatActivityMessage(action, count, input.hasBacklog);
+				: formatActivityMessage(action, count, input.hasBacklog, input.enrichment);
 		return {
 			action,
 			message,
 			startedAt: input.loopStartedAt,
-			progress: null,
-			nextCheckIn: null
+			progress: progressFromEnrichment(input.enrichment),
+			nextCheckIn: null,
+			enrichment: input.enrichment
+		};
+	}
+
+	if (input.enrichment.remaining > 0) {
+		return {
+			action: 'enrich',
+			message: enrichMessage(input.enrichment),
+			startedAt: null,
+			progress: progressFromEnrichment(input.enrichment),
+			nextCheckIn: input.sleepUntil,
+			enrichment: input.enrichment
 		};
 	}
 
 	return {
 		action: 'idle',
-		message: formatActivityMessage('idle', null, input.hasBacklog),
+		message: formatActivityMessage('idle', null, input.hasBacklog, input.enrichment),
 		startedAt: null,
-		progress: null,
-		nextCheckIn: input.sleepUntil
+		progress: progressFromEnrichment(input.enrichment),
+		nextCheckIn: input.sleepUntil,
+		enrichment: input.enrichment
 	};
 }
 
@@ -191,9 +276,11 @@ export function getDaemonActivity(): DaemonActivity {
 	const daemonJob = getLatestDaemonJob();
 	const daemonDetail = daemonJob ? parseJobDetail(daemonJob) : {};
 	const workerJob = findActiveWorkerJob();
+	const enrichment = getEnrichmentProgress();
 
 	const rateLimitedUntil =
 		bg.rateLimitedUntil ??
+		enrichment.rateLimitResetAt ??
 		(typeof daemonDetail.backlog_after === 'object' &&
 		daemonDetail.backlog_after &&
 		'rateLimitedUntil' in (daemonDetail.backlog_after as Record<string, unknown>)
@@ -216,6 +303,7 @@ export function getDaemonActivity(): DaemonActivity {
 		loopStartedAt:
 			typeof daemonDetail.loop_started === 'string'
 				? daemonDetail.loop_started
-				: daemonJob?.started_at ?? null
+				: daemonJob?.started_at ?? null,
+		enrichment
 	});
 }

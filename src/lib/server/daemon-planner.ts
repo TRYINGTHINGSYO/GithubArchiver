@@ -42,20 +42,23 @@ export interface DaemonDecision {
 export function scoreAction(action: DaemonAction, backlog: BacklogSnapshot): number {
 	switch (action) {
 		case 'ingest':
-			// Floor 150 so missing GH Archive hours always beat enrich (~120 max at huge backlog).
+			// Discover new repos only when the enrich backlog is clear.
+			if (backlog.unenriched > 0) return 0;
 			return backlog.missingGhArchiveHours > 0 ? 150 + backlog.missingGhArchiveHours : 0;
 		case 'backfill':
 			return backlog.backfillPendingHours > 0 ? 90 + backlog.backfillPendingHours : 0;
 		case 'search_gap':
+			if (backlog.unenriched > 0) return 0;
 			return backlog.currentHourSearchGap ? 85 : 0;
 		case 'enrich':
-			// Log-scaled, capped below archive floor so any unarchived repo wins.
+			// Highest priority while anything remains unenriched.
 			if (backlog.unenriched <= 0) return 0;
-			return Math.min(130, 80 + Math.log10(backlog.unenriched + 1) * 10);
+			return 200 + Math.min(100, Math.log10(backlog.unenriched + 1) * 20);
 		case 'refresh':
 			return backlog.staleRefresh > 0 ? 50 + Math.log10(backlog.staleRefresh + 1) * 8 : 0;
 		case 'archive':
-			// Floor 140 + backlog so archive beats enrich; ingest (150+n) still wins missing hours.
+			// Archive after enrich clears, or when enrich backlog is empty.
+			if (backlog.unenriched > 0) return Math.min(40, backlog.unarchivedSource);
 			return backlog.unarchivedSource > 0 ? 140 + backlog.unarchivedSource : 0;
 		case 'idle':
 			return 0;

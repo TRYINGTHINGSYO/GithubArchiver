@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import ActivityStatusBar from '$lib/components/ActivityStatusBar.svelte';
 
 	let { children, data } = $props();
 </script>
@@ -23,6 +24,10 @@
 		</nav>
 	</div>
 </header>
+
+{#if data.activity}
+	<ActivityStatusBar initial={data.activity} />
+{/if}
 
 <main class="container">
 	{@render children()}
