@@ -1,9 +1,39 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T20:35:33.220Z",
+  "generatedAt": "2026-07-18T20:35:49.586Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "bugfix-cluster-title-href",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-18",
+      "pr": 25,
+      "commit": "76f91e5",
+      "migration": null,
+      "area": [
+        "discovery",
+        "clusters",
+        "ux"
+      ],
+      "related": [
+        "bugfix-nav-perf-clusters"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "bugfix-nav-perf-clusters"
+        }
+      ],
+      "supersedes": null,
+      "title": "Homepage cluster titles must open /?cluster= not fastest-growing",
+      "path": "entries/2026-07-18-bugfix-cluster-title-href.md",
+      "summary": "PR #23 routed `mode === 'growth'` titles to `/discover/fastest-growing?cluster=…`. That page applies strict growth guardrails per request, so a homepage card (e.g. Portfolio Websites) could open an empty “No clusters meet the growth guardrails” page."
+    },
     {
       "id": "bugfix-nav-perf-clusters",
       "schema": 1,
@@ -626,36 +656,6 @@
       "title": "Fix activity bar copy so enrichment is not labeled as Search",
       "path": "entries/2026-07-18-pr-4-activity-copy.md",
       "summary": "Prefer enrichment messaging when backlog remains. Ingest-only copy: “Discovering repositories from the archive…” so the bar matches actual runtime work."
-    },
-    {
-      "id": "bugfix-cluster-title-href",
-      "schema": 1,
-      "type": "bugfix",
-      "status": "open",
-      "confidence": "confirmed",
-      "durability": "release",
-      "date": "2026-07-18",
-      "pr": null,
-      "commit": null,
-      "migration": null,
-      "area": [
-        "discovery",
-        "clusters",
-        "ux"
-      ],
-      "related": [
-        "bugfix-nav-perf-clusters"
-      ],
-      "relationships": [
-        {
-          "type": "caused-by",
-          "id": "bugfix-nav-perf-clusters"
-        }
-      ],
-      "supersedes": null,
-      "title": "Homepage cluster titles must open /?cluster= not fastest-growing",
-      "path": "entries/2026-07-18-bugfix-cluster-title-href.md",
-      "summary": "PR #23 routed `mode === 'growth'` titles to `/discover/fastest-growing?cluster=…`. That page applies strict growth guardrails per request, so a homepage card (e.g. Portfolio Websites) could open an empty “No clusters meet the growth guardrails” page."
     },
     {
       "id": "debt-github-token",

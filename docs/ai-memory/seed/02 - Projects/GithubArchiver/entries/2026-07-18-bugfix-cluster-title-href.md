@@ -2,8 +2,8 @@
 schema: 1
 id: bugfix-cluster-title-href
 date: 2026-07-18
-pr: null
-commit: null
+pr: 25
+commit: 76f91e5
 area:
   - discovery
   - clusters
