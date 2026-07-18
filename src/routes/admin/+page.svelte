@@ -374,6 +374,32 @@
 					<dt>API req / repo</dt>
 					<dd>{status.pipeline.enrichment.requestsPerRepo ?? '—'}</dd>
 				</div>
+				{#if status.pipeline.enrichment.stageTimings}
+					<div>
+						<dt>Metadata fetch</dt>
+						<dd>{Math.round(status.pipeline.enrichment.stageTimings.metadataMs)} ms</dd>
+					</div>
+					<div>
+						<dt>Classification</dt>
+						<dd>{Math.round(status.pipeline.enrichment.stageTimings.classificationMs)} ms</dd>
+					</div>
+					<div>
+						<dt>README</dt>
+						<dd>{Math.round(status.pipeline.enrichment.stageTimings.readmeMs)} ms</dd>
+					</div>
+					<div>
+						<dt>Story generation</dt>
+						<dd>{Math.round(status.pipeline.enrichment.stageTimings.storyMs)} ms</dd>
+					</div>
+					<div>
+						<dt>DB write</dt>
+						<dd>{Math.round(status.pipeline.enrichment.stageTimings.dbWriteMs)} ms</dd>
+					</div>
+					<div>
+						<dt>Total / repo</dt>
+						<dd>{Math.round(status.pipeline.enrichment.stageTimings.totalMs)} ms</dd>
+					</div>
+				{/if}
 				<div>
 					<dt>Concurrency</dt>
 					<dd>

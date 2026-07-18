@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 32;
+export const CURRENT_SCHEMA_VERSION = 33;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1085,6 +1085,12 @@ function migration028(database: Database.Database) {
 			quota_remaining INTEGER,
 			quota_reset_at TEXT,
 			throughput_per_min REAL NOT NULL DEFAULT 0,
+			avg_metadata_ms REAL NOT NULL DEFAULT 0,
+			avg_classification_ms REAL NOT NULL DEFAULT 0,
+			avg_readme_ms REAL NOT NULL DEFAULT 0,
+			avg_story_ms REAL NOT NULL DEFAULT 0,
+			avg_db_write_ms REAL NOT NULL DEFAULT 0,
+			avg_total_ms REAL NOT NULL DEFAULT 0,
 			updated_at TEXT NOT NULL
 		);
 
@@ -1210,6 +1216,24 @@ function migration032(database: Database.Database) {
 	recomputeEnrichmentTiersSql(database);
 }
 
+/** Per-stage enrichment timings for throughput profiling. */
+function migration033(database: Database.Database) {
+	const cols = columnNames(database, 'enrichment_metrics');
+	const adds: Array<[string, string]> = [
+		['avg_metadata_ms', 'REAL NOT NULL DEFAULT 0'],
+		['avg_classification_ms', 'REAL NOT NULL DEFAULT 0'],
+		['avg_readme_ms', 'REAL NOT NULL DEFAULT 0'],
+		['avg_story_ms', 'REAL NOT NULL DEFAULT 0'],
+		['avg_db_write_ms', 'REAL NOT NULL DEFAULT 0'],
+		['avg_total_ms', 'REAL NOT NULL DEFAULT 0']
+	];
+	for (const [name, decl] of adds) {
+		if (!cols.has(name)) {
+			database.exec(`ALTER TABLE enrichment_metrics ADD COLUMN ${name} ${decl}`);
+		}
+	}
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -1242,7 +1266,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	29: migration029,
 	30: migration030,
 	31: migration031,
-	32: migration032
+	32: migration032,
+	33: migration033
 };
 
 export interface MigrationRunResult {

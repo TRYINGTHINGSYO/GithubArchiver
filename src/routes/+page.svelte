@@ -23,7 +23,9 @@
 	});
 	const etaClaimableLabel = $derived.by(() => {
 		const minutes = enrichOps.etaClaimableMinutes;
-		if (minutes == null) return null;
+		if (minutes == null) {
+			return enrichOps.claimableBacklog === 0 ? 'caught up' : null;
+		}
 		if (minutes < 60) return `~${minutes} min`;
 		if (minutes < 60 * 24) return `~${Math.round(minutes / 60)} hours`;
 		return `~${Math.round(minutes / (60 * 24))} days`;
@@ -206,6 +208,7 @@
 			claimableWaiting={enrichOps.claimableBacklog}
 			deferredWaiting={enrichOps.deferredBacklog}
 			etaClaimableLabel={etaClaimableLabel}
+			stageTimings={enrichOps.stageTimings}
 		/>
 		<div class="enrich-bar" role="progressbar" aria-valuenow={enrichPercent} aria-valuemin="0" aria-valuemax="100">
 			<span style={`width: ${Math.min(100, enrichPercent)}%`}></span>

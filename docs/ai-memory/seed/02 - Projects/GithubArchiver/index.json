@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T19:44:04.764Z",
+  "generatedAt": "2026-07-18T19:56:59.467Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -596,6 +596,41 @@
       "title": "Production Railway needs a real GITHUB_TOKEN",
       "path": "entries/2026-07-18-debt-github-token.md",
       "summary": "API-backed enrichment and Search fallback require a real `GITHUB_TOKEN` in the Railway environment. This is ops configuration, not a code defect. Track until verified present and quota-healthy in production."
+    },
+    {
+      "id": "decision-enrich-stage-timings",
+      "schema": 1,
+      "type": "decision",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": null,
+      "migration": 33,
+      "area": [
+        "enrichment",
+        "throughput",
+        "observability"
+      ],
+      "related": [
+        "incident-enrichment-hourly-bottleneck",
+        "incident-empty-createevent-defer"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-enrichment-hourly-bottleneck"
+        },
+        {
+          "type": "references",
+          "id": "incident-empty-createevent-defer"
+        }
+      ],
+      "supersedes": null,
+      "title": "Profile enrichment with per-stage timings before more architecture changes",
+      "path": "entries/2026-07-18-decision-enrich-stage-timings.md",
+      "summary": "After continuous concurrent enrichment landed (~40+ repos/min, 8 workers), the next bottleneck is unknown. Guessing (API vs README vs classify vs SQLite vs story) wastes cycles."
     },
     {
       "id": "decision-knowledge-engine-philosophy",

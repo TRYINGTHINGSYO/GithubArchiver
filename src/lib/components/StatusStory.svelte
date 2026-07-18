@@ -22,6 +22,7 @@
 		claimableWaiting = null,
 		deferredWaiting = null,
 		etaClaimableLabel = null,
+		stageTimings = null,
 		compact = false
 	}: {
 		currentActivity: string;
@@ -42,6 +43,14 @@
 		claimableWaiting?: number | null;
 		deferredWaiting?: number | null;
 		etaClaimableLabel?: string | null;
+		stageTimings?: {
+			metadataMs: number;
+			classificationMs: number;
+			readmeMs: number;
+			storyMs: number;
+			dbWriteMs: number;
+			totalMs: number;
+		} | null;
 		compact?: boolean;
 	} = $props();
 
@@ -53,7 +62,13 @@
 		claimableWaiting != null ||
 		deferredWaiting != null ||
 		etaClaimableLabel != null ||
-		enrichLastRanLabel != null;
+		enrichLastRanLabel != null ||
+		stageTimings != null;
+
+	function stageLine(label: string, ms: number): string {
+		const value = `${Math.round(ms).toLocaleString()} ms`;
+		return `${label.padEnd(18)} ${value.padStart(10)}`;
+	}
 </script>
 
 <div class="status-story" class:compact>
@@ -147,6 +162,16 @@
 					</div>
 				{/if}
 			</dl>
+			{#if stageTimings}
+				<pre class="stage-timings" aria-label="Time spent per repository">{`Time spent per repository
+
+${stageLine('Metadata fetch:', stageTimings.metadataMs)}
+${stageLine('Classification:', stageTimings.classificationMs)}
+${stageLine('README:', stageTimings.readmeMs)}
+${stageLine('Story generation:', stageTimings.storyMs)}
+${stageLine('DB write:', stageTimings.dbWriteMs)}
+${stageLine('Total:', stageTimings.totalMs)}`}</pre>
+			{/if}
 		</section>
 	{/if}
 
@@ -242,5 +267,18 @@
 	.mono {
 		font-family: var(--font-mono, ui-monospace, monospace);
 		font-size: 0.92rem;
+	}
+
+	.stage-timings {
+		margin: 0.85rem 0 0;
+		padding: 0.75rem 0.85rem;
+		border-radius: 0.4rem;
+		background: color-mix(in srgb, var(--text-muted) 10%, transparent);
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 0.78rem;
+		line-height: 1.45;
+		color: var(--text);
+		white-space: pre;
+		overflow-x: auto;
 	}
 </style>

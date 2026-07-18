@@ -20,6 +20,7 @@ import { materializeDiscoveryResults, getMaterializedDiscoveryLanding } from '$l
 import { pickAction, scoreAction, type BacklogSnapshot } from '$lib/server/daemon-planner';
 import { getDueDaemonJobs } from '$lib/server/daemon-scheduler';
 import { acquireWorkerLease, releaseWorkerLease } from '$lib/server/worker-lease';
+import { getEnrichmentOpsSnapshot } from '$lib/server/workers/enrich';
 import { setupTestDb, teardownTestDb } from './helpers/db';
 
 function emptyBacklog(overrides: Partial<BacklogSnapshot> = {}): BacklogSnapshot {
@@ -326,10 +327,10 @@ describe('high-throughput enrichment architecture', () => {
 		expect(getMaterializedDiscoveryLanding({ limit: 5 })).not.toBeNull();
 	});
 
-	it('migrates to schema version 32 with enrichment indexes', () => {
+	it('migrates to schema version 33 with enrichment stage timing columns', () => {
 		const db = getDb();
 		expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(32);
+		expect(CURRENT_SCHEMA_VERSION).toBe(33);
 		const indexes = (
 			db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`).all() as { name: string }[]
 		).map((r) => r.name);
@@ -340,6 +341,44 @@ describe('high-throughput enrichment architecture', () => {
 		).map((r) => r.name);
 		expect(tables).toContain('worker_leases');
 		expect(tables).toContain('enrichment_metrics');
+		const cols = (
+			db.prepare(`PRAGMA table_info(enrichment_metrics)`).all() as { name: string }[]
+		).map((r) => r.name);
+		expect(cols).toContain('avg_metadata_ms');
+		expect(cols).toContain('avg_classification_ms');
+		expect(cols).toContain('avg_readme_ms');
+		expect(cols).toContain('avg_story_ms');
+		expect(cols).toContain('avg_db_write_ms');
+		expect(cols).toContain('avg_total_ms');
+	});
+
+	it('surfaces per-stage enrich timings in ops snapshot', () => {
+		getDb()
+			.prepare(
+				`UPDATE enrichment_metrics SET
+				  avg_metadata_ms = 180,
+				  avg_classification_ms = 40,
+				  avg_readme_ms = 0,
+				  avg_story_ms = 210,
+				  avg_db_write_ms = 25,
+				  avg_total_ms = 865,
+				  throughput_per_min = 40,
+				  concurrency = 12,
+				  updated_at = datetime('now')
+				 WHERE id = 1`
+			)
+			.run();
+		const snap = getEnrichmentOpsSnapshot();
+		expect(snap.stageTimings).toEqual({
+			metadataMs: 180,
+			classificationMs: 40,
+			readmeMs: 0,
+			storyMs: 210,
+			dbWriteMs: 25,
+			totalMs: 1075
+		});
+		expect(snap.avgSecondsPerRepo).toBe(1.08);
+		expect(snap.configuredConcurrency).toBe(12);
 	});
 });
 
