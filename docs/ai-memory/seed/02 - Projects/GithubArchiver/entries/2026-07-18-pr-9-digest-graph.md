@@ -2,7 +2,7 @@
 id: feature-digest-knowledge-graph
 date: 2026-07-18
 pr: 9
-commit: null
+commit: 9b0d012
 area:
   - memory
 type: feature

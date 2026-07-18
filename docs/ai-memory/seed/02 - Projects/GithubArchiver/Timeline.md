@@ -13,7 +13,7 @@ Chronological event log (newest first). Source of truth is `entries/`.
 
 ## 2026-07-18
 
-- **2026-07-18** · `feature` · PR #9 · `open` · `memory` — [Richer entry types, related graph, and Project Digest](entries/2026-07-18-pr-9-digest-graph.md)
+- **2026-07-18** · `feature` · PR #9 · `9b0d012` · `open` · `memory` — [Richer entry types, related graph, and Project Digest](entries/2026-07-18-pr-9-digest-graph.md)
   - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md)
 - **2026-07-18** · `feature` · PR #8 · `feda976` · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
   - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
