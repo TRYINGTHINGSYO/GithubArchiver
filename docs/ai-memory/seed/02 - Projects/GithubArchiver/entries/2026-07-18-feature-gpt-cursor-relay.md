@@ -1,6 +1,8 @@
 ---
 id: feature-gpt-cursor-relay
 date: 2026-07-18
+pr: 26
+commit: 6994512
 area:
   - tooling
   - automation
@@ -10,6 +12,8 @@ confidence: confirmed
 durability: permanent
 schema: 1
 relationships:
+  - type: implemented-by
+    id: pr-26
   - type: related
     id: feature-cursor-memory-rules
 title: Local GPT ↔ Cursor Agent CLI relay (v1)
