@@ -2,8 +2,8 @@
 schema: 1
 id: feature-cache-hit-metrics
 date: 2026-07-18
-pr: null
-commit: null
+pr: 24
+commit: 99dab1d
 area:
   - performance
   - observability
