@@ -123,7 +123,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					topLanguages: cluster.topLanguages,
 					topRepos: cluster.topRepos,
 					rankingReason: cluster.rankingReason,
-					metricLabel: 'week-over-week growth' as const
+					metricLabel: 'week-over-week growth' as const,
+					// Only true for cards sourced from the verified growth endpoint.
+					isVerifiedGrowth: true
 				}))
 			: getActiveQualityClusters({ limit: 6, minScore: 55 }).map((cluster) => ({
 					slug: cluster.slug,
@@ -136,7 +138,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					topLanguages: cluster.topLanguages,
 					topRepos: cluster.topRepos,
 					rankingReason: cluster.rankingReason,
-					metricLabel: 'recent activity' as const
+					metricLabel: 'recent activity' as const,
+					isVerifiedGrowth: false
 				}));
 
 	let nearMisses: EmergingNearMiss[] = [];

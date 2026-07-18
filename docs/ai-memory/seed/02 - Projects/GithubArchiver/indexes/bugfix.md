@@ -13,3 +13,5 @@ generated: true
   - edges: related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #4 · `ab47863` · `merged` · `status-ui`, `enrichment` — [Fix activity bar copy so enrichment is not labeled as Search](entries/2026-07-18-pr-4-activity-copy.md)
   - edges: related:[`pr-5`](entries/2026-07-18-pr-5-status-hierarchy.md), related:[`status-ui`](entries/2026-07-18-pr-4-activity-copy.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
+- **2026-07-18** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
+  - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)

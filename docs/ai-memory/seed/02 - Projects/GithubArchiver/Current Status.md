@@ -26,6 +26,8 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
   - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), references:[`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
   - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
+- **2026-07-18** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
+  - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - **2026-07-18** · `technical-debt` · `confirmed` · `temporary` · `open-debt` · `ops`, `enrichment`, `search` — [Production Railway needs a real GITHUB_TOKEN](entries/2026-07-18-debt-github-token.md)
   - edges: related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · `eb58221` · migration 32 · `open` · `enrichment`, `priority` — [Defer empty CreateEvent spam — backlog is days-old births not years-old repos](entries/2026-07-18-incident-empty-createevent-defer.md)
