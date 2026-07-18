@@ -11,9 +11,11 @@ import {
 import { setEnrichmentProgress } from '../enrichment-progress.js';
 import {
 	claimEnrichmentBatch,
+	countClaimableEnrichmentBacklog,
 	countEnrichmentBacklogByTier,
 	countEnrichmentByDepth,
 	markEnrichmentSuccess,
+	oldestClaimableEnrichmentAt,
 	scheduleEnrichmentRetry,
 	type EnrichmentQueueRepo
 } from '../enrichment-queue.js';
@@ -32,11 +34,12 @@ import {
 import { runArchiveStoryCycle } from './stories.js';
 import { runDiscoveryMaterializationCycle } from './discovery.js';
 
-const BATCH_SIZE = Number(process.env.ENRICH_BATCH_SIZE ?? 40);
-const CONCURRENCY = Number(process.env.ENRICH_CONCURRENCY ?? 6);
-const CYCLE_BUDGET_MS = Number(process.env.ENRICH_CYCLE_BUDGET_MS ?? 45_000);
-const MAX_REQUESTS = Number(process.env.ENRICH_MAX_REQUESTS_PER_CYCLE ?? 200);
+const BATCH_SIZE = Number(process.env.ENRICH_BATCH_SIZE ?? 100);
+const CONCURRENCY = Number(process.env.ENRICH_CONCURRENCY ?? 8);
+const CYCLE_BUDGET_MS = Number(process.env.ENRICH_CYCLE_BUDGET_MS ?? 90_000);
+const MAX_REQUESTS = Number(process.env.ENRICH_MAX_REQUESTS_PER_CYCLE ?? 400);
 const RETRY_LIMIT = Number(process.env.ENRICH_RETRY_LIMIT ?? 5);
+const DEEP_UPGRADE_BATCH = Number(process.env.ENRICH_DEEP_UPGRADE_BATCH ?? 20);
 
 function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
@@ -266,7 +269,7 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 			currentRepo: repo.full_name,
 			completed: result.enriched,
 			failed: result.failed,
-			remaining: countUnenriched(),
+			remaining: countClaimableEnrichmentBacklog(),
 			backlogTotal: backlogStart,
 			enrichedTotal: countRepos() - countUnenriched()
 		});
@@ -325,6 +328,60 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 		}
 	});
 
+	// Promote high-signal fast enrichments to deep (README) when urgent/high queue is quiet.
+	const tiersNow = countEnrichmentBacklogByTier();
+	if (
+		!stop &&
+		!result.rateLimited &&
+		DEEP_UPGRADE_BATCH > 0 &&
+		tiersNow.urgent + tiersNow.high === 0 &&
+		Date.now() - cycleStarted < CYCLE_BUDGET_MS
+	) {
+		const upgrades = claimEnrichmentBatch(DEEP_UPGRADE_BATCH, `${workerId}-deep`, {
+			deepUpgrade: true
+		});
+		for (const repo of upgrades) {
+			if (Date.now() - cycleStarted > CYCLE_BUDGET_MS || shouldThrottleGitHubRequests(15)) {
+				scheduleEnrichmentRetry(repo.id, 'deep upgrade deferred to next cycle', {
+					status: 'retry',
+					delayMs: 5_000
+				});
+				continue;
+			}
+			try {
+				const enrichResult = await enrichRepo(repo, {
+					level: 2,
+					depth: 'deep',
+					etag: repo.enrichment_etag,
+					syncReleases: false,
+					skipHistory: false
+				});
+				result.enriched++;
+				result.enrichedDeep++;
+				result.requests += enrichResult.requests;
+				markEnrichmentSuccess(repo.id, 'deep', {
+					etag: enrichResult.etag,
+					httpStatus: enrichResult.httpStatus
+				});
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				if (err instanceof GitHubRateLimitError) {
+					result.rateLimited = true;
+					result.rateLimitResetAt = err.resetAt.toISOString();
+					scheduleEnrichmentRetry(repo.id, message, {
+						status: 'retry',
+						delayMs: Math.max(err.resetAt.getTime() - Date.now(), 60_000),
+						httpStatus: 403
+					});
+					break;
+				}
+				const policy = retryDelayForError(err, repo.enrichment_attempts);
+				scheduleEnrichmentRetry(repo.id, message, policy);
+				result.failed++;
+			}
+		}
+	}
+
 	// Incremental downstream for this batch: stories for newly enriched IDs, then discovery.
 	if (result.enriched > 0) {
 		try {
@@ -335,11 +392,12 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 		}
 	}
 
-	result.remaining = countUnenriched();
+	result.remaining = countClaimableEnrichmentBacklog();
 	result.currentRepo = null;
 	result.backlogByTier = countEnrichmentBacklogByTier();
 	const elapsedMin = Math.max(1 / 60, (Date.now() - cycleStarted) / 60_000);
 	const quotaAfter = getGitHubQuotaSnapshot();
+	const throughputPerMin = result.enriched / elapsedMin;
 	persistEnrichmentMetrics({
 		cycle_started_at: new Date(cycleStarted).toISOString(),
 		cycle_finished_at: new Date().toISOString(),
@@ -351,24 +409,58 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 		concurrency,
 		quota_remaining: quotaAfter.remaining,
 		quota_reset_at: quotaAfter.resetAt,
-		throughput_per_min: result.enriched / elapsedMin
+		throughput_per_min: throughputPerMin
 	});
 
+	const claimable = countClaimableEnrichmentBacklog();
 	setEnrichmentProgress({
-		status: result.rateLimited ? 'rate_limited' : result.remaining > 0 ? 'paused' : 'idle',
+		status: result.rateLimited ? 'rate_limited' : claimable > 0 ? 'paused' : 'idle',
 		currentRepo: null,
 		completed: result.enriched,
 		failed: result.failed,
-		remaining: result.remaining,
+		remaining: claimable,
 		backlogTotal: backlogStart,
 		enrichedTotal: countRepos() - countUnenriched(),
 		rateLimitResetAt: result.rateLimitResetAt
 	});
 
 	finishJobRun(jobId, result.rateLimited ? 'failed' : 'success', {
-		...result
+		...result,
+		elapsed_ms: Date.now() - cycleStarted,
+		throughput_per_min: throughputPerMin,
+		claimable_remaining: claimable
 	} as Record<string, unknown>);
 	return result;
+}
+
+function sumEnrichJobWindow(sinceIso: string): {
+	enriched: number;
+	failed: number;
+	requests: number;
+	cycles: number;
+} {
+	const rows = getDb()
+		.prepare(
+			`SELECT detail_json FROM job_runs
+			 WHERE job_type = 'enrich'
+			   AND finished_at IS NOT NULL
+			   AND finished_at >= ?`
+		)
+		.all(sinceIso) as { detail_json: string }[];
+	let enriched = 0;
+	let failed = 0;
+	let requests = 0;
+	for (const row of rows) {
+		try {
+			const detail = JSON.parse(row.detail_json) as Record<string, unknown>;
+			enriched += Number(detail.enriched ?? 0);
+			failed += Number(detail.failed ?? 0);
+			requests += Number(detail.requests ?? 0);
+		} catch {
+			// ignore malformed detail
+		}
+	}
+	return { enriched, failed, requests, cycles: rows.length };
 }
 
 export function getEnrichmentOpsSnapshot() {
@@ -379,15 +471,51 @@ export function getEnrichmentOpsSnapshot() {
 		| Record<string, unknown>
 		| undefined;
 	const urgentHigh = tiers.urgent + tiers.high;
-	const throughput = Number(metrics?.throughput_per_min ?? 0);
+	const claimable = countClaimableEnrichmentBacklog();
+	const deferred = tiers.deferred;
+	const cycleThroughput = Number(metrics?.throughput_per_min ?? 0);
+	const now = Date.now();
+	const lastHour = sumEnrichJobWindow(new Date(now - 60 * 60_000).toISOString());
+	const lastMinute = sumEnrichJobWindow(new Date(now - 60_000).toISOString());
+	const hourThroughput = lastHour.enriched; // absolute count in window
+	const minuteThroughput = lastMinute.enriched;
+	const effectiveThroughput =
+		minuteThroughput > 0 ? minuteThroughput : cycleThroughput > 0 ? cycleThroughput : hourThroughput / 60;
+	const avgSecondsPerRepo =
+		cycleThroughput > 0 ? Math.round((60 / cycleThroughput) * 10) / 10 : null;
+	const requestsPerRepo =
+		Number(metrics?.enriched_fast ?? 0) + Number(metrics?.enriched_deep ?? 0) > 0
+			? Math.round(
+					(Number(metrics?.requests ?? 0) /
+						(Number(metrics?.enriched_fast ?? 0) + Number(metrics?.enriched_deep ?? 0))) *
+						10
+				) / 10
+			: null;
+	const oldestWaiting = oldestClaimableEnrichmentAt();
+	const etaClaimableMinutes =
+		effectiveThroughput > 0 ? Math.ceil(claimable / effectiveThroughput) : null;
+
 	return {
 		depths,
 		tiers,
 		quota,
 		concurrency: Number(metrics?.concurrency ?? CONCURRENCY),
-		throughputPerMin: throughput,
-		etaUrgentHighMinutes: throughput > 0 ? Math.ceil(urgentHigh / throughput) : null,
-		etaAllMinutes: throughput > 0 ? Math.ceil(countUnenriched() / throughput) : null,
+		configuredConcurrency: CONCURRENCY,
+		batchSize: BATCH_SIZE,
+		throughputPerMin: Math.round(effectiveThroughput * 10) / 10,
+		cycleThroughputPerMin: Math.round(cycleThroughput * 10) / 10,
+		enrichedLastMinute: minuteThroughput,
+		enrichedLastHour: hourThroughput,
+		failedLastHour: lastHour.failed,
+		avgSecondsPerRepo,
+		requestsPerRepo,
+		claimableBacklog: claimable,
+		deferredBacklog: deferred,
+		totalUnenriched: countUnenriched(),
+		oldestWaitingAt: oldestWaiting,
+		etaUrgentHighMinutes: effectiveThroughput > 0 ? Math.ceil(urgentHigh / effectiveThroughput) : null,
+		etaClaimableMinutes,
+		etaAllMinutes: effectiveThroughput > 0 ? Math.ceil(countUnenriched() / effectiveThroughput) : null,
 		lastCycle: metrics ?? null
 	};
 }

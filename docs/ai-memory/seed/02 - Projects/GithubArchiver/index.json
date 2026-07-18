@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T01:53:06.846Z",
+  "generatedAt": "2026-07-18T06:09:45.199Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -600,6 +600,41 @@
       "title": "Knowledge engine improves knowledge before framework",
       "path": "entries/2026-07-18-decision-knowledge-engine-philosophy.md",
       "summary": "Locked operating principle after PRs #6–#14 landed the knowledge engine on `main`."
+    },
+    {
+      "id": "incident-enrichment-hourly-bottleneck",
+      "schema": 1,
+      "type": "incident",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "enrichment",
+        "daemon",
+        "throughput"
+      ],
+      "related": [
+        "incident-backlog-sleep-tiers",
+        "debt-github-token"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "incident-backlog-sleep-tiers"
+        },
+        {
+          "type": "related",
+          "id": "debt-github-token"
+        }
+      ],
+      "supersedes": null,
+      "title": "Enrichment must be continuous concurrent queue not hourly trickle",
+      "path": "entries/2026-07-18-incident-enrichment-hourly-bottleneck.md",
+      "summary": "Dashboard showed ~739k indexed, ~3.3k analyzed (0.4%), ~671k waiting, “this run: 13”, worker last ran ~1 hour ago. At 13/hour the backlog would take years."
     },
     {
       "id": "incident-gharchive-createevent",

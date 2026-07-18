@@ -354,28 +354,58 @@
 		{#if status.pipeline.enrichment}
 			<h3 class="section-title" style="margin-top:1.25rem">Enrichment throughput</h3>
 			<p class="admin-meta">
-				High-value tiers are processed first. A large long-tail backlog does not block discovery.
+				Continuous concurrent queue. Claimable backlog is what the worker will process; deferred stays
+				metadata-only until promoted.
 			</p>
 			<dl class="detail-grid">
 				<div>
-					<dt>Fast enriched</dt>
-					<dd>{status.pipeline.enrichment.depths.fast.toLocaleString()}</dd>
+					<dt>Repos / minute</dt>
+					<dd>{status.pipeline.enrichment.throughputPerMin.toFixed(1)}</dd>
 				</div>
 				<div>
-					<dt>Deep enriched</dt>
-					<dd>{status.pipeline.enrichment.depths.deep.toLocaleString()}</dd>
+					<dt>Enriched last hour</dt>
+					<dd>{(status.pipeline.enrichment.enrichedLastHour ?? 0).toLocaleString()}</dd>
 				</div>
 				<div>
-					<dt>Throughput</dt>
-					<dd>{status.pipeline.enrichment.throughputPerMin.toFixed(1)}/min</dd>
+					<dt>Avg seconds / repo</dt>
+					<dd>{status.pipeline.enrichment.avgSecondsPerRepo ?? '—'}</dd>
+				</div>
+				<div>
+					<dt>API req / repo</dt>
+					<dd>{status.pipeline.enrichment.requestsPerRepo ?? '—'}</dd>
 				</div>
 				<div>
 					<dt>Concurrency</dt>
-					<dd>{status.pipeline.enrichment.concurrency}</dd>
+					<dd>
+						{status.pipeline.enrichment.concurrency}
+						{#if status.pipeline.enrichment.configuredConcurrency}
+							<span class="admin-meta"> / {status.pipeline.enrichment.configuredConcurrency}</span>
+						{/if}
+					</dd>
+				</div>
+				<div>
+					<dt>Batch size</dt>
+					<dd>{status.pipeline.enrichment.batchSize ?? '—'}</dd>
 				</div>
 				<div>
 					<dt>API remaining</dt>
 					<dd>{status.pipeline.enrichment.quota.remaining ?? '—'}</dd>
+				</div>
+				<div>
+					<dt>Claimable queue</dt>
+					<dd>{(status.pipeline.enrichment.claimableBacklog ?? 0).toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Deferred (metadata-only)</dt>
+					<dd>{(status.pipeline.enrichment.deferredBacklog ?? 0).toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>ETA claimable</dt>
+					<dd>
+						{status.pipeline.enrichment.etaClaimableMinutes != null
+							? `${status.pipeline.enrichment.etaClaimableMinutes} min`
+							: '—'}
+					</dd>
 				</div>
 				<div>
 					<dt>ETA urgent+high</dt>
@@ -384,6 +414,18 @@
 							? `${status.pipeline.enrichment.etaUrgentHighMinutes} min`
 							: '—'}
 					</dd>
+				</div>
+				<div>
+					<dt>Oldest waiting</dt>
+					<dd class="mono">{status.pipeline.enrichment.oldestWaitingAt ?? '—'}</dd>
+				</div>
+				<div>
+					<dt>Fast enriched</dt>
+					<dd>{status.pipeline.enrichment.depths.fast.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Deep enriched</dt>
+					<dd>{status.pipeline.enrichment.depths.deep.toLocaleString()}</dd>
 				</div>
 				<div>
 					<dt>Backlog urgent</dt>
@@ -398,12 +440,8 @@
 					<dd>{status.pipeline.enrichment.tiers.normal.toLocaleString()}</dd>
 				</div>
 				<div>
-					<dt>Backlog low/deferred</dt>
-					<dd>
-						{(
-							status.pipeline.enrichment.tiers.low + status.pipeline.enrichment.tiers.deferred
-						).toLocaleString()}
-					</dd>
+					<dt>Backlog low</dt>
+					<dd>{status.pipeline.enrichment.tiers.low.toLocaleString()}</dd>
 				</div>
 			</dl>
 		{/if}

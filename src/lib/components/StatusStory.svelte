@@ -14,6 +14,14 @@
 		archiveBacklog = null,
 		searchFallbackActive = null,
 		workerLastRanLabel = null,
+		enrichLastRanLabel = null,
+		throughputPerMin = null,
+		enrichedLastHour = null,
+		avgSecondsPerRepo = null,
+		concurrency = null,
+		claimableWaiting = null,
+		deferredWaiting = null,
+		etaClaimableLabel = null,
 		compact = false
 	}: {
 		currentActivity: string;
@@ -26,8 +34,26 @@
 		archiveBacklog?: number | null;
 		searchFallbackActive?: boolean | null;
 		workerLastRanLabel?: string | null;
+		enrichLastRanLabel?: string | null;
+		throughputPerMin?: number | null;
+		enrichedLastHour?: number | null;
+		avgSecondsPerRepo?: number | null;
+		concurrency?: number | null;
+		claimableWaiting?: number | null;
+		deferredWaiting?: number | null;
+		etaClaimableLabel?: string | null;
 		compact?: boolean;
 	} = $props();
+
+	const showThroughput =
+		throughputPerMin != null ||
+		enrichedLastHour != null ||
+		avgSecondsPerRepo != null ||
+		concurrency != null ||
+		claimableWaiting != null ||
+		deferredWaiting != null ||
+		etaClaimableLabel != null ||
+		enrichLastRanLabel != null;
 </script>
 
 <div class="status-story" class:compact>
@@ -67,6 +93,62 @@
 			{/if}
 		</dl>
 	</section>
+
+	{#if showThroughput}
+		<section class="status-block" aria-label="Enrichment throughput">
+			<h3>Throughput</h3>
+			<dl class="status-metrics">
+				{#if throughputPerMin != null}
+					<div>
+						<dt>Repos / minute</dt>
+						<dd>{throughputPerMin.toLocaleString()}</dd>
+					</div>
+				{/if}
+				{#if enrichedLastHour != null}
+					<div>
+						<dt>Enriched last hour</dt>
+						<dd>{enrichedLastHour.toLocaleString()}</dd>
+					</div>
+				{/if}
+				{#if avgSecondsPerRepo != null}
+					<div>
+						<dt>Avg seconds / repo</dt>
+						<dd>{avgSecondsPerRepo}</dd>
+					</div>
+				{/if}
+				{#if concurrency != null}
+					<div>
+						<dt>Worker concurrency</dt>
+						<dd>{concurrency}</dd>
+					</div>
+				{/if}
+				{#if claimableWaiting != null}
+					<div>
+						<dt>Claimable queue</dt>
+						<dd>{claimableWaiting.toLocaleString()}</dd>
+					</div>
+				{/if}
+				{#if deferredWaiting != null}
+					<div>
+						<dt>Deferred (metadata-only)</dt>
+						<dd>{deferredWaiting.toLocaleString()}</dd>
+					</div>
+				{/if}
+				{#if etaClaimableLabel}
+					<div>
+						<dt>Est. claimable backlog</dt>
+						<dd>{etaClaimableLabel}</dd>
+					</div>
+				{/if}
+				{#if enrichLastRanLabel}
+					<div>
+						<dt>Enrichment last ran</dt>
+						<dd>{enrichLastRanLabel}</dd>
+					</div>
+				{/if}
+			</dl>
+		</section>
+	{/if}
 
 	{#if latestArchiveHour != null || archiveBacklog != null || searchFallbackActive != null || workerLastRanLabel}
 		<section class="status-block" aria-label="Discovery">

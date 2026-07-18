@@ -7,9 +7,10 @@ import {
 	scoreEnrichmentPriority,
 	shouldDeepEnrich
 } from '$lib/server/enrichment-priority';
-import { countEnrichmentBacklogByTier } from '$lib/server/enrichment-queue';
 import {
 	claimEnrichmentBatch,
+	countClaimableEnrichmentBacklog,
+	countEnrichmentBacklogByTier,
 	markEnrichmentSuccess,
 	recomputeEnrichmentPriority,
 	releaseExpiredEnrichmentClaims,
@@ -211,6 +212,37 @@ describe('high-throughput enrichment architecture', () => {
 		expect(shouldDeepEnrich({ priority: 150, tier: 'urgent' })).toBe(true);
 		expect(shouldDeepEnrich({ priority: 40, tier: 'low', interestingScore: 60 })).toBe(true);
 		expect(shouldDeepEnrich({ priority: 30, tier: 'low', interestingScore: 10 })).toBe(false);
+	});
+
+	it('excludes deferred long-tail from claimable enrichment backlog', () => {
+		const hot = seedRepo('acme/hot-agent', {
+			stars: 80,
+			description: 'An MCP server for agent memory',
+			createdAt: new Date().toISOString()
+		});
+		const cold = seedRepo('acme/old-homework', {
+			stars: 0,
+			description: 'homework assignment lab1',
+			createdAt: new Date(Date.now() - 500 * 86_400_000).toISOString()
+		});
+		recomputeEnrichmentPriority(hot);
+		recomputeEnrichmentPriority(cold);
+		const tiers = countEnrichmentBacklogByTier();
+		const claimable = countClaimableEnrichmentBacklog();
+		expect(tiers.deferred + tiers.low + tiers.normal + tiers.high + tiers.urgent).toBeGreaterThan(0);
+		const coldRow = getDb().prepare('SELECT enrichment_tier, enrichment_status FROM repos WHERE id = ?').get(cold) as {
+			enrichment_tier: string;
+			enrichment_status: string;
+		};
+		expect(['deferred', 'low']).toContain(coldRow.enrichment_tier);
+		const hotRow = getDb().prepare('SELECT enrichment_tier FROM repos WHERE id = ?').get(hot) as {
+			enrichment_tier: string;
+		};
+		expect(['urgent', 'high']).toContain(hotRow.enrichment_tier);
+		expect(claimable).toBeGreaterThanOrEqual(1);
+		if (coldRow.enrichment_tier === 'deferred' || coldRow.enrichment_status === 'deferred') {
+			expect(claimable).toBeLessThan(2);
+		}
 	});
 
 	it('keeps ingest available despite a huge enrichment backlog', () => {

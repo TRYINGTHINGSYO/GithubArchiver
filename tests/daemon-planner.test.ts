@@ -86,7 +86,7 @@ describe('daemon-planner', () => {
 
 	it('uses short sleep while any backlog queue is non-empty', () => {
 		const ms = computeDaemonSleepMs({
-			backlog: emptyBacklog({ unenriched: 10_000 }),
+			backlog: emptyBacklog({ staleRefresh: 10_000, unenriched: 0 }),
 			hadFailure: false,
 			failureStreak: 0,
 			sleepMinMs: SLEEP_MIN,
@@ -99,9 +99,25 @@ describe('daemon-planner', () => {
 		expect(ms).toBe(SLEEP_MIN);
 	});
 
-	it('lets ARCHIVE_BACKLOG_SLEEP_MS win over a stale 5-minute sleepMin', () => {
+	it('uses near-continuous enrich sleep when unenriched backlog is large', () => {
 		const ms = computeDaemonSleepMs({
 			backlog: emptyBacklog({ unenriched: 670_000 }),
+			hadFailure: false,
+			failureStreak: 0,
+			sleepMinMs: 300_000,
+			sleepMaxMs: 900_000,
+			backlogSleepMs: 60_000,
+			enrichBacklogSleepMs: 2_000,
+			enrichBacklogSleepThreshold: 100,
+			backoffBaseMs: 60_000,
+			backoffMaxMs: 900_000
+		});
+		expect(ms).toBe(2_000);
+	});
+
+	it('lets ARCHIVE_BACKLOG_SLEEP_MS win over a stale 5-minute sleepMin when enrich is quiet', () => {
+		const ms = computeDaemonSleepMs({
+			backlog: emptyBacklog({ unarchivedSource: 5_000, unenriched: 0 }),
 			hadFailure: false,
 			failureStreak: 0,
 			sleepMinMs: 300_000,
