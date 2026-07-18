@@ -3,7 +3,7 @@ query: memory center intelligence console
 must_include:
   - research-memory-center-console
 should_include:
-  - decision-knowledge-engine-philosophy
+  - feature-memory-center-console
 must_not_include:
   - research-does-not-exist
 limit: 8
