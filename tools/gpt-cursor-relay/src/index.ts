@@ -15,7 +15,7 @@ const openaiApiKey = process.env.OPENAI_API_KEY ?? "";
 const openaiModel = process.env.OPENAI_MODEL ?? "gpt-4.1";
 const cursorAgentBin = process.env.CURSOR_AGENT_BIN ?? "agent";
 const cursorApiKey = process.env.CURSOR_API_KEY;
-const defaultMaxRounds = Number(process.env.MAX_ROUNDS ?? 8) || 8;
+const defaultMaxRounds = Number(process.env.MAX_ROUNDS ?? 12) || 12;
 
 const app = createRelayServer({
   port,

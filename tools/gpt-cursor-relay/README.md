@@ -1,35 +1,33 @@
-# GPT ↔ Cursor Relay
+# GPT ⇄ Cursor Relay
 
-A small local middleman that automates the copy/paste loop between ChatGPT and Cursor:
+A local autonomous middleman between the OpenAI API and Cursor Agent CLI:
 
 ```text
-GPT API
+GPT API  (persistent chat + streaming)
    ↕
-Local Relay
+Local Relay  (memory · git review · safety stops · retries)
    ↕
-Cursor Agent CLI
+Cursor Agent CLI  (persistent --resume · stream-json)
 ```
 
-You type the task once. The relay asks GPT for the next instruction, runs it through `agent` (Cursor Agent CLI), sends the result back to GPT, and repeats until GPT returns `complete`, asks a question, hits the max-round limit, or you stop it.
+Type the task once. The relay auto-continues until GPT returns `complete` /
+`needs_user`, a safety rule fires, or you stop it. **No Continue button.**
 
-No clipboard juggling. No switching windows to paste.
+## Features (v1.5)
 
-## First version features
+1. **Persistent memory** — task, round history, files changed, tests, decisions
+2. **Live streaming** — GPT tokens + Cursor tool/activity stream in the UI
+3. **Git diff review** — `status` / `diff` / `diff --stat` fed to GPT every round
+4. **Auto project detection** — “Fix SiegeQueue mobile overlay” → detect path
+5. **Cost tracking** — per-round GPT USD + Cursor token estimates
+6. **Visual diff** — `+` / `-` / `~` with highlighted patch lines
+7. **Automatic retries** — Cursor crashes restart up to 3 attempts
+8. **Smarter stopping** — duplicate instruction, identical diff, no changes,
+   repeated test/build failures, max rounds
+9. **Next improvements** — on complete, GPT suggests follow-ups you can continue
 
-- Project folder selector
-- Task box
-- Start / Pause / Resume / Stop
-- GPT + Cursor message log (Notepad-style local UI)
-- Automatic Cursor completion detection (process exit)
-- Maximum-round limit
-- Approval gate before pushes, deployments, deletions, or secret changes
-- Final summary + changed-files list
-
-## Requirements
-
-- Node.js 20+
-- [Cursor Agent CLI](https://cursor.com/docs/cli/headless) (`agent`) installed and authenticated
-- OpenAI API key
+Also: Start / Pause / Resume / Stop, approval gates for push / deploy /
+delete / secrets.
 
 ## Setup
 
@@ -37,50 +35,40 @@ No clipboard juggling. No switching windows to paste.
 cd tools/gpt-cursor-relay
 npm install
 cp .env.example .env
-# edit .env — set OPENAI_API_KEY
-# optional: CURSOR_API_KEY, OPENAI_MODEL, MAX_ROUNDS, PORT
+# set OPENAI_API_KEY
+# optional: RELAY_KNOWN_PROJECTS='{"GithubArchiver":"/path/to/GithubArchiver"}'
 ```
 
-Make sure the Cursor CLI works:
+Cursor Agent CLI:
 
 ```bash
-agent -p --trust --workspace /path/to/your/project "Summarize this repo in one sentence"
+agent -p --trust --workspace /path/to/project "ping"
 ```
 
 ## Run
 
 ```bash
 npm start
-# open http://127.0.0.1:8787
+# http://127.0.0.1:8787
 ```
 
-1. Paste a project folder path (for example your GithubArchiver checkout)
-2. Type a task: `Fix the cluster link and verify it with tests.`
-3. Click **Start**
-4. Watch the log:
-   - Round 1: GPT → Cursor instruction
-   - Round 2: Cursor edits + report
-   - …
-   - Final: summary + changed files
+From repo root: `npm run relay`.
 
-If GPT (or the safety scanner) wants to push, deploy, delete files, or touch secrets, the UI pauses for **Approve / Deny**.
+1. Type a task (optionally click **Detect project**)
+2. Click **Start**
+3. Watch GPT + Cursor stream live; git diff updates each round
+4. Relay auto-continues — only pauses for approvals or `needs_user`
 
 ## How the loop works
 
-1. GPT receives the task + recent log and returns JSON:
-   - `continue` + `instruction`
-   - `complete` + `summary`
-   - `ask` + `question`
-   - `needs_approval` + `instruction` + `approval_reason`
-2. The relay scans the instruction for sensitive actions
-3. Cursor runs headlessly:
-
-```bash
-agent -p --force --trust --workspace <project> --output-format text "<instruction>"
-```
-
-4. When the process exits, stdout/stderr go back to GPT
-5. Repeat until done
+1. Collect git snapshot (`status`, `diff --stat`, `diff`)
+2. Stream a GPT planning turn with **session memory + git patch**
+3. If `continue` → stream Cursor (`stream-json`, `--resume` when available)
+4. Auto-retry Cursor on crash (max 3)
+5. Update memory / cost / visual diff
+6. Apply smarter stop heuristics
+7. Auto-continue (no Continue button)
+8. On `complete`, show summary + **next improvements**
 
 ## Tests
 
@@ -88,9 +76,21 @@ agent -p --force --trust --workspace <project> --output-format text "<instructio
 npm test
 ```
 
+## Env
+
+| Variable | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | Required |
+| `OPENAI_MODEL` | Default `gpt-4.1` |
+| `CURSOR_AGENT_BIN` | Default `agent` |
+| `CURSOR_API_KEY` | Headless Cursor auth |
+| `MAX_ROUNDS` | Default `12` |
+| `PORT` | Default `8787` |
+| `RELAY_KNOWN_PROJECTS` | JSON name→path map |
+| `RELAY_PROJECT_ROOTS` | Extra folders to scan |
+
 ## Notes
 
-- This tool is intentionally local (`127.0.0.1` only).
-- It does not scrape the ChatGPT website or drive the Cursor GUI.
-- Keep approvals on for anything that can push, deploy, delete, or change credentials.
-- `CURSOR_AGENT_BIN` can point at a stub binary for dry runs.
+- Binds to `127.0.0.1` only
+- Uses OpenAI API + Cursor CLI — not ChatGPT/Cursor GUI automation
+- Keep approval gates on for push / deploy / delete / secrets

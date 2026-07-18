@@ -61,6 +61,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor relay v1.5 — autonomous loop](entries/2026-07-18-feature-gpt-cursor-relay-v15.md)
+  - edges: supersedes:[`feature-gpt-cursor-relay`](entries/2026-07-18-feature-gpt-cursor-relay.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `6994512` · `open` · `tooling`, `automation` — [Local GPT ↔ Cursor Agent CLI relay (v1)](entries/2026-07-18-feature-gpt-cursor-relay.md)
   - edges: implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), related:[`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #25 · `76f91e5` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
@@ -75,8 +77,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: supersedes:[`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), validates:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-18** · `release` · `confirmed` · `permanent` · PR #13 · `603a5c9` · `merged` · `memory`, `adoption` — [Knowledge engine adopted on main (PRs #6–#13)](entries/2026-07-18-release-knowledge-engine-on-main.md)
   - edges: implemented-by:[`pr-13`](entries/2026-07-18-release-knowledge-engine-on-main.md), references:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
-- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #12 · `fd2e4b7` · `merged` · `memory` — [Multi-stage retrieval with typed edges and token budgets](entries/2026-07-18-pr-12-multistage-retrieval.md)
-  - edges: supersedes:[`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), references:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 
 ## Open technical debt
 
@@ -85,6 +85,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor relay v1.5 — autonomous loop](entries/2026-07-18-feature-gpt-cursor-relay-v15.md)
+  - edges: supersedes:[`feature-gpt-cursor-relay`](entries/2026-07-18-feature-gpt-cursor-relay.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `6994512` · `open` · `tooling`, `automation` — [Local GPT ↔ Cursor Agent CLI relay (v1)](entries/2026-07-18-feature-gpt-cursor-relay.md)
   - edges: implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), related:[`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #25 · `76f91e5` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)

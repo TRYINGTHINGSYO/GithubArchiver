@@ -1,6 +1,6 @@
 {
   "name": "gpt-cursor-relay",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Local middleman that relays tasks between the OpenAI API and Cursor Agent CLI",

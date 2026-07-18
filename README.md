@@ -299,9 +299,9 @@ tools/gpt-cursor-relay # Local GPT ↔ Cursor Agent CLI middleman
 data/                  # SQLite DB, archives, backups (gitignored)
 ```
 
-### GPT ↔ Cursor Relay (local)
+### GPT ⇄ Cursor Relay (local)
 
-Automate the ChatGPT ↔ Cursor copy/paste loop with a small local app:
+Autonomous local middleman (persistent memory, live streams, git diff review, safety stops):
 
 ```bash
 cd tools/gpt-cursor-relay

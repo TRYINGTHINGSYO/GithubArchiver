@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`feature-gpt-cursor-relay-v15`](entries/2026-07-18-feature-gpt-cursor-relay-v15.md) (`feature`, `confirmed`, `permanent`) — GPT ↔ Cursor relay v1.5 — autonomous loop
+  - `supersedes` → [`feature-gpt-cursor-relay`](entries/2026-07-18-feature-gpt-cursor-relay.md), `implemented-by` → [`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - [`feature-gpt-cursor-relay`](entries/2026-07-18-feature-gpt-cursor-relay.md) (`feature`, `confirmed`, `permanent`) — Local GPT ↔ Cursor Agent CLI relay (v1)
   - `implemented-by` → [`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), `related` → [`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - [`bugfix-cluster-title-href`](entries/2026-07-18-bugfix-cluster-title-href.md) (`bugfix`, `confirmed`, `release`) — Homepage cluster titles must open /?cluster= not fastest-growing

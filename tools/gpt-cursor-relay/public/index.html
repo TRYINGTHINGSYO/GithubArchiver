@@ -3,16 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>GPT ↔ Cursor Relay</title>
+    <title>GPT ⇄ Cursor Relay</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="app">
       <header class="top">
         <div>
-          <h1>GPT ↔ Cursor Relay</h1>
+          <h1>GPT ⇄ Cursor Relay</h1>
           <p class="tagline">
-            Type the task once. The relay talks to GPT and Cursor Agent CLI until done.
+            Persistent autonomous loop — streams live, reviews git diffs, stops on
+            complete / needs_user / safety rules. No Continue button.
           </p>
         </div>
         <div class="status-block">
@@ -21,30 +22,54 @@
         </div>
       </header>
 
+      <section class="dashboard">
+        <div class="metric">
+          <span class="label">Project</span>
+          <strong id="projectName">—</strong>
+        </div>
+        <div class="metric">
+          <span class="label">Round</span>
+          <strong id="roundLabel">0 / 12</strong>
+        </div>
+        <div class="metric">
+          <span class="label">Git</span>
+          <strong id="gitMetric">0 files</strong>
+        </div>
+        <div class="metric">
+          <span class="label">Cost</span>
+          <strong id="costMetric">$0.00</strong>
+        </div>
+      </section>
+
       <section class="controls">
+        <label class="field">
+          <span>Task</span>
+          <textarea
+            id="task"
+            rows="3"
+            placeholder="Fix SiegeQueue mobile overlay"
+          ></textarea>
+        </label>
+
+        <div class="detect-row">
+          <button id="detectBtn" type="button" class="ghost">Detect project</button>
+          <div id="detectResult" class="detect-result"></div>
+        </div>
+
         <label class="field">
           <span>Project folder</span>
           <input
             id="projectPath"
             type="text"
             spellcheck="false"
-            placeholder="/path/to/GithubArchiver"
+            placeholder="/path/to/GithubArchiver (or leave blank after Detect)"
           />
-        </label>
-
-        <label class="field">
-          <span>Task</span>
-          <textarea
-            id="task"
-            rows="4"
-            placeholder="Fix the cluster link and verify it with tests."
-          ></textarea>
         </label>
 
         <div class="row">
           <label class="field compact">
             <span>Max rounds</span>
-            <input id="maxRounds" type="number" min="1" max="50" value="8" />
+            <input id="maxRounds" type="number" min="1" max="50" value="12" />
           </label>
           <div class="buttons">
             <button id="startBtn" type="button">Start</button>
@@ -74,10 +99,29 @@
         </div>
       </section>
 
+      <section class="live-grid">
+        <div class="live-card">
+          <h2>GPT <span id="gptLiveHint" class="hint"></span></h2>
+          <pre id="gptLive" class="live gpt-live">(waiting)</pre>
+        </div>
+        <div class="live-card">
+          <h2>Cursor <span id="cursorActivity" class="hint"></span></h2>
+          <pre id="cursorLive" class="live cursor-live">(waiting)</pre>
+        </div>
+      </section>
+
+      <section class="diff-wrap">
+        <div class="log-header">
+          <h2>Visual diff</h2>
+          <span id="diffStat">—</span>
+        </div>
+        <div id="diffView" class="diff-view">(no changes yet)</div>
+      </section>
+
       <section class="log-wrap">
         <div class="log-header">
-          <h2>Message log</h2>
-          <span id="roundLabel">Round 0 / 8</span>
+          <h2>Live conversation</h2>
+          <span id="stopReason" class="hint"></span>
         </div>
         <pre id="log" class="log" aria-live="polite"></pre>
       </section>
@@ -85,6 +129,20 @@
       <section class="summary-wrap">
         <h2>Final summary</h2>
         <pre id="summary" class="summary">(not finished yet)</pre>
+
+        <div id="improvementsPanel" class="hidden">
+          <h2>Next improvements</h2>
+          <ul id="improvementsList"></ul>
+          <div class="buttons">
+            <button id="continueImprovementsBtn" type="button" class="ok">
+              Continue with these
+            </button>
+          </div>
+        </div>
+
+        <h2>Cost</h2>
+        <pre id="costDetail" class="summary">(none yet)</pre>
+
         <h2>Changed files</h2>
         <pre id="changedFiles" class="summary">(none yet)</pre>
       </section>

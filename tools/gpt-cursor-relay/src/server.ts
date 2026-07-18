@@ -4,6 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CursorRunner } from "./cursor.js";
 import { GptClient } from "./gpt.js";
+import {
+  buildProjectIndex,
+  defaultSearchRoots,
+  detectProjectsFromTask,
+  parseKnownProjects,
+} from "./projects.js";
 import { RelaySession } from "./relay.js";
 import type { RelaySnapshot } from "./types.js";
 
@@ -18,6 +24,8 @@ export interface ServerOptions {
   cursorApiKey?: string;
   defaultMaxRounds: number;
   publicDir?: string;
+  knownProjects?: Record<string, string>;
+  searchRoots?: string[];
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -50,6 +58,9 @@ function contentType(filePath: string): string {
 
 export function createRelayServer(options: ServerOptions) {
   const publicDir = options.publicDir ?? PUBLIC_DIR;
+  const knownProjects = options.knownProjects ?? parseKnownProjects();
+  const searchRoots = options.searchRoots ?? defaultSearchRoots();
+
   let session = new RelaySession({
     gpt: new GptClient({
       apiKey: options.openaiApiKey,
@@ -122,6 +133,22 @@ export function createRelayServer(options: ServerOptions) {
         return;
       }
 
+      if (method === "POST" && pathname === "/api/detect-project") {
+        const body = (await readJson(req)) as { task?: string };
+        const task = body.task?.trim() || "";
+        if (!task) {
+          sendJson(res, 400, { error: "task is required" });
+          return;
+        }
+        const index = await buildProjectIndex({
+          known: knownProjects,
+          searchRoots,
+        });
+        const matches = detectProjectsFromTask(task, index);
+        sendJson(res, 200, { matches, indexSize: Object.keys(index).length });
+        return;
+      }
+
       if (method === "POST" && pathname === "/api/start") {
         const body = (await readJson(req)) as {
           projectPath?: string;
@@ -145,13 +172,26 @@ export function createRelayServer(options: ServerOptions) {
           return;
         }
 
-        // Fresh session for each run.
+        let projectPath = body.projectPath?.trim() || "";
+        const task = body.task?.trim() || "";
+
+        if (!projectPath && task) {
+          const index = await buildProjectIndex({
+            known: knownProjects,
+            searchRoots,
+          });
+          const matches = detectProjectsFromTask(task, index);
+          if (matches[0] && matches[0].confidence >= 0.75) {
+            projectPath = matches[0].path;
+          }
+        }
+
         resetSession();
-        sendJson(res, 202, { ok: true });
+        sendJson(res, 202, { ok: true, projectPath });
         void session
           .start({
-            projectPath: body.projectPath?.trim() || "",
-            task: body.task?.trim() || "",
+            projectPath,
+            task,
             maxRounds: body.maxRounds || options.defaultMaxRounds,
             openaiApiKey: options.openaiApiKey,
             openaiModel: options.openaiModel,
@@ -159,7 +199,6 @@ export function createRelayServer(options: ServerOptions) {
             cursorApiKey: options.cursorApiKey,
           })
           .catch((err) => {
-            // Errors are reflected in session state.
             console.error("[relay] start failed:", err);
           });
         return;
@@ -197,7 +236,14 @@ export function createRelayServer(options: ServerOptions) {
         return;
       }
 
-      // Static UI
+      if (method === "POST" && pathname === "/api/continue-improvements") {
+        sendJson(res, 202, { ok: true });
+        void session.continueWithImprovements().catch((err) => {
+          console.error("[relay] continue-improvements failed:", err);
+        });
+        return;
+      }
+
       if (method === "GET") {
         const rel =
           pathname === "/"

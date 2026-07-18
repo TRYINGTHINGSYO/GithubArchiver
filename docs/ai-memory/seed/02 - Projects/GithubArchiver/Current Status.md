@@ -20,6 +20,8 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Open work
 
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor relay v1.5 — autonomous loop](entries/2026-07-18-feature-gpt-cursor-relay-v15.md)
+  - edges: supersedes:[`feature-gpt-cursor-relay`](entries/2026-07-18-feature-gpt-cursor-relay.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `6994512` · `open` · `tooling`, `automation` — [Local GPT ↔ Cursor Agent CLI relay (v1)](entries/2026-07-18-feature-gpt-cursor-relay.md)
   - edges: implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), related:[`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #25 · `76f91e5` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
