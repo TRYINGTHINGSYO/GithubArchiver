@@ -13,7 +13,7 @@ Chronological event log (newest first). Source of truth is `entries/`.
 
 ## 2026-07-18
 
-- **2026-07-18** · `feature` · `confirmed` · PR #11 · `open` · `memory` — [Ranked retrieval scoring model for memory query](entries/2026-07-18-pr-11-retrieval-scoring.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #11 · `5972b3c` · `open` · `memory` — [Ranked retrieval scoring model for memory query](entries/2026-07-18-pr-11-retrieval-scoring.md)
   - related: [`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), [`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), [`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · PR #10 · `6f5784c` · `open` · `memory` — [Memory retrieval layer with index.json and graph query](entries/2026-07-18-pr-10-memory-retrieval.md)
   - related: [`feature-digest-knowledge-graph`](entries/2026-07-18-pr-9-digest-graph.md), [`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md), [`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), [`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), [`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), [`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)

@@ -2,7 +2,7 @@
 id: feature-retrieval-scoring
 date: 2026-07-18
 pr: 11
-commit: null
+commit: 5972b3c
 area:
   - memory
 type: feature
