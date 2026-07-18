@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T19:30:34.735Z",
+  "generatedAt": "2026-07-18T19:44:04.764Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -635,6 +635,40 @@
       "title": "Knowledge engine improves knowledge before framework",
       "path": "entries/2026-07-18-decision-knowledge-engine-philosophy.md",
       "summary": "Locked operating principle after PRs #6–#14 landed the knowledge engine on `main`."
+    },
+    {
+      "id": "incident-empty-createevent-defer",
+      "schema": 1,
+      "type": "incident",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": "eb58221",
+      "migration": 32,
+      "area": [
+        "enrichment",
+        "priority"
+      ],
+      "related": [
+        "incident-enrich-tier-flood",
+        "incident-enrichment-hourly-bottleneck"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-enrich-tier-flood"
+        },
+        {
+          "type": "related",
+          "id": "incident-enrichment-hourly-bottleneck"
+        }
+      ],
+      "supersedes": null,
+      "title": "Defer empty CreateEvent spam — backlog is days-old births not years-old repos",
+      "path": "entries/2026-07-18-incident-empty-createevent-defer.md",
+      "summary": "Throughput healthy (~43/min, concurrency 8, 1 req/repo) but **Deferred stayed 0** and claimable stayed ~795k. ETA still ~13 days."
     },
     {
       "id": "incident-enrich-tier-flood",

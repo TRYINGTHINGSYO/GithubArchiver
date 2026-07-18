@@ -87,7 +87,7 @@ describe('high-throughput enrichment architecture', () => {
 		expect(['low', 'deferred', 'normal']).toContain(cold.tier);
 	});
 
-	it('does not mark every zero-star CreateEvent as urgent', () => {
+	it('does not mark every zero-star CreateEvent as urgent or high', () => {
 		const freshCreate = scoreEnrichmentPriority({
 			stars: 0,
 			forks: 0,
@@ -96,7 +96,20 @@ describe('high-throughput enrichment architecture', () => {
 			description: null,
 			full_name: 'someone/empty-new-repo'
 		});
-		expect(freshCreate.tier).toBe('high');
+		// Empty CreateEvent spam stays metadata-only until it earns signal.
+		expect(freshCreate.tier).toBe('deferred');
+
+		const signaledCreate = scoreEnrichmentPriority({
+			stars: 0,
+			forks: 0,
+			created_at: new Date().toISOString(),
+			first_seen_at: new Date().toISOString(),
+			description: 'An MCP server for agent memory and tooling',
+			topics: '["mcp","ai-agent"]',
+			full_name: 'someone/fresh-mcp-server'
+		});
+		expect(['high', 'urgent', 'normal']).toContain(signaledCreate.tier);
+		expect(signaledCreate.tier).not.toBe('deferred');
 
 		const oldLongTail = scoreEnrichmentPriority({
 			stars: 0,
@@ -110,13 +123,13 @@ describe('high-throughput enrichment architecture', () => {
 
 		expect(
 			assignEnrichmentTier({
-				priority: 80,
+				priority: 40,
 				stars: 0,
 				createdAgeDays: 1,
 				seenAgeDays: 0,
 				hasSignal: false
 			})
-		).toBe('high');
+		).toBe('deferred');
 	});
 
 	it('recomputeEnrichmentTiersSql spreads backlog tiers instead of all-urgent', () => {
@@ -133,6 +146,22 @@ describe('high-throughput enrichment architecture', () => {
 				first_seen_at: created
 			});
 		}
+		// One signaled fresh create should stay claimable/high.
+		const signaled = insertRepo({
+			owner: 'tier',
+			name: 'mcp-hot',
+			full_name: 'tier/mcp-hot',
+			github_url: 'https://github.com/tier/mcp-hot',
+			event_id: 'tier-mcp',
+			created_at: new Date().toISOString(),
+			first_seen_at: new Date().toISOString()
+		});
+		getDb()
+			.prepare(
+				`UPDATE repos SET description = ?, stars = 12 WHERE id = ?`
+			)
+			.run('An MCP server for agent memory', signaled.id);
+
 		// Simulate the v28 bug: everything forced to urgent.
 		getDb().prepare(`UPDATE repos SET enrichment_tier = 'urgent', enrichment_priority = 1`).run();
 		expect(getSchemaVersion(getDb())).toBe(CURRENT_SCHEMA_VERSION);
@@ -140,10 +169,11 @@ describe('high-throughput enrichment architecture', () => {
 		recomputeEnrichmentTiersSql(getDb());
 
 		const tiers = countEnrichmentBacklogByTier();
-		expect(tiers.urgent).toBe(0);
-		expect(tiers.high).toBeGreaterThan(0);
-		expect(tiers.normal + tiers.low + tiers.deferred).toBeGreaterThan(0);
-		expect(tiers.urgent + tiers.high + tiers.normal + tiers.low + tiers.deferred).toBe(ages.length);
+		expect(tiers.deferred).toBeGreaterThan(0);
+		expect(tiers.high + tiers.urgent).toBeGreaterThan(0);
+		expect(tiers.urgent + tiers.high + tiers.normal + tiers.low + tiers.deferred).toBe(
+			ages.length + 1
+		);
 	});
 
 	it('claims enrichment queue in tier/priority order and recovers expired claims', () => {
@@ -227,16 +257,6 @@ describe('high-throughput enrichment architecture', () => {
 			full_name: 'someone/ancient-just-ingested'
 		});
 		expect(backfilledAncient.tier).toBe('deferred');
-
-		const freshCreate = scoreEnrichmentPriority({
-			stars: 0,
-			forks: 0,
-			created_at: new Date().toISOString(),
-			first_seen_at: new Date().toISOString(),
-			description: null,
-			full_name: 'someone/empty-new-repo'
-		});
-		expect(freshCreate.tier).toBe('high');
 	});
 
 	it('excludes deferred long-tail from claimable enrichment backlog', () => {
@@ -306,10 +326,10 @@ describe('high-throughput enrichment architecture', () => {
 		expect(getMaterializedDiscoveryLanding({ limit: 5 })).not.toBeNull();
 	});
 
-	it('migrates to schema version 31 with enrichment indexes', () => {
+	it('migrates to schema version 32 with enrichment indexes', () => {
 		const db = getDb();
 		expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(31);
+		expect(CURRENT_SCHEMA_VERSION).toBe(32);
 		const indexes = (
 			db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`).all() as { name: string }[]
 		).map((r) => r.name);
