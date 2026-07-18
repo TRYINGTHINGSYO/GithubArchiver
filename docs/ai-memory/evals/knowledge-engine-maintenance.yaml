@@ -1,0 +1,9 @@
+id: knowledge-engine-maintenance
+query: knowledge engine maintenance mode
+must_include:
+  - decision-knowledge-engine-maintenance
+should_include:
+  - decision-knowledge-engine-philosophy
+must_not_include:
+  - research-does-not-exist
+limit: 8

@@ -33,8 +33,9 @@ Treat these as authoritative unless Blake revises them.
 
 ## Knowledge engine
 
+- **Maintenance mode:** support GithubArchiver; do not compete with product work for engine features.
 - **If retrieval fails, improve the knowledge — not the framework.**
 - Append a durable entry + eval, regenerate, continue shipping.
-- Do not add retrieval capabilities until repeated real-world misses prove the architecture cannot represent or retrieve the needed knowledge.
-- Measure precision, eval stability, time-to-context, and capture rate — not entry/graph size.
+- **Do not change the framework for a single miss.** Revisit only when multiple real-world misses reveal the same limitation the architecture cannot express or retrieve.
+- Measure quiet help on real work (precision, fewer re-investigations, eval stability, capture rate) — not entry/graph size or engine PRs.
 - Full text: [[Knowledge Engine Philosophy]].

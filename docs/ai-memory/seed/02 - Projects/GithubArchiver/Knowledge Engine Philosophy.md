@@ -19,27 +19,47 @@ When retrieval fails:
 
 Do not add retrieval capabilities until repeated real-world failures demonstrate that the current architecture cannot represent or retrieve the required knowledge.
 
+## Maintenance mode
+
+The knowledge engine is in **maintenance mode**. Its job is to support GithubArchiver, not compete with it for development time.
+
+Do **not** change the retrieval framework because of a single miss. Only consider framework changes when multiple real-world misses reveal the same limitation and the existing architecture cannot express or retrieve the needed knowledge.
+
 ## Operating loop
 
 ```text
-Use retrieval during real work
+Develop GithubArchiver
         ↓
-Notice a miss or bad ranking
+Use memory:query when context is needed
         ↓
-Add the missing fact as an entry
+If retrieval is sufficient
+        → keep shipping
+
+If retrieval misses
         ↓
-Add an eval that captures the expected result
+Append durable entry
         ↓
-Regenerate and keep working
+Add eval
+        ↓
+Verify evals pass
+        ↓
+Continue development
 ```
 
 **If retrieval fails, improve the knowledge. Not the framework.**
 
 ## What success looks like
 
-Do **not** optimize for entry count, graph size, edge count, or document count.
+Do **not** optimize for entry count, graph size, edge count, document count, or new PRs against the engine.
 
-Measure:
+Practical indicators during real GithubArchiver work:
+
+- Did the top retrieval give enough context to solve the task?
+- Did you have to search manually after using `memory:query`?
+- How often do you add new entries?
+- How often do evals catch regressions after retrieval changes?
+
+Broader measures:
 
 - **Retrieval precision** — How often does the top context contain what the agent actually needed?
 - **Eval stability** — Do retrieval changes improve results without breaking existing queries?
