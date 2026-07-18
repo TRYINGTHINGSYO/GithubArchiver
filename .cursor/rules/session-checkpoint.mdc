@@ -1,0 +1,34 @@
+---
+description: Persist important project changes to the external memory vault
+alwaysApply: true
+---
+
+# Checkpoint Persistence
+
+After substantial work, update the project memory when any of these occur:
+
+- A bug root cause is confirmed
+- A migration is added
+- A PR is merged
+- Runtime behavior changes
+- A major UI or status semantic changes
+- A new architectural rule is established
+- A meaningful next step is identified
+
+Update (vault root first, else seed path):
+
+`02 - Projects/GithubArchiver/Current Status.md`
+
+Also sync the same durable facts into `docs/ai-memory/seed/02 - Projects/GithubArchiver/Current Status.md` when the vault is unavailable so the next session still has continuity.
+
+Include:
+
+- Date
+- What changed
+- Why it changed
+- Tests added
+- Deployment state
+- Remaining verification steps
+
+Do not write speculative conclusions as facts.
+Do not dump full chat transcripts into the vault.

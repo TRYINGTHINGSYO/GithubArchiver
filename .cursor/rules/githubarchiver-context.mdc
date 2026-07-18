@@ -1,0 +1,28 @@
+---
+description: Architecture, status, and operating context for GithubArchive+
+globs:
+  - src/**
+  - tests/**
+  - scripts/**
+  - docs/**
+---
+
+# GithubArchive+ Context
+
+Before making architectural or pipeline changes, read the project memory notes (from the resolved vault root, or from `docs/ai-memory/seed/02 - Projects/GithubArchiver/` if the vault is not present yet):
+
+- `02 - Projects/GithubArchiver/GithubArchiver.md`
+- `02 - Projects/GithubArchiver/Architecture.md`
+- `02 - Projects/GithubArchiver/Decisions.md`
+- `02 - Projects/GithubArchiver/Current Status.md`
+
+Important principles:
+
+- The product is repository intelligence, not a raw upload counter.
+- Prefer evidence-backed explanations.
+- Distinguish discovery, ingestion, enrichment, clustering, scoring, and preservation.
+- Status labels must describe actual runtime behavior.
+- Add regression tests for production failures.
+- Do not mask stale-state bugs only in the UI.
+- GH Archive is the primary discovery source; Search is fallback, not the default.
+- Enrichment backlog must not pause ingestion.
