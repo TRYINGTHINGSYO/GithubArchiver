@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { DaemonActivity } from '$lib/server/daemon-activity';
+	import { formatEnrichmentCounts } from '$lib/status-display';
 
 	const POLL_MS = 12_000;
 
@@ -12,6 +13,11 @@
 	const activity = $derived(latestActivity ?? initial);
 	const isActive = $derived(activity.action !== 'idle' && activity.action !== 'rate_limited');
 	const isRateLimited = $derived(activity.action === 'rate_limited');
+	const showEnrichmentCounts = $derived(
+		Boolean(
+			activity.progress && (activity.action === 'enrich' || (activity.enrichment?.remaining ?? 0) > 0)
+		)
+	);
 
 	async function refresh() {
 		try {
@@ -36,10 +42,9 @@
 		<span class="indicator" aria-hidden="true"></span>
 		<span class="label">What I'm doing</span>
 		<span class="message">{activity.message}</span>
-		{#if activity.progress && (activity.action === 'enrich' || activity.enrichment?.remaining > 0)}
+		{#if showEnrichmentCounts && activity.progress}
 			<span class="counts">
-				{activity.progress.enrichedTotal.toLocaleString()} done ·
-				{activity.progress.remaining.toLocaleString()} left
+				{formatEnrichmentCounts(activity.progress)}
 			</span>
 		{/if}
 	</div>

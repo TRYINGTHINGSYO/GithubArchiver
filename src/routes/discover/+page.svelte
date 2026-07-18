@@ -56,12 +56,20 @@
 			<dd>{data.discoveryStatus.clustered.toLocaleString()}</dd>
 		</div>
 		<div>
-			<dt>Last ingestion</dt>
+			<dt>Worker last ran</dt>
 			<dd>
 				{data.discoveryStatus.lastIngestionAt
 					? timeAgo(data.discoveryStatus.lastIngestionAt)
 					: 'pending'}
 			</dd>
+		</div>
+		<div>
+			<dt>Latest completed archive hour</dt>
+			<dd class="mono">{data.latestArchiveHour ?? 'pending'}</dd>
+		</div>
+		<div>
+			<dt>Archive hour backlog</dt>
+			<dd>{data.archiveHourBacklog.toLocaleString()}</dd>
 		</div>
 		<div>
 			<dt>Last discovery analysis</dt>

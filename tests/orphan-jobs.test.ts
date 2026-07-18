@@ -7,7 +7,7 @@ describe('orphan job reconciliation', () => {
 	beforeEach(() => setupTestDb());
 	afterEach(() => teardownTestDb());
 
-	it('marks stale running jobs failed on startup reconcile', () => {
+	it('marks stale running jobs interrupted on startup reconcile', () => {
 		const nowMs = Date.parse('2026-07-07T10:00:00.000Z');
 		const staleStarted = new Date(nowMs - 20 * 60 * 1000).toISOString();
 		const db = getDb();
@@ -29,7 +29,7 @@ describe('orphan job reconciliation', () => {
 		const stale = db.prepare('SELECT status, error, reason FROM job_runs WHERE started_at = ?').get(
 			staleStarted
 		) as { status: string; error: string; reason: string };
-		expect(stale.status).toBe('failed');
+		expect(stale.status).toBe('interrupted');
 		expect(stale.error).toContain('orphaned');
 		expect(stale.reason).toContain('orphaned');
 

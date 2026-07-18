@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { formatJobTypeLabel } from '$lib/status-display';
 	import { timeAgo, formatBytes } from '$lib/utils';
 	import type { PageData } from './$types';
 
@@ -121,6 +122,8 @@
 		if (s === 'running') return 'badge pending';
 		if (s === 'success') return 'badge archived';
 		if (s === 'failed') return 'badge deleted';
+		if (s === 'interrupted') return 'badge';
+		if (s === 'cancelled') return 'badge';
 		return 'badge';
 	}
 
@@ -710,15 +713,30 @@
 			<dd>{status.ingestion.reposToday.toLocaleString()}</dd>
 		</div>
 		<div>
-			<dt>GitHub Search fallback repos</dt>
+			<dt>Historical Search-fallback discoveries</dt>
 			<dd>{status.discovery.githubSearchRepos.toLocaleString()}</dd>
+		</div>
+		<div>
+			<dt>Search fallback active</dt>
+			<dd>{status.discovery.searchFallbackActive ? 'Yes' : 'No'}</dd>
+		</div>
+		<div>
+			<dt>Worker last ran</dt>
+			<dd>
+				{status.ingestion.workerLastRanAt
+					? timeAgo(status.ingestion.workerLastRanAt)
+					: '—'}
+				{#if status.ingestion.ingestRunning}
+					· <span class="badge pending">running</span>
+				{/if}
+			</dd>
 		</div>
 		<div>
 			<dt>Target hour (GH Archive)</dt>
 			<dd class="mono">{status.ingestion.targetHour}</dd>
 		</div>
 		<div>
-			<dt>Latest ingested</dt>
+			<dt>Latest completed archive hour</dt>
 			<dd class="mono">{status.ingestion.latestHour ?? '—'}</dd>
 		</div>
 		<div>
@@ -726,7 +744,7 @@
 			<dd>{status.ingestion.totalHours}</dd>
 		</div>
 		<div>
-			<dt>Missing (next batch)</dt>
+			<dt>Archive hour backlog</dt>
 			<dd>{status.ingestion.missingHours.length}</dd>
 		</div>
 		<div>
@@ -839,7 +857,7 @@
 			{#each status.recentJobs as job}
 				<li class="timeline-item">
 					<span class="timeline-time mono">{timeAgo(job.started_at)}</span>
-					<span class="timeline-label mono">{job.job_type}</span>
+					<span class="timeline-label mono" title={job.job_type}>{formatJobTypeLabel(job)}</span>
 					<span class={statusClass(job.status)}>{job.status}</span>
 				</li>
 				{#if job.detail_json && job.detail_json !== '{}'}

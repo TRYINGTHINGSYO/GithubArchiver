@@ -157,7 +157,8 @@ export function reconcileOrphanedJobRuns(
 
 	const reason = 'orphaned: process restarted mid-run';
 	for (const row of orphans) {
-		finishJobRun(row.id, 'failed', { orphaned: true }, reason, reason);
+		// Deploy/restart abandonments are not processing failures.
+		finishJobRun(row.id, 'interrupted', { orphaned: true }, reason, reason);
 	}
 
 	return orphans.length;

@@ -43,7 +43,10 @@ export function listLatestErrors(limit = 10): { source: string; message: string;
 	const jobErrors = db
 		.prepare(
 			`SELECT job_type as source, COALESCE(error, 'failed') as message, started_at as at
-			 FROM job_runs WHERE status = 'failed' AND error IS NOT NULL
+			 FROM job_runs
+			 WHERE status = 'failed'
+			   AND error IS NOT NULL
+			   AND COALESCE(error, '') NOT LIKE 'orphaned:%'
 			 ORDER BY started_at DESC LIMIT ?`
 		)
 		.all(limit) as { source: string; message: string; at: string }[];

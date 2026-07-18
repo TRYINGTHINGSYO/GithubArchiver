@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { formatJobTypeLabel } from '$lib/status-display';
 	import { timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
@@ -20,6 +21,7 @@
 		if (s === 'running') return 'badge pending';
 		if (s === 'success') return 'badge archived';
 		if (s === 'failed') return 'badge deleted';
+		if (s === 'interrupted') return 'badge';
 		if (s === 'cancelled') return 'badge';
 		return 'badge';
 	}
@@ -103,7 +105,7 @@
 					onkeydown={(e) => e.key === 'Enter' && selectJob(job.id)}
 				>
 					<td class="mono">#{job.id}</td>
-					<td class="mono">{job.job_type}</td>
+					<td class="mono" title={job.job_type}>{formatJobTypeLabel(job)}</td>
 					<td><span class={statusClass(job.status)}>{job.status}</span></td>
 					<td class="reason-cell" title={job.reason ?? ''}>{job.reason ?? '—'}</td>
 					<td>{timeAgo(job.started_at)}</td>
@@ -119,7 +121,7 @@
 		{:else if selected}
 			<h2 class="section-title">Job #{selected.id}</h2>
 			<dl class="detail-grid">
-				<div><dt>Type</dt><dd class="mono">{selected.job_type}</dd></div>
+				<div><dt>Type</dt><dd class="mono" title={selected.job_type}>{formatJobTypeLabel(selected)}</dd></div>
 				<div><dt>Status</dt><dd><span class={statusClass(selected.status)}>{selected.status}</span></dd></div>
 				<div><dt>Started</dt><dd>{selected.started_at}</dd></div>
 				<div><dt>Finished</dt><dd>{selected.finished_at ?? '—'}</dd></div>

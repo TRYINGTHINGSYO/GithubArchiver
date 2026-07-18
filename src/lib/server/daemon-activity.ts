@@ -103,11 +103,12 @@ function enrichMessage(progress: EnrichmentProgress): string {
 	if (progress.status === 'rate_limited') {
 		return 'Pausing briefly (GitHub rate limit)...';
 	}
+	// Counts live in the activity-bar summary; keep the message short.
 	if (progress.currentRepo) {
-		return `Enriching ${progress.currentRepo} — ${progress.completed.toLocaleString()} done, ${progress.remaining.toLocaleString()} left`;
+		return `Enriching ${progress.currentRepo}`;
 	}
 	if (progress.remaining > 0) {
-		return `Building repository intelligence — ${progress.enrichedTotal.toLocaleString()} done, ${progress.remaining.toLocaleString()} waiting`;
+		return 'Building repository intelligence...';
 	}
 	return 'Enrichment caught up — ready for new discoveries.';
 }

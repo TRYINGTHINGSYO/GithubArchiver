@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatActivityMessage, resolveDaemonActivity } from '$lib/server/daemon-activity';
 import type { EnrichmentProgress } from '$lib/server/enrichment-progress';
+import { formatEnrichmentCounts } from '$lib/status-display';
 
 function enrichment(overrides: Partial<EnrichmentProgress> = {}): EnrichmentProgress {
 	return {
@@ -17,7 +18,7 @@ function enrichment(overrides: Partial<EnrichmentProgress> = {}): EnrichmentProg
 }
 
 describe('daemon-activity', () => {
-	it('formats active enrich message with live repo progress', () => {
+	it('keeps enrich message short; counts are separate', () => {
 		expect(
 			formatActivityMessage(
 				'enrich',
@@ -31,7 +32,14 @@ describe('daemon-activity', () => {
 					enrichedTotal: 112
 				})
 			)
-		).toBe('Enriching acme/widget — 12 done, 38 left');
+		).toBe('Enriching acme/widget');
+		expect(
+			formatEnrichmentCounts({
+				enrichedTotal: 3_290,
+				completed: 13,
+				remaining: 670_976
+			})
+		).toBe('3,290 enriched · 13 this run · 670,976 waiting');
 	});
 
 	it('reports rate-limited state with next check-in', () => {
@@ -74,7 +82,7 @@ describe('daemon-activity', () => {
 		});
 
 		expect(activity.action).toBe('enrich');
-		expect(activity.message).toBe('Enriching acme/widget — 10 done, 38 left');
+		expect(activity.message).toBe('Enriching acme/widget');
 		expect(activity.startedAt).toBe('2026-07-07T11:01:29.000Z');
 		expect(activity.nextCheckIn).toBeNull();
 	});
@@ -92,7 +100,7 @@ describe('daemon-activity', () => {
 		});
 
 		expect(activity.action).toBe('enrich');
-		expect(activity.message).toContain('75 done');
+		expect(activity.message).toBe('Building repository intelligence...');
 		expect(activity.nextCheckIn).toBe('2026-07-07T11:06:29.000Z');
 	});
 
@@ -118,10 +126,11 @@ describe('daemon-activity', () => {
 		});
 
 		expect(activity.action).toBe('enrich');
-		expect(activity.message).toContain('egnaro9/eval-history');
+		expect(activity.message).toBe('Enriching egnaro9/eval-history');
 		expect(activity.message).not.toMatch(/Scanning GitHub/i);
 		expect(activity.message).not.toMatch(/Search/i);
 		expect(activity.progress?.enrichedTotal).toBe(3_290);
+		expect(activity.progress?.completed).toBe(13);
 		expect(activity.progress?.remaining).toBe(670_976);
 	});
 
