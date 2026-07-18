@@ -3,7 +3,7 @@ schema: 1
 id: incident-enrichment-hourly-bottleneck
 date: 2026-07-18
 pr: null
-commit: null
+commit: 3792bf9
 area:
   - enrichment
   - daemon

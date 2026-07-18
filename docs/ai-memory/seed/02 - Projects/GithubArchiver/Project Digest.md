@@ -83,7 +83,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
-- **2026-07-18** · `incident` · `confirmed` · `permanent` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
+- **2026-07-18** · `incident` · `confirmed` · `permanent` · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
   - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 
 ## Important files
