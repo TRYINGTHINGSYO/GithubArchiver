@@ -13,6 +13,8 @@ Chronological event log (newest first). Source of truth is `entries/`.
 
 ## 2026-07-18
 
+- **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #25 · `76f91e5` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
+  - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #24 · `99dab1d` · `open` · `performance`, `observability`, `admin` — [Admin request-path cache hit-rate metrics](entries/2026-07-18-feature-cache-hit-metrics.md)
   - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #23 · `30d6fd9` · `open` · `discovery`, `performance`, `clusters` — [Fix dead cluster links and slow page navigation](entries/2026-07-18-bugfix-nav-perf-clusters.md)

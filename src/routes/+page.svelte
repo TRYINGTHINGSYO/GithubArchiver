@@ -2,6 +2,7 @@
 	import DiscoveryRepoCard from '$lib/components/DiscoveryRepoCard.svelte';
 	import RepoListItem from '$lib/components/RepoListItem.svelte';
 	import StatusStory from '$lib/components/StatusStory.svelte';
+	import { clusterGrowthAnalysisHref, homepageClusterTitleHref } from '$lib/cluster-links';
 	import { timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
@@ -354,12 +355,7 @@
 	<div class="cluster-grid">
 		{#each data.clusters.items as cluster}
 			<article class="cluster-card">
-				<a
-					class="cluster-title"
-					href={data.clusters.mode === 'growth'
-						? `/discover/fastest-growing?cluster=${cluster.slug}`
-						: `/?cluster=${cluster.slug}`}
-				>
+				<a class="cluster-title" href={homepageClusterTitleHref(cluster)}>
 					{cluster.name}
 				</a>
 				{#if cluster.description}<p>{cluster.description}</p>{/if}
@@ -390,6 +386,11 @@
 					</ul>
 				{/if}
 				<p class="evidence">{cluster.rankingReason}</p>
+				{#if cluster.isVerifiedGrowth}
+					<p class="evidence">
+						<a href={clusterGrowthAnalysisHref(cluster.slug)}>View growth analysis</a>
+					</p>
+				{/if}
 			</article>
 		{:else}
 			<p class="empty">

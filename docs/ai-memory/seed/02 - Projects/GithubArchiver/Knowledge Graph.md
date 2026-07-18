@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`bugfix-cluster-title-href`](entries/2026-07-18-bugfix-cluster-title-href.md) (`bugfix`, `confirmed`, `release`) — Homepage cluster titles must open /?cluster= not fastest-growing
+  - `caused-by` → [`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - [`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md) (`feature`, `confirmed`, `release`) — Admin request-path cache hit-rate metrics
   - `caused-by` → [`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - [`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md) (`bugfix`, `confirmed`, `release`) — Fix dead cluster links and slow page navigation
