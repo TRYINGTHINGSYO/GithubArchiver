@@ -15,20 +15,42 @@ After substantial work, update the project memory when any of these occur:
 - A new architectural rule is established
 - A meaningful next step is identified
 
-Update (vault root first, else seed path):
+## Write a structured entry (source of truth)
 
-`02 - Projects/GithubArchiver/Current Status.md`
+Create one file under:
 
-Also sync the same durable facts into `docs/ai-memory/seed/02 - Projects/GithubArchiver/Current Status.md` when the vault is unavailable so the next session still has continuity.
+`02 - Projects/GithubArchiver/entries/YYYY-MM-DD-<slug>.md`
 
-Include:
+(or `docs/ai-memory/seed/02 - Projects/GithubArchiver/entries/` when the vault is unavailable)
 
-- Date
-- What changed
-- Why it changed
-- Tests added
-- Deployment state
-- Remaining verification steps
+Every entry must start with YAML frontmatter:
+
+```yaml
+---
+date: 2026-07-18
+pr: 8
+commit: abc1234
+area:
+  - search
+  - daemon
+type: architecture   # architecture | incident | migration | pr | debt
+status: open         # merged | open | verified | superseded | open-debt
+supersedes: null
+title: Short headline
+migration: null
+---
+```
+
+Body: what / why / tests / remaining verification. No chat transcripts. No secrets.
+
+Then regenerate indexes:
+
+```bash
+npm run memory:timeline
+```
+
+That refreshes `Timeline.md`, `Architecture Decisions.md`, `Production Incidents.md`, `Migrations.md`, `PR Timeline.md`, and `Open Technical Debt.md`.
+
+Finally, refresh the hand-maintained live summary in `Current Status.md` (**Now** / open verification only).
 
 Do not write speculative conclusions as facts.
-Do not dump full chat transcripts into the vault.

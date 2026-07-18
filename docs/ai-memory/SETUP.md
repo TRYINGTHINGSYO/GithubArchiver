@@ -39,7 +39,21 @@ Optional: set `AI_MEMORY_VAULT=C:\AI-Memory` so Cursor Cloud Agents and other en
 | `.cursor/rules/githubarchiver-context.mdc` | Project principles + which notes to load |
 | `.cursor/rules/session-checkpoint.mdc` | When/how to persist durable outcomes |
 | `docs/ai-memory/seed/` | Copyable starter vault notes for this project |
+| `docs/ai-memory/seed/02 - Projects/GithubArchiver/entries/` | Structured checkpoints (YAML frontmatter) |
+| `scripts/ai-memory-timeline.ts` | Regenerates Timeline + category indexes |
 | `docs/ai-memory/AI-BOOT.md` | Tiny adapter for non-Cursor LLMs |
+
+## Structured checkpoints
+
+Each durable event is one markdown file with queryable frontmatter (`date`, `pr`, `commit`, `area`, `type`, `status`, …). See `entries/SCHEMA.md`.
+
+Regenerate the project timeline after adding an entry:
+
+```bash
+npm run memory:timeline
+```
+
+This produces chronological / categorical indexes so an agent can answer “what changed in the daemon?” without relying only on semantic search.
 
 ## What to store (and what not to)
 
@@ -49,7 +63,8 @@ Store only durable things:
 - architecture
 - production failures and fixes
 - merged PRs / deployment results
-- unresolved next steps
+- migrations
+- unresolved technical debt
 
 Do **not** force daily-note updates on every coding chat — that creates noisy memory.
 

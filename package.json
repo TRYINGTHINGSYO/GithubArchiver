@@ -44,7 +44,9 @@
     "backfill:resume": "tsx scripts/backfill-resume.ts",
     "daemon": "tsx scripts/daemon.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "memory:timeline": "tsx scripts/ai-memory-timeline.ts",
+    "memory:timeline:check": "tsx scripts/ai-memory-timeline.ts --check"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.12",

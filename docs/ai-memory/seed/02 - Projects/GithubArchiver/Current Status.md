@@ -6,46 +6,25 @@ type: status
 
 # Current Status
 
-## 2026-07-18 — Status semantics + Search active accuracy
+Read [[Timeline]] for the chronological operating history. This note is only the **live summary**.
 
-### Merged on `main`
+## Now
 
-- **PR #2** — backlog sleep + enrichment tiers
-- **PR #3** — GH Archive CreateEvent matching / search-gap gating (`matched_repo_creates`)
-- **PR #4** — activity bar copy prefers enrichment messaging when backlog remains
-- **PR #5** — shared status hierarchy (`StatusStory`), interrupted orphans, clarified discovery labels
+- **PR #5** merged and verified in production for activity/progress/discovery hierarchy.
+- **PR #6** open — Search fallback active stale-state fix (deploy + verify table in entry).
+- **PR #7** open — Cursor Project Rules + seed vault.
+- **PR #8** open — structured checkpoint metadata + generated timeline.
 
-### Open
+## Open verification
 
-- **PR #6** — Search fallback active reflects live execution only  
-  https://github.com/TRYINGTHINGSYO/GithubArchiver/pull/6  
-  - Root cause: Railway restart left `search_ingest_stats.status='running'`; jobs reconciled, Search shards did not  
-  - Fix: reconcile orphaned Search stats on daemon start; age-floor in `isSearchFallbackActive`  
-  - Discovery order polish: archive hour → archive backlog → worker last ran → Search fallback  
-  - Tests: `tests/search-fallback-active.test.ts` including `ensureBackgroundWorker` e2e startup path  
-  - State: open, draft, mergeable (as of last check)
+After PR #6 deploys: Search fallback **No** during ordinary enrich/GH Archive ingest; **Yes** only while Search executes; stale restart rows reconcile to **No**.
 
-### Verified in production after PR #5
+## Open debt
 
-- Activity bar: Current activity + Progress (`enriched · this run · waiting`) — good
-- Shared hierarchy on homepage — good
-- Discovery labels (latest archive hour / backlog / worker last ran) — good
-- Search fallback showed **Yes** during enrichment — investigated as stale Search shard state → PR #6
+- Production Railway needs a real `GITHUB_TOKEN` — see [[Open Technical Debt]].
 
-### Remaining verification (after PR #6 deploy)
+## How to checkpoint
 
-| Scenario | Search fallback |
-| --- | :---: |
-| Normal GH Archive ingest | No |
-| Ordinary enrichment | No |
-| Search fallback actually executing | Yes |
-| Stale Search rows after Railway restart | No (reconciled or aged out) |
-
-### Ops note (not a code fix)
-
-- Production needs a real `GITHUB_TOKEN` on Railway for API-backed enrichment/Search.
-
-## Memory system (this repo)
-
-- Cursor Project Rules added under `.cursor/rules/`
-- Seed vault notes under `docs/ai-memory/seed/` for copy into `C:\AI-Memory`
+1. Add `entries/YYYY-MM-DD-*.md` with required frontmatter (see `entries/SCHEMA.md`).
+2. Run `npm run memory:timeline`.
+3. Update this file’s **Now** section if the live summary changed.

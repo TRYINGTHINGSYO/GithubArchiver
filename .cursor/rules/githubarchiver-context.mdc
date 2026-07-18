@@ -9,12 +9,20 @@ globs:
 
 # GithubArchive+ Context
 
-Before making architectural or pipeline changes, read the project memory notes (from the resolved vault root, or from `docs/ai-memory/seed/02 - Projects/GithubArchiver/` if the vault is not present yet):
+Before making architectural or pipeline changes, read (vault root first, else `docs/ai-memory/seed/`):
 
-- `02 - Projects/GithubArchiver/GithubArchiver.md`
-- `02 - Projects/GithubArchiver/Architecture.md`
-- `02 - Projects/GithubArchiver/Decisions.md`
 - `02 - Projects/GithubArchiver/Current Status.md`
+- `02 - Projects/GithubArchiver/Timeline.md`
+- `02 - Projects/GithubArchiver/Decisions.md`
+- `02 - Projects/GithubArchiver/Architecture.md`
+
+For targeted questions, prefer the generated indexes over scanning every note:
+
+- Daemon / Search incidents → `Production Incidents.md`
+- Schema versions → `Migrations.md`
+- Merged/open PRs → `PR Timeline.md`
+- Unresolved ops/code debt → `Open Technical Debt.md`
+- Locked principles → `Decisions.md`
 
 Important principles:
 

@@ -30,14 +30,28 @@ It ingests repository creation signals, enriches repositories, classifies them, 
 - UI status must distinguish current activity, progress, and discovery.
 - Stale runtime rows must be reconciled after process restarts.
 
-## Memory map
+## Memory map (project operating system)
 
-- [[Architecture]] — subsystem boundaries and data flow
-- [[Decisions]] — locked / durable choices
-- [[Current Status]] — latest verified state and open verification
+```text
+GithubArchiver
+│
+├── Architecture Decisions   ← generated
+├── Production Incidents     ← generated
+├── Migrations               ← generated
+├── PR Timeline              ← generated
+├── Open Technical Debt      ← generated
+├── Current Status           ← hand-maintained live summary
+├── Timeline                 ← generated master index
+├── Architecture.md          ← enduring subsystem notes
+├── Decisions.md             ← locked principles
+└── entries/                 ← structured checkpoints (source of truth)
+```
+
+- Start with [[Current Status]] and [[Timeline]]
+- Deep principles: [[Decisions]], [[Architecture]]
+- New durable fact → new `entries/*.md` + `npm run memory:timeline`
 
 ## Related repo paths
 
-- Code: this GithubArchiver git repository
 - Cursor rules: `.cursor/rules/`
 - Seed copy in repo: `docs/ai-memory/seed/02 - Projects/GithubArchiver/`
