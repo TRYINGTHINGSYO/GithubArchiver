@@ -214,7 +214,7 @@ export type JobType =
 	| 'backfill'
 	| 'maintenance'
 	| 'export';
-export type JobStatus = 'running' | 'success' | 'failed' | 'cancelled';
+export type JobStatus = 'running' | 'success' | 'failed' | 'cancelled' | 'interrupted';
 
 export interface JobRunRow {
 	id: number;

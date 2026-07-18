@@ -1,5 +1,6 @@
 <script lang="ts">
 	import DiscoveryRepoCard from '$lib/components/DiscoveryRepoCard.svelte';
+	import StatusStory from '$lib/components/StatusStory.svelte';
 	import { timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
@@ -11,6 +12,14 @@
 		{ href: '/discover/projects-to-watch', label: 'Projects to Watch' },
 		{ href: '/discover/deleted-gems', label: 'Deleted but preserved' }
 	];
+
+	const enrich = $derived(data.enrichmentProgress);
+	const currentActivity = $derived.by(() => {
+		if (enrich.currentRepo) return `Enriching ${enrich.currentRepo}`;
+		if (enrich.remaining > 0) return 'Building repository intelligence...';
+		if (data.discoveryStatus.workerStatus === 'running') return 'Discovery worker running';
+		return 'Discovery worker idle';
+	});
 </script>
 
 <svelte:head>
@@ -38,42 +47,25 @@
 			<h2 id="status-heading">Discovery pipeline</h2>
 		</div>
 	</div>
-	<dl class="status-grid">
-		<div>
-			<dt>Repositories discovered</dt>
-			<dd>{data.discoveryStatus.repositoriesDiscovered.toLocaleString()}</dd>
-		</div>
-		<div>
-			<dt>Enriched</dt>
-			<dd>{data.discoveryStatus.enriched.toLocaleString()}</dd>
-		</div>
-		<div>
-			<dt>Classified</dt>
-			<dd>{data.discoveryStatus.classified.toLocaleString()}</dd>
-		</div>
-		<div>
-			<dt>Clustered</dt>
-			<dd>{data.discoveryStatus.clustered.toLocaleString()}</dd>
-		</div>
-		<div>
-			<dt>Last ingestion</dt>
-			<dd>
-				{data.discoveryStatus.lastIngestionAt
-					? timeAgo(data.discoveryStatus.lastIngestionAt)
-					: 'pending'}
-			</dd>
-		</div>
-		<div>
-			<dt>Last discovery analysis</dt>
-			<dd>{data.discoveryAnalysisAgo ?? 'pending'}</dd>
-		</div>
-		<div>
-			<dt>Worker status</dt>
-			<dd class:running={data.discoveryStatus.workerStatus === 'running'}>
-				{data.discoveryStatus.workerStatus === 'running' ? 'Running' : 'Idle'}
-			</dd>
-		</div>
-	</dl>
+	<StatusStory
+		compact
+		currentActivity={currentActivity}
+		currentActivityHref={enrich.currentRepo ? `/repo/${enrich.currentRepo}` : null}
+		enriched={enrich.enrichedTotal}
+		thisRun={enrich.completed}
+		waiting={enrich.remaining}
+		latestArchiveHour={data.latestArchiveHour}
+		archiveBacklog={data.archiveHourBacklog}
+		searchFallbackActive={data.searchFallbackActive}
+		workerLastRanLabel={data.discoveryStatus.lastIngestionAt
+			? timeAgo(data.discoveryStatus.lastIngestionAt)
+			: 'pending'}
+	/>
+	<p class="admin-meta" style="margin-top:0.85rem">
+		Classified {data.discoveryStatus.classified.toLocaleString()} · Clustered
+		{data.discoveryStatus.clustered.toLocaleString()} · Last analysis
+		{data.discoveryAnalysisAgo ?? 'pending'}
+	</p>
 </section>
 
 <section class="section-block">

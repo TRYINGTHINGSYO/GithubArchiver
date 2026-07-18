@@ -34,8 +34,10 @@ import {
 } from '$lib/server/db/backfill';
 import {
 	getSearchIngestSummary,
+	isSearchFallbackActive,
 	listRecentSearchIngestStats
 } from '$lib/server/db/search-ingest';
+import { getRunningJobByType } from '$lib/server/db/jobs';
 import { summarizeDaemonDecisions } from '$lib/server/db/daemon-decisions';
 import { getBackupSummary } from '$lib/server/backup';
 import { fetchGitHubRateLimit } from '$lib/server/github';
@@ -95,7 +97,13 @@ export async function getAdminStatus() {
 			recentHours: listIngestedHours(20),
 			totalHours: countIngestedHours(),
 			reposLastHour: countReposFirstSeenSince(oneHourAgo),
-			reposToday: countReposFirstSeenSince(startOfUtcDay())
+			reposToday: countReposFirstSeenSince(startOfUtcDay()),
+			workerLastRanAt: (() => {
+				const ingest = getLatestJobsByType().ingest;
+				if (!ingest) return null;
+				return ingest.finished_at ?? ingest.started_at;
+			})(),
+			ingestRunning: Boolean(getRunningJobByType('ingest'))
 		},
 		archive: {
 			metadataOnly,
@@ -103,7 +111,9 @@ export async function getAdminStatus() {
 			indexedBytes: sumArchiveSnapshotBytes()
 		},
 		discovery: {
-			githubSearchRepos: countReposByDiscoverySource('github_search')
+			/** Lifetime count of repos whose discovery_source is github_search — not live Search. */
+			githubSearchRepos: countReposByDiscoverySource('github_search'),
+			searchFallbackActive: isSearchFallbackActive()
 		},
 		refresh: {
 			intervalHours: REFRESH_INTERVAL_HOURS,

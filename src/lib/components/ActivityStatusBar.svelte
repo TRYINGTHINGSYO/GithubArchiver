@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { DaemonActivity } from '$lib/server/daemon-activity';
+	import { formatEnrichmentCounts } from '$lib/status-display';
 
 	const POLL_MS = 12_000;
 
@@ -12,6 +13,11 @@
 	const activity = $derived(latestActivity ?? initial);
 	const isActive = $derived(activity.action !== 'idle' && activity.action !== 'rate_limited');
 	const isRateLimited = $derived(activity.action === 'rate_limited');
+	const showEnrichmentCounts = $derived(
+		Boolean(
+			activity.progress && (activity.action === 'enrich' || (activity.enrichment?.remaining ?? 0) > 0)
+		)
+	);
 
 	async function refresh() {
 		try {
@@ -34,60 +40,86 @@
 {#if !error}
 	<div class="activity-bar" class:active={isActive} class:rate-limited={isRateLimited} role="status" aria-live="polite">
 		<span class="indicator" aria-hidden="true"></span>
-		<span class="label">What I'm doing</span>
-		<span class="message">{activity.message}</span>
-		{#if activity.progress && (activity.action === 'enrich' || activity.enrichment?.remaining > 0)}
-			<span class="counts">
-				{activity.progress.enrichedTotal.toLocaleString()} done ·
-				{activity.progress.remaining.toLocaleString()} left
+		<span class="stack">
+			<span class="row">
+				<span class="label">Current activity</span>
+				<span class="message">{activity.message}</span>
 			</span>
-		{/if}
+			{#if showEnrichmentCounts && activity.progress}
+				<span class="row">
+					<span class="label">Progress</span>
+					<span class="counts">{formatEnrichmentCounts(activity.progress)}</span>
+				</span>
+			{/if}
+		</span>
 	</div>
 {:else}
 	<div class="activity-bar error" role="status" aria-live="polite">
 		<span class="indicator" aria-hidden="true"></span>
-		<span class="label">What I'm doing</span>
-		<span class="message">Status unavailable</span>
+		<span class="stack">
+			<span class="row">
+				<span class="label">Current activity</span>
+				<span class="message">Status unavailable</span>
+			</span>
+		</span>
 	</div>
 {/if}
 
 <style>
 	.activity-bar {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		gap: 0.55rem;
-		padding: 0.4rem 1.5rem;
+		padding: 0.45rem 1.5rem;
 		border-bottom: 1px solid var(--border);
 		background: var(--bg-elevated);
 		font-size: 0.78rem;
 		color: var(--text-muted);
-		min-height: 2rem;
+	}
+
+	.stack {
+		display: grid;
+		gap: 0.15rem;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.row {
+		display: flex;
+		align-items: baseline;
+		gap: 0.55rem;
+		min-width: 0;
 	}
 
 	.label {
-		font-weight: 600;
-		color: var(--text);
+		flex-shrink: 0;
+		min-width: 7.2rem;
+		font-weight: 650;
+		font-size: 0.7rem;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		color: var(--text-muted);
 		white-space: nowrap;
 	}
 
-	.message {
-		flex: 1;
+	.message,
+	.counts {
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		color: var(--text);
+		font-weight: 600;
 	}
 
 	.counts {
-		flex-shrink: 0;
 		font-variant-numeric: tabular-nums;
-		color: var(--text);
-		font-weight: 600;
 	}
 
 	.indicator {
 		width: 0.5rem;
 		height: 0.5rem;
+		margin-top: 0.35rem;
 		border-radius: 50%;
 		background: var(--text-muted);
 		flex-shrink: 0;
@@ -120,11 +152,11 @@
 
 	@media (max-width: 820px) {
 		.activity-bar {
-			padding: 0.4rem 1rem;
+			padding: 0.45rem 1rem;
 		}
 
 		.label {
-			display: none;
+			min-width: 0;
 		}
 	}
 </style>

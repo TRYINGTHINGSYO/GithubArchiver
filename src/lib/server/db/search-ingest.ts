@@ -118,6 +118,35 @@ export function hasCompletedSearchForHour(hourKey: string): boolean {
 	return Boolean(row);
 }
 
+/** True while a Search API ingest shard is actively running. */
+export function isSearchFallbackActive(): boolean {
+	const db = getDb();
+	const runningStat = db
+		.prepare(
+			`SELECT 1 AS ok FROM search_ingest_stats
+			 WHERE status = 'running'
+			 LIMIT 1`
+		)
+		.get() as { ok: number } | undefined;
+	if (runningStat) return true;
+
+	const ingestJob = db
+		.prepare(
+			`SELECT detail_json FROM job_runs
+			 WHERE job_type = 'ingest' AND status = 'running'
+			 ORDER BY started_at DESC
+			 LIMIT 1`
+		)
+		.get() as { detail_json: string } | undefined;
+	if (!ingestJob) return false;
+	try {
+		const detail = JSON.parse(ingestJob.detail_json) as Record<string, unknown>;
+		return detail.action === 'search_gap' || detail.mode === 'search';
+	} catch {
+		return false;
+	}
+}
+
 export function getSearchIngestSummary() {
 	const db = getDb();
 	const latest = db

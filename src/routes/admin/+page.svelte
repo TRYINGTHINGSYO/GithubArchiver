@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { formatJobTypeLabel } from '$lib/status-display';
 	import { timeAgo, formatBytes } from '$lib/utils';
 	import type { PageData } from './$types';
 
@@ -121,6 +122,8 @@
 		if (s === 'running') return 'badge pending';
 		if (s === 'success') return 'badge archived';
 		if (s === 'failed') return 'badge deleted';
+		if (s === 'interrupted') return 'badge';
+		if (s === 'cancelled') return 'badge';
 		return 'badge';
 	}
 
@@ -700,40 +703,74 @@
 
 <section class="detail-section">
 	<h2 class="section-title">Ingestion & discovery</h2>
-	<dl class="detail-grid">
+	<div class="status-hierarchy">
 		<div>
-			<dt>Repos ingested (last hour)</dt>
-			<dd>{status.ingestion.reposLastHour.toLocaleString()}</dd>
+			<h3 class="status-hierarchy-label">Current activity</h3>
+			<p class="admin-meta">
+				{#if status.ingestion.ingestRunning}
+					Ingest batch running
+				{:else if status.daemon.running}
+					Daemon loop active
+				{:else}
+					Workers idle
+				{/if}
+				· Worker last ran
+				{status.ingestion.workerLastRanAt
+					? timeAgo(status.ingestion.workerLastRanAt)
+					: '—'}
+			</p>
 		</div>
 		<div>
-			<dt>Repos ingested (today UTC)</dt>
-			<dd>{status.ingestion.reposToday.toLocaleString()}</dd>
+			<h3 class="status-hierarchy-label">Progress</h3>
+			<dl class="detail-grid">
+				<div>
+					<dt>Enriched</dt>
+					<dd>{status.stats.enrichedRepos.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Waiting</dt>
+					<dd>{status.stats.unenrichedRepos.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Repos ingested (last hour)</dt>
+					<dd>{status.ingestion.reposLastHour.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Repos ingested (today UTC)</dt>
+					<dd>{status.ingestion.reposToday.toLocaleString()}</dd>
+				</div>
+			</dl>
 		</div>
 		<div>
-			<dt>GitHub Search fallback repos</dt>
-			<dd>{status.discovery.githubSearchRepos.toLocaleString()}</dd>
+			<h3 class="status-hierarchy-label">Discovery</h3>
+			<dl class="detail-grid">
+				<div>
+					<dt>Latest completed archive hour</dt>
+					<dd class="mono">{status.ingestion.latestHour ?? '—'}</dd>
+				</div>
+				<div>
+					<dt>Backlog</dt>
+					<dd>{status.ingestion.missingHours.length} hours</dd>
+				</div>
+				<div>
+					<dt>Search fallback active</dt>
+					<dd>{status.discovery.searchFallbackActive ? 'Yes' : 'No'}</dd>
+				</div>
+				<div>
+					<dt>Target hour (GH Archive)</dt>
+					<dd class="mono">{status.ingestion.targetHour}</dd>
+				</div>
+				<div>
+					<dt>Hours ingested</dt>
+					<dd>{status.ingestion.totalHours}</dd>
+				</div>
+				<div>
+					<dt>Historical Search-fallback discoveries</dt>
+					<dd>{status.discovery.githubSearchRepos.toLocaleString()}</dd>
+				</div>
+			</dl>
 		</div>
-		<div>
-			<dt>Target hour (GH Archive)</dt>
-			<dd class="mono">{status.ingestion.targetHour}</dd>
-		</div>
-		<div>
-			<dt>Latest ingested</dt>
-			<dd class="mono">{status.ingestion.latestHour ?? '—'}</dd>
-		</div>
-		<div>
-			<dt>Hours ingested</dt>
-			<dd>{status.ingestion.totalHours}</dd>
-		</div>
-		<div>
-			<dt>Missing (next batch)</dt>
-			<dd>{status.ingestion.missingHours.length}</dd>
-		</div>
-		<div>
-			<dt>Unenriched repos</dt>
-			<dd>{status.stats.unenrichedRepos} / {status.stats.totalRepos}</dd>
-		</div>
-	</dl>
+	</div>
 	{#if status.ingestion.missingHours.length > 0}
 		<p class="admin-meta mono">{status.ingestion.missingHours.join(', ')}</p>
 	{/if}
@@ -839,7 +876,7 @@
 			{#each status.recentJobs as job}
 				<li class="timeline-item">
 					<span class="timeline-time mono">{timeAgo(job.started_at)}</span>
-					<span class="timeline-label mono">{job.job_type}</span>
+					<span class="timeline-label mono" title={job.job_type}>{formatJobTypeLabel(job)}</span>
 					<span class={statusClass(job.status)}>{job.status}</span>
 				</li>
 				{#if job.detail_json && job.detail_json !== '{}'}
@@ -861,6 +898,20 @@
 {/if}
 
 <style>
+	.status-hierarchy {
+		display: grid;
+		gap: 1.1rem;
+	}
+
+	.status-hierarchy-label {
+		margin: 0 0 0.4rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
 	.admin-hero,
 	.health-banner {
 		display: flex;
