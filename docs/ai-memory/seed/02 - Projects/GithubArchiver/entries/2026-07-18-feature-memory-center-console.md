@@ -9,7 +9,7 @@ area:
   - product
   - ui
 type: feature
-status: merged
+status: open
 confidence: confirmed
 durability: release
 supersedes: null

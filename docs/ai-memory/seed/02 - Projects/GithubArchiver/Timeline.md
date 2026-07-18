@@ -13,7 +13,7 @@ Chronological event log (newest first). Source of truth is `entries/`.
 
 ## 2026-07-18
 
-- **2026-07-18** · `feature` · `confirmed` · `release` · PR #17 · `b2a8940` · `merged` · `memory`, `product`, `ui` — [Ship Memory Center console at /memory](entries/2026-07-18-feature-memory-center-console.md)
+- **2026-07-18** · `feature` · `confirmed` · `release` · PR #17 · `b2a8940` · `open` · `memory`, `product`, `ui` — [Ship Memory Center console at /memory](entries/2026-07-18-feature-memory-center-console.md)
   - edges: references:[`research-memory-center-console`](entries/2026-07-18-research-memory-center-console.md), references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md)
 - **2026-07-18** · `research` · `confirmed` · `temporary` · PR #17 · `b2a8940` · `open` · `memory`, `product` — [Memory Center as intelligence console (not chat history)](entries/2026-07-18-research-memory-center-console.md)
   - edges: references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
