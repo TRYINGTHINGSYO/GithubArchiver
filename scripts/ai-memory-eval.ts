@@ -15,7 +15,7 @@ import {
 	loadMemoryEntries,
 	parseFrontmatter,
 	queryMemoryDetailed
-} from './lib/ai-memory.js';
+} from '../src/lib/server/ai-memory.js';
 
 interface EvalCase {
 	id: string;

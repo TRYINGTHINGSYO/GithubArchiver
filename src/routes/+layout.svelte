@@ -14,6 +14,7 @@
 			<a href="/discover/emerging" class="admin-link">Emerging</a>
 			<a href="/discover/fastest-growing" class="admin-link">Clusters</a>
 			<a href="/birth-feed" class="admin-link">Birth Feed</a>
+			<a href="/memory" class="admin-link">Memory</a>
 			<a href="/#repository-search" class="admin-link">Search</a>
 			{#if data.isAdmin}
 				<a href="/admin" class="admin-link">Admin</a>
@@ -36,7 +37,7 @@
 <nav class="mobile-tabbar" aria-label="Primary mobile navigation">
 	<a href="/">Home</a>
 	<a href="/discover">Discover</a>
-	<a href="/discover/emerging">Emerging</a>
+	<a href="/memory">Memory</a>
 	{#if data.isAdmin}
 		<a href="/admin">Admin</a>
 	{:else}

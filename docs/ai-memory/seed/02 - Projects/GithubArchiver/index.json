@@ -1,9 +1,128 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T01:53:06.846Z",
+  "generatedAt": "2026-07-18T03:40:04.707Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-memory-center-console",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-18",
+      "pr": 17,
+      "commit": "b2a8940",
+      "migration": null,
+      "area": [
+        "memory",
+        "product",
+        "ui"
+      ],
+      "related": [
+        "research-memory-center-console",
+        "decision-knowledge-engine-philosophy",
+        "feature-stabilize-retrieval"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "research-memory-center-console"
+        },
+        {
+          "type": "references",
+          "id": "decision-knowledge-engine-philosophy"
+        },
+        {
+          "type": "related",
+          "id": "feature-stabilize-retrieval"
+        }
+      ],
+      "supersedes": null,
+      "title": "Ship Memory Center console at /memory",
+      "path": "entries/2026-07-18-feature-memory-center-console.md",
+      "summary": "Adds a first-class **Memory** product surface to GithubArchiver:"
+    },
+    {
+      "id": "research-memory-center-console",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "temporary",
+      "date": "2026-07-18",
+      "pr": 17,
+      "commit": "b2a8940",
+      "migration": null,
+      "area": [
+        "memory",
+        "product"
+      ],
+      "related": [
+        "decision-knowledge-engine-philosophy",
+        "feature-stabilize-retrieval",
+        "memory"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "decision-knowledge-engine-philosophy"
+        },
+        {
+          "type": "related",
+          "id": "feature-stabilize-retrieval"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        }
+      ],
+      "supersedes": null,
+      "title": "Memory Center as intelligence console (not chat history)",
+      "path": "entries/2026-07-18-research-memory-center-console.md",
+      "summary": "Product vision: expose the knowledge engine as an **intelligence console** inside GithubArchiver (`/memory`), not as a chat transcript browser."
+    },
+    {
+      "id": "research-memory-center-next",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "temporary",
+      "date": "2026-07-18",
+      "pr": 17,
+      "commit": "543c7aa",
+      "migration": null,
+      "area": [
+        "memory",
+        "product",
+        "ui"
+      ],
+      "related": [
+        "research-memory-center-console",
+        "feature-memory-center-console",
+        "decision-knowledge-engine-philosophy"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "research-memory-center-console"
+        },
+        {
+          "type": "references",
+          "id": "feature-memory-center-console"
+        },
+        {
+          "type": "related",
+          "id": "decision-knowledge-engine-philosophy"
+        }
+      ],
+      "supersedes": null,
+      "title": "Deferred Memory Center UX — Context Preview and dual timelines",
+      "path": "entries/2026-07-18-research-memory-center-next.md",
+      "summary": "Not engine work. Product UX over the stable corpus. Ship only when real use shows the MVP needs them."
+    },
     {
       "id": "feature-stabilize-retrieval",
       "schema": 1,

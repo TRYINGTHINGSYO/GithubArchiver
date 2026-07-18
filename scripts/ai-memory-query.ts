@@ -18,7 +18,7 @@ import {
 	queryMemoryDetailed,
 	rootCauses,
 	buildAliasIndex
-} from './lib/ai-memory.js';
+} from '../src/lib/server/ai-memory.js';
 
 function argValue(flag: string): string | undefined {
 	const i = process.argv.indexOf(flag);

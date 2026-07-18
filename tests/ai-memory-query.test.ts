@@ -12,7 +12,7 @@ import {
 	buildAliasIndex,
 	scoreConceptMatch,
 	toMemoryIndex
-} from '../scripts/lib/ai-memory';
+} from '../src/lib/server/ai-memory';
 
 describe('ai memory multi-stage retrieval', () => {
 	const entries = loadMemoryEntries();
