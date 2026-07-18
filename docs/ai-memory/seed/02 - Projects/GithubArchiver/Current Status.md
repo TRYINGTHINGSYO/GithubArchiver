@@ -20,12 +20,12 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Open work
 
+- **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #23 · `30d6fd9` · `open` · `discovery`, `performance`, `clusters` — [Fix dead cluster links and slow page navigation](entries/2026-07-18-bugfix-nav-perf-clusters.md)
+  - edges: related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - **2026-07-18** · `decision` · `confirmed` · `permanent` · PR #22 · `5e6a396` · migration 34 · `open` · `enrichment`, `throughput`, `observability` — [Profile enrichment with per-stage timings before more architecture changes](entries/2026-07-18-decision-enrich-stage-timings.md)
   - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), references:[`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
   - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
-- **2026-07-18** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `performance`, `clusters` — [Fix dead cluster links and slow page navigation](entries/2026-07-18-bugfix-nav-perf-clusters.md)
-  - edges: related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - **2026-07-18** · `technical-debt` · `confirmed` · `temporary` · `open-debt` · `ops`, `enrichment`, `search` — [Production Railway needs a real GITHUB_TOKEN](entries/2026-07-18-debt-github-token.md)
   - edges: related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · `eb58221` · migration 32 · `open` · `enrichment`, `priority` — [Defer empty CreateEvent spam — backlog is days-old births not years-old repos](entries/2026-07-18-incident-empty-createevent-defer.md)

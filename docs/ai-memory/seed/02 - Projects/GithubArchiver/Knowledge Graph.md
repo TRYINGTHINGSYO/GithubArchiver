@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md) (`bugfix`, `confirmed`, `release`) — Fix dead cluster links and slow page navigation
+  - `related` → [`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - [`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md) (`decision`, `confirmed`, `permanent`) — Profile enrichment with per-stage timings before more architecture changes
   - `caused-by` → [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), `references` → [`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) (`incident`, `confirmed`, `permanent`) — Enrichment must be continuous concurrent queue not hourly trickle
@@ -37,8 +39,6 @@ Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, 
   - `references` → [`bugfix-activity-copy`](entries/2026-07-18-pr-4-activity-copy.md), `related` → [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), `implemented-by` → [`pr-5`](entries/2026-07-18-pr-5-status-hierarchy.md), `related` → [`pr-6`](entries/2026-07-18-pr-6-search-fallback-active.md), `related` → [`status-ui`](entries/2026-07-18-pr-4-activity-copy.md)
 - [`bugfix-activity-copy`](entries/2026-07-18-pr-4-activity-copy.md) (`bugfix`, `confirmed`, `release`) — Fix activity bar copy so enrichment is not labeled as Search
   - `related` → [`pr-5`](entries/2026-07-18-pr-5-status-hierarchy.md), `related` → [`status-ui`](entries/2026-07-18-pr-4-activity-copy.md), `related` → [`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
-- [`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md) (`bugfix`, `confirmed`, `release`) — Fix dead cluster links and slow page navigation
-  - `related` → [`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - [`debt-github-token`](entries/2026-07-18-debt-github-token.md) (`technical-debt`, `confirmed`, `temporary`) — Production Railway needs a real GITHUB_TOKEN
   - `related` → [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), `related` → [`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 - [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md) (`decision`, `confirmed`, `permanent`) — Knowledge engine improves knowledge before framework

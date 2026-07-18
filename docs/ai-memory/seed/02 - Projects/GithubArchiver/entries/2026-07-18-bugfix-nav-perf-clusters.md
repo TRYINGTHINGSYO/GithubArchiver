@@ -2,8 +2,8 @@
 schema: 1
 id: bugfix-nav-perf-clusters
 date: 2026-07-18
-pr: null
-commit: null
+pr: 23
+commit: 30d6fd9
 area:
   - discovery
   - performance

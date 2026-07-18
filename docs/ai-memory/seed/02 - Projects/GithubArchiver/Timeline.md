@@ -13,6 +13,8 @@ Chronological event log (newest first). Source of truth is `entries/`.
 
 ## 2026-07-18
 
+- **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #23 · `30d6fd9` · `open` · `discovery`, `performance`, `clusters` — [Fix dead cluster links and slow page navigation](entries/2026-07-18-bugfix-nav-perf-clusters.md)
+  - edges: related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - **2026-07-18** · `decision` · `confirmed` · `permanent` · PR #22 · `5e6a396` · migration 34 · `open` · `enrichment`, `throughput`, `observability` — [Profile enrichment with per-stage timings before more architecture changes](entries/2026-07-18-decision-enrich-stage-timings.md)
   - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), references:[`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
@@ -39,8 +41,6 @@ Chronological event log (newest first). Source of truth is `entries/`.
   - edges: references:[`bugfix-activity-copy`](entries/2026-07-18-pr-4-activity-copy.md), related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), implemented-by:[`pr-5`](entries/2026-07-18-pr-5-status-hierarchy.md), related:[`pr-6`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`status-ui`](entries/2026-07-18-pr-4-activity-copy.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #4 · `ab47863` · `merged` · `status-ui`, `enrichment` — [Fix activity bar copy so enrichment is not labeled as Search](entries/2026-07-18-pr-4-activity-copy.md)
   - edges: related:[`pr-5`](entries/2026-07-18-pr-5-status-hierarchy.md), related:[`status-ui`](entries/2026-07-18-pr-4-activity-copy.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
-- **2026-07-18** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `performance`, `clusters` — [Fix dead cluster links and slow page navigation](entries/2026-07-18-bugfix-nav-perf-clusters.md)
-  - edges: related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - **2026-07-18** · `technical-debt` · `confirmed` · `temporary` · `open-debt` · `ops`, `enrichment`, `search` — [Production Railway needs a real GITHUB_TOKEN](entries/2026-07-18-debt-github-token.md)
   - edges: related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 - **2026-07-18** · `decision` · `confirmed` · `permanent` · `055adee` · `verified` · `memory`, `adoption` — [Knowledge engine improves knowledge before framework](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
