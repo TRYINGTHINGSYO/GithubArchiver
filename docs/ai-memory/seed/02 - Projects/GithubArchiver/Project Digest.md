@@ -61,6 +61,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #25 · `76f91e5` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
+  - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #23 · `30d6fd9` · `open` · `discovery`, `performance`, `clusters` — [Fix dead cluster links and slow page navigation](entries/2026-07-18-bugfix-nav-perf-clusters.md)
   - edges: related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - **2026-07-18** · `decision` · `confirmed` · `permanent` · PR #22 · `5e6a396` · migration 34 · `open` · `enrichment`, `throughput`, `observability` — [Profile enrichment with per-stage timings before more architecture changes](entries/2026-07-18-decision-enrich-stage-timings.md)
@@ -75,8 +77,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: supersedes:[`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), references:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #11 · `5972b3c` · `merged` · `memory` — [Ranked retrieval scoring model for memory query](entries/2026-07-18-pr-11-retrieval-scoring.md)
   - edges: related:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md), related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), supersedes:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md)
-- **2026-07-18** · `feature` · `confirmed` · `release` · PR #10 · `6f5784c` · `merged` · `memory` — [Memory retrieval layer with index.json and graph query](entries/2026-07-18-pr-10-memory-retrieval.md)
-  - edges: related:[`feature-digest-knowledge-graph`](entries/2026-07-18-pr-9-digest-graph.md), related:[`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md), related:[`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), supersedes:[`feature-digest-knowledge-graph`](entries/2026-07-18-pr-9-digest-graph.md)
 
 ## Open technical debt
 
@@ -85,6 +85,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #25 · `76f91e5` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
+  - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #23 · `30d6fd9` · `open` · `discovery`, `performance`, `clusters` — [Fix dead cluster links and slow page navigation](entries/2026-07-18-bugfix-nav-perf-clusters.md)
   - edges: related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - **2026-07-18** · `decision` · `confirmed` · `permanent` · PR #22 · `5e6a396` · migration 34 · `open` · `enrichment`, `throughput`, `observability` — [Profile enrichment with per-stage timings before more architecture changes](entries/2026-07-18-decision-enrich-stage-timings.md)

@@ -1,9 +1,39 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T20:19:21.709Z",
+  "generatedAt": "2026-07-18T20:35:49.586Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "bugfix-cluster-title-href",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-18",
+      "pr": 25,
+      "commit": "76f91e5",
+      "migration": null,
+      "area": [
+        "discovery",
+        "clusters",
+        "ux"
+      ],
+      "related": [
+        "bugfix-nav-perf-clusters"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "bugfix-nav-perf-clusters"
+        }
+      ],
+      "supersedes": null,
+      "title": "Homepage cluster titles must open /?cluster= not fastest-growing",
+      "path": "entries/2026-07-18-bugfix-cluster-title-href.md",
+      "summary": "PR #23 routed `mode === 'growth'` titles to `/discover/fastest-growing?cluster=…`. That page applies strict growth guardrails per request, so a homepage card (e.g. Portfolio Websites) could open an empty “No clusters meet the growth guardrails” page."
+    },
     {
       "id": "bugfix-nav-perf-clusters",
       "schema": 1,
