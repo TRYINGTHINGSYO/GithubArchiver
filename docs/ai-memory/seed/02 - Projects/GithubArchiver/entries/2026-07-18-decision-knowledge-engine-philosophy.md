@@ -3,7 +3,7 @@ schema: 1
 id: decision-knowledge-engine-philosophy
 date: 2026-07-18
 pr: null
-commit: null
+commit: 055adee
 area:
   - memory
   - adoption
