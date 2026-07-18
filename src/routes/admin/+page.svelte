@@ -351,6 +351,34 @@
 				</dd>
 			</div>
 		</dl>
+		{#if status.pipeline.cache}
+			<h3 class="section-title" style="margin-top:1.25rem">Request-path cache</h3>
+			<p class="admin-meta">
+				Process-local TTL caches for hot aggregates. High hit rates mean navigation is skipping
+				repeated SQLite scans. Resets on deploy/restart.
+				{#if status.pipeline.cache.processUptimeSeconds != null}
+					Uptime {status.pipeline.cache.processUptimeSeconds.toLocaleString()}s.
+				{/if}
+			</p>
+			<dl class="detail-grid">
+				{#each [status.pipeline.cache.total, ...status.pipeline.cache.groups] as group}
+					<div>
+						<dt>{group.label} hit rate</dt>
+						<dd>
+							{group.lookups > 0 ? `${group.hitRatePercent}%` : '—'}
+							{#if group.lookups > 0}
+								<span class="admin-meta">
+									miss {group.missRatePercent}% · n={group.lookups.toLocaleString()}
+									{#if group.averageTtlAgeSeconds != null}
+										· avg age {group.averageTtlAgeSeconds}s
+									{/if}
+								</span>
+							{/if}
+						</dd>
+					</div>
+				{/each}
+			</dl>
+		{/if}
 		{#if status.pipeline.enrichment}
 			<h3 class="section-title" style="margin-top:1.25rem">Enrichment throughput</h3>
 			<p class="admin-meta">

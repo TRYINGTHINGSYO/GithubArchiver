@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T20:19:21.709Z",
+  "generatedAt": "2026-07-18T20:33:24.288Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -700,6 +700,36 @@
       "title": "Knowledge engine improves knowledge before framework",
       "path": "entries/2026-07-18-decision-knowledge-engine-philosophy.md",
       "summary": "Locked operating principle after PRs #6–#14 landed the knowledge engine on `main`."
+    },
+    {
+      "id": "feature-cache-hit-metrics",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "performance",
+        "observability",
+        "admin"
+      ],
+      "related": [
+        "bugfix-nav-perf-clusters"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "bugfix-nav-perf-clusters"
+        }
+      ],
+      "supersedes": null,
+      "title": "Admin request-path cache hit-rate metrics",
+      "path": "entries/2026-07-18-feature-cache-hit-metrics.md",
+      "summary": "After PR #23 removed write-on-read and added short TTL caches, the next evidence signal is whether those caches are actually warm."
     },
     {
       "id": "incident-empty-createevent-defer",

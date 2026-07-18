@@ -23,5 +23,7 @@ generated: true
   - edges: related:[`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), related:[`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), supersedes:[`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #7 · `5cc586d` · `merged` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
   - edges: related:[`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), related:[`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
+- **2026-07-18** · `feature` · `confirmed` · `release` · `open` · `performance`, `observability`, `admin` — [Admin request-path cache hit-rate metrics](entries/2026-07-18-feature-cache-hit-metrics.md)
+  - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - **2026-07-17** · `feature` · `confirmed` · `release` · PR #1 · `68e7572` · `merged` · `discovery`, `daemon`, `ingest` — [Complete autonomous discovery pipeline in production daemon](entries/2026-07-17-pr-1-discovery-pipeline.md)
   - edges: related:[`daemon`](entries/2026-07-17-pr-1-discovery-pipeline.md), related:[`discovery`](entries/2026-07-17-pr-1-discovery-pipeline.md)
