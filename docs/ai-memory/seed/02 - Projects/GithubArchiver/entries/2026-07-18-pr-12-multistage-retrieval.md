@@ -2,7 +2,7 @@
 id: feature-multistage-retrieval
 date: 2026-07-18
 pr: 12
-commit: null
+commit: fd2e4b7
 area:
   - memory
 type: feature
