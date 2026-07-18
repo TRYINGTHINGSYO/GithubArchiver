@@ -20,12 +20,10 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Open work
 
+- **2026-07-18** · `research` · `confirmed` · `temporary` · PR #17 · `b2a8940` · `open` · `memory`, `product` — [Memory Center as intelligence console (not chat history)](entries/2026-07-18-research-memory-center-console.md)
+  - edges: references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-18** · `technical-debt` · `confirmed` · `temporary` · `open-debt` · `ops`, `enrichment`, `search` — [Production Railway needs a real GITHUB_TOKEN](entries/2026-07-18-debt-github-token.md)
   - edges: related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
-- **2026-07-18** · `feature` · `confirmed` · `release` · `b2a8940` · `open` · `memory`, `product`, `ui` — [Ship Memory Center console at /memory](entries/2026-07-18-feature-memory-center-console.md)
-  - edges: references:[`research-memory-center-console`](entries/2026-07-18-research-memory-center-console.md), references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md)
-- **2026-07-18** · `research` · `confirmed` · `temporary` · `b2a8940` · `open` · `memory`, `product` — [Memory Center as intelligence console (not chat history)](entries/2026-07-18-research-memory-center-console.md)
-  - edges: references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 
 ## Open technical debt
 
@@ -38,6 +36,8 @@ _None._
 
 ## Recent merges / verified
 
+- **2026-07-18** · `feature` · `confirmed` · `release` · PR #17 · `b2a8940` · `merged` · `memory`, `product`, `ui` — [Ship Memory Center console at /memory](entries/2026-07-18-feature-memory-center-console.md)
+  - edges: references:[`research-memory-center-console`](entries/2026-07-18-research-memory-center-console.md), references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `ac157f3` · `merged` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
   - edges: supersedes:[`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), validates:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-18** · `release` · `confirmed` · `permanent` · PR #13 · `603a5c9` · `merged` · `memory`, `adoption` — [Knowledge engine adopted on main (PRs #6–#13)](entries/2026-07-18-release-knowledge-engine-on-main.md)
@@ -52,8 +52,6 @@ _None._
   - edges: related:[`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), related:[`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), related:[`pr-10`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md), supersedes:[`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #8 · `feda976` · `merged` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
   - edges: related:[`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), related:[`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), supersedes:[`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
-- **2026-07-18** · `feature` · `confirmed` · `release` · PR #7 · `5cc586d` · `merged` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
-  - edges: related:[`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), related:[`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 
 ## Next priorities
 

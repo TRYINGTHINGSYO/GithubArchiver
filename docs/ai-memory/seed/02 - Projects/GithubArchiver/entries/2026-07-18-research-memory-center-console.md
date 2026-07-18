@@ -2,7 +2,7 @@
 schema: 1
 id: research-memory-center-console
 date: 2026-07-18
-pr: null
+pr: 17
 commit: b2a8940
 area:
   - memory
