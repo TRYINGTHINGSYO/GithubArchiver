@@ -1,9 +1,43 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T21:20:01.032Z",
+  "generatedAt": "2026-07-18T21:27:25.151Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-foundry-product",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": 26,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "tooling",
+        "automation"
+      ],
+      "related": [
+        "feature-gpt-cursor-orchestrator-v04",
+        "pr-26"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "feature-gpt-cursor-orchestrator-v04"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-26"
+        }
+      ],
+      "supersedes": "feature-gpt-cursor-orchestrator-v04",
+      "title": "Rename to Foundry — task graphs, product readiness, marketplace seed",
+      "path": "entries/2026-07-18-feature-foundry-product.md",
+      "summary": "Productized the orchestrator as **Foundry** (`tools/foundry`), not “GPT Cursor Relay”."
+    },
     {
       "id": "feature-gpt-cursor-orchestrator-v03",
       "schema": 1,

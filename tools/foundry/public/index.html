@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Foundry</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top">
+        <div>
+          <h1 id="productTitle">Foundry</h1>
+          <p class="tagline">
+            Local AI orchestration — task graphs, multi-agent adapters, plugins,
+            verification, and rollback.
+          </p>
+        </div>
+        <div class="status-block">
+          <span class="label">Status</span>
+          <span id="status" class="status idle">idle</span>
+        </div>
+      </header>
+
+      <section class="dashboard">
+        <div class="metric"><span class="label">Project</span><strong id="projectName">—</strong></div>
+        <div class="metric"><span class="label">Round</span><strong id="roundLabel">0 / 12</strong></div>
+        <div class="metric"><span class="label">Git</span><strong id="gitMetric">0 files</strong></div>
+        <div class="metric"><span class="label">Cost</span><strong id="costMetric">$0.00</strong></div>
+      </section>
+
+      <section class="controls">
+        <label class="field">
+          <span>Task</span>
+          <textarea id="task" rows="3" placeholder="Build authentication"></textarea>
+        </label>
+
+        <div class="detect-row">
+          <button id="detectBtn" type="button" class="ghost">Detect project</button>
+          <div id="detectResult" class="detect-result"></div>
+        </div>
+
+        <label class="field">
+          <span>Project folder</span>
+          <input id="projectPath" type="text" spellcheck="false" placeholder="/path/to/project" />
+        </label>
+
+        <div class="flags">
+          <label><input id="flagPlan" type="checkbox" checked /> Plan approval</label>
+          <label><input id="flagSupervisor" type="checkbox" checked /> Supervisor</label>
+          <label><input id="flagVerify" type="checkbox" checked /> Auto verify</label>
+          <label><input id="flagBrowser" type="checkbox" /> Browser smoke</label>
+        </div>
+
+        <div class="row">
+          <label class="field compact">
+            <span>Max rounds</span>
+            <input id="maxRounds" type="number" min="1" max="50" value="12" />
+          </label>
+          <div class="buttons">
+            <button id="startBtn" type="button">Start</button>
+            <button id="pauseBtn" type="button" disabled>Pause</button>
+            <button id="resumeBtn" type="button" disabled>Resume</button>
+            <button id="stopBtn" type="button" disabled>Stop</button>
+            <button id="rollbackBtn" type="button" class="danger" disabled>Undo last run</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="planPanel" class="panel hidden">
+        <h2>Approve plan / task graph</h2>
+        <pre id="planText" class="code"></pre>
+        <div class="buttons">
+          <button id="approvePlanBtn" type="button" class="ok">Approve Plan</button>
+          <button id="rejectPlanBtn" type="button" class="danger">Reject</button>
+        </div>
+      </section>
+
+      <section id="graphPanel" class="panel hidden">
+        <div class="log-header">
+          <h2>Task graph</h2>
+          <span id="graphProgress" class="hint"></span>
+        </div>
+        <div id="graphView" class="graph-view"></div>
+      </section>
+
+      <section id="approvalPanel" class="panel hidden">
+        <h2>Approval required</h2>
+        <p id="approvalReason"></p>
+        <pre id="approvalInstruction" class="code"></pre>
+        <div class="buttons">
+          <button id="approveBtn" type="button" class="ok">Approve</button>
+          <button id="denyBtn" type="button" class="danger">Deny</button>
+        </div>
+      </section>
+
+      <section id="questionPanel" class="panel hidden">
+        <h2>Needs your input</h2>
+        <p id="questionText"></p>
+        <textarea id="userReply" rows="3"></textarea>
+        <div class="buttons">
+          <button id="answerBtn" type="button">Send reply</button>
+        </div>
+      </section>
+
+      <section class="live-grid">
+        <div class="live-card">
+          <h2>GPT / Supervisor <span id="gptLiveHint" class="hint"></span></h2>
+          <pre id="gptLive" class="live gpt-live">(waiting)</pre>
+        </div>
+        <div class="live-card">
+          <h2>Coding agent <span id="cursorActivity" class="hint"></span></h2>
+          <pre id="cursorLive" class="live cursor-live">(waiting)</pre>
+        </div>
+      </section>
+
+      <section class="intel-grid">
+        <div class="panel">
+          <h2>Git intelligence</h2>
+          <pre id="gitIntel" class="summary">(none yet)</pre>
+        </div>
+        <div class="panel">
+          <h2>Verification</h2>
+          <pre id="verifyPanel" class="summary">(none yet)</pre>
+        </div>
+      </section>
+
+      <section class="intel-grid">
+        <div class="panel">
+          <h2>Agents</h2>
+          <pre id="agentsPanel" class="summary">(loading…)</pre>
+        </div>
+        <div class="panel">
+          <h2>Plugin marketplace</h2>
+          <pre id="marketplacePanel" class="summary">(loading…)</pre>
+        </div>
+      </section>
+
+      <section class="diff-wrap">
+        <div class="log-header">
+          <h2>Visual diff</h2>
+          <span id="diffStat">—</span>
+        </div>
+        <div id="diffView" class="diff-view">(no changes yet)</div>
+      </section>
+
+      <section class="intel-grid">
+        <div class="panel">
+          <h2>Execution timeline</h2>
+          <pre id="timelinePanel" class="summary">(no events yet)</pre>
+        </div>
+        <div class="panel">
+          <h2>Metrics</h2>
+          <pre id="metricsPanel" class="summary">(loading…)</pre>
+          <div id="recoveryPanel" class="recovery"></div>
+        </div>
+      </section>
+
+      <section class="log-wrap">
+        <div class="log-header">
+          <h2>Live conversation</h2>
+          <span id="stopReason" class="hint"></span>
+        </div>
+        <pre id="log" class="log" aria-live="polite"></pre>
+      </section>
+
+      <section class="summary-wrap">
+        <h2>Final summary</h2>
+        <pre id="summary" class="summary">(not finished yet)</pre>
+        <div id="improvementsPanel" class="hidden">
+          <h2>Next improvements</h2>
+          <ul id="improvementsList"></ul>
+          <div class="buttons">
+            <button id="continueImprovementsBtn" type="button" class="ok">Continue with these</button>
+          </div>
+        </div>
+        <h2>Workers</h2>
+        <pre id="workersPanel" class="summary">(none)</pre>
+        <h2>Style memory</h2>
+        <pre id="stylePanel" class="summary">(none yet)</pre>
+        <h2>Cost</h2>
+        <pre id="costDetail" class="summary">(none yet)</pre>
+      </section>
+    </div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

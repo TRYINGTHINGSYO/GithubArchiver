@@ -1,0 +1,24 @@
+# Copy into a project as foundry.config.yaml (or .foundry/config.yaml)
+# Legacy relay.config.yaml is still accepted.
+
+plugins:
+  - playwright
+  - railway
+  - sqlite
+
+approval:
+  before_database_changes: true
+  before_deleting_files: true
+  before_dependency_updates: true
+  before_commits: false
+  before_pushes: true
+  before_deploys: true
+  before_secret_changes: true
+
+require_plan_approval: true
+supervisor: true
+auto_verify: true
+browser_verify: false
+
+# Coding agent backend (cursor today; claude-code / openai-codex adapters coming)
+agent: cursor

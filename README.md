@@ -295,22 +295,22 @@ src/routes/
   repo/[owner]/[repo]/ # Per-repo pages
 
 scripts/               # CLI worker entry points
-tools/gpt-cursor-relay # Local GPT ↔ Cursor Agent CLI middleman
+tools/foundry          # Foundry — local AI software engineering orchestrator
 data/                  # SQLite DB, archives, backups (gitignored)
 ```
 
-### GPT ⇄ Cursor Orchestrator (local)
+### Foundry (local orchestrator)
 
-Local AI development OS: plugins, approval policies, CodingAgent abstraction, timeline, crash recovery, metrics:
+Local AI development OS: task graphs, plugins, approval policies, CodingAgent adapters, timeline, crash recovery, metrics:
 
 ```bash
-cd tools/gpt-cursor-relay
+cd tools/foundry
 npm install
-cp .env.example .env   # set OPENAI_API_KEY
+npm run setup          # encrypted vault + agent detection
 npm start              # http://127.0.0.1:8787
 ```
 
-Or from the repo root: `npm run relay`. See [tools/gpt-cursor-relay/README.md](tools/gpt-cursor-relay/README.md).
+Or from the repo root: `npm run foundry`. See [tools/foundry/README.md](tools/foundry/README.md).
 
 ---
 

@@ -13,6 +13,8 @@ Chronological event log (newest first). Source of truth is `entries/`.
 
 ## 2026-07-18
 
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Rename to Foundry — task graphs, product readiness, marketplace seed](entries/2026-07-18-feature-foundry-product.md)
+  - edges: supersedes:[`feature-gpt-cursor-orchestrator-v04`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor orchestrator v0.3](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md)
   - edges: supersedes:[`feature-gpt-cursor-relay-v15`](entries/2026-07-18-feature-gpt-cursor-relay-v15.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Orchestrator v0.4 — reliability platform](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md)

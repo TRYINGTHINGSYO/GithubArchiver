@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md) (`feature`, `confirmed`, `permanent`) — Rename to Foundry — task graphs, product readiness, marketplace seed
+  - `supersedes` → [`feature-gpt-cursor-orchestrator-v04`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md), `implemented-by` → [`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - [`feature-gpt-cursor-orchestrator-v03`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md) (`feature`, `confirmed`, `permanent`) — GPT ↔ Cursor orchestrator v0.3
   - `supersedes` → [`feature-gpt-cursor-relay-v15`](entries/2026-07-18-feature-gpt-cursor-relay-v15.md), `implemented-by` → [`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - [`feature-gpt-cursor-orchestrator-v04`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md) (`feature`, `confirmed`, `permanent`) — Orchestrator v0.4 — reliability platform
