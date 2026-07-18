@@ -96,6 +96,41 @@ describe('daemon-activity', () => {
 		expect(activity.nextCheckIn).toBe('2026-07-07T11:06:29.000Z');
 	});
 
+	it('does not claim GitHub Search when enrichment backlog counts are shown', () => {
+		const activity = resolveDaemonActivity({
+			daemonRunning: true,
+			phase: 'ingest',
+			sleepUntil: null,
+			rateLimitedUntil: null,
+			hasBacklog: true,
+			runningWorkerJob: {
+				jobType: 'ingest',
+				startedAt: '2026-07-07T11:01:29.000Z',
+				detail: { hours_planned: 2 }
+			},
+			loopStartedAt: '2026-07-07T11:01:20.000Z',
+			enrichment: enrichment({
+				remaining: 670_976,
+				enrichedTotal: 3_290,
+				currentRepo: 'egnaro9/eval-history',
+				completed: 13
+			})
+		});
+
+		expect(activity.action).toBe('enrich');
+		expect(activity.message).toContain('egnaro9/eval-history');
+		expect(activity.message).not.toMatch(/Scanning GitHub/i);
+		expect(activity.message).not.toMatch(/Search/i);
+		expect(activity.progress?.enrichedTotal).toBe(3_290);
+		expect(activity.progress?.remaining).toBe(670_976);
+	});
+
+	it('uses archive discovery copy for ingest when enrichment backlog is empty', () => {
+		expect(formatActivityMessage('ingest', 2, true, enrichment())).toBe(
+			'Discovering repositories from the archive...'
+		);
+	});
+
 	it('reports caught up when idle without backlog', () => {
 		const activity = resolveDaemonActivity({
 			daemonRunning: true,
