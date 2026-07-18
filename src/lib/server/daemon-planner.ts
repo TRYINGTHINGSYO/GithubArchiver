@@ -164,9 +164,25 @@ export function computeDaemonSleepMs(opts: {
 	/** @deprecated Use backlogSleepMs — kept for call-site compatibility */
 	archiveBacklogSleepMs?: number;
 	archiveBacklogSleepThreshold?: number;
+	/**
+	 * Near-continuous enrich drain. When claimable enrich backlog is large, sleep this long
+	 * (default ENRICH_BACKLOG_SLEEP_MS=2000) instead of the 30–60s discovery backlog sleep.
+	 */
+	enrichBacklogSleepMs?: number;
+	enrichBacklogSleepThreshold?: number;
 }): number {
 	if (hasAnyBacklog(opts.backlog)) {
 		const backlogSleep = resolveBacklogSleepMs(opts);
+		const enrichThreshold =
+			opts.enrichBacklogSleepThreshold ??
+			Number(process.env.ENRICH_BACKLOG_SLEEP_THRESHOLD ?? 100);
+		const enrichSleepRaw = Number(process.env.ENRICH_BACKLOG_SLEEP_MS ?? 2_000);
+		const enrichSleep =
+			opts.enrichBacklogSleepMs ?? (Number.isFinite(enrichSleepRaw) ? enrichSleepRaw : 2_000);
+		// Discovery may run hourly; enrichment must not. Keep the loop hot while unenriched remains.
+		if (opts.backlog.unenriched >= enrichThreshold) {
+			return Math.min(opts.sleepMinMs, backlogSleep, enrichSleep);
+		}
 		// Prefer the explicit backlog sleep when the configured min is longer (common misconfig).
 		return Math.min(opts.sleepMinMs, backlogSleep);
 	}

@@ -31,6 +31,12 @@ function sleepMaxMs(): number {
 function backlogSleepMs(): number {
 	return Number(process.env.ARCHIVE_BACKLOG_SLEEP_MS ?? 60_000);
 }
+function enrichBacklogSleepMs(): number {
+	return Number(process.env.ENRICH_BACKLOG_SLEEP_MS ?? 2_000);
+}
+function enrichBurstCycles(): number {
+	return Math.max(1, Number(process.env.ENRICH_BURST_CYCLES ?? 8));
+}
 const BACKOFF_BASE_MS = Number(process.env.DAEMON_BACKOFF_BASE_MS ?? 60_000);
 const BACKOFF_MAX_MS = Number(process.env.DAEMON_BACKOFF_MAX_MS ?? 15 * 60 * 1000);
 const TRENDING_IDLE_INTERVAL_MS = Number(
@@ -138,12 +144,58 @@ async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
 			};
 		}
 		case 'enrich': {
-			const enrich = await runEnrichCycle();
-			appendLog(`[daemon] enrich: ${enrich.enriched} enriched`);
+			// Continuous drain: keep claiming batches until burst budget, empty queue, or rate limit.
+			// Discovery/hourly scheduling must not gate whether another enrich batch may run.
+			const burstMax = enrichBurstCycles();
+			let enriched = 0;
+			let failed = 0;
+			let planned = 0;
+			let requests = 0;
+			let cycles = 0;
+			let rateLimited = false;
+			let rateLimitResetAt: string | undefined;
+			const cycleSummaries: Array<Record<string, unknown>> = [];
+
+			for (let i = 0; i < burstMax && !stopRequested; i++) {
+				const enrich = await runEnrichCycle();
+				cycles++;
+				enriched += enrich.enriched;
+				failed += enrich.failed;
+				planned += enrich.planned;
+				requests += enrich.requests;
+				cycleSummaries.push({
+					cycle: i + 1,
+					enriched: enrich.enriched,
+					failed: enrich.failed,
+					planned: enrich.planned,
+					yielded: enrich.yielded,
+					concurrency: enrich.concurrency
+				});
+				appendLog(
+					`[daemon] enrich cycle ${i + 1}/${burstMax}: ${enrich.enriched} enriched (${enrich.concurrency}x, ${enrich.requests} req)`
+				);
+				if (enrich.rateLimited) {
+					rateLimited = true;
+					rateLimitResetAt = enrich.rateLimitResetAt;
+					break;
+				}
+				if (enrich.planned === 0) break;
+			}
+
+			appendLog(
+				`[daemon] enrich burst done: ${enriched} enriched total across ${cycles} cycle(s)`
+			);
 			return {
-				hadFailure: enrich.rateLimited,
-				rateLimitResetAt: enrich.rateLimitResetAt,
-				detail: enrich
+				hadFailure: rateLimited,
+				rateLimitResetAt,
+				detail: {
+					enriched,
+					failed,
+					planned,
+					requests,
+					burst_cycles: cycles,
+					cycles: cycleSummaries
+				}
 			};
 		}
 		case 'refresh': {
@@ -308,6 +360,7 @@ async function runLoop(): Promise<void> {
 				sleepMinMs: sleepMinMs(),
 				sleepMaxMs: sleepMaxMs(),
 				backlogSleepMs: backlogSleepMs(),
+				enrichBacklogSleepMs: enrichBacklogSleepMs(),
 				backoffBaseMs: BACKOFF_BASE_MS,
 				backoffMaxMs: BACKOFF_MAX_MS
 			});

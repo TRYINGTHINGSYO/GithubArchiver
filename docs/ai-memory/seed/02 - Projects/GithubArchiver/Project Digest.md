@@ -52,12 +52,15 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Known pitfalls
 
+- [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) — Dashboard showed ~739k indexed, ~3.3k analyzed (0.4%), ~671k waiting, “this run: 13”, worker last ran ~1 hour ago. At 13/hour the backlog would take years.
 - [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md) — Search starts `search_ingest_stats` rows as `running`. Railway restarts mid-run. Daemon reconciles orphaned `job_runs`, but Search shard rows stay `running`. `isSearchFallbackActive()` treated those stale rows as active while the daemon enriched.
 - [Fix GH Archive CreateEvent matching (0 repo creates bug)](entries/2026-07-17-pr-3-createevent-matching.md) — After ~2025-10, GH Archive CreateEvents often have no `ref_type=repository` (only branch/tag). Matching on repository ref_type yielded 0 creates and incorrectly triggered Search fallback.
 - [Fix backlog-sleep 300s stall and all-urgent enrichment tiers](entries/2026-07-17-pr-2-backlog-sleep-tiers.md) — Daemon slept `300000ms (backlog-sleep)` while ~670k repos looked urgent because tier recomputation and sleep defaults were wrong.
 
 ## Recent changes
 
+- **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
+  - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `ac157f3` · `merged` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
   - edges: supersedes:[`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), validates:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-18** · `release` · `confirmed` · `permanent` · PR #13 · `603a5c9` · `merged` · `memory`, `adoption` — [Knowledge engine adopted on main (PRs #6–#13)](entries/2026-07-18-release-knowledge-engine-on-main.md)
@@ -72,8 +75,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: related:[`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), related:[`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), related:[`pr-10`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md), supersedes:[`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #8 · `feda976` · `merged` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
   - edges: related:[`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), related:[`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), supersedes:[`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
-- **2026-07-18** · `feature` · `confirmed` · `release` · PR #7 · `5cc586d` · `merged` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
-  - edges: related:[`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), related:[`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 
 ## Open technical debt
 
@@ -82,7 +83,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
-_None open._
+- **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
+  - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 
 ## Important files
 

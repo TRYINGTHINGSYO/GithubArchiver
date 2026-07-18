@@ -232,6 +232,41 @@ export function seedEnrichmentPriorityForInsert(repoId: number): void {
 	recomputeEnrichmentPriority(repoId);
 }
 
+/** Repos the worker will actually claim next (excludes deferred long-tail + terminal states). */
+export function countClaimableEnrichmentBacklog(): number {
+	const db = getDb();
+	const now = new Date().toISOString();
+	return (
+		db
+			.prepare(
+				`SELECT COUNT(*) AS c FROM repos
+				 WHERE enriched_at IS NULL
+				   AND deleted_at IS NULL
+				   AND enrichment_status IN ('pending', 'retry')
+				   AND enrichment_tier IN ('urgent', 'high', 'normal', 'low')
+				   AND (next_enrichment_at IS NULL OR next_enrichment_at <= ?)
+				   AND (enrichment_claim_expires_at IS NULL OR enrichment_claim_expires_at < ?)`
+			)
+			.get(now, now) as { c: number }
+	).c;
+}
+
+export function oldestClaimableEnrichmentAt(): string | null {
+	const db = getDb();
+	const now = new Date().toISOString();
+	const row = db
+		.prepare(
+			`SELECT MIN(created_at) AS oldest FROM repos
+			 WHERE enriched_at IS NULL
+			   AND deleted_at IS NULL
+			   AND enrichment_status IN ('pending', 'retry')
+			   AND enrichment_tier IN ('urgent', 'high', 'normal', 'low')
+			   AND (next_enrichment_at IS NULL OR next_enrichment_at <= ?)`
+		)
+		.get(now) as { oldest: string | null };
+	return row.oldest ?? null;
+}
+
 export function countEnrichmentBacklogByTier(): Record<EnrichmentTier, number> {
 	const db = getDb();
 	const rows = db

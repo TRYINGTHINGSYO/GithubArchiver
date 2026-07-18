@@ -1,0 +1,9 @@
+id: enrichment-throughput
+query: enrichment continuous concurrent backlog
+must_include:
+  - incident-enrichment-hourly-bottleneck
+should_include:
+  - debt-github-token
+must_not_include:
+  - research-does-not-exist
+limit: 8

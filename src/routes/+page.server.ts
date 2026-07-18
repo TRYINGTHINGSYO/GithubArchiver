@@ -11,6 +11,7 @@ import {
 } from '$lib/server/discovery';
 import { getDiscoverySystemStatus } from '$lib/server/discovery-materialized';
 import { getEnrichmentProgress } from '$lib/server/enrichment-progress';
+import { getEnrichmentOpsSnapshot } from '$lib/server/workers/enrich';
 import {
 	getLatestEmergingDetectionProvenance,
 	listEmergingNearMisses,
@@ -93,6 +94,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const archivePulse = getArchivePulse();
 	const discoveryStatus = getDiscoverySystemStatus();
 	const enrichmentProgress = getEnrichmentProgress();
+	const enrichmentOps = getEnrichmentOpsSnapshot();
 	const provenance = getLatestEmergingDetectionProvenance();
 	const highSignalRepos = getNewHighSignalRepos({ limit: 8, minScore: 55 });
 	const featuredRepo =
@@ -170,6 +172,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		discovery,
 		discoveryStatus,
 		enrichmentProgress,
+		enrichmentOps,
 		latestArchiveHour: latestIngestedHour(),
 		archiveHourBacklog: countMissingGhArchiveHours(),
 		searchFallbackActive: isSearchFallbackActive(),

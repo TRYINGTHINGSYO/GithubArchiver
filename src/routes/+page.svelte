@@ -8,6 +8,7 @@
 	let { data }: { data: PageData } = $props();
 
 	const enrich = $derived(data.enrichmentProgress);
+	const enrichOps = $derived(data.enrichmentOps);
 	const enrichPercent = $derived.by(() => {
 		const total = enrich.enrichedTotal + enrich.remaining;
 		if (total <= 0) return 100;
@@ -15,8 +16,17 @@
 	});
 	const enrichCurrentActivity = $derived.by(() => {
 		if (enrich.currentRepo) return `Enriching ${enrich.currentRepo}`;
-		if (enrich.remaining > 0) return 'Building repository intelligence...';
+		if ((enrichOps.claimableBacklog ?? enrich.remaining) > 0) {
+			return 'Building repository intelligence (continuous queue)...';
+		}
 		return 'Enrichment caught up — ready for new discoveries.';
+	});
+	const etaClaimableLabel = $derived.by(() => {
+		const minutes = enrichOps.etaClaimableMinutes;
+		if (minutes == null) return null;
+		if (minutes < 60) return `~${minutes} min`;
+		if (minutes < 60 * 24) return `~${Math.round(minutes / 60)} hours`;
+		return `~${Math.round(minutes / (60 * 24))} days`;
 	});
 
 	const browseLinks = [
@@ -169,8 +179,8 @@
 			<p class="eyebrow">Live enrichment</p>
 			<h2 id="enrich-heading">Voting repositories into the archive</h2>
 			<p class="section-why">
-				High-value repositories are enriched first (urgent/high tiers). Discovery continues while the
-				long-tail archive is processed progressively — a large backlog does not pause ingestion.
+				Enrichment runs as a continuous concurrent queue (not an hourly trickle). High-value tiers go
+				first; deferred long-tail stays metadata-only until promoted. Discovery keeps ingesting in parallel.
 			</p>
 		</div>
 	</div>
@@ -180,7 +190,7 @@
 			currentActivityHref={enrich.currentRepo ? `/repo/${enrich.currentRepo}` : null}
 			enriched={enrich.enrichedTotal}
 			thisRun={enrich.completed}
-			waiting={enrich.remaining}
+			waiting={enrichOps.claimableBacklog ?? enrich.remaining}
 			coveragePercent={enrichPercent}
 			latestArchiveHour={data.latestArchiveHour}
 			archiveBacklog={data.archiveHourBacklog}
@@ -188,6 +198,14 @@
 			workerLastRanLabel={data.discoveryStatus.lastIngestionAt
 				? timeAgo(data.discoveryStatus.lastIngestionAt)
 				: 'pending'}
+			enrichLastRanLabel={enrich.updatedAt ? timeAgo(enrich.updatedAt) : null}
+			throughputPerMin={enrichOps.throughputPerMin}
+			enrichedLastHour={enrichOps.enrichedLastHour}
+			avgSecondsPerRepo={enrichOps.avgSecondsPerRepo}
+			concurrency={enrichOps.concurrency}
+			claimableWaiting={enrichOps.claimableBacklog}
+			deferredWaiting={enrichOps.deferredBacklog}
+			etaClaimableLabel={etaClaimableLabel}
 		/>
 		<div class="enrich-bar" role="progressbar" aria-valuenow={enrichPercent} aria-valuemin="0" aria-valuemax="100">
 			<span style={`width: ${Math.min(100, enrichPercent)}%`}></span>

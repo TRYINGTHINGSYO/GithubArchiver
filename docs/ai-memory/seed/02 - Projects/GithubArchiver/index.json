@@ -1,9 +1,44 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T01:53:06.846Z",
+  "generatedAt": "2026-07-18T06:09:59.856Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "incident-enrichment-hourly-bottleneck",
+      "schema": 1,
+      "type": "incident",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": 18,
+      "commit": "3792bf9",
+      "migration": null,
+      "area": [
+        "enrichment",
+        "daemon",
+        "throughput"
+      ],
+      "related": [
+        "incident-backlog-sleep-tiers",
+        "debt-github-token"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "incident-backlog-sleep-tiers"
+        },
+        {
+          "type": "related",
+          "id": "debt-github-token"
+        }
+      ],
+      "supersedes": null,
+      "title": "Enrichment must be continuous concurrent queue not hourly trickle",
+      "path": "entries/2026-07-18-incident-enrichment-hourly-bottleneck.md",
+      "summary": "Dashboard showed ~739k indexed, ~3.3k analyzed (0.4%), ~671k waiting, “this run: 13”, worker last ran ~1 hour ago. At 13/hour the backlog would take years."
+    },
     {
       "id": "feature-stabilize-retrieval",
       "schema": 1,

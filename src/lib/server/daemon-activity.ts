@@ -57,7 +57,7 @@ export interface DaemonActivityInput {
 function defaultBatchSize(action: string): number | null {
 	switch (action) {
 		case 'enrich':
-			return Number(process.env.ENRICH_BATCH_SIZE ?? 50);
+			return Number(process.env.ENRICH_BATCH_SIZE ?? 100);
 		case 'refresh':
 			return Number(process.env.REFRESH_BATCH_SIZE ?? 50);
 		case 'archive':
