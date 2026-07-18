@@ -3,7 +3,7 @@ schema: 1
 id: decision-knowledge-engine-maintenance
 date: 2026-07-18
 pr: null
-commit: null
+commit: b994149
 area:
   - memory
   - adoption
