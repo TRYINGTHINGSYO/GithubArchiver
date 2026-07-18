@@ -1,0 +1,271 @@
+{
+  "generated": true,
+  "generatedAt": "2026-07-18T01:15:46.886Z",
+  "project": "githubarchiver",
+  "entries": [
+    {
+      "id": "feature-memory-retrieval",
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "date": "2026-07-18",
+      "pr": 10,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "memory"
+      ],
+      "related": [
+        "feature-digest-knowledge-graph",
+        "feature-structured-timeline",
+        "incident-search-fallback-stale",
+        "incident-gharchive-createevent",
+        "migration-030",
+        "search-fallback",
+        "memory"
+      ],
+      "supersedes": "feature-digest-knowledge-graph",
+      "title": "Memory retrieval layer with index.json and graph query",
+      "path": "entries/2026-07-18-pr-10-memory-retrieval.md",
+      "summary": "Adds machine-readable `index.json`, required stable `id`s, `confidence` (`confirmed` | `hypothesis` | `deprecated`), and:"
+    },
+    {
+      "id": "feature-digest-knowledge-graph",
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "date": "2026-07-18",
+      "pr": 9,
+      "commit": "9b0d012",
+      "migration": null,
+      "area": [
+        "memory"
+      ],
+      "related": [
+        "pr-7",
+        "pr-8",
+        "pr-10",
+        "memory",
+        "decision-status-hierarchy"
+      ],
+      "supersedes": "feature-structured-timeline",
+      "title": "Richer entry types, related graph, and Project Digest",
+      "path": "entries/2026-07-18-pr-9-digest-graph.md",
+      "summary": "- Expanded types: decision, incident, migration, feature, bugfix, performance, refactor, test, release, technical-debt, research"
+    },
+    {
+      "id": "feature-structured-timeline",
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "date": "2026-07-18",
+      "pr": 8,
+      "commit": "feda976",
+      "migration": null,
+      "area": [
+        "memory"
+      ],
+      "related": [
+        "pr-7",
+        "pr-9",
+        "memory"
+      ],
+      "supersedes": "feature-cursor-memory-rules",
+      "title": "Structured checkpoint metadata and generated project timeline",
+      "path": "entries/2026-07-18-pr-8-structured-timeline.md",
+      "summary": "Append-only `entries/*.md` with YAML frontmatter become the event log. `npm run memory:timeline` regenerates chronological and categorical views. Raw facts stay immutable; summaries are derived."
+    },
+    {
+      "id": "feature-cursor-memory-rules",
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "date": "2026-07-18",
+      "pr": 7,
+      "commit": "5cc586d",
+      "migration": null,
+      "area": [
+        "memory"
+      ],
+      "related": [
+        "pr-8",
+        "pr-9",
+        "memory"
+      ],
+      "supersedes": null,
+      "title": "Cursor Project Rules + AI memory seed vault",
+      "path": "entries/2026-07-18-pr-7-cursor-memory-rules.md",
+      "summary": "- `.cursor/rules/`: memory-system, githubarchiver-context, session-checkpoint"
+    },
+    {
+      "id": "incident-search-fallback-stale",
+      "type": "incident",
+      "status": "open",
+      "confidence": "confirmed",
+      "date": "2026-07-18",
+      "pr": 6,
+      "commit": "10cdc46",
+      "migration": null,
+      "area": [
+        "search",
+        "search-fallback",
+        "daemon",
+        "status-ui"
+      ],
+      "related": [
+        "incident-gharchive-createevent",
+        "search-fallback",
+        "decision-status-hierarchy",
+        "migration-030"
+      ],
+      "supersedes": null,
+      "title": "Search fallback active must reflect live execution only",
+      "path": "entries/2026-07-18-pr-6-search-fallback-active.md",
+      "summary": "Search starts `search_ingest_stats` rows as `running`. Railway restarts mid-run. Daemon reconciles orphaned `job_runs`, but Search shard rows stay `running`. `isSearchFallbackActive()` treated those stale rows as active while the daemon enriched."
+    },
+    {
+      "id": "decision-status-hierarchy",
+      "type": "decision",
+      "status": "verified",
+      "confidence": "confirmed",
+      "date": "2026-07-18",
+      "pr": 5,
+      "commit": "12f7ae4",
+      "migration": null,
+      "area": [
+        "status-ui",
+        "daemon",
+        "search"
+      ],
+      "related": [
+        "bugfix-activity-copy",
+        "pr-6",
+        "search-fallback",
+        "status-ui"
+      ],
+      "supersedes": null,
+      "title": "Shared status hierarchy and clearer discovery/job semantics",
+      "path": "entries/2026-07-18-pr-5-status-hierarchy.md",
+      "summary": "Shared UI structure: **Current activity → Progress → Discovery** (`StatusStory`)."
+    },
+    {
+      "id": "bugfix-activity-copy",
+      "type": "bugfix",
+      "status": "merged",
+      "confidence": "confirmed",
+      "date": "2026-07-18",
+      "pr": 4,
+      "commit": "ab47863",
+      "migration": null,
+      "area": [
+        "status-ui",
+        "enrichment"
+      ],
+      "related": [
+        "pr-5",
+        "status-ui",
+        "enrichment"
+      ],
+      "supersedes": null,
+      "title": "Fix activity bar copy so enrichment is not labeled as Search",
+      "path": "entries/2026-07-18-pr-4-activity-copy.md",
+      "summary": "Prefer enrichment messaging when backlog remains. Ingest-only copy: “Discovering repositories from the archive…” so the bar matches actual runtime work."
+    },
+    {
+      "id": "debt-github-token",
+      "type": "technical-debt",
+      "status": "open-debt",
+      "confidence": "confirmed",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ops",
+        "enrichment",
+        "search"
+      ],
+      "related": [
+        "search-fallback",
+        "enrichment"
+      ],
+      "supersedes": null,
+      "title": "Production Railway needs a real GITHUB_TOKEN",
+      "path": "entries/2026-07-18-debt-github-token.md",
+      "summary": "API-backed enrichment and Search fallback require a real `GITHUB_TOKEN` in the Railway environment. This is ops configuration, not a code defect. Track until verified present and quota-healthy in production."
+    },
+    {
+      "id": "incident-gharchive-createevent",
+      "type": "incident",
+      "status": "merged",
+      "confidence": "confirmed",
+      "date": "2026-07-17",
+      "pr": 3,
+      "commit": "e5476ac",
+      "migration": 30,
+      "area": [
+        "search",
+        "search-fallback",
+        "discovery",
+        "ingest",
+        "migration"
+      ],
+      "related": [
+        "migration-030",
+        "search-fallback",
+        "pr-6"
+      ],
+      "supersedes": null,
+      "title": "Fix GH Archive CreateEvent matching (0 repo creates bug)",
+      "path": "entries/2026-07-17-pr-3-createevent-matching.md",
+      "summary": "After ~2025-10, GH Archive CreateEvents often have no `ref_type=repository` (only branch/tag). Matching on repository ref_type yielded 0 creates and incorrectly triggered Search fallback."
+    },
+    {
+      "id": "incident-backlog-sleep-tiers",
+      "type": "incident",
+      "status": "merged",
+      "confidence": "confirmed",
+      "date": "2026-07-17",
+      "pr": 2,
+      "commit": "269732c",
+      "migration": 29,
+      "area": [
+        "daemon",
+        "enrichment",
+        "migration"
+      ],
+      "related": [
+        "migration-029",
+        "daemon",
+        "enrichment"
+      ],
+      "supersedes": null,
+      "title": "Fix backlog-sleep 300s stall and all-urgent enrichment tiers",
+      "path": "entries/2026-07-17-pr-2-backlog-sleep-tiers.md",
+      "summary": "Daemon slept `300000ms (backlog-sleep)` while ~670k repos looked urgent because tier recomputation and sleep defaults were wrong."
+    },
+    {
+      "id": "pr-1-discovery-pipeline",
+      "type": "feature",
+      "status": "merged",
+      "confidence": "confirmed",
+      "date": "2026-07-17",
+      "pr": 1,
+      "commit": "68e7572",
+      "migration": null,
+      "area": [
+        "discovery",
+        "daemon",
+        "ingest"
+      ],
+      "related": [
+        "daemon",
+        "discovery"
+      ],
+      "supersedes": null,
+      "title": "Complete autonomous discovery pipeline in production daemon",
+      "path": "entries/2026-07-17-pr-1-discovery-pipeline.md",
+      "summary": "Wired end-to-end discovery into the production daemon so GH Archive ingestion and related workers run continuously in Railway without manual CLI babysitting."
+    }
+  ]
+}

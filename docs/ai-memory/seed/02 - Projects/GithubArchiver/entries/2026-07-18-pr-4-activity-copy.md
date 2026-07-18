@@ -8,6 +8,7 @@ area:
   - enrichment
 type: bugfix
 status: merged
+confidence: confirmed
 supersedes: null
 related:
   - pr-5

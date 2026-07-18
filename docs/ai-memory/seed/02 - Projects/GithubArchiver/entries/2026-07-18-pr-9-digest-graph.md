@@ -7,10 +7,12 @@ area:
   - memory
 type: feature
 status: open
+confidence: confirmed
 supersedes: feature-structured-timeline
 related:
   - pr-7
   - pr-8
+  - pr-10
   - memory
   - decision-status-hierarchy
 title: Richer entry types, related graph, and Project Digest

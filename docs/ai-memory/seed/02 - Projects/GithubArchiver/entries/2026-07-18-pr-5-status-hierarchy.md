@@ -9,6 +9,7 @@ area:
   - search
 type: decision
 status: verified
+confidence: confirmed
 supersedes: null
 related:
   - bugfix-activity-copy

@@ -53,37 +53,39 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
-- **2026-07-18** · `feature` · PR #9 · `9b0d012` · `open` · `memory` — [Richer entry types, related graph, and Project Digest](entries/2026-07-18-pr-9-digest-graph.md)
-  - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md)
-- **2026-07-18** · `feature` · PR #8 · `feda976` · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #10 · `open` · `memory` — [Memory retrieval layer with index.json and graph query](entries/2026-07-18-pr-10-memory-retrieval.md)
+  - related: [`feature-digest-knowledge-graph`](entries/2026-07-18-pr-9-digest-graph.md), [`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md), [`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), [`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), [`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #9 · `9b0d012` · `open` · `memory` — [Richer entry types, related graph, and Project Digest](entries/2026-07-18-pr-9-digest-graph.md)
+  - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), [`pr-10`](entries/2026-07-18-pr-10-memory-retrieval.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #8 · `feda976` · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
   - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
-- **2026-07-18** · `feature` · PR #7 · `5cc586d` · `open` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #7 · `5cc586d` · `open` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
   - related: [`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), [`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
-- **2026-07-18** · `incident` · PR #6 · `10cdc46` · `open` · `search`, `search-fallback`, `daemon`, `status-ui` — [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md)
+- **2026-07-18** · `incident` · `confirmed` · PR #6 · `10cdc46` · `open` · `search`, `search-fallback`, `daemon`, `status-ui` — [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md)
   - related: [`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md), [`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md)
-- **2026-07-18** · `decision` · PR #5 · `12f7ae4` · `verified` · `status-ui`, `daemon`, `search` — [Shared status hierarchy and clearer discovery/job semantics](entries/2026-07-18-pr-5-status-hierarchy.md)
+- **2026-07-18** · `decision` · `confirmed` · PR #5 · `12f7ae4` · `verified` · `status-ui`, `daemon`, `search` — [Shared status hierarchy and clearer discovery/job semantics](entries/2026-07-18-pr-5-status-hierarchy.md)
   - related: [`bugfix-activity-copy`](entries/2026-07-18-pr-4-activity-copy.md), [`pr-6`](entries/2026-07-18-pr-6-search-fallback-active.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`status-ui`](entries/2026-07-18-pr-4-activity-copy.md)
-- **2026-07-18** · `bugfix` · PR #4 · `ab47863` · `merged` · `status-ui`, `enrichment` — [Fix activity bar copy so enrichment is not labeled as Search](entries/2026-07-18-pr-4-activity-copy.md)
+- **2026-07-18** · `bugfix` · `confirmed` · PR #4 · `ab47863` · `merged` · `status-ui`, `enrichment` — [Fix activity bar copy so enrichment is not labeled as Search](entries/2026-07-18-pr-4-activity-copy.md)
   - related: [`pr-5`](entries/2026-07-18-pr-5-status-hierarchy.md), [`status-ui`](entries/2026-07-18-pr-4-activity-copy.md), [`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
-- **2026-07-18** · `technical-debt` · `open-debt` · `ops`, `enrichment`, `search` — [Production Railway needs a real GITHUB_TOKEN](entries/2026-07-18-debt-github-token.md)
+- **2026-07-18** · `technical-debt` · `confirmed` · `open-debt` · `ops`, `enrichment`, `search` — [Production Railway needs a real GITHUB_TOKEN](entries/2026-07-18-debt-github-token.md)
   - related: [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
-- **2026-07-17** · `incident` · PR #3 · `e5476ac` · migration 30 · `merged` · `search`, `search-fallback`, `discovery`, `ingest`, `migration` — [Fix GH Archive CreateEvent matching (0 repo creates bug)](entries/2026-07-17-pr-3-createevent-matching.md)
-  - related: [`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`pr-6`](entries/2026-07-18-pr-6-search-fallback-active.md)
 
 ## Open technical debt
 
-- **2026-07-18** · `technical-debt` · `open-debt` · `ops`, `enrichment`, `search` — [Production Railway needs a real GITHUB_TOKEN](entries/2026-07-18-debt-github-token.md)
+- **2026-07-18** · `technical-debt` · `confirmed` · `open-debt` · `ops`, `enrichment`, `search` — [Production Railway needs a real GITHUB_TOKEN](entries/2026-07-18-debt-github-token.md)
   - related: [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 
 ## Current priorities
 
-- **2026-07-18** · `feature` · PR #9 · `9b0d012` · `open` · `memory` — [Richer entry types, related graph, and Project Digest](entries/2026-07-18-pr-9-digest-graph.md)
-  - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md)
-- **2026-07-18** · `feature` · PR #8 · `feda976` · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #10 · `open` · `memory` — [Memory retrieval layer with index.json and graph query](entries/2026-07-18-pr-10-memory-retrieval.md)
+  - related: [`feature-digest-knowledge-graph`](entries/2026-07-18-pr-9-digest-graph.md), [`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md), [`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), [`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), [`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #9 · `9b0d012` · `open` · `memory` — [Richer entry types, related graph, and Project Digest](entries/2026-07-18-pr-9-digest-graph.md)
+  - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), [`pr-10`](entries/2026-07-18-pr-10-memory-retrieval.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #8 · `feda976` · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
   - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
-- **2026-07-18** · `feature` · PR #7 · `5cc586d` · `open` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #7 · `5cc586d` · `open` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
   - related: [`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), [`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
-- **2026-07-18** · `incident` · PR #6 · `10cdc46` · `open` · `search`, `search-fallback`, `daemon`, `status-ui` — [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md)
+- **2026-07-18** · `incident` · `confirmed` · PR #6 · `10cdc46` · `open` · `search`, `search-fallback`, `daemon`, `status-ui` — [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md)
   - related: [`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md), [`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md)
 
 ## Important files
@@ -96,3 +98,4 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 - `src/lib/components/StatusStory.svelte`
 - `src/lib/components/ActivityStatusBar.svelte`
 - `docs/ai-memory/seed/02 - Projects/GithubArchiver/entries/`
+- `docs/ai-memory/seed/02 - Projects/GithubArchiver/index.json`

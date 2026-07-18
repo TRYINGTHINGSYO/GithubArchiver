@@ -11,15 +11,16 @@ Treat `entries/` as an **append-only event log**. Do not rewrite old entries to 
 
 ```yaml
 ---
-id: incident-gharchive-createevent   # optional stable id (defaults to filename stem)
+id: incident-gharchive-createevent   # REQUIRED stable id (survives renames)
 date: 2026-07-17
 pr: 3
 commit: e5476ac
 area:
   - search
-  - daemon
+  - search-fallback
 type: incident
 status: merged
+confidence: confirmed                 # confirmed | hypothesis | deprecated
 supersedes: null
 related:
   - migration-030
@@ -32,42 +33,31 @@ migration: 30
 
 ## Types
 
-| type | Use for |
-| --- | --- |
-| `decision` | Locked architectural / product choices |
-| `incident` | Production failures and root-cause writeups |
-| `migration` | Schema/version migrations (or set `migration:` on another type) |
-| `feature` | New capability |
-| `bugfix` | Correctness fix that is not a full incident writeup |
-| `performance` | Throughput / latency / cost work |
-| `refactor` | Structural change without intended behavior change |
-| `test` | Coverage / harness improvements as the main change |
-| `release` | Deploy / release notes |
-| `technical-debt` | Known unresolved debt |
-| `research` | Spikes / investigations without a ship decision yet |
-
-Legacy aliases still accepted by the generator: `architecture`→`decision`, `debt`→`technical-debt`, `pr`→`feature`.
+`decision` · `incident` · `migration` · `feature` · `bugfix` · `performance` · `refactor` · `test` · `release` · `technical-debt` · `research`
 
 ## Status
 
 `merged` | `open` | `verified` | `superseded` | `open-debt`
 
+## Confidence
+
+| value | Meaning |
+| --- | --- |
+| `confirmed` | Verified production fact / shipped decision |
+| `hypothesis` | Investigation or unproven theory |
+| `deprecated` | Superseded or no longer operative |
+
+Retrieval down-ranks `deprecated` and `hypothesis` unless explicitly included.
+
 ## Related graph
 
-`related` is a list of ids. Resolvers understand:
+Prefer stable `id:` values in `related`. Also accepted: `pr-N`, `migration-NNN`, concept tags from `area:`.
 
-- explicit `id:` values
-- entry filename stems
-- `pr-N`
-- `migration-N` / `migration-00N`
-- first entry tagged with that `area` (concept tag)
-
-## Body
-
-Short and factual: what / why / tests / remaining verification. No chat transcripts. No secrets.
-
-After adding an entry:
+## Tooling
 
 ```bash
-npm run memory:timeline
+npm run memory:timeline          # regenerate markdown views + index.json
+npm run memory:query -- "…"      # graph-aware retrieval for agents
 ```
+
+Machine-readable index: `../index.json` (generated).

@@ -46,7 +46,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "memory:timeline": "tsx scripts/ai-memory-timeline.ts",
-    "memory:timeline:check": "tsx scripts/ai-memory-timeline.ts --check"
+    "memory:timeline:check": "tsx scripts/ai-memory-timeline.ts --check",
+    "memory:query": "tsx scripts/ai-memory-query.ts"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.12",

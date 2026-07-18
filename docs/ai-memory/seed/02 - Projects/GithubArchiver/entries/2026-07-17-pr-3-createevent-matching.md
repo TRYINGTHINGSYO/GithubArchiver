@@ -11,6 +11,7 @@ area:
   - migration
 type: incident
 status: merged
+confidence: confirmed
 supersedes: null
 related:
   - migration-030

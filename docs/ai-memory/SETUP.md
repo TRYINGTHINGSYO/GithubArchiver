@@ -67,10 +67,20 @@ Primary generated artifacts:
 | `Current Status.md` | Living summary (open work, debt, recent merges) |
 | `Project Digest.md` | Single AI-priming document |
 | `Knowledge Graph.md` | `related` / `supersedes` link map |
+| `index.json` | Machine-readable index for agents/tooling |
 
 Plus convenience indexes (`PR Timeline.md`, `Production Incidents.md`, …) and `indexes/<type>.md`.
 
-Principle: **generate summaries whenever possible; manually maintain only enduring Decisions/Architecture and the entry log.**
+### Retrieval (PR #10)
+
+```bash
+npm run memory:query -- "search fallback"
+npm run memory:query -- incident-gharchive-createevent --json
+```
+
+Walks stable ids + graph edges and assembles the minimal cluster. Respects `confidence` (`confirmed` / `hypothesis` / `deprecated`).
+
+Principle: **make important things easy to rediscover** — generate views and query the graph; don’t expect the model to remember everything.
 
 ## What to store (and what not to)
 

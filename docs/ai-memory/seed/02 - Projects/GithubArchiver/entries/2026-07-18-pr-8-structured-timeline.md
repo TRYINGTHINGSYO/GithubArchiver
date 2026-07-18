@@ -7,6 +7,7 @@ area:
   - memory
 type: feature
 status: open
+confidence: confirmed
 supersedes: feature-cursor-memory-rules
 related:
   - pr-7

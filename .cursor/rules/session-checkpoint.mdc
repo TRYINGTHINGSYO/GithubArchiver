@@ -27,28 +27,28 @@ Do **not** rewrite old entries to change history. Add a new entry and set `super
 
 ```yaml
 ---
-id: incident-example
+id: incident-example                 # REQUIRED stable id
 date: 2026-07-18
-pr: 9
+pr: 10
 commit: abc1234
 area:
   - search
   - daemon
 type: bugfix
-# decision | incident | migration | feature | bugfix | performance |
-# refactor | test | release | technical-debt | research
 status: open
+confidence: confirmed                # confirmed | hypothesis | deprecated
 supersedes: null
 related:
-  - pr-6
+  - incident-gharchive-createevent
   - migration-030
-  - search-fallback
+  - pr-6
 title: Short headline
 migration: null
 ---
 ```
 
 Body: what / why / tests / remaining verification. No chat transcripts. No secrets.
+Use `confidence: hypothesis` for unproven investigations; `deprecated` when superseded.
 
 Regenerate derived views (never hand-edit them):
 
@@ -56,12 +56,12 @@ Regenerate derived views (never hand-edit them):
 npm run memory:timeline
 ```
 
-Produces:
+Produces Timeline / Current Status / Project Digest / Knowledge Graph / `index.json` / type indexes.
 
-- `Timeline.md` — chronological
-- `Current Status.md` — living summary
-- `Project Digest.md` — single AI-priming doc
-- `Knowledge Graph.md` — related-id map
-- type indexes under `indexes/`
+For task priming after a checkpoint:
+
+```bash
+npm run memory:query -- "<topic or id>"
+```
 
 Do not write speculative conclusions as facts.

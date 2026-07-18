@@ -9,6 +9,7 @@ area:
   - ingest
 type: feature
 status: merged
+confidence: confirmed
 supersedes: null
 related:
   - daemon

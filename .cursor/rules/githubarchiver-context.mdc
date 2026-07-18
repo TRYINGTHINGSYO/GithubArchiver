@@ -15,21 +15,28 @@ If context is tight, read **only**:
 
 (or `docs/ai-memory/seed/02 - Projects/GithubArchiver/Project Digest.md`)
 
+For a focused topic, prefer retrieval over loading many notes:
+
+```bash
+npm run memory:query -- "search fallback"
+```
+
+That walks stable ids + `related` edges and returns the minimal cluster (respecting `confidence`).
+
 Otherwise, before architectural or pipeline changes, read:
 
 1. `Project Digest.md`
 2. `Current Status.md`
-3. `Timeline.md` (recent section)
+3. `Timeline.md` / `Knowledge Graph.md` / `index.json`
 4. `Decisions.md` / `Architecture.md` for enduring principles
 
-For targeted questions use generated indexes / graph:
+Generated helpers:
 
-- Related concepts → `Knowledge Graph.md`
+- Related concepts → `Knowledge Graph.md` or `index.json`
 - Incidents → `Production Incidents.md` or `indexes/incident.md`
 - Schema versions → `Migrations.md`
 - PRs → `PR Timeline.md`
 - Debt → `Open Technical Debt.md`
-- By type → `indexes/<type>.md`
 
 Important principles:
 

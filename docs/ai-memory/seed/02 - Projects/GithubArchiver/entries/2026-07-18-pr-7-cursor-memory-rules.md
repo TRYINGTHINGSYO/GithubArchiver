@@ -7,6 +7,7 @@ area:
   - memory
 type: feature
 status: open
+confidence: confirmed
 supersedes: null
 related:
   - pr-8

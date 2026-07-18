@@ -10,6 +10,7 @@ area:
   - status-ui
 type: incident
 status: open
+confidence: confirmed
 supersedes: null
 related:
   - incident-gharchive-createevent

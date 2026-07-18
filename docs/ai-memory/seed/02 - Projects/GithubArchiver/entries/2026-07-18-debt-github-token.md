@@ -9,6 +9,7 @@ area:
   - search
 type: technical-debt
 status: open-debt
+confidence: confirmed
 supersedes: null
 related:
   - search-fallback

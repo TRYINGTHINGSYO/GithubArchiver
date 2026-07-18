@@ -26,5 +26,6 @@ For substantial work:
 7. Prefer append-only entries over rewriting history or creating thin ad-hoc notes.
 8. Never store secrets, API keys, passwords, tokens, or private credentials in the vault.
 9. Do not maintain daily conversation transcripts in the vault — store only durable outcomes.
-10. If only one memory file fits in context, read `Project Digest.md`. Otherwise use `Current Status.md` + `Timeline.md` / `Knowledge Graph.md` before scanning every entry body.
-11. Do not hand-edit generated files (`Timeline.md`, `Current Status.md`, `Project Digest.md`, `Knowledge Graph.md`, `indexes/*`).
+10. If only one memory file fits in context, read `Project Digest.md`. For a focused topic, run `npm run memory:query -- "<topic or id>"` before loading many notes.
+11. Do not hand-edit generated files (`Timeline.md`, `Current Status.md`, `Project Digest.md`, `Knowledge Graph.md`, `index.json`, `indexes/*`).
+12. Prefer stable `id:` values in `related`. Set `confidence` so agents can distinguish confirmed facts from hypotheses and deprecated designs.
