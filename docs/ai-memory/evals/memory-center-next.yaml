@@ -1,0 +1,9 @@
+id: memory-center-next
+query: context preview dual timeline
+must_include:
+  - research-memory-center-next
+should_include:
+  - research-memory-center-console
+must_not_include:
+  - research-does-not-exist
+limit: 8

@@ -33,21 +33,26 @@ Product vision: expose the knowledge engine as an **intelligence console** insid
 
 ## Why not chat history
 
-Durable knowledge is append-only entries. Conversation transcripts are intentionally not stored. The console visualizes corpus timeline, typed graph, live `memory:query` retrieval, and investigation paths over relationships — not Cursor/ChatGPT message dumps.
+A chat transcript browser archives conversations. This console visualizes the **durable artifacts that survive** those conversations.
 
-## MVP shipped with this work
+Pays off because:
 
-- Sidebar/nav **Memory** → `/memory`
-- **Timeline** of durable entries
-- **Knowledge graph** (typed edges, click-to-dossier)
-- **Live retrieval** panel (candidate → expand → re-rank → budget) via `/api/memory/query`
-- **Investigation path / replay** over related entries
-- Corpus stats (entries, decisions, incidents, edges)
+- **Stable signal** — entries, decisions, incidents, and retrieval paths are long-lived; raw chats are noisy and full of dead ends
+- **Model-agnostic** — Cursor, ChatGPT, Claude, or human work all surface as the same durable knowledge
+- **Scalable** — only validated knowledge enters the corpus, so the UI is not overwhelmed by message volume
+
+## Complementary views (MVP)
+
+| View | Answers |
+| --- | --- |
+| Timeline | *When* something happened |
+| Knowledge graph | *How* concepts relate |
+| Retrieval pipeline | *Why* the engine returned what it did |
+| Replay | *How* an investigation evolved |
+| Corpus stats | *What* the engine knows |
 
 ## Later (evidence-driven)
 
-- Richer force simulation / thinking-map animations
-- Eval accuracy metrics live on the dashboard
-- Same console patterns applied to repository investigations and enrichment pipelines
+See [[research-memory-center-next]] for Context Preview and dual repo/knowledge timelines. Also: richer graph motion, live eval accuracy, console patterns on enrichment pipelines.
 
-Framework stays in maintenance mode; this is a **product UI** over the stable engine.
+Framework stays in maintenance mode; `/memory` is an operational interface over infrastructure.

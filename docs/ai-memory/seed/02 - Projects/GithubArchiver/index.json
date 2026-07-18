@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T02:09:59.674Z",
+  "generatedAt": "2026-07-18T03:40:04.179Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -82,6 +82,46 @@
       "title": "Memory Center as intelligence console (not chat history)",
       "path": "entries/2026-07-18-research-memory-center-console.md",
       "summary": "Product vision: expose the knowledge engine as an **intelligence console** inside GithubArchiver (`/memory`), not as a chat transcript browser."
+    },
+    {
+      "id": "research-memory-center-next",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "temporary",
+      "date": "2026-07-18",
+      "pr": 17,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "memory",
+        "product",
+        "ui"
+      ],
+      "related": [
+        "research-memory-center-console",
+        "feature-memory-center-console",
+        "decision-knowledge-engine-philosophy"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "research-memory-center-console"
+        },
+        {
+          "type": "references",
+          "id": "feature-memory-center-console"
+        },
+        {
+          "type": "related",
+          "id": "decision-knowledge-engine-philosophy"
+        }
+      ],
+      "supersedes": null,
+      "title": "Deferred Memory Center UX — Context Preview and dual timelines",
+      "path": "entries/2026-07-18-research-memory-center-next.md",
+      "summary": "Not engine work. Product UX over the stable corpus. Ship only when real use shows the MVP needs them."
     },
     {
       "id": "feature-stabilize-retrieval",
