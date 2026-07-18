@@ -57,7 +57,12 @@ Prefer stable `id:` values in `related`. Also accepted: `pr-N`, `migration-NNN`,
 
 ```bash
 npm run memory:timeline          # regenerate markdown views + index.json
-npm run memory:query -- "…"      # graph-aware retrieval for agents
+npm run memory:query -- "…"      # ranked graph retrieval (confirmed by default)
+npm run memory:query -- "…" --include-hypotheses
 ```
+
+Retrieval score:
+
+`concept(≤40) + edge(≤25) + confidence(≤15) + recency(≤10) + durability(≤5) + status(≤5)`
 
 Machine-readable index: `../index.json` (generated).

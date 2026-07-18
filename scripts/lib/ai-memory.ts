@@ -1,5 +1,5 @@
 /**
- * Shared loader for GithubArchiver structured memory entries.
+ * Shared loader + retrieval scoring for GithubArchiver structured memory.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -69,6 +69,24 @@ export interface MemoryIndexFile {
 		path: string;
 		summary: string;
 	}>;
+}
+
+export interface ScoreBreakdown {
+	concept: number;
+	edge: number;
+	confidence: number;
+	recency: number;
+	durability: number;
+	status: number;
+	total: number;
+}
+
+export interface QueryHit {
+	entry: MemoryEntry;
+	score: number;
+	breakdown: ScoreBreakdown;
+	via: string;
+	depth: number;
 }
 
 export function defaultMemoryRoot(): string {
@@ -259,122 +277,258 @@ export function tokenizeQuery(q: string): string[] {
 		.filter((t) => t.length >= 2);
 }
 
-export function scoreEntry(entry: MemoryEntry, tokens: string[]): number {
-	if (tokens.length === 0) return 0;
-	let score = 0;
+/** Concept match component: 0–40 */
+export function scoreConceptMatch(entry: MemoryEntry, tokens: string[], queryRaw: string): number {
+	if (tokens.length === 0 && !queryRaw.trim()) return 0;
+	let raw = 0;
 	const id = entry.id.toLowerCase();
 	const title = entry.title.toLowerCase();
 	const areas = entry.area.map((a) => a.toLowerCase());
 	const hay = `${entry.summary}\n${entry.body}`.toLowerCase();
+	const q = queryRaw.trim().toLowerCase();
+
+	if (q && (id === q || id.includes(q))) raw += 40;
+	if (q && title.includes(q)) raw += 28;
 
 	for (const t of tokens) {
-		if (id === t || id.includes(t)) score += 12;
-		if (title.includes(t)) score += 8;
-		if (areas.some((a) => a === t || a.includes(t))) score += 6;
-		if (entry.type.includes(t)) score += 4;
-		if (t.startsWith('pr-') && entry.pr != null && `pr-${entry.pr}` === t) score += 14;
+		if (id === t) raw += 36;
+		else if (id.includes(t)) raw += 22;
+		if (title.includes(t)) raw += 16;
+		if (areas.some((a) => a === t)) raw += 18;
+		else if (areas.some((a) => a.includes(t) || t.includes(a))) raw += 12;
+		if (entry.type === t || entry.type.includes(t)) raw += 8;
+		if (t.startsWith('pr-') && entry.pr != null && `pr-${entry.pr}` === t) raw += 30;
 		if (t.startsWith('migration-') && entry.migration != null) {
-			const n = Number(t.replace('migration-', ''));
-			if (n === entry.migration) score += 14;
+			const n = Number(t.replace(/^migration-0*/, '') || t.replace('migration-', ''));
+			if (n === entry.migration) raw += 30;
 		}
-		if (hay.includes(t)) score += 2;
+		if (hay.includes(t)) raw += 4;
 	}
 
-	if (entry.confidence === 'deprecated') score *= 0.35;
-	else if (entry.confidence === 'hypothesis') score *= 0.75;
-	if (entry.status === 'open' || entry.status === 'open-debt') score += 1;
-	return score;
+	return Math.min(40, raw);
 }
 
-export interface QueryHit {
-	entry: MemoryEntry;
-	score: number;
-	via: string;
-	depth: number;
+/** Edge distance component: depth 0 → 25, then decays */
+export function scoreEdgeDistance(depth: number): number {
+	if (depth <= 0) return 25;
+	if (depth === 1) return 14;
+	if (depth === 2) return 7;
+	if (depth === 3) return 3;
+	return 1;
+}
+
+/** Confidence component: 0–15 */
+export function scoreConfidence(confidence: Confidence): number {
+	switch (confidence) {
+		case 'confirmed':
+			return 15;
+		case 'hypothesis':
+			return 6;
+		case 'deprecated':
+			return 0;
+	}
+}
+
+/** Recency component: 0–10 relative to newest entry date */
+export function scoreRecency(entry: MemoryEntry, newestMs: number): number {
+	const ageDays = Math.max(0, (newestMs - Date.parse(entry.date)) / 86_400_000);
+	if (ageDays <= 2) return 10;
+	if (ageDays <= 14) return 8;
+	if (ageDays <= 45) return 5;
+	if (ageDays <= 120) return 3;
+	return 1;
+}
+
+/** Durability component: 0–5 — enduring knowledge ranks above transient work */
+export function scoreDurability(type: EntryType): number {
+	switch (type) {
+		case 'decision':
+			return 5;
+		case 'incident':
+		case 'migration':
+			return 4;
+		case 'technical-debt':
+			return 3;
+		case 'feature':
+		case 'bugfix':
+		case 'performance':
+			return 2;
+		case 'refactor':
+		case 'test':
+		case 'release':
+			return 1;
+		case 'research':
+			return 1;
+	}
+}
+
+/** Current-status boost: 0–5 */
+export function scoreStatusBoost(status: EntryStatus): number {
+	switch (status) {
+		case 'open':
+		case 'open-debt':
+			return 5;
+		case 'verified':
+			return 3;
+		case 'merged':
+			return 1;
+		case 'superseded':
+			return 0;
+	}
+}
+
+export function composeScore(parts: Omit<ScoreBreakdown, 'total'>): ScoreBreakdown {
+	const total =
+		parts.concept + parts.edge + parts.confidence + parts.recency + parts.durability + parts.status;
+	return { ...parts, total };
+}
+
+function neighborsOf(entry: MemoryEntry, entries: MemoryEntry[], aliases: Map<string, MemoryEntry>): MemoryEntry[] {
+	const ids = new Set<string>();
+	const out: MemoryEntry[] = [];
+	const push = (ref: string) => {
+		const hit = resolveRef(ref, aliases);
+		if (hit && !ids.has(hit.id)) {
+			ids.add(hit.id);
+			out.push(hit);
+		}
+	};
+
+	for (const r of entry.related) push(r);
+	if (entry.supersedes) push(entry.supersedes);
+
+	for (const other of entries) {
+		if (other.id === entry.id) continue;
+		const pointsHere =
+			other.related.includes(entry.id) ||
+			other.supersedes === entry.id ||
+			(entry.pr != null && other.related.includes(`pr-${entry.pr}`)) ||
+			(entry.migration != null &&
+				(other.related.includes(`migration-${entry.migration}`) ||
+					other.related.includes(`migration-${String(entry.migration).padStart(3, '0')}`)));
+		if (pointsHere) push(other.id);
+	}
+	return out;
+}
+
+export interface QueryOptions {
+	depth?: number;
+	limit?: number;
+	/** Default false — confirmed only */
+	includeHypotheses?: boolean;
+	/** Default false */
+	includeDeprecated?: boolean;
 }
 
 /**
- * Score seed matches, then BFS outward through related/supersedes edges.
+ * Ranked retrieval:
+ * score = concept + edge distance + confidence + recency + durability + status boost
+ *
+ * Default returns confirmed knowledge only.
  */
 export function queryMemory(
 	entries: MemoryEntry[],
 	query: string,
-	opts: { depth?: number; limit?: number; includeDeprecated?: boolean } = {}
+	opts: QueryOptions = {}
 ): QueryHit[] {
 	const depth = opts.depth ?? 2;
-	const limit = opts.limit ?? 12;
+	const limit = opts.limit ?? 8;
+	const includeHypotheses = opts.includeHypotheses ?? false;
 	const includeDeprecated = opts.includeDeprecated ?? false;
 	const aliases = buildAliasIndex(entries);
 	const tokens = tokenizeQuery(query);
+	const newestMs = Math.max(...entries.map((e) => Date.parse(e.date)), Date.now());
 
-	const seedScores = new Map<string, number>();
-	for (const e of entries) {
-		const s = scoreEntry(e, tokens);
-		if (s > 0) seedScores.set(e.id, s);
-	}
+	const allowed = (e: MemoryEntry) => {
+		if (!includeDeprecated && e.confidence === 'deprecated') return false;
+		if (!includeHypotheses && e.confidence === 'hypothesis') return false;
+		return true;
+	};
 
-	// Exact id / alias hit
 	const direct = aliases.get(query.trim()) ?? aliases.get(query.trim().toLowerCase());
-	if (direct) seedScores.set(direct.id, Math.max(seedScores.get(direct.id) ?? 0, 20));
-
-	const best = new Map<string, QueryHit>();
-	const queue: Array<{ id: string; score: number; via: string; depth: number }> = [];
-
-	for (const [id, score] of seedScores) {
-		queue.push({ id, score, via: 'match', depth: 0 });
+	const conceptById = new Map<string, number>();
+	for (const e of entries) {
+		if (!allowed(e)) continue;
+		let concept = scoreConceptMatch(e, tokens, query);
+		if (direct?.id === e.id) concept = Math.max(concept, 40);
+		if (concept > 0) conceptById.set(e.id, concept);
 	}
-	queue.sort((a, b) => b.score - a.score);
+
+	// BFS from concept seeds — track minimum graph distance + provenance.
+	type Reach = { depth: number; via: string };
+	const reach = new Map<string, Reach>();
+	const queue: Array<{ id: string; depth: number; via: string }> = [];
+
+	for (const id of conceptById.keys()) {
+		reach.set(id, { depth: 0, via: 'match' });
+		queue.push({ id, depth: 0, via: 'match' });
+	}
 
 	while (queue.length) {
 		const cur = queue.shift()!;
+		if (cur.depth >= depth) continue;
 		const entry = aliases.get(cur.id);
 		if (!entry) continue;
-		if (!includeDeprecated && entry.confidence === 'deprecated') continue;
-
-		const prev = best.get(entry.id);
-		if (prev && prev.score >= cur.score) continue;
-		best.set(entry.id, {
-			entry,
-			score: cur.score,
-			via: cur.via,
-			depth: cur.depth
-		});
-
-		if (cur.depth >= depth) continue;
-		const edgeScore = cur.score * 0.55;
-		const neighbors = [...entry.related];
-		if (entry.supersedes) neighbors.push(entry.supersedes);
-		// reverse edges
-		for (const other of entries) {
-			if (other.related.includes(entry.id) || other.related.includes(`pr-${entry.pr}`) || other.supersedes === entry.id) {
-				neighbors.push(other.id);
-			}
-			if (entry.pr != null && other.related.includes(`pr-${entry.pr}`)) neighbors.push(other.id);
-			if (entry.migration != null) {
-				const m = `migration-${String(entry.migration).padStart(3, '0')}`;
-				if (other.related.includes(m) || other.related.includes(`migration-${entry.migration}`)) {
-					neighbors.push(other.id);
-				}
-			}
-		}
-
-		for (const ref of neighbors) {
-			const next = resolveRef(ref, aliases);
-			if (!next) continue;
-			if (!includeDeprecated && next.confidence === 'deprecated') continue;
-			const existing = best.get(next.id);
-			const nextScore = edgeScore;
-			if (existing && existing.score >= nextScore) continue;
-			queue.push({
-				id: next.id,
-				score: nextScore,
-				via: `related:${entry.id}`,
-				depth: cur.depth + 1
-			});
+		for (const next of neighborsOf(entry, entries, aliases)) {
+			if (!allowed(next)) continue;
+			const nextDepth = cur.depth + 1;
+			const prev = reach.get(next.id);
+			if (prev && prev.depth <= nextDepth) continue;
+			reach.set(next.id, { depth: nextDepth, via: `related:${entry.id}` });
+			queue.push({ id: next.id, depth: nextDepth, via: `related:${entry.id}` });
 		}
 	}
 
-	return [...best.values()]
-		.sort((a, b) => b.score - a.score || (a.entry.date < b.entry.date ? 1 : -1))
-		.slice(0, limit);
+	const hits: QueryHit[] = [];
+	for (const [id, r] of reach) {
+		const entry = aliases.get(id);
+		if (!entry) continue;
+		// Intrinsic concept for seeds; small residual for edge-only nodes so they can still rank.
+		const concept = conceptById.get(id) ?? Math.max(4, 12 - r.depth * 3);
+		const breakdown = composeScore({
+			concept: Math.min(40, concept),
+			edge: scoreEdgeDistance(r.depth),
+			confidence: scoreConfidence(entry.confidence),
+			recency: scoreRecency(entry, newestMs),
+			durability: scoreDurability(entry.type),
+			status: scoreStatusBoost(entry.status)
+		});
+		hits.push({
+			entry,
+			score: breakdown.total,
+			breakdown,
+			via: r.via,
+			depth: r.depth
+		});
+	}
+
+	return hits.sort((a, b) => b.score - a.score || (a.entry.date < b.entry.date ? 1 : -1)).slice(0, limit);
+}
+
+/** Group hits for human/agent presentation around concept types. */
+export function clusterHits(hits: QueryHit[]): Map<string, QueryHit[]> {
+	const order = [
+		'decision',
+		'incident',
+		'migration',
+		'technical-debt',
+		'feature',
+		'bugfix',
+		'performance',
+		'refactor',
+		'test',
+		'release',
+		'research'
+	];
+	const map = new Map<string, QueryHit[]>();
+	for (const key of order) map.set(key, []);
+	for (const h of hits) {
+		const list = map.get(h.entry.type) ?? [];
+		list.push(h);
+		map.set(h.entry.type, list);
+	}
+	for (const [k, v] of [...map.entries()]) {
+		if (v.length === 0) map.delete(k);
+	}
+	return map;
 }

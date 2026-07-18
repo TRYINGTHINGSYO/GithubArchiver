@@ -1,8 +1,33 @@
 {
   "generated": true,
-  "generatedAt": "2026-07-18T01:15:52.667Z",
+  "generatedAt": "2026-07-18T01:33:09.295Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-retrieval-scoring",
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "date": "2026-07-18",
+      "pr": 11,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "memory"
+      ],
+      "related": [
+        "feature-memory-retrieval",
+        "incident-search-fallback-stale",
+        "incident-gharchive-createevent",
+        "decision-status-hierarchy",
+        "search-fallback",
+        "memory"
+      ],
+      "supersedes": "feature-memory-retrieval",
+      "title": "Ranked retrieval scoring model for memory query",
+      "path": "entries/2026-07-18-pr-11-retrieval-scoring.md",
+      "summary": "`memory:query` now ranks graph hits instead of returning an unordered connected component:"
+    },
     {
       "id": "feature-memory-retrieval",
       "type": "feature",
@@ -18,6 +43,7 @@
       "related": [
         "feature-digest-knowledge-graph",
         "feature-structured-timeline",
+        "feature-retrieval-scoring",
         "incident-search-fallback-stale",
         "incident-gharchive-createevent",
         "migration-030",

@@ -12,6 +12,7 @@ supersedes: feature-digest-knowledge-graph
 related:
   - feature-digest-knowledge-graph
   - feature-structured-timeline
+  - feature-retrieval-scoring
   - incident-search-fallback-stale
   - incident-gharchive-createevent
   - migration-030

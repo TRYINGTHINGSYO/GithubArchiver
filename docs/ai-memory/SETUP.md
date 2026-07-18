@@ -71,14 +71,19 @@ Primary generated artifacts:
 
 Plus convenience indexes (`PR Timeline.md`, `Production Incidents.md`, …) and `indexes/<type>.md`.
 
-### Retrieval (PR #10)
+### Retrieval (PR #10–#11)
 
 ```bash
 npm run memory:query -- "search fallback"
+npm run memory:query -- "search fallback" --include-hypotheses
 npm run memory:query -- incident-gharchive-createevent --json
 ```
 
-Walks stable ids + graph edges and assembles the minimal cluster. Respects `confidence` (`confirmed` / `hypothesis` / `deprecated`).
+Walks stable ids + graph edges, then **ranks** hits:
+
+`concept + edge distance + confidence + recency + durability + current-status boost`
+
+Default confidence filter: **confirmed only** (hypothesis/deprecated excluded unless opted in). Output is clustered by type so agents can stop after the top few scores.
 
 Principle: **make important things easy to rediscover** — generate views and query the graph; don’t expect the model to remember everything.
 

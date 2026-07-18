@@ -15,13 +15,13 @@ If context is tight, read **only**:
 
 (or `docs/ai-memory/seed/02 - Projects/GithubArchiver/Project Digest.md`)
 
-For a focused topic, prefer retrieval over loading many notes:
+For a focused topic, prefer ranked retrieval over loading many notes:
 
 ```bash
 npm run memory:query -- "search fallback"
 ```
 
-That walks stable ids + `related` edges and returns the minimal cluster (respecting `confidence`).
+Default: **confirmed only**. Add `--include-hypotheses` for investigations. Use the scoreboard and stop after the top few hits; do not load the entire connected component.
 
 Otherwise, before architectural or pipeline changes, read:
 
