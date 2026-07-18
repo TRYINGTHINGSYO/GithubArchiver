@@ -41,6 +41,8 @@ Chronological event log (newest first). Source of truth is `entries/`.
   - edges: related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 - **2026-07-18** · `decision` · `confirmed` · `permanent` · `055adee` · `verified` · `memory`, `adoption` — [Knowledge engine improves knowledge before framework](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
   - edges: references:[`release-knowledge-engine-on-main`](entries/2026-07-18-release-knowledge-engine-on-main.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
+- **2026-07-18** · `incident` · `confirmed` · `permanent` · migration 31 · `open` · `enrichment`, `priority`, `throughput` — [Bulk ingest marked ~all repos high tier and forced deep enrich](entries/2026-07-18-incident-enrich-tier-flood.md)
+  - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 ## 2026-07-17
 
 - **2026-07-17** · `incident` · `confirmed` · `permanent` · PR #3 · `e5476ac` · migration 30 · `merged` · `search`, `search-fallback`, `discovery`, `ingest`, `migration` — [Fix GH Archive CreateEvent matching (0 repo creates bug)](entries/2026-07-17-pr-3-createevent-matching.md)

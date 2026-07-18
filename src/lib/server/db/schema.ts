@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 30;
+export const CURRENT_SCHEMA_VERSION = 31;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1122,6 +1122,8 @@ const SQL_TS = (column: string) =>
 /**
  * Recompute enrichment tiers for the unenriched backlog.
  * v28 marked nearly every CreateEvent as urgent via `created_at >= datetime('now', '-3 days')`.
+ * v29/v30 still promoted recently-*seen* repos to high, which flooded the queue after bulk ingest.
+ * v31 tiers by created_at (+ stars/signal), and defers old zero-signal long-tail.
  */
 export function recomputeEnrichmentTiersSql(database: Database.Database): void {
 	const createdAge = `(julianday('now') - ${SQL_TS('created_at')})`;
@@ -1139,7 +1141,7 @@ export function recomputeEnrichmentTiersSql(database: Database.Database): void {
 		           WHEN ${createdAge} <= 45 THEN 20
 		           WHEN ${createdAge} >= 365 THEN -20
 		           ELSE 0 END +
-		      CASE WHEN ${seenAge} <= 1 THEN 20 ELSE 0 END +
+		      CASE WHEN ${seenAge} <= 1 AND ${createdAge} <= 30 THEN 20 ELSE 0 END +
 		      CASE WHEN description IS NOT NULL AND length(trim(description)) >= 20 THEN 15 ELSE 0 END +
 		      CASE WHEN language IS NOT NULL AND language != '' THEN 10 ELSE 0 END +
 		      CASE WHEN topics IS NOT NULL AND topics != '[]' AND topics != '' THEN 12 ELSE 0 END
@@ -1150,23 +1152,24 @@ export function recomputeEnrichmentTiersSql(database: Database.Database): void {
 		    WHEN COALESCE(stars, 0) >= 50 THEN 'urgent'
 		    WHEN COALESCE(stars, 0) >= 5 AND ${createdAge} <= 3 THEN 'urgent'
 		    WHEN COALESCE(stars, 0) >= 10 THEN 'high'
-		    WHEN ${createdAge} <= 14 THEN 'high'
-		    WHEN ${seenAge} <= 2 THEN 'high'
+		    WHEN ${createdAge} <= 7 THEN 'high'
+		    WHEN ${createdAge} <= 14 AND (COALESCE(stars, 0) >= 1 OR (description IS NOT NULL AND length(trim(description)) >= 20)) THEN 'high'
 		    WHEN ${createdAge} >= 365 AND COALESCE(stars, 0) = 0 THEN 'deferred'
-		    WHEN ${createdAge} >= 180 AND COALESCE(stars, 0) < 2 THEN 'low'
+		    WHEN ${createdAge} >= 180 AND COALESCE(stars, 0) < 2 THEN 'deferred'
+		    WHEN ${createdAge} >= 90 AND COALESCE(stars, 0) < 2 THEN 'low'
 		    ELSE 'normal'
 		  END,
 		  enrichment_status = CASE
 		    WHEN deleted_at IS NOT NULL THEN 'unavailable'
 		    WHEN enriched_at IS NOT NULL THEN 'done'
-		    WHEN ${createdAge} >= 365 AND COALESCE(stars, 0) = 0 THEN 'deferred'
+		    WHEN ${createdAge} >= 180 AND COALESCE(stars, 0) < 2 THEN 'deferred'
 		    WHEN enrichment_status IN ('claimed', 'forbidden', 'terminal', 'unavailable') THEN enrichment_status
 		    ELSE 'pending'
 		  END,
 		  next_enrichment_at = CASE
 		    WHEN enriched_at IS NOT NULL THEN NULL
 		    WHEN deleted_at IS NOT NULL THEN NULL
-		    WHEN ${createdAge} >= 365 AND COALESCE(stars, 0) = 0 THEN datetime('now', '+7 days')
+		    WHEN ${createdAge} >= 180 AND COALESCE(stars, 0) < 2 THEN datetime('now', '+7 days')
 		    ELSE COALESCE(next_enrichment_at, datetime('now'))
 		  END
 		WHERE enriched_at IS NULL;
@@ -1190,6 +1193,11 @@ function migration030(database: Database.Database) {
 			`ALTER TABLE ingestion_state ADD COLUMN matched_repo_creates INTEGER NOT NULL DEFAULT 0`
 		);
 	}
+}
+
+/** Fix bulk-ingest tier flood: stop promoting recently-seen old repos to high. */
+function migration031(database: Database.Database) {
+	recomputeEnrichmentTiersSql(database);
 }
 
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
@@ -1222,7 +1230,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	27: migration027,
 	28: migration028,
 	29: migration029,
-	30: migration030
+	30: migration030,
+	31: migration031
 };
 
 export interface MigrationRunResult {

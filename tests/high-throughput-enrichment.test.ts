@@ -212,6 +212,31 @@ describe('high-throughput enrichment architecture', () => {
 		expect(shouldDeepEnrich({ priority: 150, tier: 'urgent' })).toBe(true);
 		expect(shouldDeepEnrich({ priority: 40, tier: 'low', interestingScore: 60 })).toBe(true);
 		expect(shouldDeepEnrich({ priority: 30, tier: 'low', interestingScore: 10 })).toBe(false);
+		// Bulk "high" from brand-new creates must stay on the cheap fast path.
+		expect(shouldDeepEnrich({ priority: 70, tier: 'high' })).toBe(false);
+		expect(shouldDeepEnrich({ priority: 130, tier: 'high' })).toBe(true);
+	});
+
+	it('does not promote recently-seen old repos into the high tier', () => {
+		const backfilledAncient = scoreEnrichmentPriority({
+			stars: 0,
+			forks: 0,
+			created_at: new Date(Date.now() - 400 * 86_400_000).toISOString(),
+			first_seen_at: new Date().toISOString(),
+			description: null,
+			full_name: 'someone/ancient-just-ingested'
+		});
+		expect(backfilledAncient.tier).toBe('deferred');
+
+		const freshCreate = scoreEnrichmentPriority({
+			stars: 0,
+			forks: 0,
+			created_at: new Date().toISOString(),
+			first_seen_at: new Date().toISOString(),
+			description: null,
+			full_name: 'someone/empty-new-repo'
+		});
+		expect(freshCreate.tier).toBe('high');
 	});
 
 	it('excludes deferred long-tail from claimable enrichment backlog', () => {
@@ -281,10 +306,10 @@ describe('high-throughput enrichment architecture', () => {
 		expect(getMaterializedDiscoveryLanding({ limit: 5 })).not.toBeNull();
 	});
 
-	it('migrates to schema version 29 with enrichment indexes', () => {
+	it('migrates to schema version 31 with enrichment indexes', () => {
 		const db = getDb();
 		expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(30);
+		expect(CURRENT_SCHEMA_VERSION).toBe(31);
 		const indexes = (
 			db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`).all() as { name: string }[]
 		).map((r) => r.name);

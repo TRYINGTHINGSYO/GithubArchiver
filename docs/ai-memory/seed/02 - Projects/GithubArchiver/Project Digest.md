@@ -54,6 +54,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 - [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) — Dashboard showed ~739k indexed, ~3.3k analyzed (0.4%), ~671k waiting, “this run: 13”, worker last ran ~1 hour ago. At 13/hour the backlog would take years.
 - [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md) — Search starts `search_ingest_stats` rows as `running`. Railway restarts mid-run. Daemon reconciles orphaned `job_runs`, but Search shard rows stay `running`. `isSearchFallbackActive()` treated those stale rows as active while the daemon enriched.
+- [Bulk ingest marked ~all repos high tier and forced deep enrich](entries/2026-07-18-incident-enrich-tier-flood.md) — After continuous-enrich shipped: ~34 repos/min, GitHub auth OK (4189/5000 remaining), but:
 - [Fix GH Archive CreateEvent matching (0 repo creates bug)](entries/2026-07-17-pr-3-createevent-matching.md) — After ~2025-10, GH Archive CreateEvents often have no `ref_type=repository` (only branch/tag). Matching on repository ref_type yielded 0 creates and incorrectly triggered Search fallback.
 - [Fix backlog-sleep 300s stall and all-urgent enrichment tiers](entries/2026-07-17-pr-2-backlog-sleep-tiers.md) — Daemon slept `300000ms (backlog-sleep)` while ~670k repos looked urgent because tier recomputation and sleep defaults were wrong.
 
@@ -85,6 +86,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
   - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
+- **2026-07-18** · `incident` · `confirmed` · `permanent` · migration 31 · `open` · `enrichment`, `priority`, `throughput` — [Bulk ingest marked ~all repos high tier and forced deep enrich](entries/2026-07-18-incident-enrich-tier-flood.md)
+  - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 
 ## Important files
 

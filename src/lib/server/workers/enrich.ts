@@ -34,8 +34,16 @@ import {
 import { runArchiveStoryCycle } from './stories.js';
 import { runDiscoveryMaterializationCycle } from './discovery.js';
 
-const BATCH_SIZE = Number(process.env.ENRICH_BATCH_SIZE ?? 100);
-const CONCURRENCY = Number(process.env.ENRICH_CONCURRENCY ?? 8);
+// Use ENRICH_WORKER_* only. Legacy ENRICH_CONCURRENCY=6 / ENRICH_BATCH_SIZE=40 on Railway
+// were pinning throughput below the continuous-queue targets.
+function envInt(name: string, fallback: number): number {
+	const raw = process.env[name];
+	if (raw == null || raw === '') return fallback;
+	const n = Number(raw);
+	return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+const BATCH_SIZE = envInt('ENRICH_WORKER_BATCH_SIZE', 100);
+const CONCURRENCY = envInt('ENRICH_WORKER_CONCURRENCY', 8);
 const CYCLE_BUDGET_MS = Number(process.env.ENRICH_CYCLE_BUDGET_MS ?? 90_000);
 const MAX_REQUESTS = Number(process.env.ENRICH_MAX_REQUESTS_PER_CYCLE ?? 400);
 const RETRY_LIMIT = Number(process.env.ENRICH_RETRY_LIMIT ?? 5);
