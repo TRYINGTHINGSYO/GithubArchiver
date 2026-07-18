@@ -295,8 +295,22 @@ src/routes/
   repo/[owner]/[repo]/ # Per-repo pages
 
 scripts/               # CLI worker entry points
+tools/gpt-cursor-relay # Local GPT ↔ Cursor Agent CLI middleman
 data/                  # SQLite DB, archives, backups (gitignored)
 ```
+
+### GPT ↔ Cursor Relay (local)
+
+Automate the ChatGPT ↔ Cursor copy/paste loop with a small local app:
+
+```bash
+cd tools/gpt-cursor-relay
+npm install
+cp .env.example .env   # set OPENAI_API_KEY
+npm start              # http://127.0.0.1:8787
+```
+
+Or from the repo root: `npm run relay`. See [tools/gpt-cursor-relay/README.md](tools/gpt-cursor-relay/README.md).
 
 ---
 

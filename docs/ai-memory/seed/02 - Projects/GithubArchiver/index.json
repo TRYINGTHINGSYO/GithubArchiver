@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T20:35:49.586Z",
+  "generatedAt": "2026-07-18T20:50:43.832Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -730,6 +730,35 @@
       "title": "Knowledge engine improves knowledge before framework",
       "path": "entries/2026-07-18-decision-knowledge-engine-philosophy.md",
       "summary": "Locked operating principle after PRs #6–#14 landed the knowledge engine on `main`."
+    },
+    {
+      "id": "feature-gpt-cursor-relay",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "tooling",
+        "automation"
+      ],
+      "related": [
+        "feature-cursor-memory-rules"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "feature-cursor-memory-rules"
+        }
+      ],
+      "supersedes": null,
+      "title": "Local GPT ↔ Cursor Agent CLI relay (v1)",
+      "path": "entries/2026-07-18-feature-gpt-cursor-relay.md",
+      "summary": "Added `tools/gpt-cursor-relay` — a local middleman that eliminates the ChatGPT ↔ Cursor copy/paste loop."
     },
     {
       "id": "incident-empty-createevent-defer",

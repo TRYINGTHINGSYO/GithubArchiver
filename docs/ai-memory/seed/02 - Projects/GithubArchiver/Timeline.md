@@ -47,6 +47,8 @@ Chronological event log (newest first). Source of truth is `entries/`.
   - edges: related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 - **2026-07-18** · `decision` · `confirmed` · `permanent` · `055adee` · `verified` · `memory`, `adoption` — [Knowledge engine improves knowledge before framework](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
   - edges: references:[`release-knowledge-engine-on-main`](entries/2026-07-18-release-knowledge-engine-on-main.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · `open` · `tooling`, `automation` — [Local GPT ↔ Cursor Agent CLI relay (v1)](entries/2026-07-18-feature-gpt-cursor-relay.md)
+  - edges: related:[`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · `eb58221` · migration 32 · `open` · `enrichment`, `priority` — [Defer empty CreateEvent spam — backlog is days-old births not years-old repos](entries/2026-07-18-incident-empty-createevent-defer.md)
   - edges: caused-by:[`incident-enrich-tier-flood`](entries/2026-07-18-incident-enrich-tier-flood.md), related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · `137f3a0` · migration 31 · `open` · `enrichment`, `priority`, `throughput` — [Bulk ingest marked ~all repos high tier and forced deep enrich](entries/2026-07-18-incident-enrich-tier-flood.md)

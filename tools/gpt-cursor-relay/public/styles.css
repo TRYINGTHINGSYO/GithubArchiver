@@ -1,0 +1,271 @@
+:root {
+  --bg: #f7f4ec;
+  --ink: #1c1a16;
+  --muted: #5c564c;
+  --line: #cfc6b4;
+  --panel: #fffdf7;
+  --gpt: #1f4b3a;
+  --cursor: #1d3a66;
+  --system: #5c564c;
+  --user: #6b3b14;
+  --approval: #7a2e2e;
+  --ok: #245c34;
+  --danger: #8a2424;
+  --shadow: 0 1px 0 rgba(28, 26, 22, 0.06);
+  font-family: "IBM Plex Mono", "Cascadia Mono", "Consolas", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.8), transparent 40%),
+    linear-gradient(180deg, #efe8d8 0%, var(--bg) 40%, #ebe4d4 100%);
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.tagline {
+  margin: 0;
+  color: var(--muted);
+  max-width: 42rem;
+  line-height: 1.45;
+}
+
+.status-block {
+  text-align: right;
+}
+
+.label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.status {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+.status.running,
+.status.awaiting_approval,
+.status.awaiting_user {
+  border-color: #8aa0c2;
+  color: var(--cursor);
+}
+
+.status.completed {
+  border-color: #7aa888;
+  color: var(--ok);
+}
+
+.status.error,
+.status.stopped {
+  border-color: #c48888;
+  color: var(--danger);
+}
+
+.status.paused {
+  border-color: #c2a56b;
+  color: #6b5314;
+}
+
+.controls,
+.panel,
+.log-wrap,
+.summary-wrap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.field span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.field.compact {
+  margin-bottom: 0;
+  min-width: 120px;
+}
+
+input,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+textarea {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 96px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+button {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #f7f4ec;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button.ok {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+
+button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+.hidden {
+  display: none;
+}
+
+.panel p {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.code,
+.log,
+.summary {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.code {
+  border: 1px solid var(--line);
+  background: #f3eee2;
+  padding: 10px;
+  margin-bottom: 12px;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.log {
+  border: 1px solid var(--line);
+  background: #1c1a16;
+  color: #efe8d8;
+  padding: 14px;
+  min-height: 320px;
+  max-height: 55vh;
+  overflow: auto;
+}
+
+.log .src-gpt {
+  color: #9dceb4;
+}
+.log .src-cursor {
+  color: #9db7e3;
+}
+.log .src-system {
+  color: #b7b1a4;
+}
+.log .src-user {
+  color: #e0b48a;
+}
+.log .src-approval {
+  color: #e0a0a0;
+}
+
+.summary {
+  border: 1px solid var(--line);
+  background: #f3eee2;
+  padding: 12px;
+  margin-bottom: 14px;
+  min-height: 64px;
+}
+
+@media (max-width: 700px) {
+  .top {
+    flex-direction: column;
+  }
+
+  .status-block {
+    text-align: left;
+  }
+}

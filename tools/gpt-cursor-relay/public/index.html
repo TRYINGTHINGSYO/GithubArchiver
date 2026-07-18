@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GPT ↔ Cursor Relay</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top">
+        <div>
+          <h1>GPT ↔ Cursor Relay</h1>
+          <p class="tagline">
+            Type the task once. The relay talks to GPT and Cursor Agent CLI until done.
+          </p>
+        </div>
+        <div class="status-block">
+          <span class="label">Status</span>
+          <span id="status" class="status idle">idle</span>
+        </div>
+      </header>
+
+      <section class="controls">
+        <label class="field">
+          <span>Project folder</span>
+          <input
+            id="projectPath"
+            type="text"
+            spellcheck="false"
+            placeholder="/path/to/GithubArchiver"
+          />
+        </label>
+
+        <label class="field">
+          <span>Task</span>
+          <textarea
+            id="task"
+            rows="4"
+            placeholder="Fix the cluster link and verify it with tests."
+          ></textarea>
+        </label>
+
+        <div class="row">
+          <label class="field compact">
+            <span>Max rounds</span>
+            <input id="maxRounds" type="number" min="1" max="50" value="8" />
+          </label>
+          <div class="buttons">
+            <button id="startBtn" type="button">Start</button>
+            <button id="pauseBtn" type="button" disabled>Pause</button>
+            <button id="resumeBtn" type="button" disabled>Resume</button>
+            <button id="stopBtn" type="button" disabled>Stop</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="approvalPanel" class="panel hidden">
+        <h2>Approval required</h2>
+        <p id="approvalReason"></p>
+        <pre id="approvalInstruction" class="code"></pre>
+        <div class="buttons">
+          <button id="approveBtn" type="button" class="ok">Approve</button>
+          <button id="denyBtn" type="button" class="danger">Deny</button>
+        </div>
+      </section>
+
+      <section id="questionPanel" class="panel hidden">
+        <h2>GPT needs your input</h2>
+        <p id="questionText"></p>
+        <textarea id="userReply" rows="3" placeholder="Your reply…"></textarea>
+        <div class="buttons">
+          <button id="answerBtn" type="button">Send reply</button>
+        </div>
+      </section>
+
+      <section class="log-wrap">
+        <div class="log-header">
+          <h2>Message log</h2>
+          <span id="roundLabel">Round 0 / 8</span>
+        </div>
+        <pre id="log" class="log" aria-live="polite"></pre>
+      </section>
+
+      <section class="summary-wrap">
+        <h2>Final summary</h2>
+        <pre id="summary" class="summary">(not finished yet)</pre>
+        <h2>Changed files</h2>
+        <pre id="changedFiles" class="summary">(none yet)</pre>
+      </section>
+    </div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
