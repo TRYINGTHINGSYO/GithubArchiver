@@ -9,12 +9,35 @@ globs:
 
 # GithubArchive+ Context
 
-Before making architectural or pipeline changes, read the project memory notes (from the resolved vault root, or from `docs/ai-memory/seed/02 - Projects/GithubArchiver/` if the vault is not present yet):
+If context is tight, read **only**:
 
-- `02 - Projects/GithubArchiver/GithubArchiver.md`
-- `02 - Projects/GithubArchiver/Architecture.md`
-- `02 - Projects/GithubArchiver/Decisions.md`
-- `02 - Projects/GithubArchiver/Current Status.md`
+`02 - Projects/GithubArchiver/Project Digest.md`
+
+(or `docs/ai-memory/seed/02 - Projects/GithubArchiver/Project Digest.md`)
+
+For a focused topic, prefer multi-stage retrieval over loading many notes:
+
+```bash
+npm run memory:query -- "search fallback" --budget 6000
+```
+
+Pipeline: candidates → typed graph expand → re-rank → assemble under token budget.  
+Default: **confirmed only**. Use `--follow caused-by` when you need root cause. Do not load the entire vault.
+
+Otherwise, before architectural or pipeline changes, read:
+
+1. `Project Digest.md`
+2. `Current Status.md`
+3. `Timeline.md` / `Knowledge Graph.md` / `index.json`
+4. `Decisions.md` / `Architecture.md` for enduring principles
+
+Generated helpers:
+
+- Related concepts → `Knowledge Graph.md` or `index.json`
+- Incidents → `Production Incidents.md` or `indexes/incident.md`
+- Schema versions → `Migrations.md`
+- PRs → `PR Timeline.md`
+- Debt → `Open Technical Debt.md`
 
 Important principles:
 
@@ -26,3 +49,4 @@ Important principles:
 - Do not mask stale-state bugs only in the UI.
 - GH Archive is the primary discovery source; Search is fallback, not the default.
 - Enrichment backlog must not pause ingestion.
+- Memory: append entries; generate summaries — do not maintain giant journals by hand.

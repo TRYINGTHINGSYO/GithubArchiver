@@ -1,0 +1,10 @@
+id: createevent-root-cause
+query: incident-gharchive-createevent
+must_include:
+  - incident-gharchive-createevent
+should_include:
+  - incident-search-fallback-stale
+must_not_include:
+  - research-does-not-exist
+limit: 8
+depth: 2

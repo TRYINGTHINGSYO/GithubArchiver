@@ -1,0 +1,9 @@
+id: status-hierarchy
+query: status hierarchy
+must_include:
+  - decision-status-hierarchy
+should_include:
+  - bugfix-activity-copy
+must_not_include:
+  - research-does-not-exist
+limit: 8

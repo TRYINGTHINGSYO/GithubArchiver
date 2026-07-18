@@ -1,6 +1,8 @@
-# AI Memory setup for Cursor (GithubArchiver)
+# Project Knowledge Engine (GithubArchiver)
 
-Adapted from the open-source AI Memory Vault approach (boot file + structured vault + job priming) for Cursor. The boot layer here is **Project Rules** in `.cursor/rules/` instead of a root `CLAUDE.md`. Daily-note updates on every coding chat are intentionally optional — store durable outcomes only.
+What began as an “AI memory vault” is now a **knowledge operating system** for the project: an append-only event log, typed knowledge graph, generated human views, and a read-only multi-stage retrieval engine.
+
+Cursor integration uses **Project Rules** in `.cursor/rules/`. Daily-note diaries are intentionally out of scope — store durable engineering knowledge only.
 
 ## Layout (outside code repos)
 
@@ -39,7 +41,61 @@ Optional: set `AI_MEMORY_VAULT=C:\AI-Memory` so Cursor Cloud Agents and other en
 | `.cursor/rules/githubarchiver-context.mdc` | Project principles + which notes to load |
 | `.cursor/rules/session-checkpoint.mdc` | When/how to persist durable outcomes |
 | `docs/ai-memory/seed/` | Copyable starter vault notes for this project |
+| `docs/ai-memory/seed/02 - Projects/GithubArchiver/entries/` | Structured checkpoints (YAML frontmatter) |
+| `scripts/ai-memory-timeline.ts` | Regenerates Timeline + category indexes |
 | `docs/ai-memory/AI-BOOT.md` | Tiny adapter for non-Cursor LLMs |
+
+## Structured checkpoints (event log)
+
+Each durable event is one append-only markdown file with queryable frontmatter:
+
+`date`, `pr`, `commit`, `area`, `type`, `status`, `supersedes`, `related`, `id`, …
+
+See `entries/SCHEMA.md`. Prefer adding a new entry over rewriting history.
+
+Types include: `decision`, `incident`, `migration`, `feature`, `bugfix`, `performance`, `refactor`, `test`, `release`, `technical-debt`, `research`.
+
+Regenerate derived views after adding an entry:
+
+```bash
+npm run memory:timeline
+```
+
+Primary generated artifacts:
+
+| File | Role |
+| --- | --- |
+| `Timeline.md` | Chronological event log |
+| `Current Status.md` | Living summary (open work, debt, recent merges) |
+| `Project Digest.md` | Single AI-priming document |
+| `Knowledge Graph.md` | `related` / `supersedes` link map |
+| `index.json` | Machine-readable index for agents/tooling |
+
+Plus convenience indexes (`PR Timeline.md`, `Production Incidents.md`, …) and `indexes/<type>.md`.
+
+### Retrieval (PR #10–#13) — read-only
+
+```text
+Human / AI → Append Event → Validation → Graph → Generated Views → Retrieval
+```
+
+**Retrieval never writes to the vault.** Durable knowledge enters only through explicit `entries/*.md` appends.
+
+```text
+Query → candidates → typed expand → re-rank → budget assemble
+```
+
+```bash
+npm run memory:query -- "search fallback"
+npm run memory:query -- "search fallback" --budget 6000
+npm run memory:eval
+```
+
+Each query prints **metrics** (candidates / expanded / ranked / returned / budget) and **explanations** per hit. Eval cases live in `docs/ai-memory/evals/`.
+
+Default confidence filter: **confirmed only**. Metadata API version: `schema: 1`.
+
+Principle: **make important things easy to rediscover** — invest in evaluation and explainability before expanding the vault.
 
 ## What to store (and what not to)
 
@@ -49,7 +105,8 @@ Store only durable things:
 - architecture
 - production failures and fixes
 - merged PRs / deployment results
-- unresolved next steps
+- migrations
+- unresolved technical debt
 
 Do **not** force daily-note updates on every coding chat — that creates noisy memory.
 

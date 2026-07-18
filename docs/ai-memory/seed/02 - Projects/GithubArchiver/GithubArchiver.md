@@ -11,16 +11,24 @@ type: index
 GithubArchive+ is an evidence-first GitHub repository intelligence platform.
 It ingests repository creation signals, enriches repositories, classifies them, assigns clusters, calculates Interesting Scores, generates Archive Stories, and detects emerging themes.
 
-## Current Architecture
+## Knowledge operating system
 
-- SvelteKit application
-- SQLite with numbered migrations
-- GH Archive ingestion
-- GitHub Search fallback
-- Background daemon
-- Enrichment pipeline
-- Clustering and emerging-topic analysis
-- Railway production deploy (auto from `main`)
+```text
+Append-only entries → Graph + index.json → Generated views
+                              ↓
+              Read-only retrieval (query / eval)
+```
+
+Retrieval never writes facts back into the vault.
+
+**Load order for agents**
+
+1. [[Project Digest]] — if only one file fits
+2. [[Current Status]] — open work / debt / recent merges
+3. `npm run memory:query -- "<topic>" --budget 6000` — explained, ranked context
+4. `npm run memory:eval` after ranking/graph changes
+5. [[Timeline]] / [[Knowledge Graph]] / `index.json`
+6. [[Decisions]] / [[Architecture]] — enduring principles (`durability: permanent`)
 
 ## Current Operating Principles
 
@@ -29,15 +37,9 @@ It ingests repository creation signals, enriches repositories, classifies them, 
 - Enrichment backlog does not pause ingestion.
 - UI status must distinguish current activity, progress, and discovery.
 - Stale runtime rows must be reconciled after process restarts.
-
-## Memory map
-
-- [[Architecture]] — subsystem boundaries and data flow
-- [[Decisions]] — locked / durable choices
-- [[Current Status]] — latest verified state and open verification
+- Memory summaries are generated; entry facts are append-only.
 
 ## Related repo paths
 
-- Code: this GithubArchiver git repository
 - Cursor rules: `.cursor/rules/`
-- Seed copy in repo: `docs/ai-memory/seed/02 - Projects/GithubArchiver/`
+- Seed: `docs/ai-memory/seed/02 - Projects/GithubArchiver/`

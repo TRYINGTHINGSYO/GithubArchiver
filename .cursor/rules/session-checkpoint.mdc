@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Checkpoint Persistence
 
-After substantial work, update the project memory when any of these occur:
+After substantial work, append a structured entry when any of these occur:
 
 - A bug root cause is confirmed
 - A migration is added
@@ -15,20 +15,54 @@ After substantial work, update the project memory when any of these occur:
 - A new architectural rule is established
 - A meaningful next step is identified
 
-Update (vault root first, else seed path):
+## Append-only event log
 
-`02 - Projects/GithubArchiver/Current Status.md`
+Create one file under:
 
-Also sync the same durable facts into `docs/ai-memory/seed/02 - Projects/GithubArchiver/Current Status.md` when the vault is unavailable so the next session still has continuity.
+`02 - Projects/GithubArchiver/entries/YYYY-MM-DD-<slug>.md`
 
-Include:
+(or `docs/ai-memory/seed/02 - Projects/GithubArchiver/entries/` when the vault is unavailable)
 
-- Date
-- What changed
-- Why it changed
-- Tests added
-- Deployment state
-- Remaining verification steps
+Do **not** rewrite old entries to change history. Add a new entry and set `supersedes` / `related`.
+
+```yaml
+---
+id: incident-example
+date: 2026-07-18
+pr: 12
+commit: abc1234
+area:
+  - search
+type: incident
+status: open
+confidence: confirmed
+durability: permanent
+relationships:
+  - type: caused-by
+    id: incident-gharchive-createevent
+  - type: implemented-by
+    id: pr-12
+  - type: references
+    id: migration-030
+title: Short headline
+---
+```
+
+Body: what / why / tests / remaining verification. No chat transcripts. No secrets.
+Use typed `relationships` (not only bare `related`). Set `durability` (`permanent` / `release` / `temporary` / `transient`).
+
+Regenerate derived views (never hand-edit them):
+
+```bash
+npm run memory:timeline
+```
+
+Produces Timeline / Current Status / Project Digest / Knowledge Graph / `index.json` / type indexes.
+
+For task priming after a checkpoint:
+
+```bash
+npm run memory:query -- "<topic or id>"
+```
 
 Do not write speculative conclusions as facts.
-Do not dump full chat transcripts into the vault.
