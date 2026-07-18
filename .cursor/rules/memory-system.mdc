@@ -30,3 +30,4 @@ For substantial work:
 11. Do not hand-edit generated files (`Timeline.md`, `Current Status.md`, `Project Digest.md`, `Knowledge Graph.md`, `index.json`, `indexes/*`).
 12. Prefer typed `relationships` with stable `id`s. Set `schema`, `confidence`, and `durability`.
 13. **Retrieval is read-only.** Never let query/eval write vault “facts.” Append durable knowledge only via explicit `entries/*.md` checkpoints.
+14. **If retrieval fails, improve the knowledge — not the framework.** Append entry + eval, regenerate, continue shipping. Do not add retrieval capabilities until repeated real-world failures show the architecture cannot represent or retrieve the required knowledge. See `Knowledge Engine Philosophy.md`.

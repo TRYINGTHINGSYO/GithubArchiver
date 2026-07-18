@@ -30,3 +30,11 @@ Treat these as authoritative unless Blake revises them.
 
 - Production failure modes get regression tests (including daemon startup reconcile for Search shards).
 - Do not “fix” stale-state bugs only by changing UI copy.
+
+## Knowledge engine
+
+- **If retrieval fails, improve the knowledge — not the framework.**
+- Append a durable entry + eval, regenerate, continue shipping.
+- Do not add retrieval capabilities until repeated real-world misses prove the architecture cannot represent or retrieve the needed knowledge.
+- Measure precision, eval stability, time-to-context, and capture rate — not entry/graph size.
+- Full text: [[Knowledge Engine Philosophy]].
