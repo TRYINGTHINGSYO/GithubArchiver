@@ -53,7 +53,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
-- **2026-07-18** · `feature` · `confirmed` · PR #10 · `open` · `memory` — [Memory retrieval layer with index.json and graph query](entries/2026-07-18-pr-10-memory-retrieval.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #10 · `6f5784c` · `open` · `memory` — [Memory retrieval layer with index.json and graph query](entries/2026-07-18-pr-10-memory-retrieval.md)
   - related: [`feature-digest-knowledge-graph`](entries/2026-07-18-pr-9-digest-graph.md), [`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md), [`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), [`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), [`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · PR #9 · `9b0d012` · `open` · `memory` — [Richer entry types, related graph, and Project Digest](entries/2026-07-18-pr-9-digest-graph.md)
   - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), [`pr-10`](entries/2026-07-18-pr-10-memory-retrieval.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md)
@@ -77,7 +77,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
-- **2026-07-18** · `feature` · `confirmed` · PR #10 · `open` · `memory` — [Memory retrieval layer with index.json and graph query](entries/2026-07-18-pr-10-memory-retrieval.md)
+- **2026-07-18** · `feature` · `confirmed` · PR #10 · `6f5784c` · `open` · `memory` — [Memory retrieval layer with index.json and graph query](entries/2026-07-18-pr-10-memory-retrieval.md)
   - related: [`feature-digest-knowledge-graph`](entries/2026-07-18-pr-9-digest-graph.md), [`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md), [`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), [`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), [`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · PR #9 · `9b0d012` · `open` · `memory` — [Richer entry types, related graph, and Project Digest](entries/2026-07-18-pr-9-digest-graph.md)
   - related: [`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), [`pr-10`](entries/2026-07-18-pr-10-memory-retrieval.md), [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md), [`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md)
