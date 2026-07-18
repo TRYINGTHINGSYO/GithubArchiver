@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T06:09:59.856Z",
+  "generatedAt": "2026-07-18T19:30:34.735Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -635,6 +635,41 @@
       "title": "Knowledge engine improves knowledge before framework",
       "path": "entries/2026-07-18-decision-knowledge-engine-philosophy.md",
       "summary": "Locked operating principle after PRs #6–#14 landed the knowledge engine on `main`."
+    },
+    {
+      "id": "incident-enrich-tier-flood",
+      "schema": 1,
+      "type": "incident",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": "137f3a0",
+      "migration": 31,
+      "area": [
+        "enrichment",
+        "priority",
+        "throughput"
+      ],
+      "related": [
+        "incident-enrichment-hourly-bottleneck",
+        "incident-backlog-sleep-tiers"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-enrichment-hourly-bottleneck"
+        },
+        {
+          "type": "related",
+          "id": "incident-backlog-sleep-tiers"
+        }
+      ],
+      "supersedes": null,
+      "title": "Bulk ingest marked ~all repos high tier and forced deep enrich",
+      "path": "entries/2026-07-18-incident-enrich-tier-flood.md",
+      "summary": "After continuous-enrich shipped: ~34 repos/min, GitHub auth OK (4189/5000 remaining), but:"
     },
     {
       "id": "incident-gharchive-createevent",

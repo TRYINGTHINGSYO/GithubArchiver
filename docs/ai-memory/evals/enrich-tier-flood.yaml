@@ -1,0 +1,9 @@
+id: enrich-tier-flood
+query: enrichment tier flood deep enrich backlog
+must_include:
+  - incident-enrich-tier-flood
+should_include:
+  - incident-enrichment-hourly-bottleneck
+must_not_include:
+  - research-does-not-exist
+limit: 8

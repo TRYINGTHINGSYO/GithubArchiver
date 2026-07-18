@@ -105,8 +105,11 @@ function hasHighValueSignal(input: PriorityInput, clusterScore: number): boolean
 /**
  * Tier rules (deliberately NOT "every CreateEvent is urgent"):
  * - urgent: clear demand (stars) or strong signal on a brand-new repo
- * - high: worth enriching soon (recent, modest stars, or newly discovered)
- * - normal / low / deferred: long-tail backlog
+ * - high: worth enriching soon — recently *created*, not merely recently *seen*
+ * - normal / low / deferred: long-tail backlog (metadata-only until promoted)
+ *
+ * Important: `seenAgeDays <= N => high` flooded the queue when bulk ingest
+ * discovered hundreds of thousands of old repos in a short window.
  */
 export function assignEnrichmentTier(input: {
 	priority: number;
@@ -115,17 +118,20 @@ export function assignEnrichmentTier(input: {
 	seenAgeDays: number;
 	hasSignal: boolean;
 }): EnrichmentTier {
-	const { priority, stars, createdAgeDays, seenAgeDays, hasSignal } = input;
+	const { priority, stars, createdAgeDays, hasSignal } = input;
 
 	if (stars >= 50 || priority >= 160) return 'urgent';
 	if (createdAgeDays <= 3 && (stars >= 5 || (hasSignal && priority >= 110))) return 'urgent';
 
 	if (stars >= 10 || priority >= 100) return 'high';
-	if (createdAgeDays <= 14 || seenAgeDays <= 2) return 'high';
+	// Brand-new creates get a look; recently *ingested* old repos do not.
+	if (createdAgeDays <= 7) return 'high';
+	if (createdAgeDays <= 14 && (stars >= 1 || hasSignal || priority >= 55)) return 'high';
 
-	if (createdAgeDays > 400 && stars === 0 && priority < 40) return 'deferred';
-	if (priority < 25 || (createdAgeDays > 365 && stars === 0)) return 'deferred';
-	if (priority < 45 || (createdAgeDays > 180 && stars < 2)) return 'low';
+	if (createdAgeDays > 365 && stars === 0 && !hasSignal) return 'deferred';
+	if (createdAgeDays > 180 && stars < 2 && priority < 50) return 'deferred';
+	if (priority < 25) return 'deferred';
+	if (priority < 45 || (createdAgeDays > 90 && stars < 2 && !hasSignal)) return 'low';
 
 	return 'normal';
 }
@@ -204,11 +210,13 @@ export function shouldDeepEnrich(input: {
 	signalTier?: string | null;
 	clustered?: boolean;
 }): boolean {
-	if (input.tier === 'urgent' || input.tier === 'high') return true;
+	// Fast (1 API call) is the default for bulk high/normal. Deep (README+) is expensive.
+	if (input.tier === 'urgent') return true;
 	if ((input.interestingScore ?? 0) >= 55) return true;
 	if (input.signalTier === 'high') return true;
 	if (input.clustered && (input.interestingScore ?? 0) >= 40) return true;
-	return input.priority >= 120;
+	if (input.tier === 'high' && input.priority >= 120) return true;
+	return input.priority >= 140;
 }
 
 export const TIER_ORDER: EnrichmentTier[] = ['urgent', 'high', 'normal', 'low', 'deferred'];
