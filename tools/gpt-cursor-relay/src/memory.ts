@@ -1,6 +1,8 @@
 import path from "node:path";
+import { defaultStyle } from "./persist.js";
 import type {
   ChangedFile,
+  CodingStylePrefs,
   RoundRecord,
   SessionMemory,
 } from "./types.js";
@@ -8,6 +10,10 @@ import type {
 export function createSessionMemory(
   task: string,
   projectPath: string,
+  extras?: {
+    style?: CodingStylePrefs;
+    longMemoryFacts?: string[];
+  },
 ): SessionMemory {
   return {
     task,
@@ -19,6 +25,8 @@ export function createSessionMemory(
     testHistory: [],
     decisions: [],
     cursorChatId: null,
+    style: extras?.style ?? defaultStyle(),
+    longMemoryFacts: extras?.longMemoryFacts ?? [],
   };
 }
 
@@ -87,6 +95,7 @@ export function formatMemoryForPrompt(memory: SessionMemory): string {
     if (r.instruction) bits.push(`instruction: ${r.instruction.slice(0, 240)}`);
     if (r.cursorSummary) bits.push(`cursor: ${r.cursorSummary.slice(0, 240)}`);
     if (r.testSummary) bits.push(`tests: ${r.testSummary}`);
+    if (r.verifySummary) bits.push(`verify: ${r.verifySummary.slice(0, 160)}`);
     if (r.git) {
       bits.push(
         `git: ${r.git.filesChanged} files +${r.git.additions}/-${r.git.deletions}`,
@@ -117,6 +126,19 @@ export function formatMemoryForPrompt(memory: SessionMemory): string {
     "Decisions:",
     memory.decisions.length
       ? memory.decisions.map((d) => `- ${d}`).join("\n")
+      : "- (none)",
+    "",
+    "Coding style:",
+    memory.style.prefers.length
+      ? memory.style.prefers.map((p) => `✓ ${p}`).join("\n")
+      : "✓ (none yet)",
+    memory.style.avoids.length
+      ? memory.style.avoids.map((a) => `✗ avoid ${a}`).join("\n")
+      : "",
+    "",
+    "Long-term facts:",
+    memory.longMemoryFacts.length
+      ? memory.longMemoryFacts.slice(-10).map((f) => `- ${f}`).join("\n")
       : "- (none)",
   ].join("\n");
 }

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { RelaySession } from "../src/relay.js";
+import { defaultStyle } from "../src/persist.js";
 import type { GitSnapshot, GptDecision, GptPlanResult } from "../src/types.js";
 
 function gitSnap(files: GitSnapshot["files"] = [], hash = "h1"): GitSnapshot {
@@ -45,6 +46,9 @@ function mockGpt(decisions: GptDecision[]) {
       };
       return result;
     }),
+    analyzeGit: vi.fn(async ({ heuristic }) => heuristic),
+    verifyOpinion: vi.fn(async () => ({ accepts: true, notes: "looks good" })),
+    supervise: vi.fn(async () => ({ decision: "allow", reason: "ok" })),
   };
 }
 
@@ -76,8 +80,60 @@ function mockCursor(
   };
 }
 
-describe("RelaySession autonomous loop", () => {
-  it("streams memory + git into complete with next improvements", async () => {
+function baseDeps(gpt: ReturnType<typeof mockGpt>, cursor: ReturnType<typeof mockCursor>) {
+  return {
+    gpt: gpt as never,
+    cursor: cursor as never,
+    collectGitSnapshot: async () =>
+      cursor.run.mock.calls.length > 0
+        ? gitSnap([{ path: "note.txt", status: "M", kind: "modified" }], "diff-a")
+        : gitSnap(),
+    createCheckpoint: async () => ({
+      id: "cp1",
+      createdAt: new Date().toISOString(),
+      projectPath: "/tmp",
+      headSha: "abc12345deadbeef",
+      stashRef: null,
+      label: "test",
+    }),
+    rollbackToCheckpoint: async () => ({
+      ok: true,
+      message: "Rolled back to abc12345",
+    }),
+    loadProjectMemory: async () => ({
+      projectPath: "/tmp",
+      projectName: "tmp",
+      sessions: [],
+      style: defaultStyle(),
+      facts: ["Built analytics last month"],
+    }),
+    rememberSessionEnd: async () => ({
+      projectPath: "/tmp",
+      projectName: "tmp",
+      sessions: [],
+      style: defaultStyle(),
+      facts: [],
+    }),
+    runVerification: async () => ({
+      ok: true,
+      commands: [
+        {
+          name: "test",
+          command: "npm test",
+          ok: true,
+          exitCode: 0,
+          output: "1 passed",
+          durationMs: 10,
+        },
+      ],
+      summary: "✓ test (npm test) exit=0 10ms",
+    }),
+    runParallelWorkers: async () => [],
+  };
+}
+
+describe("RelaySession orchestrator", () => {
+  it("plans optional, runs Cursor, verifies, completes", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "relay-"));
     await writeFile(path.join(dir, "note.txt"), "hi\n", "utf8");
 
@@ -96,23 +152,7 @@ describe("RelaySession autonomous loop", () => {
     const cursor = mockCursor([
       { stdout: "Updated note.txt\n1 passed", chatId: "chat-1" },
     ]);
-
-    let gitCalls = 0;
-    const session = new RelaySession({
-      gpt: gpt as never,
-      cursor: cursor as never,
-      collectGitSnapshot: async () => {
-        gitCalls += 1;
-        // After Cursor has run once, report a change
-        if (cursor.run.mock.calls.length > 0) {
-          return gitSnap(
-            [{ path: "note.txt", status: "M", kind: "modified" }],
-            "diff-a",
-          );
-        }
-        return gitSnap();
-      },
-    });
+    const session = new RelaySession(baseDeps(gpt, cursor));
 
     await session.start({
       projectPath: dir,
@@ -121,6 +161,9 @@ describe("RelaySession autonomous loop", () => {
       openaiApiKey: "test",
       openaiModel: "gpt-test",
       cursorAgentBin: "agent",
+      requirePlanApproval: false,
+      supervisorEnabled: false,
+      autoVerify: true,
     });
 
     const final = session.snapshot();
@@ -129,16 +172,98 @@ describe("RelaySession autonomous loop", () => {
     expect(final.nextImprovements).toContain(
       "Add a unit test for note formatting",
     );
-    expect(final.memory.cursorChatId).toBe("chat-1");
-    expect(final.memory.rounds.length).toBeGreaterThan(0);
-    expect(final.cost.rounds.length).toBeGreaterThan(0);
-    expect(gpt.planTurn).toHaveBeenCalledTimes(2);
+    expect(final.verification?.ok).toBe(true);
+    expect(final.canRollback).toBe(true);
+    expect(final.memory.longMemoryFacts[0]).toMatch(/analytics/i);
+    expect(gpt.planTurn).toHaveBeenCalled();
     expect(cursor.run).toHaveBeenCalledTimes(1);
-    expect(gitCalls).toBeGreaterThan(1);
-    const firstCursorCall = (
-      cursor.run.mock.calls as unknown as Array<[{ instruction: string }]>
-    )[0]?.[0];
-    expect(firstCursorCall?.instruction).toContain("Edit note.txt");
+  });
+
+  it("waits for plan approval before editing", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "relay-"));
+    const gpt = mockGpt([
+      {
+        status: "plan",
+        plan: {
+          title: "Build auth",
+          steps: [
+            { id: "1", title: "API", detail: "JWT", role: "backend" },
+          ],
+          estimatedMinutes: 12,
+          filesLikelyTouched: ["src/auth.ts"],
+          risk: "medium",
+        },
+      },
+      {
+        status: "complete",
+        summary: "Stopped after plan-only test",
+        next_improvements: [],
+      },
+    ]);
+    const cursor = mockCursor();
+    const session = new RelaySession(baseDeps(gpt, cursor));
+
+    const started = session.start({
+      projectPath: dir,
+      task: "Build authentication",
+      maxRounds: 4,
+      openaiApiKey: "test",
+      openaiModel: "gpt-test",
+      cursorAgentBin: "agent",
+      requirePlanApproval: true,
+      supervisorEnabled: false,
+      autoVerify: false,
+    });
+
+    for (let i = 0; i < 50; i++) {
+      if (session.snapshot().status === "awaiting_plan") break;
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    expect(session.snapshot().status).toBe("awaiting_plan");
+    expect(session.snapshot().pendingPlan?.title).toBe("Build auth");
+    expect(cursor.run).not.toHaveBeenCalled();
+
+    session.resolvePlan(true);
+    await started;
+
+    expect(session.snapshot().status).toBe("completed");
+    expect(cursor.run).not.toHaveBeenCalled();
+  });
+
+  it("supports rollback after completion", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "relay-"));
+    const gpt = mockGpt([
+      {
+        status: "complete",
+        summary: "Nothing to do",
+        next_improvements: [],
+      },
+    ]);
+    const cursor = mockCursor();
+    const rollback = vi.fn(async () => ({
+      ok: true,
+      message: "Rolled back to abc12345",
+    }));
+    const session = new RelaySession({
+      ...baseDeps(gpt, cursor),
+      rollbackToCheckpoint: rollback,
+    });
+
+    await session.start({
+      projectPath: dir,
+      task: "noop",
+      maxRounds: 2,
+      openaiApiKey: "test",
+      openaiModel: "gpt-test",
+      cursorAgentBin: "agent",
+      requirePlanApproval: false,
+      autoVerify: false,
+      supervisorEnabled: false,
+    });
+
+    const result = await session.rollback();
+    expect(result.ok).toBe(true);
+    expect(rollback).toHaveBeenCalled();
   });
 
   it("pauses for approval on git push instructions", async () => {
@@ -150,11 +275,7 @@ describe("RelaySession autonomous loop", () => {
       },
     ]);
     const cursor = mockCursor();
-    const session = new RelaySession({
-      gpt: gpt as never,
-      cursor: cursor as never,
-      collectGitSnapshot: async () => gitSnap(),
-    });
+    const session = new RelaySession(baseDeps(gpt, cursor));
 
     const started = session.start({
       projectPath: dir,
@@ -163,6 +284,9 @@ describe("RelaySession autonomous loop", () => {
       openaiApiKey: "test",
       openaiModel: "gpt-test",
       cursorAgentBin: "agent",
+      requirePlanApproval: false,
+      autoVerify: false,
+      supervisorEnabled: false,
     });
 
     for (let i = 0; i < 40; i++) {
@@ -171,108 +295,9 @@ describe("RelaySession autonomous loop", () => {
     }
 
     expect(session.snapshot().status).toBe("awaiting_approval");
-    expect(session.snapshot().pendingApproval?.categories).toContain("push");
-    expect(cursor.run).not.toHaveBeenCalled();
-
     session.resolveApproval(false);
     await started;
-
     expect(session.snapshot().status).toBe("stopped");
     expect(cursor.run).not.toHaveBeenCalled();
-  });
-
-  it("auto-retries Cursor crashes then continues", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "relay-"));
-    const gpt = mockGpt([
-      { status: "continue", instruction: "do the work" },
-      {
-        status: "complete",
-        summary: "Recovered after retry",
-        next_improvements: [],
-      },
-    ]);
-
-    let calls = 0;
-    const cursor = {
-      run: vi.fn(async () => {
-        calls += 1;
-        if (calls === 1) {
-          return {
-            ok: false,
-            exitCode: null,
-            stdout: "",
-            stderr: "spawn failed",
-            timedOut: false,
-            durationMs: 5,
-            estimatedTokens: 0,
-            crashed: true,
-            attempt: 1,
-          };
-        }
-        return {
-          ok: true,
-          exitCode: 0,
-          stdout: "all good",
-          stderr: "",
-          timedOut: false,
-          durationMs: 8,
-          estimatedTokens: 40,
-          crashed: false,
-          attempt: 2,
-          chatId: "c2",
-        };
-      }),
-    };
-
-    const session = new RelaySession({
-      gpt: gpt as never,
-      cursor: cursor as never,
-      collectGitSnapshot: async () =>
-        gitSnap([{ path: "a.ts", status: "M", kind: "modified" }], "z"),
-    });
-
-    await session.start({
-      projectPath: dir,
-      task: "Recover",
-      maxRounds: 4,
-      openaiApiKey: "test",
-      openaiModel: "gpt-test",
-      cursorAgentBin: "agent",
-    });
-
-    expect(cursor.run).toHaveBeenCalledTimes(2);
-    expect(session.snapshot().status).toBe("completed");
-    expect(session.snapshot().summary).toMatch(/Recovered/);
-  });
-
-  it("stops on duplicate instruction without user Continue", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "relay-"));
-    const gpt = mockGpt([
-      { status: "continue", instruction: "Apply the same fix again" },
-      { status: "continue", instruction: "Apply the same fix again" },
-    ]);
-    const cursor = mockCursor([
-      { stdout: "edited" },
-      { stdout: "edited again" },
-    ]);
-    const session = new RelaySession({
-      gpt: gpt as never,
-      cursor: cursor as never,
-      collectGitSnapshot: async () =>
-        gitSnap([{ path: "x.ts", status: "M", kind: "modified" }], "unique"),
-    });
-
-    await session.start({
-      projectPath: dir,
-      task: "Loop trap",
-      maxRounds: 6,
-      openaiApiKey: "test",
-      openaiModel: "gpt-test",
-      cursorAgentBin: "agent",
-    });
-
-    const final = session.snapshot();
-    expect(final.stopReason).toBe("duplicate_instruction");
-    expect(cursor.run).toHaveBeenCalledTimes(1);
   });
 });

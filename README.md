@@ -299,9 +299,9 @@ tools/gpt-cursor-relay # Local GPT ↔ Cursor Agent CLI middleman
 data/                  # SQLite DB, archives, backups (gitignored)
 ```
 
-### GPT ⇄ Cursor Relay (local)
+### GPT ⇄ Cursor Orchestrator (local)
 
-Autonomous local middleman (persistent memory, live streams, git diff review, safety stops):
+Plan → parallel Cursor workers → supervisor oversight → automatic verification → rollback:
 
 ```bash
 cd tools/gpt-cursor-relay

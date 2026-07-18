@@ -264,6 +264,32 @@ button.danger {
   overflow: auto;
 }
 
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.flags label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.intel-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.intel-grid .panel {
+  margin-bottom: 0;
+}
+
 .live-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -333,6 +359,26 @@ button.danger {
 }
 .log .src-cost {
   color: #a8c09a;
+}
+.log .src-verify {
+  color: #9cc4a8;
+}
+.log .src-supervisor {
+  color: #e0c27a;
+}
+.log .src-worker {
+  color: #9db7e3;
+}
+.log .src-style {
+  color: #c4a8d8;
+}
+
+.status.planning,
+.status.awaiting_plan,
+.status.verifying,
+.status.supervising {
+  border-color: #c2a56b;
+  color: #6b5314;
 }
 
 .diff-view {

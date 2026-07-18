@@ -29,12 +29,11 @@ export interface ServerOptions {
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  const payload = JSON.stringify(body);
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
   });
-  res.end(payload);
+  res.end(JSON.stringify(body));
 }
 
 async function readJson(req: IncomingMessage): Promise<unknown> {
@@ -42,7 +41,7 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   for await (const chunk of req) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
-  if (chunks.length === 0) return {};
+  if (!chunks.length) return {};
   const raw = Buffer.concat(chunks).toString("utf8");
   if (!raw.trim()) return {};
   return JSON.parse(raw);
@@ -52,7 +51,6 @@ function contentType(filePath: string): string {
   if (filePath.endsWith(".html")) return "text/html; charset=utf-8";
   if (filePath.endsWith(".js")) return "text/javascript; charset=utf-8";
   if (filePath.endsWith(".css")) return "text/css; charset=utf-8";
-  if (filePath.endsWith(".svg")) return "image/svg+xml";
   return "application/octet-stream";
 }
 
@@ -73,14 +71,10 @@ export function createRelayServer(options: ServerOptions) {
   });
 
   const sseClients = new Set<ServerResponse>();
-
   const broadcast = (snapshot: RelaySnapshot) => {
     const data = `data: ${JSON.stringify(snapshot)}\n\n`;
-    for (const client of sseClients) {
-      client.write(data);
-    }
+    for (const client of sseClients) client.write(data);
   };
-
   session.subscribe(broadcast);
 
   const resetSession = () => {
@@ -110,6 +104,7 @@ export function createRelayServer(options: ServerOptions) {
           openaiModel: options.openaiModel,
           cursorAgentBin: options.cursorAgentBin,
           defaultMaxRounds: options.defaultMaxRounds,
+          orchestrator: true,
         });
         return;
       }
@@ -127,9 +122,7 @@ export function createRelayServer(options: ServerOptions) {
         });
         res.write(`data: ${JSON.stringify(session.snapshot())}\n\n`);
         sseClients.add(res);
-        req.on("close", () => {
-          sseClients.delete(res);
-        });
+        req.on("close", () => sseClients.delete(res));
         return;
       }
 
@@ -144,8 +137,10 @@ export function createRelayServer(options: ServerOptions) {
           known: knownProjects,
           searchRoots,
         });
-        const matches = detectProjectsFromTask(task, index);
-        sendJson(res, 200, { matches, indexSize: Object.keys(index).length });
+        sendJson(res, 200, {
+          matches: detectProjectsFromTask(task, index),
+          indexSize: Object.keys(index).length,
+        });
         return;
       }
 
@@ -154,15 +149,25 @@ export function createRelayServer(options: ServerOptions) {
           projectPath?: string;
           task?: string;
           maxRounds?: number;
+          requirePlanApproval?: boolean;
+          supervisorEnabled?: boolean;
+          autoVerify?: boolean;
+          browserVerify?: boolean;
         };
         const snap = session.snapshot();
         if (
-          snap.status === "running" ||
-          snap.status === "paused" ||
-          snap.status === "awaiting_approval" ||
-          snap.status === "awaiting_user"
+          [
+            "planning",
+            "awaiting_plan",
+            "running",
+            "paused",
+            "awaiting_approval",
+            "awaiting_user",
+            "verifying",
+            "supervising",
+          ].includes(snap.status)
         ) {
-          sendJson(res, 409, { error: "Relay already active" });
+          sendJson(res, 409, { error: "Orchestrator already active" });
           return;
         }
         if (!options.openaiApiKey) {
@@ -174,7 +179,6 @@ export function createRelayServer(options: ServerOptions) {
 
         let projectPath = body.projectPath?.trim() || "";
         const task = body.task?.trim() || "";
-
         if (!projectPath && task) {
           const index = await buildProjectIndex({
             known: knownProjects,
@@ -197,10 +201,12 @@ export function createRelayServer(options: ServerOptions) {
             openaiModel: options.openaiModel,
             cursorAgentBin: options.cursorAgentBin,
             cursorApiKey: options.cursorApiKey,
+            requirePlanApproval: body.requirePlanApproval !== false,
+            supervisorEnabled: body.supervisorEnabled !== false,
+            autoVerify: body.autoVerify !== false,
+            browserVerify: Boolean(body.browserVerify),
           })
-          .catch((err) => {
-            console.error("[relay] start failed:", err);
-          });
+          .catch((err) => console.error("[orchestrator] start failed:", err));
         return;
       }
 
@@ -209,37 +215,46 @@ export function createRelayServer(options: ServerOptions) {
         sendJson(res, 200, session.snapshot());
         return;
       }
-
       if (method === "POST" && pathname === "/api/resume") {
         session.resume();
         sendJson(res, 200, session.snapshot());
         return;
       }
-
       if (method === "POST" && pathname === "/api/stop") {
         await session.stop();
         sendJson(res, 200, session.snapshot());
         return;
       }
-
       if (method === "POST" && pathname === "/api/approve") {
         const body = (await readJson(req)) as { approved?: boolean };
         session.resolveApproval(Boolean(body.approved));
         sendJson(res, 200, session.snapshot());
         return;
       }
-
+      if (method === "POST" && pathname === "/api/approve-plan") {
+        const body = (await readJson(req)) as { approved?: boolean };
+        session.resolvePlan(Boolean(body.approved));
+        sendJson(res, 200, session.snapshot());
+        return;
+      }
       if (method === "POST" && pathname === "/api/answer") {
         const body = (await readJson(req)) as { reply?: string };
         session.answerQuestion(body.reply ?? "");
         sendJson(res, 200, session.snapshot());
         return;
       }
-
+      if (method === "POST" && pathname === "/api/rollback") {
+        const result = await session.rollback();
+        sendJson(res, result.ok ? 200 : 400, {
+          ...result,
+          state: session.snapshot(),
+        });
+        return;
+      }
       if (method === "POST" && pathname === "/api/continue-improvements") {
         sendJson(res, 202, { ok: true });
         void session.continueWithImprovements().catch((err) => {
-          console.error("[relay] continue-improvements failed:", err);
+          console.error("[orchestrator] continue-improvements failed:", err);
         });
         return;
       }
@@ -267,8 +282,9 @@ export function createRelayServer(options: ServerOptions) {
 
       sendJson(res, 405, { error: "Method not allowed" });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      sendJson(res, 500, { error: message });
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   });
 

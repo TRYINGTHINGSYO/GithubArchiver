@@ -9,14 +9,22 @@ const els = {
   costMetric: document.getElementById("costMetric"),
   log: document.getElementById("log"),
   summary: document.getElementById("summary"),
-  changedFiles: document.getElementById("changedFiles"),
   costDetail: document.getElementById("costDetail"),
   startBtn: document.getElementById("startBtn"),
   pauseBtn: document.getElementById("pauseBtn"),
   resumeBtn: document.getElementById("resumeBtn"),
   stopBtn: document.getElementById("stopBtn"),
+  rollbackBtn: document.getElementById("rollbackBtn"),
   detectBtn: document.getElementById("detectBtn"),
   detectResult: document.getElementById("detectResult"),
+  flagPlan: document.getElementById("flagPlan"),
+  flagSupervisor: document.getElementById("flagSupervisor"),
+  flagVerify: document.getElementById("flagVerify"),
+  flagBrowser: document.getElementById("flagBrowser"),
+  planPanel: document.getElementById("planPanel"),
+  planText: document.getElementById("planText"),
+  approvePlanBtn: document.getElementById("approvePlanBtn"),
+  rejectPlanBtn: document.getElementById("rejectPlanBtn"),
   approvalPanel: document.getElementById("approvalPanel"),
   approvalReason: document.getElementById("approvalReason"),
   approvalInstruction: document.getElementById("approvalInstruction"),
@@ -33,6 +41,10 @@ const els = {
   diffView: document.getElementById("diffView"),
   diffStat: document.getElementById("diffStat"),
   stopReason: document.getElementById("stopReason"),
+  gitIntel: document.getElementById("gitIntel"),
+  verifyPanel: document.getElementById("verifyPanel"),
+  workersPanel: document.getElementById("workersPanel"),
+  stylePanel: document.getElementById("stylePanel"),
   improvementsPanel: document.getElementById("improvementsPanel"),
   improvementsList: document.getElementById("improvementsList"),
   continueImprovementsBtn: document.getElementById("continueImprovementsBtn"),
@@ -42,6 +54,12 @@ const saved = JSON.parse(localStorage.getItem("gpt-cursor-relay") || "{}");
 if (saved.projectPath) els.projectPath.value = saved.projectPath;
 if (saved.task) els.task.value = saved.task;
 if (saved.maxRounds) els.maxRounds.value = saved.maxRounds;
+if (typeof saved.flagPlan === "boolean") els.flagPlan.checked = saved.flagPlan;
+if (typeof saved.flagSupervisor === "boolean") {
+  els.flagSupervisor.checked = saved.flagSupervisor;
+}
+if (typeof saved.flagVerify === "boolean") els.flagVerify.checked = saved.flagVerify;
+if (typeof saved.flagBrowser === "boolean") els.flagBrowser.checked = saved.flagBrowser;
 
 function persist() {
   localStorage.setItem(
@@ -50,6 +68,10 @@ function persist() {
       projectPath: els.projectPath.value,
       task: els.task.value,
       maxRounds: Number(els.maxRounds.value) || 12,
+      flagPlan: els.flagPlan.checked,
+      flagSupervisor: els.flagSupervisor.checked,
+      flagVerify: els.flagVerify.checked,
+      flagBrowser: els.flagBrowser.checked,
     }),
   );
 }
@@ -62,18 +84,11 @@ function escapeHtml(text) {
 }
 
 function kindGlyph(kind) {
-  switch (kind) {
-    case "added":
-      return "+";
-    case "removed":
-      return "-";
-    case "modified":
-      return "~";
-    case "untracked":
-      return "?";
-    default:
-      return "•";
-  }
+  return (
+    { added: "+", removed: "-", modified: "~", untracked: "?", renamed: "~" }[
+      kind
+    ] || "•"
+  );
 }
 
 function renderDiff(git) {
@@ -82,25 +97,22 @@ function renderDiff(git) {
     els.diffStat.textContent = "—";
     return;
   }
-
   els.diffStat.textContent = `${git.files?.length ?? 0} files · +${git.additions ?? 0} -${git.deletions ?? 0}`;
-
   if (git.diffFiles?.length) {
     els.diffView.innerHTML = git.diffFiles
       .map((file) => {
-        const head = `${kindGlyph(file.kind)} ${escapeHtml(file.path)}  (+${file.additions}/-${file.deletions})`;
+        const head = `${kindGlyph(file.kind)} ${escapeHtml(file.path)} (+${file.additions}/-${file.deletions})`;
         const body = (file.lines || [])
-          .map((line) => {
-            const cls = line.type || "ctx";
-            return `<div class="diff-line ${cls}">${escapeHtml(line.text)}</div>`;
-          })
+          .map(
+            (line) =>
+              `<div class="diff-line ${line.type || "ctx"}">${escapeHtml(line.text)}</div>`,
+          )
           .join("");
         return `<div class="diff-file"><div class="diff-file-head">${head}</div>${body}</div>`;
       })
       .join("");
     return;
   }
-
   els.diffView.innerHTML = git.files
     .map(
       (f) =>
@@ -119,26 +131,23 @@ function render(state) {
   els.gitMetric.textContent = git
     ? `${git.files?.length ?? 0} files · +${git.additions ?? 0}/-${git.deletions ?? 0}`
     : "0 files";
+  els.costMetric.textContent = `$${(state.cost?.totalUsd ?? 0).toFixed(2)}`;
 
-  const cost = state.cost || {};
-  els.costMetric.textContent = `$${(cost.totalUsd ?? 0).toFixed(2)}`;
-  els.costDetail.textContent = (cost.rounds || []).length
-    ? [
-        ...(cost.rounds || []).map(
-          (r) =>
-            `Round ${r.round}\nGPT: $${(r.gptUsd ?? 0).toFixed(4)} (${r.gptTokens ?? 0} tok)\nCursor: ~${r.cursorTokens ?? 0} tokens`,
-        ),
-        `Total:\nGPT $${(cost.totalUsd ?? 0).toFixed(4)} · Cursor ~${cost.cursorTokens ?? 0} tok`,
-      ].join("\n\n")
-    : "(none yet)";
-
-  const active = ["running", "paused", "awaiting_approval", "awaiting_user"].includes(
-    state.status,
-  );
+  const active = [
+    "planning",
+    "awaiting_plan",
+    "running",
+    "paused",
+    "awaiting_approval",
+    "awaiting_user",
+    "verifying",
+    "supervising",
+  ].includes(state.status);
   els.startBtn.disabled = active;
-  els.pauseBtn.disabled = state.status !== "running";
+  els.pauseBtn.disabled = !["running", "verifying"].includes(state.status);
   els.resumeBtn.disabled = state.status !== "paused";
   els.stopBtn.disabled = !active;
+  els.rollbackBtn.disabled = !state.canRollback;
   els.projectPath.disabled = active;
   els.task.disabled = active;
   els.maxRounds.disabled = active;
@@ -149,12 +158,52 @@ function render(state) {
   els.cursorActivity.textContent = state.live?.cursorActivity
     ? `· ${state.live.cursorActivity}`
     : "";
-  els.gptLiveHint.textContent =
-    state.status === "running" && state.live?.gpt ? "· streaming" : "";
   els.gptLive.scrollTop = els.gptLive.scrollHeight;
   els.cursorLive.scrollTop = els.cursorLive.scrollHeight;
-
   els.stopReason.textContent = state.stopReason ? `stop: ${state.stopReason}` : "";
+
+  if (state.gitIntel) {
+    els.gitIntel.textContent = [
+      state.gitIntel.theme,
+      "",
+      ...(state.gitIntel.bullets || []),
+      "",
+      `Risk: ${state.gitIntel.risk}`,
+      `Breaking changes: ${state.gitIntel.breakingChanges}`,
+      `Migration: ${state.gitIntel.migration}`,
+    ].join("\n");
+  } else {
+    els.gitIntel.textContent = "(none yet)";
+  }
+
+  els.verifyPanel.textContent = state.verification?.summary || "(none yet)";
+  els.workersPanel.textContent = state.workers?.length
+    ? state.workers
+        .map(
+          (w) =>
+            `[${w.role}] ok=${w.ok} files=${w.filesChanged.length}\n${w.summary.slice(0, 400)}`,
+        )
+        .join("\n\n")
+    : "(none)";
+
+  const style = state.memory?.style;
+  els.stylePanel.textContent = style?.prefers?.length
+    ? [
+        ...style.prefers.map((p) => `✓ ${p}`),
+        ...(style.avoids || []).map((a) => `✗ avoid ${a}`),
+      ].join("\n")
+    : "(none yet)";
+
+  const cost = state.cost || {};
+  els.costDetail.textContent = (cost.rounds || []).length
+    ? [
+        ...(cost.rounds || []).map(
+          (r) =>
+            `Round ${r.round}\nGPT: $${(r.gptUsd ?? 0).toFixed(4)}\nCursor: ~${r.cursorTokens ?? 0} tok`,
+        ),
+        `Total: $${(cost.totalUsd ?? 0).toFixed(4)}`,
+      ].join("\n\n")
+    : "(none yet)";
 
   els.log.innerHTML = (state.logs || [])
     .map((entry) => {
@@ -165,15 +214,27 @@ function render(state) {
     .join("\n");
   els.log.scrollTop = els.log.scrollHeight;
 
-  els.summary.textContent =
-    state.summary || state.error || "(not finished yet)";
-
-  const files = state.changedFiles || [];
-  els.changedFiles.textContent = files.length
-    ? files.map((f) => `${kindGlyph(f.kind || "other")} ${f.path}`).join("\n")
-    : "(none yet)";
-
+  els.summary.textContent = state.summary || state.error || "(not finished yet)";
   renderDiff(git);
+
+  if (state.status === "awaiting_plan" && state.pendingPlan) {
+    const p = state.pendingPlan;
+    els.planPanel.classList.remove("hidden");
+    els.planText.textContent = [
+      p.title,
+      "",
+      ...p.steps.map((s) => `${s.id}. ${s.title}\n   ${s.detail}`),
+      "",
+      `Estimated: ${p.estimatedMinutes} minutes`,
+      `Files likely touched: ${p.filesLikelyTouched?.join(", ") || "(unspecified)"}`,
+      `Risk: ${p.risk}`,
+      p.notes ? `Notes: ${p.notes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  } else {
+    els.planPanel.classList.add("hidden");
+  }
 
   if (state.status === "awaiting_approval" && state.pendingApproval) {
     els.approvalPanel.classList.remove("hidden");
@@ -208,24 +269,20 @@ async function post(path, body) {
     body: body ? JSON.stringify(body) : "{}",
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `Request failed (${res.status})`);
-  }
+  if (!res.ok) throw new Error(data.error || data.message || `Request failed (${res.status})`);
   return data;
 }
 
 els.detectBtn.addEventListener("click", async () => {
   persist();
   try {
-    const data = await post("/api/detect-project", {
-      task: els.task.value.trim(),
-    });
+    const data = await post("/api/detect-project", { task: els.task.value.trim() });
     const best = data.matches?.[0];
     if (!best) {
       els.detectResult.textContent = "No project match — set the folder path manually.";
       return;
     }
-    els.detectResult.textContent = `Detected: ${best.name} (${Math.round(best.confidence * 100)}%) — ${best.reason}`;
+    els.detectResult.textContent = `Detected: ${best.name} (${Math.round(best.confidence * 100)}%)`;
     els.projectPath.value = best.path;
     persist();
   } catch (err) {
@@ -236,27 +293,26 @@ els.detectBtn.addEventListener("click", async () => {
 els.startBtn.addEventListener("click", async () => {
   persist();
   try {
-    // Auto-detect if folder blank
     if (!els.projectPath.value.trim() && els.task.value.trim()) {
       const data = await post("/api/detect-project", {
         task: els.task.value.trim(),
       });
       const best = data.matches?.[0];
       if (best) {
-        const ok = confirm(
-          `Detected:\n✓ ${best.name}\n\n${best.path}\n\nRun?`,
-        );
+        const ok = confirm(`Detected:\n✓ ${best.name}\n\n${best.path}\n\nRun?`);
         if (!ok) return;
         els.projectPath.value = best.path;
-        els.detectResult.textContent = `Using ${best.name}`;
         persist();
       }
     }
-
     await post("/api/start", {
       projectPath: els.projectPath.value.trim(),
       task: els.task.value.trim(),
       maxRounds: Number(els.maxRounds.value) || 12,
+      requirePlanApproval: els.flagPlan.checked,
+      supervisorEnabled: els.flagSupervisor.checked,
+      autoVerify: els.flagVerify.checked,
+      browserVerify: els.flagBrowser.checked,
     });
   } catch (err) {
     alert(err.message);
@@ -266,6 +322,23 @@ els.startBtn.addEventListener("click", async () => {
 els.pauseBtn.addEventListener("click", () => post("/api/pause").catch(alert));
 els.resumeBtn.addEventListener("click", () => post("/api/resume").catch(alert));
 els.stopBtn.addEventListener("click", () => post("/api/stop").catch(alert));
+els.rollbackBtn.addEventListener("click", async () => {
+  if (!confirm("Undo last autonomous run? This runs git reset --hard + clean.")) {
+    return;
+  }
+  try {
+    const result = await post("/api/rollback");
+    alert(result.message || "Rolled back");
+  } catch (err) {
+    alert(err.message);
+  }
+});
+els.approvePlanBtn.addEventListener("click", () =>
+  post("/api/approve-plan", { approved: true }).catch(alert),
+);
+els.rejectPlanBtn.addEventListener("click", () =>
+  post("/api/approve-plan", { approved: false }).catch(alert),
+);
 els.approveBtn.addEventListener("click", () =>
   post("/api/approve", { approved: true }).catch(alert),
 );
@@ -283,21 +356,24 @@ els.continueImprovementsBtn.addEventListener("click", () =>
   post("/api/continue-improvements").catch(alert),
 );
 
-for (const el of [els.projectPath, els.task, els.maxRounds]) {
+for (const el of [
+  els.projectPath,
+  els.task,
+  els.maxRounds,
+  els.flagPlan,
+  els.flagSupervisor,
+  els.flagVerify,
+  els.flagBrowser,
+]) {
   el.addEventListener("change", persist);
 }
 
 const bootstrap = await fetch("/api/health").then((r) => r.json());
-if (!els.maxRounds.value) els.maxRounds.value = bootstrap.defaultMaxRounds;
 if (!bootstrap.hasOpenAiKey) {
   els.summary.textContent =
     "OPENAI_API_KEY is missing. Copy tools/gpt-cursor-relay/.env.example to .env";
 }
 
-const state = await fetch("/api/state").then((r) => r.json());
-render(state);
-
+render(await fetch("/api/state").then((r) => r.json()));
 const events = new EventSource("/api/events");
-events.onmessage = (event) => {
-  render(JSON.parse(event.data));
-};
+events.onmessage = (event) => render(JSON.parse(event.data));

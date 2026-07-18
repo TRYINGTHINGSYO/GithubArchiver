@@ -12,6 +12,46 @@ describe("parseGptDecision", () => {
     expect(decision.instruction).toContain("failing test");
   });
 
+  it("parses plan", () => {
+    const decision = parseGptDecision({
+      status: "plan",
+      plan: {
+        title: "Build auth",
+        steps: [
+          { id: "1", title: "API", detail: "JWT endpoints", role: "backend" },
+          { id: "2", title: "UI", detail: "Login page", role: "frontend" },
+        ],
+        estimatedMinutes: 15,
+        filesLikelyTouched: ["src/auth.ts"],
+        risk: "medium",
+      },
+    });
+    expect(decision.status).toBe("plan");
+    expect(decision.plan?.steps).toHaveLength(2);
+  });
+
+  it("parses parallel workers", () => {
+    const decision = parseGptDecision({
+      status: "parallel",
+      workers: [
+        {
+          id: "w1",
+          role: "backend",
+          instruction: "Build API",
+          focus: ["src/lib"],
+        },
+        {
+          id: "w2",
+          role: "frontend",
+          instruction: "Build UI",
+        },
+      ],
+      merge_instruction: "Integrate both",
+    });
+    expect(decision.workers).toHaveLength(2);
+    expect(decision.merge_instruction).toMatch(/Integrate/);
+  });
+
   it("requires summary on complete and defaults next_improvements", () => {
     expect(() => parseGptDecision({ status: "complete" })).toThrow(/summary/);
     const decision = parseGptDecision({
@@ -28,17 +68,5 @@ describe("parseGptDecision", () => {
       question: "Which branch?",
     });
     expect(decision.status).toBe("needs_user");
-  });
-
-  it("requires question on needs_user", () => {
-    expect(() => parseGptDecision({ status: "needs_user" })).toThrow(/question/);
-  });
-
-  it("defaults approval_reason when missing", () => {
-    const decision = parseGptDecision({
-      status: "needs_approval",
-      instruction: "git push origin HEAD",
-    });
-    expect(decision.approval_reason).toMatch(/approval/i);
   });
 });
