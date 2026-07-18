@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T20:35:49.586Z",
+  "generatedAt": "2026-07-18T20:47:53.305Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -33,6 +33,36 @@
       "title": "Homepage cluster titles must open /?cluster= not fastest-growing",
       "path": "entries/2026-07-18-bugfix-cluster-title-href.md",
       "summary": "PR #23 routed `mode === 'growth'` titles to `/discover/fastest-growing?cluster=…`. That page applies strict growth guardrails per request, so a homepage card (e.g. Portfolio Websites) could open an empty “No clusters meet the growth guardrails” page."
+    },
+    {
+      "id": "feature-cache-hit-metrics",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-18",
+      "pr": 24,
+      "commit": "99dab1d",
+      "migration": null,
+      "area": [
+        "performance",
+        "observability",
+        "admin"
+      ],
+      "related": [
+        "bugfix-nav-perf-clusters"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "bugfix-nav-perf-clusters"
+        }
+      ],
+      "supersedes": null,
+      "title": "Admin request-path cache hit-rate metrics",
+      "path": "entries/2026-07-18-feature-cache-hit-metrics.md",
+      "summary": "After PR #23 removed write-on-read and added short TTL caches, the next evidence signal is whether those caches are actually warm."
     },
     {
       "id": "bugfix-nav-perf-clusters",
