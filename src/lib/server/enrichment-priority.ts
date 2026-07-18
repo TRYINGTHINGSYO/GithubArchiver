@@ -103,13 +103,14 @@ function hasHighValueSignal(input: PriorityInput, clusterScore: number): boolean
 }
 
 /**
- * Tier rules (deliberately NOT "every CreateEvent is urgent"):
+ * Tier rules (deliberately NOT "every CreateEvent is urgent/high"):
  * - urgent: clear demand (stars) or strong signal on a brand-new repo
- * - high: worth enriching soon — recently *created*, not merely recently *seen*
- * - normal / low / deferred: long-tail backlog (metadata-only until promoted)
+ * - high: worth a GitHub API call soon (stars, keywords, real description)
+ * - deferred: indexed metadata only — empty CreateEvent spam / zero-signal long-tail
  *
- * Important: `seenAgeDays <= N => high` flooded the queue when bulk ingest
- * discovered hundreds of thousands of old repos in a short window.
+ * Production note (2026-07-18): the unenriched backlog is almost entirely repos
+ * *created* in the last few days via GH Archive. Age-based deferral never fires;
+ * empty new creates must be deferred by signal quality, not age.
  */
 export function assignEnrichmentTier(input: {
 	priority: number;
@@ -124,14 +125,15 @@ export function assignEnrichmentTier(input: {
 	if (createdAgeDays <= 3 && (stars >= 5 || (hasSignal && priority >= 110))) return 'urgent';
 
 	if (stars >= 10 || priority >= 100) return 'high';
-	// Brand-new creates get a look; recently *ingested* old repos do not.
-	if (createdAgeDays <= 7) return 'high';
-	if (createdAgeDays <= 14 && (stars >= 1 || hasSignal || priority >= 55)) return 'high';
+	if (createdAgeDays <= 14 && (stars >= 1 || hasSignal) && priority >= 70) return 'high';
+	if (hasSignal && priority >= 80) return 'high';
 
-	if (createdAgeDays > 365 && stars === 0 && !hasSignal) return 'deferred';
-	if (createdAgeDays > 180 && stars < 2 && priority < 50) return 'deferred';
+	// Zero-signal CreateEvent flood: keep searchable, skip GitHub enrichment for now.
+	if (stars === 0 && !hasSignal && priority < 70) return 'deferred';
+	if (createdAgeDays > 180 && stars < 2 && !hasSignal) return 'deferred';
 	if (priority < 25) return 'deferred';
-	if (priority < 45 || (createdAgeDays > 90 && stars < 2 && !hasSignal)) return 'low';
+
+	if (priority < 50 || (stars < 2 && !hasSignal && priority < 80)) return 'low';
 
 	return 'normal';
 }
@@ -160,12 +162,13 @@ export function scoreEnrichmentPriority(input: PriorityInput): PriorityResult {
 		spamPenalty(input) +
 		Math.min(40, (input.event_count ?? 0) * 4);
 
-	if (createdAge <= 3) priority += 55;
-	else if (createdAge <= 14) priority += 35;
-	else if (createdAge <= 45) priority += 20;
+	// Mild recency only — a +55 boost was enough to make every empty CreateEvent "high".
+	if (createdAge <= 3) priority += 20;
+	else if (createdAge <= 14) priority += 12;
+	else if (createdAge <= 45) priority += 8;
 	else if (createdAge > 365) priority -= 20;
 
-	if (seenAge <= 1) priority += 20;
+	if (seenAge <= 1 && createdAge <= 30) priority += 10;
 	if (pushAge <= 14) priority += 15;
 	if (attempts > 0) priority -= Math.min(50, attempts * 12);
 	if (input.last_enrichment_error) priority -= 8;

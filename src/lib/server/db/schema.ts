@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 31;
+export const CURRENT_SCHEMA_VERSION = 32;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1124,10 +1124,13 @@ const SQL_TS = (column: string) =>
  * v28 marked nearly every CreateEvent as urgent via `created_at >= datetime('now', '-3 days')`.
  * v29/v30 still promoted recently-*seen* repos to high, which flooded the queue after bulk ingest.
  * v31 tiers by created_at (+ stars/signal), and defers old zero-signal long-tail.
+ * v32 defers empty CreateEvent spam (zero stars / no description) — the live backlog
+ * is almost entirely repos created in the last few days, so age-deferral never fires.
  */
 export function recomputeEnrichmentTiersSql(database: Database.Database): void {
 	const createdAge = `(julianday('now') - ${SQL_TS('created_at')})`;
 	const seenAge = `(julianday('now') - ${SQL_TS('first_seen_at')})`;
+	const hasDesc = `(description IS NOT NULL AND length(trim(description)) >= 20)`;
 
 	database.exec(`
 		UPDATE repos SET
@@ -1136,13 +1139,13 @@ export function recomputeEnrichmentTiersSql(database: Database.Database): void {
 		    ELSE (
 		      COALESCE(stars, 0) * 12.0 +
 		      COALESCE(forks, 0) * 4.0 +
-		      CASE WHEN ${createdAge} <= 3 THEN 55
-		           WHEN ${createdAge} <= 14 THEN 35
-		           WHEN ${createdAge} <= 45 THEN 20
+		      CASE WHEN ${createdAge} <= 3 THEN 20
+		           WHEN ${createdAge} <= 14 THEN 12
+		           WHEN ${createdAge} <= 45 THEN 8
 		           WHEN ${createdAge} >= 365 THEN -20
 		           ELSE 0 END +
-		      CASE WHEN ${seenAge} <= 1 AND ${createdAge} <= 30 THEN 20 ELSE 0 END +
-		      CASE WHEN description IS NOT NULL AND length(trim(description)) >= 20 THEN 15 ELSE 0 END +
+		      CASE WHEN ${seenAge} <= 1 AND ${createdAge} <= 30 THEN 10 ELSE 0 END +
+		      CASE WHEN ${hasDesc} THEN 15 ELSE 0 END +
 		      CASE WHEN language IS NOT NULL AND language != '' THEN 10 ELSE 0 END +
 		      CASE WHEN topics IS NOT NULL AND topics != '[]' AND topics != '' THEN 12 ELSE 0 END
 		    )
@@ -1152,16 +1155,17 @@ export function recomputeEnrichmentTiersSql(database: Database.Database): void {
 		    WHEN COALESCE(stars, 0) >= 50 THEN 'urgent'
 		    WHEN COALESCE(stars, 0) >= 5 AND ${createdAge} <= 3 THEN 'urgent'
 		    WHEN COALESCE(stars, 0) >= 10 THEN 'high'
-		    WHEN ${createdAge} <= 7 THEN 'high'
-		    WHEN ${createdAge} <= 14 AND (COALESCE(stars, 0) >= 1 OR (description IS NOT NULL AND length(trim(description)) >= 20)) THEN 'high'
-		    WHEN ${createdAge} >= 365 AND COALESCE(stars, 0) = 0 THEN 'deferred'
+		    WHEN COALESCE(stars, 0) >= 1 AND ${createdAge} <= 14 THEN 'high'
+		    WHEN ${hasDesc} AND ${createdAge} <= 14 THEN 'high'
+		    WHEN COALESCE(stars, 0) = 0 AND NOT ${hasDesc} THEN 'deferred'
 		    WHEN ${createdAge} >= 180 AND COALESCE(stars, 0) < 2 THEN 'deferred'
-		    WHEN ${createdAge} >= 90 AND COALESCE(stars, 0) < 2 THEN 'low'
+		    WHEN COALESCE(stars, 0) < 2 AND NOT ${hasDesc} THEN 'low'
 		    ELSE 'normal'
 		  END,
 		  enrichment_status = CASE
 		    WHEN deleted_at IS NOT NULL THEN 'unavailable'
 		    WHEN enriched_at IS NOT NULL THEN 'done'
+		    WHEN COALESCE(stars, 0) = 0 AND NOT ${hasDesc} THEN 'deferred'
 		    WHEN ${createdAge} >= 180 AND COALESCE(stars, 0) < 2 THEN 'deferred'
 		    WHEN enrichment_status IN ('claimed', 'forbidden', 'terminal', 'unavailable') THEN enrichment_status
 		    ELSE 'pending'
@@ -1169,6 +1173,7 @@ export function recomputeEnrichmentTiersSql(database: Database.Database): void {
 		  next_enrichment_at = CASE
 		    WHEN enriched_at IS NOT NULL THEN NULL
 		    WHEN deleted_at IS NOT NULL THEN NULL
+		    WHEN COALESCE(stars, 0) = 0 AND NOT ${hasDesc} THEN datetime('now', '+7 days')
 		    WHEN ${createdAge} >= 180 AND COALESCE(stars, 0) < 2 THEN datetime('now', '+7 days')
 		    ELSE COALESCE(next_enrichment_at, datetime('now'))
 		  END
@@ -1197,6 +1202,11 @@ function migration030(database: Database.Database) {
 
 /** Fix bulk-ingest tier flood: stop promoting recently-seen old repos to high. */
 function migration031(database: Database.Database) {
+	recomputeEnrichmentTiersSql(database);
+}
+
+/** Defer empty CreateEvent spam — live backlog is nearly all <7d-old creates. */
+function migration032(database: Database.Database) {
 	recomputeEnrichmentTiersSql(database);
 }
 
@@ -1231,7 +1241,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	28: migration028,
 	29: migration029,
 	30: migration030,
-	31: migration031
+	31: migration031,
+	32: migration032
 };
 
 export interface MigrationRunResult {
