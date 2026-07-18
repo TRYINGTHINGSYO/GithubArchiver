@@ -80,20 +80,20 @@
 				{/if}
 				{#if archiveBacklog != null}
 					<div>
-						<dt>Backlog</dt>
+						<dt>Archive backlog</dt>
 						<dd>{archiveBacklog.toLocaleString()} hours</dd>
-					</div>
-				{/if}
-				{#if searchFallbackActive != null}
-					<div>
-						<dt>Search fallback active</dt>
-						<dd>{searchFallbackActive ? 'Yes' : 'No'}</dd>
 					</div>
 				{/if}
 				{#if workerLastRanLabel}
 					<div>
 						<dt>Worker last ran</dt>
 						<dd>{workerLastRanLabel}</dd>
+					</div>
+				{/if}
+				{#if searchFallbackActive != null}
+					<div>
+						<dt>Search fallback</dt>
+						<dd>{searchFallbackActive ? 'Yes' : 'No'}</dd>
 					</div>
 				{/if}
 			</dl>

@@ -118,27 +118,61 @@ export function hasCompletedSearchForHour(hourKey: string): boolean {
 	return Boolean(row);
 }
 
-/** True while a Search API ingest shard is actively running. */
-export function isSearchFallbackActive(): boolean {
+/** Same age floor as orphaned job_runs — abandoned Search shards after restart. */
+const DEFAULT_ORPHAN_SEARCH_AGE_MS = 10 * 60 * 1000;
+
+/**
+ * Mark stale `running` Search-ingest shards as failed.
+ * Railway restarts left these rows stuck, which made "Search fallback active" stick on Yes
+ * even while the daemon was enriching / ingesting GH Archive hours.
+ */
+export function reconcileOrphanedSearchIngestStats(
+	maxAgeMs: number = DEFAULT_ORPHAN_SEARCH_AGE_MS,
+	nowMs: number = Date.now()
+): number {
 	const db = getDb();
+	const cutoff = new Date(nowMs - maxAgeMs).toISOString();
+	const now = new Date(nowMs).toISOString();
+	const reason = 'orphaned: process restarted mid-run';
+	const result = db
+		.prepare(
+			`UPDATE search_ingest_stats
+			 SET status = 'failed', error = ?, finished_at = ?
+			 WHERE status = 'running' AND started_at < ?`
+		)
+		.run(reason, now, cutoff);
+	return Number(result.changes ?? 0);
+}
+
+/**
+ * True only while Search API work is currently executing — not historical discoveries.
+ * Ignores stale `running` shards left behind by process restarts (same age as job orphans).
+ */
+export function isSearchFallbackActive(
+	nowMs: number = Date.now(),
+	maxAgeMs: number = DEFAULT_ORPHAN_SEARCH_AGE_MS
+): boolean {
+	const db = getDb();
+	const cutoff = new Date(nowMs - maxAgeMs).toISOString();
 	const runningStat = db
 		.prepare(
 			`SELECT 1 AS ok FROM search_ingest_stats
-			 WHERE status = 'running'
+			 WHERE status = 'running' AND started_at >= ?
 			 LIMIT 1`
 		)
-		.get() as { ok: number } | undefined;
+		.get(cutoff) as { ok: number } | undefined;
 	if (runningStat) return true;
 
 	const ingestJob = db
 		.prepare(
-			`SELECT detail_json FROM job_runs
+			`SELECT detail_json, started_at FROM job_runs
 			 WHERE job_type = 'ingest' AND status = 'running'
 			 ORDER BY started_at DESC
 			 LIMIT 1`
 		)
-		.get() as { detail_json: string } | undefined;
+		.get() as { detail_json: string; started_at: string } | undefined;
 	if (!ingestJob) return false;
+	if (ingestJob.started_at < cutoff) return false;
 	try {
 		const detail = JSON.parse(ingestJob.detail_json) as Record<string, unknown>;
 		return detail.action === 'search_gap' || detail.mode === 'search';

@@ -11,6 +11,7 @@ import {
 } from './daemon-planner';
 import { insertDaemonDecision } from './db/daemon-decisions';
 import { finishJobRun, reconcileOrphanedJobRuns, startJobRun, updateJobRun } from './db/jobs';
+import { reconcileOrphanedSearchIngestStats } from './db/search-ingest';
 import { assertDatabaseReady, isDatabaseReady } from './db/ready';
 import { runArchiveCycle } from './workers/archive';
 import { runEnrichCycle } from './workers/enrich';
@@ -446,6 +447,11 @@ function reconcileOrphanedJobsOnce(): void {
 		console.log(`[daemon] reconciled ${count} orphaned job_run(s)`);
 		appendLog(`[daemon] reconciled ${count} orphaned job_run(s)`);
 	}
+	const searchCount = reconcileOrphanedSearchIngestStats();
+	if (searchCount > 0) {
+		console.log(`[daemon] reconciled ${searchCount} orphaned search_ingest_stat(s)`);
+		appendLog(`[daemon] reconciled ${searchCount} orphaned search_ingest_stat(s)`);
+	}
 }
 
 /** Start auto-scan on boot when BACKGROUND_WORKER=auto|1 (default auto on Railway). */
@@ -469,4 +475,10 @@ export function ensureBackgroundWorker(): void {
 		console.log('[daemon] auto-starting background worker');
 		startBackgroundDaemon();
 	}
+}
+
+/** Reset once-per-process startup flags so tests can re-enter ensureBackgroundWorker. */
+export function resetBackgroundDaemonForTests(): void {
+	autoStartAttempted = false;
+	orphanJobsReconciled = false;
 }
