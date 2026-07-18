@@ -15,6 +15,8 @@ export interface StoryCycleResult {
 	batches: number;
 	queued: number;
 	targetVersion: number;
+	/** Wall-clock ms per successfully generated story (for percentile profiling). */
+	durationsMs: number[];
 }
 
 export async function runArchiveStoryCycle(
@@ -44,7 +46,8 @@ export async function runArchiveStoryCycle(
 		processed: 0,
 		batches: 0,
 		queued: 0,
-		targetVersion
+		targetVersion,
+		durationsMs: []
 	};
 
 	const queued = listPipelineJobs('needsStory', batchSize * Math.max(1, maxBatches || 4));
@@ -54,14 +57,25 @@ export async function runArchiveStoryCycle(
 			markPipelineDone(job.repositoryId, { needsStory: true });
 			continue;
 		}
+		const started = performance.now();
 		generateAndSaveArchiveStory(repo, targetVersion);
+		result.durationsMs.push(Math.max(0, Math.round(performance.now() - started)));
 		markPipelineDone(job.repositoryId, { needsStory: true });
 		result.processed++;
 		result.queued++;
 	}
 
 	if (queueOnly) {
-		finishJobRun(jobId, 'success', result);
+		finishJobRun(jobId, 'success', {
+			...result,
+			durationsMs: undefined,
+			avg_duration_ms:
+				result.durationsMs.length > 0
+					? Math.round(
+							result.durationsMs.reduce((a, b) => a + b, 0) / result.durationsMs.length
+						)
+					: 0
+		});
 		return result;
 	}
 
@@ -71,7 +85,9 @@ export async function runArchiveStoryCycle(
 		if (repos.length === 0) break;
 
 		for (const repo of repos) {
+			const started = performance.now();
 			generateAndSaveArchiveStory(repo, targetVersion);
+			result.durationsMs.push(Math.max(0, Math.round(performance.now() - started)));
 			markPipelineDone(repo.id, { needsStory: true });
 			afterId = repo.id;
 			result.processed++;
@@ -82,6 +98,13 @@ export async function runArchiveStoryCycle(
 		if (repos.length < batchSize) break;
 	}
 
-	finishJobRun(jobId, 'success', result);
+	finishJobRun(jobId, 'success', {
+		...result,
+		durationsMs: undefined,
+		avg_duration_ms:
+			result.durationsMs.length > 0
+				? Math.round(result.durationsMs.reduce((a, b) => a + b, 0) / result.durationsMs.length)
+				: 0
+	});
 	return result;
 }

@@ -20,6 +20,13 @@ import { materializeDiscoveryResults, getMaterializedDiscoveryLanding } from '$l
 import { pickAction, scoreAction, type BacklogSnapshot } from '$lib/server/daemon-planner';
 import { getDueDaemonJobs } from '$lib/server/daemon-scheduler';
 import { acquireWorkerLease, releaseWorkerLease } from '$lib/server/worker-lease';
+import {
+	computeStageTimingPercentiles,
+	percentileNearestRank,
+	pushEnrichStageSample,
+	pushStoryTimingSamples,
+	resetEnrichTimingSamplesForTests
+} from '$lib/server/enrichment-stage-timings';
 import { getEnrichmentOpsSnapshot } from '$lib/server/workers/enrich';
 import { setupTestDb, teardownTestDb } from './helpers/db';
 
@@ -327,10 +334,10 @@ describe('high-throughput enrichment architecture', () => {
 		expect(getMaterializedDiscoveryLanding({ limit: 5 })).not.toBeNull();
 	});
 
-	it('migrates to schema version 33 with enrichment stage timing columns', () => {
+	it('migrates to schema version 34 with enrichment stage timing + percentile columns', () => {
 		const db = getDb();
 		expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(33);
+		expect(CURRENT_SCHEMA_VERSION).toBe(34);
 		const indexes = (
 			db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`).all() as { name: string }[]
 		).map((r) => r.name);
@@ -350,9 +357,21 @@ describe('high-throughput enrichment architecture', () => {
 		expect(cols).toContain('avg_story_ms');
 		expect(cols).toContain('avg_db_write_ms');
 		expect(cols).toContain('avg_total_ms');
+		expect(cols).toContain('stage_percentiles_json');
 	});
 
-	it('surfaces per-stage enrich timings in ops snapshot', () => {
+	it('surfaces per-stage enrich timings and percentiles in ops snapshot', () => {
+		const percentiles = {
+			sampleCount: 100,
+			readmeSampleCount: 10,
+			storySampleCount: 80,
+			metadata: { p50: 120, p95: 780 },
+			classification: { p50: 35, p95: 90 },
+			readme: { p50: 210, p95: 2800 },
+			story: { p50: 180, p95: 900 },
+			dbWrite: { p50: 20, p95: 80 },
+			total: { p50: 900, p95: 3400 }
+		};
 		getDb()
 			.prepare(
 				`UPDATE enrichment_metrics SET
@@ -362,12 +381,13 @@ describe('high-throughput enrichment architecture', () => {
 				  avg_story_ms = 210,
 				  avg_db_write_ms = 25,
 				  avg_total_ms = 865,
+				  stage_percentiles_json = ?,
 				  throughput_per_min = 40,
 				  concurrency = 12,
 				  updated_at = datetime('now')
 				 WHERE id = 1`
 			)
-			.run();
+			.run(JSON.stringify(percentiles));
 		const snap = getEnrichmentOpsSnapshot();
 		expect(snap.stageTimings).toEqual({
 			metadataMs: 180,
@@ -377,8 +397,33 @@ describe('high-throughput enrichment architecture', () => {
 			dbWriteMs: 25,
 			totalMs: 1075
 		});
+		expect(snap.stagePercentiles).toEqual(percentiles);
 		expect(snap.avgSecondsPerRepo).toBe(1.08);
 		expect(snap.configuredConcurrency).toBe(12);
+	});
+
+	it('computes nearest-rank P50/P95 and ignores zero README samples', () => {
+		resetEnrichTimingSamplesForTests();
+		expect(percentileNearestRank([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 50)).toBe(5);
+		expect(percentileNearestRank([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 95)).toBe(10);
+
+		for (let i = 0; i < 20; i++) {
+			pushEnrichStageSample({
+				metadataMs: 100 + i,
+				classificationMs: 40,
+				readmeMs: i < 18 ? 0 : 2000 + i,
+				dbWriteMs: 25,
+				totalMs: 200 + i
+			});
+		}
+		pushStoryTimingSamples([100, 200, 300, 400, 5000]);
+		const pct = computeStageTimingPercentiles();
+		expect(pct).not.toBeNull();
+		expect(pct!.sampleCount).toBe(20);
+		expect(pct!.readmeSampleCount).toBe(2);
+		expect(pct!.readme.p50).toBeGreaterThan(2000);
+		expect(pct!.story.p95).toBe(5000);
+		expect(pct!.metadata.p50).toBeGreaterThan(0);
 	});
 });
 

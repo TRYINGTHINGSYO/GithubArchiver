@@ -18,7 +18,7 @@ relationships:
   - type: references
     id: incident-empty-createevent-defer
 title: Profile enrichment with per-stage timings before more architecture changes
-migration: 33
+migration: 34
 ---
 
 # Profile enrichment with per-stage timings
@@ -46,3 +46,14 @@ Also raise default `ENRICH_WORKER_CONCURRENCY` from 8 → 12 (still env-overrida
 ## Schema
 
 Migration **33** adds `avg_*_ms` columns on `enrichment_metrics`.
+
+## Percentiles (follow-up on PR #22)
+
+Averages hide long-tail stalls. Keep a process-local rolling window (default 2000 samples) and persist P50/P95 per stage in `stage_percentiles_json` (migration **34**).
+
+Optimization sequence after deploy:
+1. Collect several hundred / few thousand enrichments
+2. Identify the stage with the largest wall-clock share (and check P95 vs P50)
+3. Fix that bottleneck
+4. Remeasure
+5. Only then raise concurrency again

@@ -209,6 +209,7 @@
 			deferredWaiting={enrichOps.deferredBacklog}
 			etaClaimableLabel={etaClaimableLabel}
 			stageTimings={enrichOps.stageTimings}
+			stagePercentiles={enrichOps.stagePercentiles}
 		/>
 		<div class="enrich-bar" role="progressbar" aria-valuenow={enrichPercent} aria-valuemin="0" aria-valuemax="100">
 			<span style={`width: ${Math.min(100, enrichPercent)}%`}></span>
