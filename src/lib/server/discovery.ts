@@ -1,5 +1,11 @@
-import { getArchiveStoryForRepo } from '$lib/server/archive-story';
-import { getRepoClusterMemberships, listClusterAnalytics, type ClusterAnalyticsRow } from '$lib/server/db/clusters';
+import { getStoredArchiveStory } from '$lib/server/db/archive-story';
+import {
+	getRepoClusterMemberships,
+	listActiveClusterSummaries,
+	listClusterAnalytics,
+	type ClusterAnalyticsRow
+} from '$lib/server/db/clusters';
+import { cached } from '$lib/server/ttl-cache';
 import { getDb } from '$lib/server/db/connection';
 import { parseTopics } from '$lib/server/db/repos';
 import type { RepoRow } from '$lib/server/db/types';
@@ -134,13 +140,17 @@ export function getDiscoveryLanding(opts: Partial<DiscoveryQuery> = {}): Discove
 		deletedGems: getDeletedGems({ ...query, limit: 6 }),
 		unusualFinds: getUnusualFinds({ ...query, limit: 6 }),
 		emergingTopics: listEmergingTopics({ limit: 6 }),
-		clusters: listClusterAnalytics().filter((cluster) => cluster.repo_count > 0).slice(0, 24)
+		clusters: listActiveClusterSummaries(24)
 	};
+}
+
+function cachedClusterAnalytics(): ClusterAnalyticsRow[] {
+	return cached('cluster-analytics', 30_000, () => listClusterAnalytics());
 }
 
 export function getFastestGrowingClusters(opts: Partial<DiscoveryQuery> = {}): DiscoveryClusterCard[] {
 	const query = normalizeQuery(opts);
-	const clusters = listClusterAnalytics()
+	const clusters = cachedClusterAnalytics()
 		.filter((cluster) => cluster.growth_pct != null)
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
 		.filter((cluster) => cluster.new_7d >= MIN_CLUSTER_CURRENT_COUNT)
@@ -280,7 +290,7 @@ export function getPreliminaryProjectsToWatch(opts: Partial<DiscoveryQuery> = {}
 /** Populated clusters with preliminary 24h activity when week-over-week growth is unavailable. */
 export function getPreliminaryGrowingClusters(opts: Partial<DiscoveryQuery> = {}): DiscoveryClusterCard[] {
 	const query = normalizeQuery(opts);
-	return listClusterAnalytics()
+	return cachedClusterAnalytics()
 		.filter((cluster) => cluster.repo_count > 0)
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
 		.sort((a, b) => b.new_24h - a.new_24h || b.repo_count - a.repo_count)
@@ -371,7 +381,7 @@ export function getNewHighSignalRepos(opts: Partial<DiscoveryQuery> = {}): Disco
  */
 export function getActiveQualityClusters(opts: Partial<DiscoveryQuery> = {}): ActiveClusterCard[] {
 	const query = normalizeQuery(opts);
-	return listClusterAnalytics()
+	return cachedClusterAnalytics()
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
 		.filter((cluster) => cluster.repo_count > 0)
 		.filter((cluster) => (cluster.avg_interesting_score ?? 0) >= Math.max(0, query.minScore - 25))
@@ -579,7 +589,8 @@ function toDiscoveryRepoCard(row: DiscoveryRepoRow, rankScore: number, reason?: 
 			name: membership.name,
 			confidence: membership.confidence
 		}));
-	const story = getArchiveStoryForRepo(row.id);
+	// Never generate stories on GET — workers own that. Read stored text only.
+	const storedStory = getStoredArchiveStory(row.id);
 	const preservationState = getPreservationState(row);
 	return {
 		id: row.id,
@@ -598,7 +609,7 @@ function toDiscoveryRepoCard(row: DiscoveryRepoRow, rankScore: number, reason?: 
 		github_archived: row.github_archived === 1,
 		topics: parseTopics(row.topics),
 		clusters,
-		storyPreview: story?.story ?? row.story_text ?? null,
+		storyPreview: storedStory?.story_text ?? row.story_text ?? null,
 		preservationState,
 		hasReadme: row.has_readme === 1,
 		hasSource: row.has_source === 1,

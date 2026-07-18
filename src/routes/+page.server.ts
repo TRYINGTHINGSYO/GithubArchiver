@@ -189,7 +189,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		snapshot: {
 			indexed: readiness.totalRepos,
 			enriched: readiness.enrichedRepos,
-			classified: countClassifiedRepos(),
+			classified: discoveryStatus.classified || countClassifiedRepos(),
 			clustered: readiness.clusteredRepos,
 			highSignal: countHighSignalRepos(),
 			emergingActive: discovery.emergingTopics.length,

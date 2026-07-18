@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md) (`bugfix`, `confirmed`, `release`) — Fix dead cluster links and slow page navigation
+  - `related` → [`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 - [`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md) (`decision`, `confirmed`, `permanent`) — Profile enrichment with per-stage timings before more architecture changes
   - `caused-by` → [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), `references` → [`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) (`incident`, `confirmed`, `permanent`) — Enrichment must be continuous concurrent queue not hourly trickle

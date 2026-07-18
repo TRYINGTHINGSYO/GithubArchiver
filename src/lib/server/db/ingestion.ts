@@ -3,6 +3,7 @@ import {
 	shouldExcludeHourFromMissingBacklog,
 	type HourUnavailableState
 } from '../gharchive-hours.js';
+import { cached } from '../ttl-cache.js';
 import { getDb } from './connection.js';
 import type { IngestionStateRow } from './types.js';
 
@@ -138,7 +139,11 @@ function collectMissingHourKeys(nowMs: number = Date.now()): string[] {
 
 /** Full filtered count for daemon priority (no batch slice). */
 export function countMissingGhArchiveHours(nowMs: number = Date.now()): number {
-	return collectMissingHourKeys(nowMs).length;
+	// Bucket to 30s so layout/homepage/activity don't recompute the full hour grid each hit.
+	const bucket = Math.floor(nowMs / 30_000);
+	return cached(`missing-gharchive-hours:${bucket}`, 30_000, () =>
+		collectMissingHourKeys(nowMs).length
+	);
 }
 
 /** GH Archive hours that should drive ingest priority (excludes unpublished / cooling-down 404s). */

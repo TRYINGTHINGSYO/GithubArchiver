@@ -2,6 +2,7 @@ import { getDb } from '$lib/server/db/connection';
 import { countRepos, countUnenriched } from '$lib/server/db/repos';
 import { countReposByEnrichmentLevel } from '$lib/server/db/pipeline';
 import { hasGitHubToken } from '$lib/server/github';
+import { cached } from '$lib/server/ttl-cache';
 
 export const EMERGING_READY_MIN_ENRICHED = 250;
 export const EMERGING_READY_MIN_OWNERS = 50;
@@ -37,17 +38,33 @@ export function getDataReadiness(opts: {
 	minEnriched?: number;
 	minOwners?: number;
 } = {}): DataReadiness {
-	const db = getDb();
 	const windowDays = opts.windowDays ?? 7;
 	const periodEnd = opts.periodEnd ?? new Date();
+	const minEnriched = opts.minEnriched ?? EMERGING_READY_MIN_ENRICHED;
+	const minOwners = opts.minOwners ?? EMERGING_READY_MIN_OWNERS;
+	// Bucket periodEnd to the minute so short TTLs actually hit across navigations.
+	const periodKey = Math.floor(periodEnd.getTime() / 60_000);
+	return cached(
+		`data-readiness:${windowDays}:${periodKey}:${minEnriched}:${minOwners}`,
+		30_000,
+		() => computeDataReadiness({ windowDays, periodEnd, minEnriched, minOwners })
+	);
+}
+
+function computeDataReadiness(opts: {
+	windowDays: number;
+	periodEnd: Date;
+	minEnriched: number;
+	minOwners: number;
+}): DataReadiness {
+	const db = getDb();
+	const { windowDays, periodEnd, minEnriched, minOwners } = opts;
 	const periodStart = new Date(periodEnd.getTime() - windowDays * 86_400_000);
 	const previousStart = new Date(periodStart.getTime() - windowDays * 86_400_000);
 	const windowStart = periodStart.toISOString();
 	const windowEnd = periodEnd.toISOString();
 	const previousWindowStart = previousStart.toISOString();
 	const previousWindowEnd = periodStart.toISOString();
-	const minEnriched = opts.minEnriched ?? EMERGING_READY_MIN_ENRICHED;
-	const minOwners = opts.minOwners ?? EMERGING_READY_MIN_OWNERS;
 
 	const totalRepos = countRepos();
 	const enrichmentBacklog = countUnenriched();
