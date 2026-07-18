@@ -374,6 +374,64 @@
 					<dt>API req / repo</dt>
 					<dd>{status.pipeline.enrichment.requestsPerRepo ?? '—'}</dd>
 				</div>
+				{#if status.pipeline.enrichment.stageTimings}
+					{@const st = status.pipeline.enrichment.stageTimings}
+					{@const pct = status.pipeline.enrichment.stagePercentiles}
+					<div>
+						<dt>Metadata fetch</dt>
+						<dd>
+							{Math.round(st.metadataMs)} ms
+							{#if pct}
+								<span class="admin-meta">P50 {Math.round(pct.metadata.p50)} / P95 {Math.round(pct.metadata.p95)}</span>
+							{/if}
+						</dd>
+					</div>
+					<div>
+						<dt>Classification</dt>
+						<dd>
+							{Math.round(st.classificationMs)} ms
+							{#if pct}
+								<span class="admin-meta">P50 {Math.round(pct.classification.p50)} / P95 {Math.round(pct.classification.p95)}</span>
+							{/if}
+						</dd>
+					</div>
+					<div>
+						<dt>README</dt>
+						<dd>
+							{Math.round(st.readmeMs)} ms
+							{#if pct}
+								<span class="admin-meta">P50 {Math.round(pct.readme.p50)} / P95 {Math.round(pct.readme.p95)}</span>
+							{/if}
+						</dd>
+					</div>
+					<div>
+						<dt>Story generation</dt>
+						<dd>
+							{Math.round(st.storyMs)} ms
+							{#if pct}
+								<span class="admin-meta">P50 {Math.round(pct.story.p50)} / P95 {Math.round(pct.story.p95)}</span>
+							{/if}
+						</dd>
+					</div>
+					<div>
+						<dt>DB write</dt>
+						<dd>
+							{Math.round(st.dbWriteMs)} ms
+							{#if pct}
+								<span class="admin-meta">P50 {Math.round(pct.dbWrite.p50)} / P95 {Math.round(pct.dbWrite.p95)}</span>
+							{/if}
+						</dd>
+					</div>
+					<div>
+						<dt>Total / repo</dt>
+						<dd>
+							{Math.round(st.totalMs)} ms
+							{#if pct}
+								<span class="admin-meta">P50 {Math.round(pct.total.p50)} / P95 {Math.round(pct.total.p95)} (n={pct.sampleCount})</span>
+							{/if}
+						</dd>
+					</div>
+				{/if}
 				<div>
 					<dt>Concurrency</dt>
 					<dd>

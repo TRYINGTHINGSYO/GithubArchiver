@@ -22,6 +22,8 @@
 		claimableWaiting = null,
 		deferredWaiting = null,
 		etaClaimableLabel = null,
+		stageTimings = null,
+		stagePercentiles = null,
 		compact = false
 	}: {
 		currentActivity: string;
@@ -42,6 +44,25 @@
 		claimableWaiting?: number | null;
 		deferredWaiting?: number | null;
 		etaClaimableLabel?: string | null;
+		stageTimings?: {
+			metadataMs: number;
+			classificationMs: number;
+			readmeMs: number;
+			storyMs: number;
+			dbWriteMs: number;
+			totalMs: number;
+		} | null;
+		stagePercentiles?: {
+			sampleCount: number;
+			readmeSampleCount: number;
+			storySampleCount: number;
+			metadata: { p50: number; p95: number };
+			classification: { p50: number; p95: number };
+			readme: { p50: number; p95: number };
+			story: { p50: number; p95: number };
+			dbWrite: { p50: number; p95: number };
+			total: { p50: number; p95: number };
+		} | null;
 		compact?: boolean;
 	} = $props();
 
@@ -53,7 +74,45 @@
 		claimableWaiting != null ||
 		deferredWaiting != null ||
 		etaClaimableLabel != null ||
-		enrichLastRanLabel != null;
+		enrichLastRanLabel != null ||
+		stageTimings != null;
+
+	function fmtMs(ms: number): string {
+		return `${Math.round(ms).toLocaleString()} ms`;
+	}
+
+	function stageLine(
+		label: string,
+		avgMs: number,
+		pct: { p50: number; p95: number } | null | undefined
+	): string {
+		if (!pct) {
+			return `${label.padEnd(18)} ${fmtMs(avgMs).padStart(10)}`;
+		}
+		return `${label.padEnd(18)} avg ${fmtMs(avgMs).padStart(8)}   P50 ${fmtMs(pct.p50).padStart(8)}   P95 ${fmtMs(pct.p95).padStart(8)}`;
+	}
+
+	const stageBlock = $derived.by(() => {
+		if (!stageTimings) return '';
+		const pct = stagePercentiles;
+		const n = pct?.sampleCount ?? 0;
+		const header =
+			n > 0
+				? `Time spent per repository (avg / P50 / P95)  n=${n.toLocaleString()}`
+				: 'Time spent per repository';
+		const footnote =
+			n > 0
+				? '\n\nTotal P50/P95 = enrich path. Story is timed separately (README P50/P95 = deep path only).'
+				: '';
+		return `${header}
+
+${stageLine('Metadata fetch:', stageTimings.metadataMs, pct?.metadata)}
+${stageLine('Classification:', stageTimings.classificationMs, pct?.classification)}
+${stageLine('README:', stageTimings.readmeMs, pct?.readme)}
+${stageLine('Story generation:', stageTimings.storyMs, pct?.story)}
+${stageLine('DB write:', stageTimings.dbWriteMs, pct?.dbWrite)}
+${stageLine('Total:', stageTimings.totalMs, pct?.total)}${footnote}`;
+	});
 </script>
 
 <div class="status-story" class:compact>
@@ -147,6 +206,9 @@
 					</div>
 				{/if}
 			</dl>
+			{#if stageTimings}
+				<pre class="stage-timings" aria-label="Time spent per repository">{stageBlock}</pre>
+			{/if}
 		</section>
 	{/if}
 
@@ -242,5 +304,18 @@
 	.mono {
 		font-family: var(--font-mono, ui-monospace, monospace);
 		font-size: 0.92rem;
+	}
+
+	.stage-timings {
+		margin: 0.85rem 0 0;
+		padding: 0.75rem 0.85rem;
+		border-radius: 0.4rem;
+		background: color-mix(in srgb, var(--text-muted) 10%, transparent);
+		font-family: var(--font-mono, ui-monospace, monospace);
+		font-size: 0.78rem;
+		line-height: 1.45;
+		color: var(--text);
+		white-space: pre;
+		overflow-x: auto;
 	}
 </style>

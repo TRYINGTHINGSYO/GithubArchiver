@@ -47,6 +47,19 @@ export interface EnrichRepoOptions {
 	skipHistory?: boolean;
 }
 
+/** Wall-clock milliseconds spent in each enrichRepo stage (for ops profiling). */
+export interface EnrichStageTimings {
+	metadataMs: number;
+	classificationMs: number;
+	readmeMs: number;
+	dbWriteMs: number;
+	/** History probe (deep path); 0 on fast. */
+	historyMs: number;
+	/** Clustering + pipeline enqueue (local CPU/DB). */
+	clusterMs: number;
+	totalMs: number;
+}
+
 export interface EnrichRepoResult {
 	level: number;
 	requests: number;
@@ -55,6 +68,23 @@ export interface EnrichRepoResult {
 	httpStatus: number;
 	depth: EnrichDepth;
 	notModified: boolean;
+	timings: EnrichStageTimings;
+}
+
+function emptyTimings(): EnrichStageTimings {
+	return {
+		metadataMs: 0,
+		classificationMs: 0,
+		readmeMs: 0,
+		dbWriteMs: 0,
+		historyMs: 0,
+		clusterMs: 0,
+		totalMs: 0
+	};
+}
+
+function elapsedMs(started: number): number {
+	return Math.max(0, Math.round(performance.now() - started));
 }
 const IMPORTANT_METADATA_FIELDS: (keyof EnrichmentData)[] = [
 	'default_branch',
@@ -270,11 +300,16 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 	const syncReleases = opts.syncReleases ?? false;
 	const skipHistory = opts.skipHistory ?? depth === 'fast';
 	let requests = 0;
+	const timings = emptyTimings();
+	const totalStarted = performance.now();
 
+	const metadataStarted = performance.now();
 	const data = await fetchRepoMetadata(repo.owner, repo.name, { etag: opts.etag });
+	timings.metadataMs = elapsedMs(metadataStarted);
 	requests += 1;
 
 	if (data.notModified && repo.enriched_at) {
+		timings.totalMs = elapsedMs(totalStarted);
 		return {
 			level: Math.max(1, level),
 			requests,
@@ -282,7 +317,8 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 			etag: data.etag,
 			httpStatus: 304,
 			depth,
-			notModified: true
+			notModified: true,
+			timings
 		};
 	}
 
@@ -293,31 +329,44 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 	const observedAt = new Date().toISOString();
 
 	if (!skipHistory) {
+		const historyStarted = performance.now();
 		await recordRepoHistoryChanges(repo, enrichment, observedAt);
+		timings.historyMs = elapsedMs(historyStarted);
 		requests += 1;
 	}
 
 	const metadataDelta = metadataChangesForEvent(repo, enrichment);
 
+	const dbStarted = performance.now();
 	saveEnrichment(repo.id, enrichment);
 	setEnrichmentLevel(repo.id, Math.max(depth === 'deep' ? 2 : 1, level));
-	applyRepoIntelligence(repo, enrichment);
+	timings.dbWriteMs = elapsedMs(dbStarted);
 
+	const classifyStarted = performance.now();
+	applyRepoIntelligence(repo, enrichment);
+	timings.classificationMs = elapsedMs(classifyStarted);
+
+	const clusterStarted = performance.now();
 	const refreshed = getRepoById(repo.id) ?? repo;
 	applyRepoClusters(refreshed, enrichment);
+	timings.clusterMs = elapsedMs(clusterStarted);
 
 	if (depth === 'deep') {
 		// README fetch improves classification evidence without full source archive.
+		const readmeStarted = performance.now();
 		await fetchReadme(repo.owner, repo.name);
+		timings.readmeMs = elapsedMs(readmeStarted);
 		requests += 1;
 	}
 
+	const enqueueStarted = performance.now();
 	enqueueRepoPipeline(repo.id, {
 		needsClassification: false,
 		needsScoring: false,
 		needsClustering: false,
 		needsStory: true
 	});
+	timings.dbWriteMs += elapsedMs(enqueueStarted);
 
 	if (wasEnriched && Object.keys(metadataDelta).length > 0) {
 		appendRepoEvent(repo.id, 'metadata_updated', {
@@ -331,6 +380,7 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 		requests += 2;
 	}
 
+	timings.totalMs = elapsedMs(totalStarted);
 	return {
 		level: Math.max(depth === 'deep' ? 2 : 1, level),
 		requests,
@@ -338,7 +388,8 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 		etag: data.etag,
 		httpStatus: data.status,
 		depth,
-		notModified: false
+		notModified: false,
+		timings
 	};
 }
 

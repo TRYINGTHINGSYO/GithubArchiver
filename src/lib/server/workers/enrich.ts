@@ -31,6 +31,13 @@ import {
 	GitHubNotFoundError,
 	GitHubRateLimitError
 } from '../github.js';
+import {
+	computeStageTimingPercentiles,
+	parseStagePercentilesJson,
+	pushEnrichStageSample,
+	pushStoryTimingSamples,
+	stagePercentilesToJson
+} from '../enrichment-stage-timings.js';
 import { runArchiveStoryCycle } from './stories.js';
 import { runDiscoveryMaterializationCycle } from './discovery.js';
 
@@ -43,7 +50,7 @@ function envInt(name: string, fallback: number): number {
 	return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 const BATCH_SIZE = envInt('ENRICH_WORKER_BATCH_SIZE', 100);
-const CONCURRENCY = envInt('ENRICH_WORKER_CONCURRENCY', 8);
+const CONCURRENCY = envInt('ENRICH_WORKER_CONCURRENCY', 12);
 const CYCLE_BUDGET_MS = Number(process.env.ENRICH_CYCLE_BUDGET_MS ?? 90_000);
 const MAX_REQUESTS = Number(process.env.ENRICH_MAX_REQUESTS_PER_CYCLE ?? 400);
 const RETRY_LIMIT = Number(process.env.ENRICH_RETRY_LIMIT ?? 5);
@@ -121,8 +128,9 @@ function persistEnrichmentMetrics(partial: Record<string, unknown>): void {
 		`INSERT INTO enrichment_metrics (
 		   id, cycle_started_at, cycle_finished_at, enriched_fast, enriched_deep, failed,
 		   requests, avg_latency_ms, concurrency, quota_remaining, quota_reset_at,
-		   throughput_per_min, updated_at
-		 ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		   throughput_per_min, avg_metadata_ms, avg_classification_ms, avg_readme_ms,
+		   avg_story_ms, avg_db_write_ms, avg_total_ms, stage_percentiles_json, updated_at
+		 ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET
 		   cycle_started_at = excluded.cycle_started_at,
 		   cycle_finished_at = excluded.cycle_finished_at,
@@ -135,6 +143,13 @@ function persistEnrichmentMetrics(partial: Record<string, unknown>): void {
 		   quota_remaining = excluded.quota_remaining,
 		   quota_reset_at = excluded.quota_reset_at,
 		   throughput_per_min = excluded.throughput_per_min,
+		   avg_metadata_ms = excluded.avg_metadata_ms,
+		   avg_classification_ms = excluded.avg_classification_ms,
+		   avg_readme_ms = excluded.avg_readme_ms,
+		   avg_story_ms = excluded.avg_story_ms,
+		   avg_db_write_ms = excluded.avg_db_write_ms,
+		   avg_total_ms = excluded.avg_total_ms,
+		   stage_percentiles_json = excluded.stage_percentiles_json,
 		   updated_at = excluded.updated_at`
 	).run(
 		partial.cycle_started_at ?? null,
@@ -148,8 +163,71 @@ function persistEnrichmentMetrics(partial: Record<string, unknown>): void {
 		partial.quota_remaining ?? null,
 		partial.quota_reset_at ?? null,
 		partial.throughput_per_min ?? 0,
+		partial.avg_metadata_ms ?? 0,
+		partial.avg_classification_ms ?? 0,
+		partial.avg_readme_ms ?? 0,
+		partial.avg_story_ms ?? 0,
+		partial.avg_db_write_ms ?? 0,
+		partial.avg_total_ms ?? 0,
+		partial.stage_percentiles_json ?? '{}',
 		now
 	);
+}
+
+interface StageTimingAccumulator {
+	count: number;
+	metadataMs: number;
+	classificationMs: number;
+	readmeMs: number;
+	dbWriteMs: number;
+	totalMs: number;
+}
+
+function emptyStageAccumulator(): StageTimingAccumulator {
+	return {
+		count: 0,
+		metadataMs: 0,
+		classificationMs: 0,
+		readmeMs: 0,
+		dbWriteMs: 0,
+		totalMs: 0
+	};
+}
+
+function recordStageTimings(
+	acc: StageTimingAccumulator,
+	timings: {
+		metadataMs: number;
+		classificationMs: number;
+		readmeMs: number;
+		dbWriteMs: number;
+		totalMs: number;
+	}
+): void {
+	acc.count += 1;
+	acc.metadataMs += timings.metadataMs;
+	acc.classificationMs += timings.classificationMs;
+	acc.readmeMs += timings.readmeMs;
+	acc.dbWriteMs += timings.dbWriteMs;
+	acc.totalMs += timings.totalMs;
+}
+
+function averageStageMs(acc: StageTimingAccumulator): {
+	avg_metadata_ms: number;
+	avg_classification_ms: number;
+	avg_readme_ms: number;
+	avg_db_write_ms: number;
+	avg_total_ms: number;
+} {
+	const n = acc.count || 1;
+	const round = (sum: number) => Math.round((sum / n) * 10) / 10;
+	return {
+		avg_metadata_ms: acc.count ? round(acc.metadataMs) : 0,
+		avg_classification_ms: acc.count ? round(acc.classificationMs) : 0,
+		avg_readme_ms: acc.count ? round(acc.readmeMs) : 0,
+		avg_db_write_ms: acc.count ? round(acc.dbWriteMs) : 0,
+		avg_total_ms: acc.count ? round(acc.totalMs) : 0
+	};
 }
 
 export interface EnrichCycleResult {
@@ -210,6 +288,8 @@ export async function runEnrichCycle(opts: EnrichCycleOptions = {}): Promise<Enr
 		yielded: false,
 		backlogByTier: countEnrichmentBacklogByTier()
 	};
+	const stageAcc = emptyStageAccumulator();
+	let avgStoryMs = 0;
 
 	if (backlogStart === 0) {
 		setEnrichmentProgress({
@@ -313,6 +393,8 @@ export async function runEnrichCycle(opts: EnrichCycleOptions = {}): Promise<Enr
 			result.requests += enrichResult.requests;
 			if (depth === 'deep') result.enrichedDeep++;
 			else result.enrichedFast++;
+			recordStageTimings(stageAcc, enrichResult.timings);
+			pushEnrichStageSample(enrichResult.timings);
 			markEnrichmentSuccess(repo.id, depth, {
 				etag: enrichResult.etag,
 				httpStatus: enrichResult.httpStatus
@@ -379,6 +461,8 @@ export async function runEnrichCycle(opts: EnrichCycleOptions = {}): Promise<Enr
 				result.enriched++;
 				result.enrichedDeep++;
 				result.requests += enrichResult.requests;
+				recordStageTimings(stageAcc, enrichResult.timings);
+				pushEnrichStageSample(enrichResult.timings);
 				markEnrichmentSuccess(repo.id, 'deep', {
 					etag: enrichResult.etag,
 					httpStatus: enrichResult.httpStatus
@@ -405,7 +489,20 @@ export async function runEnrichCycle(opts: EnrichCycleOptions = {}): Promise<Enr
 	// Incremental downstream for this batch: stories for newly enriched IDs, then discovery.
 	if (result.enriched > 0) {
 		try {
-			await runArchiveStoryCycle({ maxBatches: 1, queueOnly: true, batchSize: Math.min(100, result.enriched) });
+			const storyResult = await runArchiveStoryCycle({
+				maxBatches: 1,
+				queueOnly: true,
+				batchSize: Math.min(100, result.enriched)
+			});
+			pushStoryTimingSamples(storyResult.durationsMs);
+			avgStoryMs =
+				storyResult.durationsMs.length > 0
+					? Math.round(
+							(storyResult.durationsMs.reduce((a, b) => a + b, 0) /
+								storyResult.durationsMs.length) *
+								10
+						) / 10
+					: 0;
 			await runDiscoveryMaterializationCycle();
 		} catch {
 			// Keep enrichment success even if story/discovery refresh fails.
@@ -418,6 +515,8 @@ export async function runEnrichCycle(opts: EnrichCycleOptions = {}): Promise<Enr
 	const elapsedMin = Math.max(1 / 60, (Date.now() - cycleStarted) / 60_000);
 	const quotaAfter = getGitHubQuotaSnapshot();
 	const throughputPerMin = result.enriched / elapsedMin;
+	const stageAverages = averageStageMs(stageAcc);
+	const percentiles = computeStageTimingPercentiles();
 	persistEnrichmentMetrics({
 		cycle_started_at: new Date(cycleStarted).toISOString(),
 		cycle_finished_at: new Date().toISOString(),
@@ -429,7 +528,10 @@ export async function runEnrichCycle(opts: EnrichCycleOptions = {}): Promise<Enr
 		concurrency,
 		quota_remaining: quotaAfter.remaining,
 		quota_reset_at: quotaAfter.resetAt,
-		throughput_per_min: throughputPerMin
+		throughput_per_min: throughputPerMin,
+		...stageAverages,
+		avg_story_ms: avgStoryMs,
+		stage_percentiles_json: stagePercentilesToJson(percentiles)
 	});
 
 	const claimable = countClaimableEnrichmentBacklog();
@@ -566,8 +668,14 @@ export function getEnrichmentOpsSnapshot() {
 	const minuteThroughput = lastMinute.enriched;
 	const effectiveThroughput =
 		minuteThroughput > 0 ? minuteThroughput : cycleThroughput > 0 ? cycleThroughput : hourThroughput / 60;
+	const avgTotalMs =
+		Number(metrics?.avg_total_ms ?? 0) + Number(metrics?.avg_story_ms ?? 0);
 	const avgSecondsPerRepo =
-		cycleThroughput > 0 ? Math.round((60 / cycleThroughput) * 10) / 10 : null;
+		avgTotalMs > 0
+			? Math.round((avgTotalMs / 1000) * 100) / 100
+			: cycleThroughput > 0
+				? Math.round((60 / cycleThroughput) * 10) / 10
+				: null;
 	const requestsPerRepo =
 		Number(metrics?.enriched_fast ?? 0) + Number(metrics?.enriched_deep ?? 0) > 0
 			? Math.round(
@@ -578,7 +686,20 @@ export function getEnrichmentOpsSnapshot() {
 			: null;
 	const oldestWaiting = oldestClaimableEnrichmentAt();
 	const etaClaimableMinutes =
-		effectiveThroughput > 0 ? Math.ceil(claimable / effectiveThroughput) : null;
+		effectiveThroughput > 0 && claimable > 0 ? Math.ceil(claimable / effectiveThroughput) : null;
+	const enrichTotalMs = Number(metrics?.avg_total_ms ?? 0);
+	const storyMs = Number(metrics?.avg_story_ms ?? 0);
+	const stageTimings = {
+		metadataMs: Math.round(Number(metrics?.avg_metadata_ms ?? 0) * 10) / 10,
+		classificationMs: Math.round(Number(metrics?.avg_classification_ms ?? 0) * 10) / 10,
+		readmeMs: Math.round(Number(metrics?.avg_readme_ms ?? 0) * 10) / 10,
+		storyMs: Math.round(storyMs * 10) / 10,
+		dbWriteMs: Math.round(Number(metrics?.avg_db_write_ms ?? 0) * 10) / 10,
+		// Include amortized story time so Total matches the stage breakdown.
+		totalMs: Math.round((enrichTotalMs + storyMs) * 10) / 10
+	};
+	const hasStageTimings = enrichTotalMs > 0;
+	const stagePercentiles = parseStagePercentilesJson(metrics?.stage_percentiles_json);
 
 	return {
 		depths,
@@ -600,7 +721,10 @@ export function getEnrichmentOpsSnapshot() {
 		oldestWaitingAt: oldestWaiting,
 		etaUrgentHighMinutes: effectiveThroughput > 0 ? Math.ceil(urgentHigh / effectiveThroughput) : null,
 		etaClaimableMinutes,
+		// Includes deferred metadata-only pile — do not surface as primary ETA.
 		etaAllMinutes: effectiveThroughput > 0 ? Math.ceil(countUnenriched() / effectiveThroughput) : null,
+		stageTimings: hasStageTimings ? stageTimings : null,
+		stagePercentiles,
 		lastCycle: metrics ?? null
 	};
 }

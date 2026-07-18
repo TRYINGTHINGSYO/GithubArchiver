@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md) (`decision`, `confirmed`, `permanent`) — Profile enrichment with per-stage timings before more architecture changes
+  - `caused-by` → [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), `references` → [`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) (`incident`, `confirmed`, `permanent`) — Enrichment must be continuous concurrent queue not hourly trickle
   - `related` → [`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), `related` → [`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - [`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md) (`feature`, `confirmed`, `permanent`) — Stabilize knowledge engine with evals, explanations, and schema version
