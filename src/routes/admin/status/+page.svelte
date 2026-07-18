@@ -509,12 +509,8 @@
 					<dd class="mono">{status.ingestion.latestHour ?? '—'}</dd>
 				</div>
 				<div>
-					<dt>Backlog</dt>
+					<dt>Archive backlog</dt>
 					<dd>{status.ingestion.missingHours.length} hours</dd>
-				</div>
-				<div>
-					<dt>Search fallback active</dt>
-					<dd>{status.discovery.searchFallbackActive ? 'Yes' : 'No'}</dd>
 				</div>
 				<div>
 					<dt>Target hour (GH Archive)</dt>
@@ -523,6 +519,10 @@
 				<div>
 					<dt>Hours ingested</dt>
 					<dd>{status.ingestion.totalHours}</dd>
+				</div>
+				<div>
+					<dt>Search fallback</dt>
+					<dd>{status.discovery.searchFallbackActive ? 'Yes' : 'No'}</dd>
 				</div>
 				<div>
 					<dt>Historical Search-fallback discoveries</dt>

@@ -11,6 +11,7 @@ import {
 } from './daemon-planner';
 import { insertDaemonDecision } from './db/daemon-decisions';
 import { finishJobRun, reconcileOrphanedJobRuns, startJobRun, updateJobRun } from './db/jobs';
+import { reconcileOrphanedSearchIngestStats } from './db/search-ingest';
 import { assertDatabaseReady, isDatabaseReady } from './db/ready';
 import { runArchiveCycle } from './workers/archive';
 import { runEnrichCycle } from './workers/enrich';
@@ -445,6 +446,11 @@ function reconcileOrphanedJobsOnce(): void {
 	if (count > 0) {
 		console.log(`[daemon] reconciled ${count} orphaned job_run(s)`);
 		appendLog(`[daemon] reconciled ${count} orphaned job_run(s)`);
+	}
+	const searchCount = reconcileOrphanedSearchIngestStats();
+	if (searchCount > 0) {
+		console.log(`[daemon] reconciled ${searchCount} orphaned search_ingest_stat(s)`);
+		appendLog(`[daemon] reconciled ${searchCount} orphaned search_ingest_stat(s)`);
 	}
 }
 
