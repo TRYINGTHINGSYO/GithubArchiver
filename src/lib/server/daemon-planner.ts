@@ -48,10 +48,15 @@ export function scoreAction(action: DaemonAction, backlog: BacklogSnapshot): num
 			return backlog.backfillPendingHours > 0 ? 90 + backlog.backfillPendingHours : 0;
 		case 'search_gap':
 			return backlog.currentHourSearchGap ? 85 : 0;
-		case 'enrich':
-			// High priority, but does not monopolize the planner over ingest.
+		case 'enrich': {
+			// High priority, but does not monopolize the planner over ingest —
+			// unless the enrich backlog is catastrophic (overnight drain).
 			if (backlog.unenriched <= 0) return 0;
-			return 120 + Math.min(40, Math.log10(backlog.unenriched + 1) * 10);
+			let score = 120 + Math.min(40, Math.log10(backlog.unenriched + 1) * 10);
+			if (backlog.unenriched >= 50_000) score += 80;
+			if (backlog.unenriched >= 200_000) score += 40;
+			return score;
+		}
 		case 'refresh':
 			return backlog.staleRefresh > 0 ? 50 + Math.log10(backlog.staleRefresh + 1) * 8 : 0;
 		case 'archive':
