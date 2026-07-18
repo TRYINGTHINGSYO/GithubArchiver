@@ -3,7 +3,7 @@ schema: 1
 id: decision-enrich-stage-timings
 date: 2026-07-18
 pr: 22
-commit: d6c1647
+commit: 5e6a396
 area:
   - enrichment
   - throughput
