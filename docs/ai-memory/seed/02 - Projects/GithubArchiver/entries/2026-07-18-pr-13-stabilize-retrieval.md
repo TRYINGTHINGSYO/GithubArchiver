@@ -3,7 +3,7 @@ schema: 1
 id: feature-stabilize-retrieval
 date: 2026-07-18
 pr: 13
-commit: null
+commit: ac157f3
 area:
   - memory
 type: feature

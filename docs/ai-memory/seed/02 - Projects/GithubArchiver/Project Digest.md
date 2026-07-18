@@ -53,7 +53,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
-- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `open` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `ac157f3` · `open` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
   - edges: supersedes:[`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), validates:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #12 · `fd2e4b7` · `open` · `memory` — [Multi-stage retrieval with typed edges and token budgets](entries/2026-07-18-pr-12-multistage-retrieval.md)
   - edges: supersedes:[`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), references:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
@@ -77,7 +77,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
-- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `open` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `ac157f3` · `open` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
   - edges: supersedes:[`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), validates:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #12 · `fd2e4b7` · `open` · `memory` — [Multi-stage retrieval with typed edges and token budgets](entries/2026-07-18-pr-12-multistage-retrieval.md)
   - edges: supersedes:[`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), references:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
