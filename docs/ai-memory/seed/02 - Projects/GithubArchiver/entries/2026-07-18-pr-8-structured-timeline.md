@@ -6,7 +6,7 @@ commit: feda976
 area:
   - memory
 type: feature
-status: open
+status: merged
 confidence: confirmed
 supersedes: feature-cursor-memory-rules
 related:

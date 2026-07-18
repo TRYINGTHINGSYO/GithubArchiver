@@ -6,7 +6,7 @@ commit: 9b0d012
 area:
   - memory
 type: feature
-status: open
+status: merged
 confidence: confirmed
 supersedes: feature-structured-timeline
 related:

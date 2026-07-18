@@ -6,7 +6,7 @@ commit: 6f5784c
 area:
   - memory
 type: feature
-status: open
+status: merged
 confidence: confirmed
 supersedes: feature-digest-knowledge-graph
 related:

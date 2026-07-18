@@ -6,7 +6,7 @@ commit: 5cc586d
 area:
   - memory
 type: feature
-status: open
+status: merged
 confidence: confirmed
 supersedes: null
 related:
