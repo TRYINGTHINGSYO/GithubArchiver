@@ -11,7 +11,17 @@ area:
 type: incident
 status: open
 confidence: confirmed
+durability: permanent
 supersedes: null
+relationships:
+  - type: caused-by
+    id: incident-gharchive-createevent
+  - type: references
+    id: migration-030
+  - type: related
+    id: decision-status-hierarchy
+  - type: implemented-by
+    id: pr-6
 related:
   - incident-gharchive-createevent
   - search-fallback

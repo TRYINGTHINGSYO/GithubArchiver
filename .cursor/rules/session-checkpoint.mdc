@@ -27,28 +27,29 @@ Do **not** rewrite old entries to change history. Add a new entry and set `super
 
 ```yaml
 ---
-id: incident-example                 # REQUIRED stable id
+id: incident-example
 date: 2026-07-18
-pr: 10
+pr: 12
 commit: abc1234
 area:
   - search
-  - daemon
-type: bugfix
+type: incident
 status: open
-confidence: confirmed                # confirmed | hypothesis | deprecated
-supersedes: null
-related:
-  - incident-gharchive-createevent
-  - migration-030
-  - pr-6
+confidence: confirmed
+durability: permanent
+relationships:
+  - type: caused-by
+    id: incident-gharchive-createevent
+  - type: implemented-by
+    id: pr-12
+  - type: references
+    id: migration-030
 title: Short headline
-migration: null
 ---
 ```
 
 Body: what / why / tests / remaining verification. No chat transcripts. No secrets.
-Use `confidence: hypothesis` for unproven investigations; `deprecated` when superseded.
+Use typed `relationships` (not only bare `related`). Set `durability` (`permanent` / `release` / `temporary` / `transient`).
 
 Regenerate derived views (never hand-edit them):
 

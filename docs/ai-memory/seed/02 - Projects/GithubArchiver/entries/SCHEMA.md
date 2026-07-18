@@ -6,63 +6,70 @@ type: meta
 
 # Checkpoint entry schema
 
-Every durable checkpoint is one markdown file in this folder with YAML frontmatter.
-Treat `entries/` as an **append-only event log**. Do not rewrite old entries to change history — add a new entry and point `supersedes` / `related` at the prior one.
+Append-only event log. Do not rewrite history — add a new entry and point typed edges at the prior one.
 
 ```yaml
 ---
-id: incident-gharchive-createevent   # REQUIRED stable id (survives renames)
-date: 2026-07-17
-pr: 3
-commit: e5476ac
+id: incident-search-fallback-stale    # REQUIRED stable id
+date: 2026-07-18
+pr: 6
+commit: 10cdc46
 area:
-  - search
   - search-fallback
 type: incident
-status: merged
+status: open
 confidence: confirmed                 # confirmed | hypothesis | deprecated
-supersedes: null
-related:
-  - migration-030
-  - search-fallback
-  - pr-6
+durability: permanent                 # transient | temporary | release | permanent
+relationships:
+  - type: caused-by
+    id: incident-gharchive-createevent
+  - type: implemented-by
+    id: pr-6
+  - type: references
+    id: migration-030
+  - type: validates
+    id: feature-memory-retrieval
 title: Short headline
-migration: 30
+migration: null
 ---
 ```
 
-## Types
+Legacy `related:` / `supersedes:` still work and are normalized into `relationships`.
 
-`decision` · `incident` · `migration` · `feature` · `bugfix` · `performance` · `refactor` · `test` · `release` · `technical-debt` · `research`
+## Relationship types
 
-## Status
-
-`merged` | `open` | `verified` | `superseded` | `open-debt`
-
-## Confidence
-
-| value | Meaning |
+| type | Meaning |
 | --- | --- |
-| `confirmed` | Verified production fact / shipped decision |
-| `hypothesis` | Investigation or unproven theory |
-| `deprecated` | Superseded or no longer operative |
+| `caused-by` | Root cause / prior incident |
+| `implemented-by` | PR or change that shipped it |
+| `supersedes` | Replaces prior knowledge |
+| `references` | Points at migration/doc/concept |
+| `validates` | Test or verification artifact |
+| `related` | Generic association |
 
-Retrieval down-ranks `deprecated` and `hypothesis` unless explicitly included.
+## Durability
 
-## Related graph
+| value | Typical use |
+| --- | --- |
+| `permanent` | Decisions, root-cause incidents, migrations |
+| `release` | Features / bugfixes tied to a ship |
+| `temporary` | Open debt, transitional state |
+| `transient` | Research / spikes |
 
-Prefer stable `id:` values in `related`. Also accepted: `pr-N`, `migration-NNN`, concept tags from `area:`.
+Project Digest prefers permanent; Current Status emphasizes temporary/open.
 
-## Tooling
+## Retrieval pipeline
 
-```bash
-npm run memory:timeline          # regenerate markdown views + index.json
-npm run memory:query -- "…"      # ranked graph retrieval (confirmed by default)
-npm run memory:query -- "…" --include-hypotheses
+```text
+Query → Stage1 candidates → Stage2 typed expand → Stage3 re-rank → budget assemble
 ```
 
-Retrieval score:
+```bash
+npm run memory:timeline
+npm run memory:query -- "search fallback"
+npm run memory:query -- "search fallback" --budget 6000
+npm run memory:query -- "search fallback" --follow caused-by,references
+```
 
-`concept(≤40) + edge(≤25) + confidence(≤15) + recency(≤10) + durability(≤5) + status(≤5)`
-
-Machine-readable index: `../index.json` (generated).
+Score: `concept + edge + confidence + recency + durability + status`  
+Default confidence filter: **confirmed only**.

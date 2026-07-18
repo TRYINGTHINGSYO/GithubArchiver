@@ -71,21 +71,26 @@ Primary generated artifacts:
 
 Plus convenience indexes (`PR Timeline.md`, `Production Incidents.md`, …) and `indexes/<type>.md`.
 
-### Retrieval (PR #10–#11)
+### Retrieval (PR #10–#12)
+
+Multi-stage pipeline (scales past naive full-graph walks):
+
+```text
+Query → candidates (top K) → typed expand → re-rank → token-budget assemble
+```
 
 ```bash
 npm run memory:query -- "search fallback"
+npm run memory:query -- "search fallback" --budget 6000
+npm run memory:query -- "search fallback" --follow caused-by,references
 npm run memory:query -- "search fallback" --include-hypotheses
-npm run memory:query -- incident-gharchive-createevent --json
 ```
 
-Walks stable ids + graph edges, then **ranks** hits:
+Typed edges (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`) let agents ask for root cause without treating every link equally. Explicit `durability` separates permanent knowledge from temporary status.
 
-`concept + edge distance + confidence + recency + durability + current-status boost`
+Default confidence filter: **confirmed only**.
 
-Default confidence filter: **confirmed only** (hypothesis/deprecated excluded unless opted in). Output is clustered by type so agents can stop after the top few scores.
-
-Principle: **make important things easy to rediscover** — generate views and query the graph; don’t expect the model to remember everything.
+Principle: **make important things easy to rediscover** — smarter retrieval beats a larger vault.
 
 ## What to store (and what not to)
 

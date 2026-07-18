@@ -34,15 +34,17 @@ function linkRef(ref: string, aliases: Map<string, MemoryEntry>): string {
 }
 
 function lineFor(e: MemoryEntry, aliases: Map<string, MemoryEntry>): string {
-	const bits = [`**${e.date}**`, `\`${e.type}\``, `\`${e.confidence}\``];
+	const bits = [`**${e.date}**`, `\`${e.type}\``, `\`${e.confidence}\``, `\`${e.durability}\``];
 	if (e.pr != null) bits.push(`PR #${e.pr}`);
 	if (e.commit) bits.push(`\`${e.commit}\``);
 	if (e.migration != null) bits.push(`migration ${e.migration}`);
 	bits.push(`\`${e.status}\``);
 	if (e.area.length) bits.push(e.area.map((a) => `\`${a}\``).join(', '));
 	let line = `- ${bits.join(' · ')} — [${e.title}](${e.relPath})`;
-	if (e.related.length) {
-		line += `\n  - related: ${e.related.map((r) => linkRef(r, aliases)).join(', ')}`;
+	if (e.relationships.length) {
+		line += `\n  - edges: ${e.relationships
+			.map((r) => `${r.type}:${linkRef(r.id, aliases)}`)
+			.join(', ')}`;
 	}
 	return line;
 }
@@ -228,11 +230,12 @@ function renderDigest(entries: MemoryEntry[], aliases: Map<string, MemoryEntry>)
 function renderKnowledgeGraph(entries: MemoryEntry[], aliases: Map<string, MemoryEntry>): string {
 	const lines = entries.map((e) => {
 		const rel =
-			e.related.length > 0
-				? e.related.map((r) => linkRef(r, aliases)).join(', ')
+			e.relationships.length > 0
+				? e.relationships
+						.map((r) => `\`${r.type}\` → ${linkRef(r.id, aliases)}`)
+						.join(', ')
 				: '_none_';
-		const supersedes = e.supersedes ? linkRef(e.supersedes, aliases) : '_none_';
-		return `- [\`${e.id}\`](${e.relPath}) (\`${e.type}\`, \`${e.confidence}\`) — ${e.title}\n  - related: ${rel}\n  - supersedes: ${supersedes}`;
+		return `- [\`${e.id}\`](${e.relPath}) (\`${e.type}\`, \`${e.confidence}\`, \`${e.durability}\`) — ${e.title}\n  - ${rel}`;
 	});
 
 	return [
@@ -247,7 +250,7 @@ function renderKnowledgeGraph(entries: MemoryEntry[], aliases: Map<string, Memor
 		'',
 		genBanner(),
 		'',
-		'Edges come from each entry’s `related` and `supersedes` fields. Prefer stable `id:` values in `related`.',
+		'Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).',
 		'',
 		...lines,
 		''

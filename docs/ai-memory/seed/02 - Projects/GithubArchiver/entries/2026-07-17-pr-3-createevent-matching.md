@@ -12,7 +12,15 @@ area:
 type: incident
 status: merged
 confidence: confirmed
+durability: permanent
 supersedes: null
+relationships:
+  - type: references
+    id: migration-030
+  - type: related
+    id: search-fallback
+  - type: implemented-by
+    id: pr-3
 related:
   - migration-030
   - search-fallback

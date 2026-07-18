@@ -1,5 +1,11 @@
 /**
- * Shared loader + retrieval scoring for GithubArchiver structured memory.
+ * Shared loader + multi-stage ranked retrieval for GithubArchiver memory.
+ *
+ * Pipeline:
+ *   Stage 1 — Candidate retrieval (top K by concept)
+ *   Stage 2 — Typed graph expansion (1–2 hops from candidates)
+ *   Stage 3 — Re-rank (full score model)
+ *   Assemble — fill token budget with minimal context
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -21,6 +27,17 @@ export const ENTRY_TYPES = [
 export type EntryType = (typeof ENTRY_TYPES)[number];
 export type EntryStatus = 'merged' | 'open' | 'verified' | 'superseded' | 'open-debt';
 export type Confidence = 'confirmed' | 'hypothesis' | 'deprecated';
+export type Durability = 'transient' | 'temporary' | 'release' | 'permanent';
+
+export const RELATION_TYPES = [
+	'caused-by',
+	'implemented-by',
+	'supersedes',
+	'references',
+	'validates',
+	'related'
+] as const;
+export type RelationType = (typeof RELATION_TYPES)[number];
 
 const TYPE_ALIASES: Record<string, EntryType> = {
 	architecture: 'decision',
@@ -29,6 +46,22 @@ const TYPE_ALIASES: Record<string, EntryType> = {
 };
 
 const CONFIDENCE_VALUES = new Set<Confidence>(['confirmed', 'hypothesis', 'deprecated']);
+const DURABILITY_VALUES = new Set<Durability>(['transient', 'temporary', 'release', 'permanent']);
+
+/** Prefer following these edges when expanding for root-cause style queries. */
+const EDGE_EXPAND_WEIGHT: Record<RelationType, number> = {
+	'caused-by': 1.0,
+	'implemented-by': 0.9,
+	supersedes: 0.85,
+	references: 0.7,
+	validates: 0.65,
+	related: 0.5
+};
+
+export interface Relationship {
+	type: RelationType;
+	id: string;
+}
 
 export interface MemoryEntry {
 	stem: string;
@@ -40,8 +73,10 @@ export interface MemoryEntry {
 	type: EntryType;
 	status: EntryStatus;
 	confidence: Confidence;
+	durability: Durability;
 	supersedes: string | null;
 	related: string[];
+	relationships: Relationship[];
 	title: string;
 	migration: number | null;
 	relPath: string;
@@ -58,12 +93,14 @@ export interface MemoryIndexFile {
 		type: EntryType;
 		status: EntryStatus;
 		confidence: Confidence;
+		durability: Durability;
 		date: string;
 		pr: number | null;
 		commit: string | null;
 		migration: number | null;
 		area: string[];
 		related: string[];
+		relationships: Relationship[];
 		supersedes: string | null;
 		title: string;
 		path: string;
@@ -87,6 +124,7 @@ export interface QueryHit {
 	breakdown: ScoreBreakdown;
 	via: string;
 	depth: number;
+	edgeType?: RelationType;
 }
 
 export function defaultMemoryRoot(): string {
@@ -105,6 +143,12 @@ function parseScalar(raw: string): string | number | null {
 	return v;
 }
 
+/**
+ * Minimal YAML frontmatter parser supporting:
+ * - scalars
+ * - lists of scalars
+ * - lists of maps (for relationships)
+ */
 export function parseFrontmatter(text: string): { fm: Record<string, unknown>; body: string } {
 	if (!text.startsWith('---\n')) throw new Error('missing frontmatter open');
 	const end = text.indexOf('\n---\n', 4);
@@ -113,14 +157,39 @@ export function parseFrontmatter(text: string): { fm: Record<string, unknown>; b
 	const body = text.slice(end + 5).trim();
 	const out: Record<string, unknown> = {};
 	let listKey: string | null = null;
+	let currentObj: Record<string, unknown> | null = null;
+
+	const flushObj = () => {
+		if (!listKey || !currentObj) return;
+		const arr = (out[listKey] as unknown[]) ?? [];
+		arr.push(currentObj);
+		out[listKey] = arr;
+		currentObj = null;
+	};
+
 	for (const line of block.split('\n')) {
 		if (/^\s+-\s+/.test(line) && listKey) {
-			const item = parseScalar(line.replace(/^\s+-\s+/, ''));
+			const rest = line.replace(/^\s+-\s+/, '');
+			const objStart = rest.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
+			if (objStart && (objStart[1] === 'type' || objStart[1] === 'id')) {
+				flushObj();
+				currentObj = { [objStart[1]]: parseScalar(objStart[2]) };
+				continue;
+			}
+			flushObj();
 			const arr = (out[listKey] as unknown[]) ?? [];
-			arr.push(item);
+			arr.push(parseScalar(rest));
 			out[listKey] = arr;
 			continue;
 		}
+
+		if (currentObj && /^\s{2,}([A-Za-z0-9_]+):\s*(.*)$/.test(line)) {
+			const m = line.match(/^\s{2,}([A-Za-z0-9_]+):\s*(.*)$/)!;
+			currentObj[m[1]] = parseScalar(m[2]);
+			continue;
+		}
+
+		flushObj();
 		listKey = null;
 		const m = line.match(/^([A-Za-z0-9_]+):\s*(.*)$/);
 		if (!m) continue;
@@ -132,6 +201,7 @@ export function parseFrontmatter(text: string): { fm: Record<string, unknown>; b
 		}
 		out[key] = parseScalar(rest);
 	}
+	flushObj();
 	return { fm: out, body };
 }
 
@@ -162,6 +232,84 @@ function inferConfidence(fm: Record<string, unknown>, status: EntryStatus): Conf
 	return 'confirmed';
 }
 
+function inferDurability(fm: Record<string, unknown>, type: EntryType): Durability {
+	if (fm.durability != null) {
+		const d = String(fm.durability) as Durability;
+		if (!DURABILITY_VALUES.has(d)) throw new Error(`invalid durability: ${fm.durability}`);
+		return d;
+	}
+	switch (type) {
+		case 'decision':
+		case 'incident':
+		case 'migration':
+			return 'permanent';
+		case 'technical-debt':
+			return 'temporary';
+		case 'research':
+			return 'transient';
+		case 'release':
+			return 'release';
+		default:
+			return 'release';
+	}
+}
+
+function normalizeRelationships(fm: Record<string, unknown>): {
+	relationships: Relationship[];
+	related: string[];
+	supersedes: string | null;
+} {
+	const relationships: Relationship[] = [];
+	const relatedIds = new Set<string>();
+
+	const rawRels = Array.isArray(fm.relationships) ? fm.relationships : [];
+	for (const item of rawRels) {
+		if (typeof item === 'string') {
+			const m = item.match(/^([a-z-]+):(.+)$/);
+			if (m && (RELATION_TYPES as readonly string[]).includes(m[1])) {
+				relationships.push({ type: m[1] as RelationType, id: m[2].trim() });
+				relatedIds.add(m[2].trim());
+			} else {
+				relationships.push({ type: 'related', id: item });
+				relatedIds.add(item);
+			}
+			continue;
+		}
+		if (item && typeof item === 'object') {
+			const obj = item as Record<string, unknown>;
+			const type = String(obj.type ?? 'related') as RelationType;
+			const id = String(obj.id ?? '');
+			if (!id) continue;
+			if (!(RELATION_TYPES as readonly string[]).includes(type)) {
+				throw new Error(`invalid relationship type: ${type}`);
+			}
+			relationships.push({ type, id });
+			relatedIds.add(id);
+		}
+	}
+
+	const legacyRelated = Array.isArray(fm.related) ? fm.related.map(String) : [];
+	for (const id of legacyRelated) {
+		if (!relatedIds.has(id)) {
+			relationships.push({ type: 'related', id });
+			relatedIds.add(id);
+		}
+	}
+
+	let supersedes = fm.supersedes == null ? null : String(fm.supersedes);
+	if (supersedes) {
+		if (!relationships.some((r) => r.type === 'supersedes' && r.id === supersedes)) {
+			relationships.push({ type: 'supersedes', id: supersedes });
+			relatedIds.add(supersedes);
+		}
+	} else {
+		const edge = relationships.find((r) => r.type === 'supersedes');
+		if (edge) supersedes = edge.id;
+	}
+
+	return { relationships, related: [...relatedIds], supersedes };
+}
+
 export function loadMemoryEntries(root: string = defaultMemoryRoot()): MemoryEntry[] {
 	const entriesDir = join(root, 'entries');
 	const files = readdirSync(entriesDir)
@@ -177,7 +325,6 @@ export function loadMemoryEntries(root: string = defaultMemoryRoot()): MemoryEnt
 		const type = normalizeType(String(fm.type));
 		const status = String(fm.status) as EntryStatus;
 		const area = Array.isArray(fm.area) ? fm.area.map(String) : [];
-		const related = Array.isArray(fm.related) ? fm.related.map(String) : [];
 		if (fm.id == null || String(fm.id).trim() === '') {
 			throw new Error(`${file}: stable id: is required`);
 		}
@@ -188,6 +335,7 @@ export function loadMemoryEntries(root: string = defaultMemoryRoot()): MemoryEnt
 		if (!title) throw new Error(`${file}: title required`);
 		const date = String(fm.date);
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`${file}: date must be YYYY-MM-DD`);
+		const { relationships, related, supersedes } = normalizeRelationships(fm);
 
 		entries.push({
 			stem,
@@ -199,8 +347,10 @@ export function loadMemoryEntries(root: string = defaultMemoryRoot()): MemoryEnt
 			type,
 			status,
 			confidence: inferConfidence(fm, status),
-			supersedes: fm.supersedes == null ? null : String(fm.supersedes),
+			durability: inferDurability(fm, type),
+			supersedes,
 			related,
+			relationships,
 			title,
 			migration: fm.migration == null ? null : Number(fm.migration),
 			relPath: `entries/${file}`,
@@ -255,12 +405,14 @@ export function toMemoryIndex(entries: MemoryEntry[], generatedAt = new Date().t
 			type: e.type,
 			status: e.status,
 			confidence: e.confidence,
+			durability: e.durability,
 			date: e.date,
 			pr: e.pr,
 			commit: e.commit,
 			migration: e.migration,
 			area: e.area,
 			related: e.related,
+			relationships: e.relationships,
 			supersedes: e.supersedes,
 			title: e.title,
 			path: e.relPath,
@@ -277,7 +429,11 @@ export function tokenizeQuery(q: string): string[] {
 		.filter((t) => t.length >= 2);
 }
 
-/** Concept match component: 0–40 */
+/** Rough token estimate for budget assembly (~4 chars/token). */
+export function estimateTokens(text: string): number {
+	return Math.max(1, Math.ceil(text.length / 4));
+}
+
 export function scoreConceptMatch(entry: MemoryEntry, tokens: string[], queryRaw: string): number {
 	if (tokens.length === 0 && !queryRaw.trim()) return 0;
 	let raw = 0;
@@ -308,7 +464,6 @@ export function scoreConceptMatch(entry: MemoryEntry, tokens: string[], queryRaw
 	return Math.min(40, raw);
 }
 
-/** Edge distance component: depth 0 → 25, then decays */
 export function scoreEdgeDistance(depth: number): number {
 	if (depth <= 0) return 25;
 	if (depth === 1) return 14;
@@ -317,7 +472,6 @@ export function scoreEdgeDistance(depth: number): number {
 	return 1;
 }
 
-/** Confidence component: 0–15 */
 export function scoreConfidence(confidence: Confidence): number {
 	switch (confidence) {
 		case 'confirmed':
@@ -329,7 +483,6 @@ export function scoreConfidence(confidence: Confidence): number {
 	}
 }
 
-/** Recency component: 0–10 relative to newest entry date */
 export function scoreRecency(entry: MemoryEntry, newestMs: number): number {
 	const ageDays = Math.max(0, (newestMs - Date.parse(entry.date)) / 86_400_000);
 	if (ageDays <= 2) return 10;
@@ -339,30 +492,20 @@ export function scoreRecency(entry: MemoryEntry, newestMs: number): number {
 	return 1;
 }
 
-/** Durability component: 0–5 — enduring knowledge ranks above transient work */
-export function scoreDurability(type: EntryType): number {
-	switch (type) {
-		case 'decision':
+/** Durability score component from explicit metadata (0–5). */
+export function scoreDurabilityMeta(durability: Durability): number {
+	switch (durability) {
+		case 'permanent':
 			return 5;
-		case 'incident':
-		case 'migration':
-			return 4;
-		case 'technical-debt':
-			return 3;
-		case 'feature':
-		case 'bugfix':
-		case 'performance':
-			return 2;
-		case 'refactor':
-		case 'test':
 		case 'release':
-			return 1;
-		case 'research':
+			return 3;
+		case 'temporary':
+			return 2;
+		case 'transient':
 			return 1;
 	}
 }
 
-/** Current-status boost: 0–5 */
 export function scoreStatusBoost(status: EntryStatus): number {
 	switch (status) {
 		case 'open':
@@ -383,58 +526,86 @@ export function composeScore(parts: Omit<ScoreBreakdown, 'total'>): ScoreBreakdo
 	return { ...parts, total };
 }
 
-function neighborsOf(entry: MemoryEntry, entries: MemoryEntry[], aliases: Map<string, MemoryEntry>): MemoryEntry[] {
-	const ids = new Set<string>();
-	const out: MemoryEntry[] = [];
-	const push = (ref: string) => {
-		const hit = resolveRef(ref, aliases);
-		if (hit && !ids.has(hit.id)) {
-			ids.add(hit.id);
-			out.push(hit);
-		}
-	};
+function outgoingEdges(entry: MemoryEntry): Relationship[] {
+	return entry.relationships;
+}
 
-	for (const r of entry.related) push(r);
-	if (entry.supersedes) push(entry.supersedes);
-
+function incomingEdges(
+	entry: MemoryEntry,
+	entries: MemoryEntry[]
+): Array<Relationship & { from: string }> {
+	const out: Array<Relationship & { from: string }> = [];
 	for (const other of entries) {
-		if (other.id === entry.id) continue;
-		const pointsHere =
-			other.related.includes(entry.id) ||
-			other.supersedes === entry.id ||
-			(entry.pr != null && other.related.includes(`pr-${entry.pr}`)) ||
-			(entry.migration != null &&
-				(other.related.includes(`migration-${entry.migration}`) ||
-					other.related.includes(`migration-${String(entry.migration).padStart(3, '0')}`)));
-		if (pointsHere) push(other.id);
+		for (const rel of other.relationships) {
+			if (
+				rel.id === entry.id ||
+				(entry.pr != null && rel.id === `pr-${entry.pr}`) ||
+				(entry.migration != null &&
+					(rel.id === `migration-${entry.migration}` ||
+						rel.id === `migration-${String(entry.migration).padStart(3, '0')}`))
+			) {
+				out.push({ ...rel, from: other.id });
+			}
+		}
 	}
 	return out;
 }
 
 export interface QueryOptions {
 	depth?: number;
+	/** Stage 1 candidate pool size */
+	candidates?: number;
+	/** Final ranked hits if no token budget */
 	limit?: number;
-	/** Default false — confirmed only */
 	includeHypotheses?: boolean;
-	/** Default false */
 	includeDeprecated?: boolean;
+	/** Prefer following these edge types during expansion */
+	follow?: RelationType[];
+	/** Approximate token budget for assembled context (chars/4) */
+	budget?: number;
+}
+
+export interface QueryResult {
+	hits: QueryHit[];
+	candidates: QueryHit[];
+	assembled: QueryHit[];
+	tokensUsed: number;
+	budget: number | null;
+	stages: {
+		candidates: number;
+		expanded: number;
+		ranked: number;
+		assembled: number;
+	};
 }
 
 /**
- * Ranked retrieval:
- * score = concept + edge distance + confidence + recency + durability + status boost
- *
- * Default returns confirmed knowledge only.
+ * Multi-stage retrieval:
+ * 1) Candidate retrieval by concept
+ * 2) Typed graph expansion from top candidates
+ * 3) Full re-rank
+ * 4) Optional token-budget assembly
  */
 export function queryMemory(
 	entries: MemoryEntry[],
 	query: string,
 	opts: QueryOptions = {}
 ): QueryHit[] {
+	return queryMemoryDetailed(entries, query, opts).assembled;
+}
+
+export function queryMemoryDetailed(
+	entries: MemoryEntry[],
+	query: string,
+	opts: QueryOptions = {}
+): QueryResult {
 	const depth = opts.depth ?? 2;
+	const candidateN = opts.candidates ?? 20;
 	const limit = opts.limit ?? 8;
 	const includeHypotheses = opts.includeHypotheses ?? false;
 	const includeDeprecated = opts.includeDeprecated ?? false;
+	const follow = new Set(opts.follow ?? RELATION_TYPES);
+	const budget = opts.budget ?? null;
 	const aliases = buildAliasIndex(entries);
 	const tokens = tokenizeQuery(query);
 	const newestMs = Math.max(...entries.map((e) => Date.parse(e.date)), Date.now());
@@ -446,22 +617,51 @@ export function queryMemory(
 	};
 
 	const direct = aliases.get(query.trim()) ?? aliases.get(query.trim().toLowerCase());
-	const conceptById = new Map<string, number>();
+
+	// ----- Stage 1: candidate retrieval -----
+	const stage1: QueryHit[] = [];
 	for (const e of entries) {
 		if (!allowed(e)) continue;
 		let concept = scoreConceptMatch(e, tokens, query);
 		if (direct?.id === e.id) concept = Math.max(concept, 40);
-		if (concept > 0) conceptById.set(e.id, concept);
+		if (concept <= 0) continue;
+		const breakdown = composeScore({
+			concept,
+			edge: scoreEdgeDistance(0),
+			confidence: scoreConfidence(e.confidence),
+			recency: scoreRecency(e, newestMs),
+			durability: scoreDurabilityMeta(e.durability),
+			status: scoreStatusBoost(e.status)
+		});
+		stage1.push({
+			entry: e,
+			score: breakdown.total,
+			breakdown,
+			via: 'stage1:match',
+			depth: 0
+		});
 	}
+	stage1.sort((a, b) => b.breakdown.concept - a.breakdown.concept || b.score - a.score);
+	const candidates = stage1.slice(0, candidateN);
 
-	// BFS from concept seeds — track minimum graph distance + provenance.
-	type Reach = { depth: number; via: string };
+	// ----- Stage 2: typed graph expansion -----
+	type Reach = { depth: number; via: string; edgeType?: RelationType; seedConcept: number };
 	const reach = new Map<string, Reach>();
-	const queue: Array<{ id: string; depth: number; via: string }> = [];
+	const queue: Array<{ id: string; depth: number; via: string; edgeType?: RelationType; seedConcept: number }> =
+		[];
 
-	for (const id of conceptById.keys()) {
-		reach.set(id, { depth: 0, via: 'match' });
-		queue.push({ id, depth: 0, via: 'match' });
+	for (const c of candidates) {
+		reach.set(c.entry.id, {
+			depth: 0,
+			via: 'stage1:match',
+			seedConcept: c.breakdown.concept
+		});
+		queue.push({
+			id: c.entry.id,
+			depth: 0,
+			via: 'stage1:match',
+			seedConcept: c.breakdown.concept
+		});
 	}
 
 	while (queue.length) {
@@ -469,43 +669,134 @@ export function queryMemory(
 		if (cur.depth >= depth) continue;
 		const entry = aliases.get(cur.id);
 		if (!entry) continue;
-		for (const next of neighborsOf(entry, entries, aliases)) {
-			if (!allowed(next)) continue;
+
+		const outs = outgoingEdges(entry)
+			.filter((r) => follow.has(r.type))
+			.sort((a, b) => EDGE_EXPAND_WEIGHT[b.type] - EDGE_EXPAND_WEIGHT[a.type]);
+
+		for (const rel of outs) {
+			const next = resolveRef(rel.id, aliases);
+			if (!next || !allowed(next)) continue;
 			const nextDepth = cur.depth + 1;
 			const prev = reach.get(next.id);
 			if (prev && prev.depth <= nextDepth) continue;
-			reach.set(next.id, { depth: nextDepth, via: `related:${entry.id}` });
-			queue.push({ id: next.id, depth: nextDepth, via: `related:${entry.id}` });
+			reach.set(next.id, {
+				depth: nextDepth,
+				via: `${rel.type}:${entry.id}`,
+				edgeType: rel.type,
+				seedConcept: cur.seedConcept
+			});
+			queue.push({
+				id: next.id,
+				depth: nextDepth,
+				via: `${rel.type}:${entry.id}`,
+				edgeType: rel.type,
+				seedConcept: cur.seedConcept
+			});
+		}
+
+		// Reverse edges (who points here) — useful for implemented-by / validates.
+		for (const rel of incomingEdges(entry, entries)) {
+			if (!follow.has(rel.type)) continue;
+			const next = aliases.get(rel.from);
+			if (!next || !allowed(next)) continue;
+			const nextDepth = cur.depth + 1;
+			const prev = reach.get(next.id);
+			if (prev && prev.depth <= nextDepth) continue;
+			reach.set(next.id, {
+				depth: nextDepth,
+				via: `inv-${rel.type}:${entry.id}`,
+				edgeType: rel.type,
+				seedConcept: cur.seedConcept
+			});
+			queue.push({
+				id: next.id,
+				depth: nextDepth,
+				via: `inv-${rel.type}:${entry.id}`,
+				edgeType: rel.type,
+				seedConcept: cur.seedConcept
+			});
 		}
 	}
 
-	const hits: QueryHit[] = [];
+	// ----- Stage 3: re-rank -----
+	const ranked: QueryHit[] = [];
 	for (const [id, r] of reach) {
 		const entry = aliases.get(id);
 		if (!entry) continue;
-		// Intrinsic concept for seeds; small residual for edge-only nodes so they can still rank.
-		const concept = conceptById.get(id) ?? Math.max(4, 12 - r.depth * 3);
+		const intrinsic = scoreConceptMatch(entry, tokens, query);
+		const concept =
+			intrinsic > 0 ? intrinsic : Math.max(4, Math.min(16, r.seedConcept * 0.35 - r.depth * 2));
+		const edgeBoost =
+			r.edgeType && r.depth > 0 ? EDGE_EXPAND_WEIGHT[r.edgeType] * 2 : 0;
 		const breakdown = composeScore({
 			concept: Math.min(40, concept),
-			edge: scoreEdgeDistance(r.depth),
+			edge: Math.min(25, scoreEdgeDistance(r.depth) + edgeBoost),
 			confidence: scoreConfidence(entry.confidence),
 			recency: scoreRecency(entry, newestMs),
-			durability: scoreDurability(entry.type),
+			durability: scoreDurabilityMeta(entry.durability),
 			status: scoreStatusBoost(entry.status)
 		});
-		hits.push({
+		ranked.push({
 			entry,
 			score: breakdown.total,
 			breakdown,
 			via: r.via,
-			depth: r.depth
+			depth: r.depth,
+			edgeType: r.edgeType
 		});
 	}
+	ranked.sort((a, b) => b.score - a.score || (a.entry.date < b.entry.date ? 1 : -1));
 
-	return hits.sort((a, b) => b.score - a.score || (a.entry.date < b.entry.date ? 1 : -1)).slice(0, limit);
+	// ----- Assemble under token budget -----
+	const pool = ranked.slice(0, Math.max(limit, budget ? 50 : limit));
+	const assembled: QueryHit[] = [];
+	let tokensUsed = 0;
+	const headerTax = 40;
+
+	if (budget != null && budget > 0) {
+		tokensUsed = headerTax;
+		for (const h of pool) {
+			const chunk = formatHitChunk(h);
+			const cost = estimateTokens(chunk);
+			if (assembled.length > 0 && tokensUsed + cost > budget) break;
+			assembled.push(h);
+			tokensUsed += cost;
+			if (assembled.length >= limit && tokensUsed >= budget * 0.9) break;
+		}
+	} else {
+		assembled.push(...ranked.slice(0, limit));
+		tokensUsed = estimateTokens(assembled.map(formatHitChunk).join('\n'));
+	}
+
+	return {
+		hits: ranked,
+		candidates,
+		assembled,
+		tokensUsed,
+		budget,
+		stages: {
+			candidates: candidates.length,
+			expanded: reach.size,
+			ranked: ranked.length,
+			assembled: assembled.length
+		}
+	};
 }
 
-/** Group hits for human/agent presentation around concept types. */
+export function formatHitChunk(h: QueryHit): string {
+	const e = h.entry;
+	const parts = [
+		`## ${e.type}: ${e.title}`,
+		`id: ${e.id}`,
+		`confidence: ${e.confidence}`,
+		`durability: ${e.durability}`,
+		e.summary,
+		e.relationships.map((r) => `${r.type}:${r.id}`).join(', ')
+	];
+	return parts.filter(Boolean).join('\n');
+}
+
 export function clusterHits(hits: QueryHit[]): Map<string, QueryHit[]> {
 	const order = [
 		'decision',
@@ -531,4 +822,12 @@ export function clusterHits(hits: QueryHit[]): Map<string, QueryHit[]> {
 		if (v.length === 0) map.delete(k);
 	}
 	return map;
+}
+
+/** Follow caused-by edges to surface root-cause entries. */
+export function rootCauses(entry: MemoryEntry, aliases: Map<string, MemoryEntry>): MemoryEntry[] {
+	return entry.relationships
+		.filter((r) => r.type === 'caused-by')
+		.map((r) => resolveRef(r.id, aliases))
+		.filter((e): e is MemoryEntry => Boolean(e));
 }

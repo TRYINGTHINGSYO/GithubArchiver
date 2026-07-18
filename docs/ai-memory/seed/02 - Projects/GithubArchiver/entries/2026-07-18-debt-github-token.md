@@ -10,7 +10,13 @@ area:
 type: technical-debt
 status: open-debt
 confidence: confirmed
+durability: temporary
 supersedes: null
+relationships:
+  - type: related
+    id: search-fallback
+  - type: related
+    id: enrichment
 related:
   - search-fallback
   - enrichment

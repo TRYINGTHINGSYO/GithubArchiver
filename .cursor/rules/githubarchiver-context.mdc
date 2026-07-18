@@ -15,13 +15,14 @@ If context is tight, read **only**:
 
 (or `docs/ai-memory/seed/02 - Projects/GithubArchiver/Project Digest.md`)
 
-For a focused topic, prefer ranked retrieval over loading many notes:
+For a focused topic, prefer multi-stage retrieval over loading many notes:
 
 ```bash
-npm run memory:query -- "search fallback"
+npm run memory:query -- "search fallback" --budget 6000
 ```
 
-Default: **confirmed only**. Add `--include-hypotheses` for investigations. Use the scoreboard and stop after the top few hits; do not load the entire connected component.
+Pipeline: candidates → typed graph expand → re-rank → assemble under token budget.  
+Default: **confirmed only**. Use `--follow caused-by` when you need root cause. Do not load the entire vault.
 
 Otherwise, before architectural or pipeline changes, read:
 

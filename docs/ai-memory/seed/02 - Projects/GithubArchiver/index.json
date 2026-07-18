@@ -1,13 +1,56 @@
 {
   "generated": true,
-  "generatedAt": "2026-07-18T01:33:10.313Z",
+  "generatedAt": "2026-07-18T01:44:17.024Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-multistage-retrieval",
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": 12,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "memory"
+      ],
+      "related": [
+        "feature-retrieval-scoring",
+        "feature-memory-retrieval",
+        "incident-search-fallback-stale",
+        "memory"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "feature-retrieval-scoring"
+        },
+        {
+          "type": "references",
+          "id": "feature-memory-retrieval"
+        },
+        {
+          "type": "related",
+          "id": "incident-search-fallback-stale"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        }
+      ],
+      "supersedes": "feature-retrieval-scoring",
+      "title": "Multi-stage retrieval with typed edges and token budgets",
+      "path": "entries/2026-07-18-pr-12-multistage-retrieval.md",
+      "summary": "Retrieval pipeline:"
+    },
     {
       "id": "feature-retrieval-scoring",
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
+      "durability": "release",
       "date": "2026-07-18",
       "pr": 11,
       "commit": "5972b3c",
@@ -23,6 +66,36 @@
         "search-fallback",
         "memory"
       ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "feature-memory-retrieval"
+        },
+        {
+          "type": "related",
+          "id": "incident-search-fallback-stale"
+        },
+        {
+          "type": "related",
+          "id": "incident-gharchive-createevent"
+        },
+        {
+          "type": "related",
+          "id": "decision-status-hierarchy"
+        },
+        {
+          "type": "related",
+          "id": "search-fallback"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        },
+        {
+          "type": "supersedes",
+          "id": "feature-memory-retrieval"
+        }
+      ],
       "supersedes": "feature-memory-retrieval",
       "title": "Ranked retrieval scoring model for memory query",
       "path": "entries/2026-07-18-pr-11-retrieval-scoring.md",
@@ -33,6 +106,7 @@
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
+      "durability": "release",
       "date": "2026-07-18",
       "pr": 10,
       "commit": "6f5784c",
@@ -50,6 +124,44 @@
         "search-fallback",
         "memory"
       ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "feature-digest-knowledge-graph"
+        },
+        {
+          "type": "related",
+          "id": "feature-structured-timeline"
+        },
+        {
+          "type": "related",
+          "id": "feature-retrieval-scoring"
+        },
+        {
+          "type": "related",
+          "id": "incident-search-fallback-stale"
+        },
+        {
+          "type": "related",
+          "id": "incident-gharchive-createevent"
+        },
+        {
+          "type": "related",
+          "id": "migration-030"
+        },
+        {
+          "type": "related",
+          "id": "search-fallback"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        },
+        {
+          "type": "supersedes",
+          "id": "feature-digest-knowledge-graph"
+        }
+      ],
       "supersedes": "feature-digest-knowledge-graph",
       "title": "Memory retrieval layer with index.json and graph query",
       "path": "entries/2026-07-18-pr-10-memory-retrieval.md",
@@ -60,6 +172,7 @@
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
+      "durability": "release",
       "date": "2026-07-18",
       "pr": 9,
       "commit": "9b0d012",
@@ -72,7 +185,34 @@
         "pr-8",
         "pr-10",
         "memory",
-        "decision-status-hierarchy"
+        "decision-status-hierarchy",
+        "feature-structured-timeline"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "pr-7"
+        },
+        {
+          "type": "related",
+          "id": "pr-8"
+        },
+        {
+          "type": "related",
+          "id": "pr-10"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        },
+        {
+          "type": "related",
+          "id": "decision-status-hierarchy"
+        },
+        {
+          "type": "supersedes",
+          "id": "feature-structured-timeline"
+        }
       ],
       "supersedes": "feature-structured-timeline",
       "title": "Richer entry types, related graph, and Project Digest",
@@ -84,6 +224,7 @@
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
+      "durability": "release",
       "date": "2026-07-18",
       "pr": 8,
       "commit": "feda976",
@@ -94,7 +235,26 @@
       "related": [
         "pr-7",
         "pr-9",
-        "memory"
+        "memory",
+        "feature-cursor-memory-rules"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "pr-7"
+        },
+        {
+          "type": "related",
+          "id": "pr-9"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        },
+        {
+          "type": "supersedes",
+          "id": "feature-cursor-memory-rules"
+        }
       ],
       "supersedes": "feature-cursor-memory-rules",
       "title": "Structured checkpoint metadata and generated project timeline",
@@ -106,6 +266,7 @@
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
+      "durability": "release",
       "date": "2026-07-18",
       "pr": 7,
       "commit": "5cc586d",
@@ -118,6 +279,20 @@
         "pr-9",
         "memory"
       ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "pr-8"
+        },
+        {
+          "type": "related",
+          "id": "pr-9"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        }
+      ],
       "supersedes": null,
       "title": "Cursor Project Rules + AI memory seed vault",
       "path": "entries/2026-07-18-pr-7-cursor-memory-rules.md",
@@ -128,6 +303,7 @@
       "type": "incident",
       "status": "open",
       "confidence": "confirmed",
+      "durability": "permanent",
       "date": "2026-07-18",
       "pr": 6,
       "commit": "10cdc46",
@@ -140,9 +316,32 @@
       ],
       "related": [
         "incident-gharchive-createevent",
-        "search-fallback",
+        "migration-030",
         "decision-status-hierarchy",
-        "migration-030"
+        "pr-6",
+        "search-fallback"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-gharchive-createevent"
+        },
+        {
+          "type": "references",
+          "id": "migration-030"
+        },
+        {
+          "type": "related",
+          "id": "decision-status-hierarchy"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-6"
+        },
+        {
+          "type": "related",
+          "id": "search-fallback"
+        }
       ],
       "supersedes": null,
       "title": "Search fallback active must reflect live execution only",
@@ -154,6 +353,7 @@
       "type": "decision",
       "status": "verified",
       "confidence": "confirmed",
+      "durability": "permanent",
       "date": "2026-07-18",
       "pr": 5,
       "commit": "12f7ae4",
@@ -165,9 +365,32 @@
       ],
       "related": [
         "bugfix-activity-copy",
-        "pr-6",
         "search-fallback",
+        "pr-5",
+        "pr-6",
         "status-ui"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "bugfix-activity-copy"
+        },
+        {
+          "type": "related",
+          "id": "search-fallback"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-5"
+        },
+        {
+          "type": "related",
+          "id": "pr-6"
+        },
+        {
+          "type": "related",
+          "id": "status-ui"
+        }
       ],
       "supersedes": null,
       "title": "Shared status hierarchy and clearer discovery/job semantics",
@@ -179,6 +402,7 @@
       "type": "bugfix",
       "status": "merged",
       "confidence": "confirmed",
+      "durability": "release",
       "date": "2026-07-18",
       "pr": 4,
       "commit": "ab47863",
@@ -192,6 +416,20 @@
         "status-ui",
         "enrichment"
       ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "pr-5"
+        },
+        {
+          "type": "related",
+          "id": "status-ui"
+        },
+        {
+          "type": "related",
+          "id": "enrichment"
+        }
+      ],
       "supersedes": null,
       "title": "Fix activity bar copy so enrichment is not labeled as Search",
       "path": "entries/2026-07-18-pr-4-activity-copy.md",
@@ -202,6 +440,7 @@
       "type": "technical-debt",
       "status": "open-debt",
       "confidence": "confirmed",
+      "durability": "temporary",
       "date": "2026-07-18",
       "pr": null,
       "commit": null,
@@ -215,6 +454,16 @@
         "search-fallback",
         "enrichment"
       ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "search-fallback"
+        },
+        {
+          "type": "related",
+          "id": "enrichment"
+        }
+      ],
       "supersedes": null,
       "title": "Production Railway needs a real GITHUB_TOKEN",
       "path": "entries/2026-07-18-debt-github-token.md",
@@ -225,6 +474,7 @@
       "type": "incident",
       "status": "merged",
       "confidence": "confirmed",
+      "durability": "permanent",
       "date": "2026-07-17",
       "pr": 3,
       "commit": "e5476ac",
@@ -239,7 +489,26 @@
       "related": [
         "migration-030",
         "search-fallback",
+        "pr-3",
         "pr-6"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "migration-030"
+        },
+        {
+          "type": "related",
+          "id": "search-fallback"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-3"
+        },
+        {
+          "type": "related",
+          "id": "pr-6"
+        }
       ],
       "supersedes": null,
       "title": "Fix GH Archive CreateEvent matching (0 repo creates bug)",
@@ -251,6 +520,7 @@
       "type": "incident",
       "status": "merged",
       "confidence": "confirmed",
+      "durability": "permanent",
       "date": "2026-07-17",
       "pr": 2,
       "commit": "269732c",
@@ -265,6 +535,20 @@
         "daemon",
         "enrichment"
       ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "migration-029"
+        },
+        {
+          "type": "related",
+          "id": "daemon"
+        },
+        {
+          "type": "related",
+          "id": "enrichment"
+        }
+      ],
       "supersedes": null,
       "title": "Fix backlog-sleep 300s stall and all-urgent enrichment tiers",
       "path": "entries/2026-07-17-pr-2-backlog-sleep-tiers.md",
@@ -275,6 +559,7 @@
       "type": "feature",
       "status": "merged",
       "confidence": "confirmed",
+      "durability": "release",
       "date": "2026-07-17",
       "pr": 1,
       "commit": "68e7572",
@@ -287,6 +572,16 @@
       "related": [
         "daemon",
         "discovery"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "daemon"
+        },
+        {
+          "type": "related",
+          "id": "discovery"
+        }
       ],
       "supersedes": null,
       "title": "Complete autonomous discovery pipeline in production daemon",

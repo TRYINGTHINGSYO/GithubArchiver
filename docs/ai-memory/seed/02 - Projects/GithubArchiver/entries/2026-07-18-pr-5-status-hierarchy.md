@@ -10,7 +10,15 @@ area:
 type: decision
 status: verified
 confidence: confirmed
+durability: permanent
 supersedes: null
+relationships:
+  - type: references
+    id: bugfix-activity-copy
+  - type: related
+    id: search-fallback
+  - type: implemented-by
+    id: pr-5
 related:
   - bugfix-activity-copy
   - pr-6

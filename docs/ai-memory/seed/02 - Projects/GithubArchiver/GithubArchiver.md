@@ -29,9 +29,9 @@ npm run memory:timeline
 
 1. [[Project Digest]] — if only one file fits
 2. [[Current Status]] — open work / debt / recent merges
-3. `npm run memory:query -- "<topic>"` — minimal graph cluster for the task
+3. `npm run memory:query -- "<topic>" --budget 6000` — multi-stage ranked context
 4. [[Timeline]] / [[Knowledge Graph]] / `index.json` — deeper history
-5. [[Decisions]] / [[Architecture]] — enduring principles
+5. [[Decisions]] / [[Architecture]] — enduring principles (prefer `durability: permanent`)
 
 ## Current Operating Principles
 
