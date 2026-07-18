@@ -476,3 +476,9 @@ export function ensureBackgroundWorker(): void {
 		startBackgroundDaemon();
 	}
 }
+
+/** Reset once-per-process startup flags so tests can re-enter ensureBackgroundWorker. */
+export function resetBackgroundDaemonForTests(): void {
+	autoStartAttempted = false;
+	orphanJobsReconciled = false;
+}
