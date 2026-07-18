@@ -22,6 +22,10 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 - **2026-07-18** · `technical-debt` · `confirmed` · `temporary` · `open-debt` · `ops`, `enrichment`, `search` — [Production Railway needs a real GITHUB_TOKEN](entries/2026-07-18-debt-github-token.md)
   - edges: related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
+- **2026-07-18** · `feature` · `confirmed` · `release` · `open` · `memory`, `product`, `ui` — [Ship Memory Center console at /memory](entries/2026-07-18-feature-memory-center-console.md)
+  - edges: references:[`research-memory-center-console`](entries/2026-07-18-research-memory-center-console.md), references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md)
+- **2026-07-18** · `research` · `confirmed` · `temporary` · `open` · `memory`, `product` — [Memory Center as intelligence console (not chat history)](entries/2026-07-18-research-memory-center-console.md)
+  - edges: references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 
 ## Open technical debt
 

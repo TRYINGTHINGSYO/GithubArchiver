@@ -21,7 +21,7 @@ import {
 	defaultMemoryRoot,
 	loadMemoryEntries,
 	toMemoryIndex
-} from './lib/ai-memory.js';
+} from '../src/lib/server/ai-memory.js';
 
 const ROOT = defaultMemoryRoot();
 const INDEXES_DIR = join(ROOT, 'indexes');

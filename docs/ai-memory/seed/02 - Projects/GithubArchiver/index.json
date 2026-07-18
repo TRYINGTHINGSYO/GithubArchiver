@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T01:53:06.846Z",
+  "generatedAt": "2026-07-18T02:09:22.533Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -600,6 +600,85 @@
       "title": "Knowledge engine improves knowledge before framework",
       "path": "entries/2026-07-18-decision-knowledge-engine-philosophy.md",
       "summary": "Locked operating principle after PRs #6–#14 landed the knowledge engine on `main`."
+    },
+    {
+      "id": "feature-memory-center-console",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "memory",
+        "product",
+        "ui"
+      ],
+      "related": [
+        "research-memory-center-console",
+        "decision-knowledge-engine-philosophy",
+        "feature-stabilize-retrieval"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "research-memory-center-console"
+        },
+        {
+          "type": "references",
+          "id": "decision-knowledge-engine-philosophy"
+        },
+        {
+          "type": "related",
+          "id": "feature-stabilize-retrieval"
+        }
+      ],
+      "supersedes": null,
+      "title": "Ship Memory Center console at /memory",
+      "path": "entries/2026-07-18-feature-memory-center-console.md",
+      "summary": "Adds a first-class **Memory** product surface to GithubArchiver:"
+    },
+    {
+      "id": "research-memory-center-console",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "temporary",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "memory",
+        "product"
+      ],
+      "related": [
+        "decision-knowledge-engine-philosophy",
+        "feature-stabilize-retrieval",
+        "memory"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "decision-knowledge-engine-philosophy"
+        },
+        {
+          "type": "related",
+          "id": "feature-stabilize-retrieval"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        }
+      ],
+      "supersedes": null,
+      "title": "Memory Center as intelligence console (not chat history)",
+      "path": "entries/2026-07-18-research-memory-center-console.md",
+      "summary": "Product vision: expose the knowledge engine as an **intelligence console** inside GithubArchiver (`/memory`), not as a chat transcript browser."
     },
     {
       "id": "incident-gharchive-createevent",

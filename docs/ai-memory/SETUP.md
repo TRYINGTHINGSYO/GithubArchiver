@@ -42,6 +42,8 @@ Optional: set `AI_MEMORY_VAULT=C:\AI-Memory` so Cursor Cloud Agents and other en
 | `.cursor/rules/session-checkpoint.mdc` | When/how to persist durable outcomes |
 | `docs/ai-memory/seed/` | Copyable starter vault notes for this project |
 | `docs/ai-memory/seed/02 - Projects/GithubArchiver/entries/` | Structured checkpoints (YAML frontmatter) |
+| `src/lib/server/ai-memory.ts` | Shared loader + multi-stage retrieval (CLI + `/memory`) |
+| `src/routes/memory/` | Memory Center product console |
 | `scripts/ai-memory-timeline.ts` | Regenerates Timeline + category indexes |
 | `docs/ai-memory/AI-BOOT.md` | Tiny adapter for non-Cursor LLMs |
 
