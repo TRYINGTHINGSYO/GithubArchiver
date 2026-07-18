@@ -22,7 +22,7 @@ GithubArchiver
 
 ## Architecture Decisions
 
-- **2026-07-18** · PR #8 · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
+- **2026-07-18** · PR #8 · `feda976` · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
 - **2026-07-18** · PR #7 · `5cc586d` · `open` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · PR #5 · `12f7ae4` · `verified` · `status-ui`, `daemon`, `search` — [Shared status hierarchy and clearer discovery/job semantics](entries/2026-07-18-pr-5-status-hierarchy.md)
 
@@ -39,7 +39,7 @@ GithubArchiver
 
 ## PR Timeline
 
-- **2026-07-18** · PR #8 · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
+- **2026-07-18** · PR #8 · `feda976` · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
 - **2026-07-18** · PR #7 · `5cc586d` · `open` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · PR #6 · `10cdc46` · `open` · `search`, `daemon`, `status-ui` — [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md)
 - **2026-07-18** · PR #5 · `12f7ae4` · `verified` · `status-ui`, `daemon`, `search` — [Shared status hierarchy and clearer discovery/job semantics](entries/2026-07-18-pr-5-status-hierarchy.md)
@@ -54,7 +54,7 @@ GithubArchiver
 
 ## Chronological (newest first)
 
-- **2026-07-18** · PR #8 · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
+- **2026-07-18** · PR #8 · `feda976` · `open` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
 - **2026-07-18** · PR #7 · `5cc586d` · `open` · `memory` — [Cursor Project Rules + AI memory seed vault](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · PR #6 · `10cdc46` · `open` · `search`, `daemon`, `status-ui` — [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md)
 - **2026-07-18** · PR #5 · `12f7ae4` · `verified` · `status-ui`, `daemon`, `search` — [Shared status hierarchy and clearer discovery/job semantics](entries/2026-07-18-pr-5-status-hierarchy.md)
