@@ -50,6 +50,12 @@ describe('daemon-planner', () => {
 		expect(pickAction(backlog).action).toBe('enrich');
 	});
 
+	it('prefers enrich overnight drain over a moderate archive-hour deficit', () => {
+		const backlog = emptyBacklog({ missingGhArchiveHours: 24, unenriched: 670_000 });
+		expect(scoreAction('enrich', backlog)).toBeGreaterThan(scoreAction('ingest', backlog));
+		expect(pickAction(backlog).action).toBe('enrich');
+	});
+
 	it('prefers archive when unarchived exists and enrich is empty', () => {
 		const backlog = emptyBacklog({ unarchivedSource: 5_000 });
 		expect(pickAction(backlog).action).toBe('archive');

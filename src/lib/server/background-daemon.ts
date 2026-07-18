@@ -14,7 +14,8 @@ import { finishJobRun, reconcileOrphanedJobRuns, startJobRun, updateJobRun } fro
 import { reconcileOrphanedSearchIngestStats } from './db/search-ingest';
 import { assertDatabaseReady, isDatabaseReady } from './db/ready';
 import { runArchiveCycle } from './workers/archive';
-import { runEnrichCycle } from './workers/enrich';
+import { runEnrichBurst } from './workers/enrich';
+import { countClaimableEnrichmentBacklog } from './enrichment-queue';
 import { runIngestCycle, isIngestCycleFailure } from './workers/ingest';
 import { runRefreshCycle } from './workers/refresh';
 import { runSearchGapCycle } from './workers/search-gap';
@@ -35,7 +36,13 @@ function enrichBacklogSleepMs(): number {
 	return Number(process.env.ENRICH_BACKLOG_SLEEP_MS ?? 2_000);
 }
 function enrichBurstCycles(): number {
-	return Math.max(1, Number(process.env.ENRICH_BURST_CYCLES ?? 8));
+	return Math.max(1, Number(process.env.ENRICH_BURST_CYCLES ?? 40));
+}
+function enrichBurstMs(): number {
+	return Math.max(5_000, Number(process.env.ENRICH_BURST_MS ?? 10 * 60_000));
+}
+function enrichTailCycles(): number {
+	return Math.max(0, Number(process.env.ENRICH_TAIL_CYCLES_AFTER_INGEST ?? 3));
 }
 const BACKOFF_BASE_MS = Number(process.env.DAEMON_BACKOFF_BASE_MS ?? 60_000);
 const BACKOFF_MAX_MS = Number(process.env.DAEMON_BACKOFF_MAX_MS ?? 15 * 60 * 1000);
@@ -121,6 +128,30 @@ async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
 			appendLog(
 				`[daemon] ingest: ${ingest.downloaded} downloaded, +${ingest.inserted} repos`
 			);
+			// Keep enrichment moving overnight even when discovery has archive hours to catch up.
+			let enrichTail: Record<string, unknown> | null = null;
+			const tailCycles = enrichTailCycles();
+			if (!stopRequested && tailCycles > 0 && countClaimableEnrichmentBacklog() > 0) {
+				const tail = await runEnrichBurst({
+					maxCycles: tailCycles,
+					maxMs: Math.min(enrichBurstMs(), 3 * 60_000),
+					shouldStop: () => stopRequested,
+					onCycle: (cycle, totals) => {
+						appendLog(
+							`[daemon] enrich-after-ingest ${totals.cycles}/${tailCycles}: ${cycle.enriched} (+${totals.enriched} burst)`
+						);
+					}
+				});
+				enrichTail = { ...tail };
+				appendLog(
+					`[daemon] enrich-after-ingest done: ${tail.enriched} enriched in ${tail.cycles} cycle(s)`
+				);
+				return {
+					hadFailure: isIngestCycleFailure(ingest) || tail.rateLimited,
+					rateLimitResetAt: tail.rateLimitResetAt,
+					detail: { ...ingest, enrich_tail: enrichTail }
+				};
+			}
 			return {
 				hadFailure: isIngestCycleFailure(ingest),
 				detail: ingest
@@ -144,57 +175,34 @@ async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
 			};
 		}
 		case 'enrich': {
-			// Continuous drain: keep claiming batches until burst budget, empty queue, or rate limit.
-			// Discovery/hourly scheduling must not gate whether another enrich batch may run.
+			// Wall-clock continuous drain (default 10 minutes). Discovery must not starve this overnight.
 			const burstMax = enrichBurstCycles();
-			let enriched = 0;
-			let failed = 0;
-			let planned = 0;
-			let requests = 0;
-			let cycles = 0;
-			let rateLimited = false;
-			let rateLimitResetAt: string | undefined;
-			const cycleSummaries: Array<Record<string, unknown>> = [];
-
-			for (let i = 0; i < burstMax && !stopRequested; i++) {
-				const enrich = await runEnrichCycle();
-				cycles++;
-				enriched += enrich.enriched;
-				failed += enrich.failed;
-				planned += enrich.planned;
-				requests += enrich.requests;
-				cycleSummaries.push({
-					cycle: i + 1,
-					enriched: enrich.enriched,
-					failed: enrich.failed,
-					planned: enrich.planned,
-					yielded: enrich.yielded,
-					concurrency: enrich.concurrency
-				});
-				appendLog(
-					`[daemon] enrich cycle ${i + 1}/${burstMax}: ${enrich.enriched} enriched (${enrich.concurrency}x, ${enrich.requests} req)`
-				);
-				if (enrich.rateLimited) {
-					rateLimited = true;
-					rateLimitResetAt = enrich.rateLimitResetAt;
-					break;
+			const burstMs = enrichBurstMs();
+			const burst = await runEnrichBurst({
+				maxCycles: burstMax,
+				maxMs: burstMs,
+				shouldStop: () => stopRequested,
+				onCycle: (cycle, totals) => {
+					appendLog(
+						`[daemon] enrich cycle ${totals.cycles}: ${cycle.enriched} enriched (${cycle.concurrency}x) · burst ${totals.enriched} in ${Math.round(totals.elapsedMs / 1000)}s`
+					);
 				}
-				if (enrich.planned === 0) break;
-			}
+			});
 
 			appendLog(
-				`[daemon] enrich burst done: ${enriched} enriched total across ${cycles} cycle(s)`
+				`[daemon] enrich burst done: ${burst.enriched} enriched total across ${burst.cycles} cycle(s) in ${Math.round(burst.elapsedMs / 1000)}s`
 			);
 			return {
-				hadFailure: rateLimited,
-				rateLimitResetAt,
+				hadFailure: burst.rateLimited,
+				rateLimitResetAt: burst.rateLimitResetAt,
 				detail: {
-					enriched,
-					failed,
-					planned,
-					requests,
-					burst_cycles: cycles,
-					cycles: cycleSummaries
+					enriched: burst.enriched,
+					failed: burst.failed,
+					planned: burst.planned,
+					requests: burst.requests,
+					burst_cycles: burst.cycles,
+					burst_ms: burst.elapsedMs,
+					burst_budget_ms: burstMs
 				}
 			};
 		}

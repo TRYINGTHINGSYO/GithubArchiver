@@ -162,7 +162,16 @@ export interface EnrichCycleResult {
 	backlogByTier: Record<string, number>;
 }
 
-export async function runEnrichCycle(): Promise<EnrichCycleResult> {
+export interface EnrichCycleOptions {
+	/** Accumulate into activity-bar "this run" across a multi-cycle burst. */
+	completedBase?: number;
+	failedBase?: number;
+	shouldStop?: () => boolean;
+}
+
+export async function runEnrichCycle(opts: EnrichCycleOptions = {}): Promise<EnrichCycleResult> {
+	const completedBase = opts.completedBase ?? 0;
+	const failedBase = opts.failedBase ?? 0;
 	const workerId = `enrich-${process.pid}-${randomUUID().slice(0, 8)}`;
 	const backlogStart = countUnenriched();
 	const cycleStarted = Date.now();
@@ -198,8 +207,8 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 		setEnrichmentProgress({
 			status: 'idle',
 			currentRepo: null,
-			completed: 0,
-			failed: 0,
+			completed: completedBase,
+			failed: failedBase,
 			remaining: 0,
 			backlogTotal: 0,
 			enrichedTotal: countRepos() - countUnenriched()
@@ -226,9 +235,9 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 	setEnrichmentProgress({
 		status: 'running',
 		currentRepo: claimed[0]?.full_name ?? null,
-		completed: 0,
-		failed: 0,
-		remaining: backlogStart,
+		completed: completedBase,
+		failed: failedBase,
+		remaining: countClaimableEnrichmentBacklog(),
 		backlogTotal: backlogStart,
 		enrichedTotal: countRepos() - countUnenriched()
 	});
@@ -236,7 +245,10 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 	let stop = false;
 
 	await mapPool(claimed, concurrency, async (repo: EnrichmentQueueRepo) => {
-		if (stop) return;
+		if (stop || opts.shouldStop?.()) {
+			stop = true;
+			return;
+		}
 		if (Date.now() - cycleStarted > CYCLE_BUDGET_MS) {
 			result.yielded = true;
 			stop = true;
@@ -267,8 +279,8 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 		setEnrichmentProgress({
 			status: 'running',
 			currentRepo: repo.full_name,
-			completed: result.enriched,
-			failed: result.failed,
+			completed: completedBase + result.enriched,
+			failed: failedBase + result.failed,
 			remaining: countClaimableEnrichmentBacklog(),
 			backlogTotal: backlogStart,
 			enrichedTotal: countRepos() - countUnenriched()
@@ -416,8 +428,8 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 	setEnrichmentProgress({
 		status: result.rateLimited ? 'rate_limited' : claimable > 0 ? 'paused' : 'idle',
 		currentRepo: null,
-		completed: result.enriched,
-		failed: result.failed,
+		completed: completedBase + result.enriched,
+		failed: failedBase + result.failed,
 		remaining: claimable,
 		backlogTotal: backlogStart,
 		enrichedTotal: countRepos() - countUnenriched(),
@@ -431,6 +443,71 @@ export async function runEnrichCycle(): Promise<EnrichCycleResult> {
 		claimable_remaining: claimable
 	} as Record<string, unknown>);
 	return result;
+}
+
+export interface EnrichBurstOptions {
+	maxCycles?: number;
+	/** Wall-clock drain budget (default ENRICH_BURST_MS / 10 minutes). */
+	maxMs?: number;
+	shouldStop?: () => boolean;
+	onCycle?: (cycle: EnrichCycleResult, totals: EnrichBurstResult) => void;
+}
+
+export interface EnrichBurstResult {
+	enriched: number;
+	failed: number;
+	planned: number;
+	requests: number;
+	cycles: number;
+	rateLimited: boolean;
+	rateLimitResetAt?: string;
+	elapsedMs: number;
+}
+
+/** Drain enrichment for a wall-clock window (overnight continuous processing). */
+export async function runEnrichBurst(opts: EnrichBurstOptions = {}): Promise<EnrichBurstResult> {
+	const maxCycles = Math.max(1, opts.maxCycles ?? Number(process.env.ENRICH_BURST_CYCLES ?? 40));
+	const maxMs = Math.max(
+		5_000,
+		opts.maxMs ?? Number(process.env.ENRICH_BURST_MS ?? 10 * 60_000)
+	);
+	const started = Date.now();
+	const totals: EnrichBurstResult = {
+		enriched: 0,
+		failed: 0,
+		planned: 0,
+		requests: 0,
+		cycles: 0,
+		rateLimited: false,
+		elapsedMs: 0
+	};
+
+	for (let i = 0; i < maxCycles; i++) {
+		if (opts.shouldStop?.()) break;
+		if (Date.now() - started >= maxMs) break;
+
+		const enrich = await runEnrichCycle({
+			completedBase: totals.enriched,
+			failedBase: totals.failed,
+			shouldStop: opts.shouldStop
+		});
+		totals.cycles++;
+		totals.enriched += enrich.enriched;
+		totals.failed += enrich.failed;
+		totals.planned += enrich.planned;
+		totals.requests += enrich.requests;
+		opts.onCycle?.(enrich, totals);
+
+		if (enrich.rateLimited) {
+			totals.rateLimited = true;
+			totals.rateLimitResetAt = enrich.rateLimitResetAt;
+			break;
+		}
+		if (enrich.planned === 0) break;
+	}
+
+	totals.elapsedMs = Date.now() - started;
+	return totals;
 }
 
 function sumEnrichJobWindow(sinceIso: string): {
