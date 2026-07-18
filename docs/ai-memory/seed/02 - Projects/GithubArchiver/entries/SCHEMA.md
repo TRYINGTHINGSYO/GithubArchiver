@@ -7,44 +7,67 @@ type: meta
 # Checkpoint entry schema
 
 Every durable checkpoint is one markdown file in this folder with YAML frontmatter.
+Treat `entries/` as an **append-only event log**. Do not rewrite old entries to change history — add a new entry and point `supersedes` / `related` at the prior one.
 
 ```yaml
 ---
-date: 2026-07-17          # UTC date of the decision / merge / incident
-pr: 3                     # optional GitHub PR number
-commit: e5476ac           # optional short or full SHA
-area:                     # tags for filtering (lowercase)
+id: incident-gharchive-createevent   # optional stable id (defaults to filename stem)
+date: 2026-07-17
+pr: 3
+commit: e5476ac
+area:
   - search
   - daemon
-type: incident            # architecture | incident | migration | pr | debt
-status: merged            # merged | open | verified | superseded | open-debt
-supersedes: null          # optional prior entry stem or "pr-N"
+type: incident
+status: merged
+supersedes: null
+related:
+  - migration-030
+  - search-fallback
+  - pr-6
 title: Short headline
-migration: 30             # optional schema migration number
+migration: 30
 ---
 ```
 
-## Field rules
+## Types
 
-| Field | Required | Notes |
-| --- | --- | --- |
-| `date` | yes | ISO date `YYYY-MM-DD` |
-| `type` | yes | One of the enum values above |
-| `status` | yes | Lifecycle of this checkpoint |
-| `title` | yes | One-line summary |
-| `area` | no | Free-form tags; prefer stable ones: `search`, `daemon`, `enrichment`, `ingest`, `status-ui`, `migration`, `memory` |
-| `pr` | no | Integer |
-| `commit` | no | Prefer merge commit on `main` when merged |
-| `supersedes` | no | Prior entry filename stem (without `.md`) or `pr-N` |
-| `migration` | no | Integer schema version |
+| type | Use for |
+| --- | --- |
+| `decision` | Locked architectural / product choices |
+| `incident` | Production failures and root-cause writeups |
+| `migration` | Schema/version migrations (or set `migration:` on another type) |
+| `feature` | New capability |
+| `bugfix` | Correctness fix that is not a full incident writeup |
+| `performance` | Throughput / latency / cost work |
+| `refactor` | Structural change without intended behavior change |
+| `test` | Coverage / harness improvements as the main change |
+| `release` | Deploy / release notes |
+| `technical-debt` | Known unresolved debt |
+| `research` | Spikes / investigations without a ship decision yet |
+
+Legacy aliases still accepted by the generator: `architecture`→`decision`, `debt`→`technical-debt`, `pr`→`feature`.
+
+## Status
+
+`merged` | `open` | `verified` | `superseded` | `open-debt`
+
+## Related graph
+
+`related` is a list of ids. Resolvers understand:
+
+- explicit `id:` values
+- entry filename stems
+- `pr-N`
+- `migration-N` / `migration-00N`
+- first entry tagged with that `area` (concept tag)
 
 ## Body
 
-Keep the body short and factual:
+Short and factual: what / why / tests / remaining verification. No chat transcripts. No secrets.
 
-- What changed
-- Why
-- Tests / verification
-- Remaining open items (if any)
+After adding an entry:
 
-Do not paste chat transcripts.
+```bash
+npm run memory:timeline
+```

@@ -1,15 +1,23 @@
 ---
+id: incident-search-fallback-stale
 date: 2026-07-18
 pr: 6
 commit: 10cdc46
 area:
   - search
+  - search-fallback
   - daemon
   - status-ui
 type: incident
 status: open
 supersedes: null
+related:
+  - incident-gharchive-createevent
+  - search-fallback
+  - decision-status-hierarchy
+  - migration-030
 title: Search fallback active must reflect live execution only
+migration: null
 ---
 
 # PR #6 — Search fallback active accuracy

@@ -11,16 +11,27 @@ type: index
 GithubArchive+ is an evidence-first GitHub repository intelligence platform.
 It ingests repository creation signals, enriches repositories, classifies them, assigns clusters, calculates Interesting Scores, generates Archive Stories, and detects emerging themes.
 
-## Current Architecture
+## Memory operating system
 
-- SvelteKit application
-- SQLite with numbered migrations
-- GH Archive ingestion
-- GitHub Search fallback
-- Background daemon
-- Enrichment pipeline
-- Clustering and emerging-topic analysis
-- Railway production deploy (auto from `main`)
+```text
+entries/   append-only event log (source of truth)
+    ↓
+npm run memory:timeline
+    ↓
+┌───────────────────┬────────────────────┬──────────────────┐
+│ Timeline.md       │ Current Status.md  │ Project Digest.md│
+│ (chronological)   │ (living summary)   │ (AI one-pager)   │
+└───────────────────┴────────────────────┴──────────────────┘
+         + Knowledge Graph.md + indexes/<type>.md
+```
+
+**Load order for agents**
+
+1. [[Project Digest]] — if only one file fits
+2. [[Current Status]] — open work / debt / recent merges
+3. [[Timeline]] — when / why history
+4. [[Knowledge Graph]] — jump related concepts
+5. [[Decisions]] / [[Architecture]] — enduring principles
 
 ## Current Operating Principles
 
@@ -29,29 +40,9 @@ It ingests repository creation signals, enriches repositories, classifies them, 
 - Enrichment backlog does not pause ingestion.
 - UI status must distinguish current activity, progress, and discovery.
 - Stale runtime rows must be reconciled after process restarts.
-
-## Memory map (project operating system)
-
-```text
-GithubArchiver
-│
-├── Architecture Decisions   ← generated
-├── Production Incidents     ← generated
-├── Migrations               ← generated
-├── PR Timeline              ← generated
-├── Open Technical Debt      ← generated
-├── Current Status           ← hand-maintained live summary
-├── Timeline                 ← generated master index
-├── Architecture.md          ← enduring subsystem notes
-├── Decisions.md             ← locked principles
-└── entries/                 ← structured checkpoints (source of truth)
-```
-
-- Start with [[Current Status]] and [[Timeline]]
-- Deep principles: [[Decisions]], [[Architecture]]
-- New durable fact → new `entries/*.md` + `npm run memory:timeline`
+- Memory summaries are generated; entry facts are append-only.
 
 ## Related repo paths
 
 - Cursor rules: `.cursor/rules/`
-- Seed copy in repo: `docs/ai-memory/seed/02 - Projects/GithubArchiver/`
+- Seed: `docs/ai-memory/seed/02 - Projects/GithubArchiver/`

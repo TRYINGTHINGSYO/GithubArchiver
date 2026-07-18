@@ -9,20 +9,27 @@ globs:
 
 # GithubArchive+ Context
 
-Before making architectural or pipeline changes, read (vault root first, else `docs/ai-memory/seed/`):
+If context is tight, read **only**:
 
-- `02 - Projects/GithubArchiver/Current Status.md`
-- `02 - Projects/GithubArchiver/Timeline.md`
-- `02 - Projects/GithubArchiver/Decisions.md`
-- `02 - Projects/GithubArchiver/Architecture.md`
+`02 - Projects/GithubArchiver/Project Digest.md`
 
-For targeted questions, prefer the generated indexes over scanning every note:
+(or `docs/ai-memory/seed/02 - Projects/GithubArchiver/Project Digest.md`)
 
-- Daemon / Search incidents → `Production Incidents.md`
+Otherwise, before architectural or pipeline changes, read:
+
+1. `Project Digest.md`
+2. `Current Status.md`
+3. `Timeline.md` (recent section)
+4. `Decisions.md` / `Architecture.md` for enduring principles
+
+For targeted questions use generated indexes / graph:
+
+- Related concepts → `Knowledge Graph.md`
+- Incidents → `Production Incidents.md` or `indexes/incident.md`
 - Schema versions → `Migrations.md`
-- Merged/open PRs → `PR Timeline.md`
-- Unresolved ops/code debt → `Open Technical Debt.md`
-- Locked principles → `Decisions.md`
+- PRs → `PR Timeline.md`
+- Debt → `Open Technical Debt.md`
+- By type → `indexes/<type>.md`
 
 Important principles:
 
@@ -34,3 +41,4 @@ Important principles:
 - Do not mask stale-state bugs only in the UI.
 - GH Archive is the primary discovery source; Search is fallback, not the default.
 - Enrichment backlog must not pause ingestion.
+- Memory: append entries; generate summaries — do not maintain giant journals by hand.

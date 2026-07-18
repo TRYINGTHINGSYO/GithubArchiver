@@ -1,4 +1,5 @@
 ---
+id: decision-status-hierarchy
 date: 2026-07-18
 pr: 5
 commit: 12f7ae4
@@ -6,10 +7,16 @@ area:
   - status-ui
   - daemon
   - search
-type: architecture
+type: decision
 status: verified
 supersedes: null
+related:
+  - bugfix-activity-copy
+  - pr-6
+  - search-fallback
+  - status-ui
 title: Shared status hierarchy and clearer discovery/job semantics
+migration: null
 ---
 
 # PR #5 — Status semantics hierarchy

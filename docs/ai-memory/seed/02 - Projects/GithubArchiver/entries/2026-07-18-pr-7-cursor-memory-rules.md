@@ -1,13 +1,19 @@
 ---
+id: feature-cursor-memory-rules
 date: 2026-07-18
 pr: 7
 commit: 5cc586d
 area:
   - memory
-type: architecture
+type: feature
 status: open
 supersedes: null
+related:
+  - pr-8
+  - pr-9
+  - memory
 title: Cursor Project Rules + AI memory seed vault
+migration: null
 ---
 
 # PR #7 — Cursor AI memory bootstrapping

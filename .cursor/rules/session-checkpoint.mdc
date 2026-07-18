@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Checkpoint Persistence
 
-After substantial work, update the project memory when any of these occur:
+After substantial work, append a structured entry when any of these occur:
 
 - A bug root cause is confirmed
 - A migration is added
@@ -15,7 +15,7 @@ After substantial work, update the project memory when any of these occur:
 - A new architectural rule is established
 - A meaningful next step is identified
 
-## Write a structured entry (source of truth)
+## Append-only event log
 
 Create one file under:
 
@@ -23,19 +23,26 @@ Create one file under:
 
 (or `docs/ai-memory/seed/02 - Projects/GithubArchiver/entries/` when the vault is unavailable)
 
-Every entry must start with YAML frontmatter:
+Do **not** rewrite old entries to change history. Add a new entry and set `supersedes` / `related`.
 
 ```yaml
 ---
+id: incident-example
 date: 2026-07-18
-pr: 8
+pr: 9
 commit: abc1234
 area:
   - search
   - daemon
-type: architecture   # architecture | incident | migration | pr | debt
-status: open         # merged | open | verified | superseded | open-debt
+type: bugfix
+# decision | incident | migration | feature | bugfix | performance |
+# refactor | test | release | technical-debt | research
+status: open
 supersedes: null
+related:
+  - pr-6
+  - migration-030
+  - search-fallback
 title: Short headline
 migration: null
 ---
@@ -43,14 +50,18 @@ migration: null
 
 Body: what / why / tests / remaining verification. No chat transcripts. No secrets.
 
-Then regenerate indexes:
+Regenerate derived views (never hand-edit them):
 
 ```bash
 npm run memory:timeline
 ```
 
-That refreshes `Timeline.md`, `Architecture Decisions.md`, `Production Incidents.md`, `Migrations.md`, `PR Timeline.md`, and `Open Technical Debt.md`.
+Produces:
 
-Finally, refresh the hand-maintained live summary in `Current Status.md` (**Now** / open verification only).
+- `Timeline.md` — chronological
+- `Current Status.md` — living summary
+- `Project Digest.md` — single AI-priming doc
+- `Knowledge Graph.md` — related-id map
+- type indexes under `indexes/`
 
 Do not write speculative conclusions as facts.

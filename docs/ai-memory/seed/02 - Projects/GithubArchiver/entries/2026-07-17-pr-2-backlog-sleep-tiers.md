@@ -1,4 +1,5 @@
 ---
+id: incident-backlog-sleep-tiers
 date: 2026-07-17
 pr: 2
 commit: 269732c
@@ -9,6 +10,10 @@ area:
 type: incident
 status: merged
 supersedes: null
+related:
+  - migration-029
+  - daemon
+  - enrichment
 title: Fix backlog-sleep 300s stall and all-urgent enrichment tiers
 migration: 29
 ---

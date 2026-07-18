@@ -43,17 +43,34 @@ Optional: set `AI_MEMORY_VAULT=C:\AI-Memory` so Cursor Cloud Agents and other en
 | `scripts/ai-memory-timeline.ts` | Regenerates Timeline + category indexes |
 | `docs/ai-memory/AI-BOOT.md` | Tiny adapter for non-Cursor LLMs |
 
-## Structured checkpoints
+## Structured checkpoints (event log)
 
-Each durable event is one markdown file with queryable frontmatter (`date`, `pr`, `commit`, `area`, `type`, `status`, …). See `entries/SCHEMA.md`.
+Each durable event is one append-only markdown file with queryable frontmatter:
 
-Regenerate the project timeline after adding an entry:
+`date`, `pr`, `commit`, `area`, `type`, `status`, `supersedes`, `related`, `id`, …
+
+See `entries/SCHEMA.md`. Prefer adding a new entry over rewriting history.
+
+Types include: `decision`, `incident`, `migration`, `feature`, `bugfix`, `performance`, `refactor`, `test`, `release`, `technical-debt`, `research`.
+
+Regenerate derived views after adding an entry:
 
 ```bash
 npm run memory:timeline
 ```
 
-This produces chronological / categorical indexes so an agent can answer “what changed in the daemon?” without relying only on semantic search.
+Primary generated artifacts:
+
+| File | Role |
+| --- | --- |
+| `Timeline.md` | Chronological event log |
+| `Current Status.md` | Living summary (open work, debt, recent merges) |
+| `Project Digest.md` | Single AI-priming document |
+| `Knowledge Graph.md` | `related` / `supersedes` link map |
+
+Plus convenience indexes (`PR Timeline.md`, `Production Incidents.md`, …) and `indexes/<type>.md`.
+
+Principle: **generate summaries whenever possible; manually maintain only enduring Decisions/Architecture and the entry log.**
 
 ## What to store (and what not to)
 

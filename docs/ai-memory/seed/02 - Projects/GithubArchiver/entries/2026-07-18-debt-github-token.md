@@ -1,4 +1,5 @@
 ---
+id: debt-github-token
 date: 2026-07-18
 pr: null
 commit: null
@@ -6,10 +7,14 @@ area:
   - ops
   - enrichment
   - search
-type: debt
+type: technical-debt
 status: open-debt
 supersedes: null
+related:
+  - search-fallback
+  - enrichment
 title: Production Railway needs a real GITHUB_TOKEN
+migration: null
 ---
 
 # Tech debt — GITHUB_TOKEN on Railway
