@@ -1,0 +1,28 @@
+---
+description: Use Blake's external memory vault for project context and decisions
+alwaysApply: true
+---
+
+# External Memory
+
+Persistent project memory lives in an Obsidian-style vault outside this repository.
+
+Resolve the vault root in this order (first match wins):
+
+1. Environment variable `AI_MEMORY_VAULT`
+2. `C:\AI-Memory` (Windows local)
+3. `$HOME/AI-Memory`
+
+Seed notes for this repo also ship under `docs/ai-memory/seed/` so a new machine can bootstrap the vault.
+
+For substantial work:
+
+1. Read `VAULT-INDEX.md` at the vault root (if present).
+2. Read the relevant project index under `02 - Projects`.
+3. Load only the notes needed for the current task.
+4. Do not load the entire vault.
+5. Treat existing decisions in the vault as authoritative unless the user changes them.
+6. When a durable decision, bug diagnosis, architecture change, or next step is established, update the relevant project note.
+7. Prefer appending to an existing note over creating a new thin note.
+8. Never store secrets, API keys, passwords, tokens, or private credentials in the vault.
+9. Do not maintain daily conversation transcripts in the vault — store only durable outcomes.
