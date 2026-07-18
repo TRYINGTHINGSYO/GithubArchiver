@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DiscoveryRepoCard from '$lib/components/DiscoveryRepoCard.svelte';
 	import RepoListItem from '$lib/components/RepoListItem.svelte';
+	import StatusStory from '$lib/components/StatusStory.svelte';
 	import { timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
 
@@ -12,9 +13,11 @@
 		if (total <= 0) return 100;
 		return Math.round((enrich.enrichedTotal / total) * 1000) / 10;
 	});
-	const enrichPercentLabel = $derived(
-		Number.isInteger(enrichPercent) ? String(enrichPercent) : enrichPercent.toFixed(1)
-	);
+	const enrichCurrentActivity = $derived.by(() => {
+		if (enrich.currentRepo) return `Enriching ${enrich.currentRepo}`;
+		if (enrich.remaining > 0) return 'Building repository intelligence...';
+		return 'Enrichment caught up — ready for new discoveries.';
+	});
 
 	const browseLinks = [
 		{ href: '/discover', label: 'All discoveries', why: 'Landing for every intelligence lane' },
@@ -172,42 +175,23 @@
 		</div>
 	</div>
 	<div class="enrich-panel">
-		<div class="enrich-counts">
-			<div>
-				<span class="metric-value">{enrich.enrichedTotal.toLocaleString()}</span>
-				<span class="metric-label">Enriched</span>
-			</div>
-			<div>
-				<span class="metric-value">{enrich.remaining.toLocaleString()}</span>
-				<span class="metric-label">Waiting</span>
-			</div>
-			<div>
-				<span class="metric-value">{enrich.completed.toLocaleString()}</span>
-				<span class="metric-label">This run</span>
-			</div>
-			<div>
-				<span class="metric-value">{enrichPercentLabel}%</span>
-				<span class="metric-label">Coverage</span>
-			</div>
-		</div>
+		<StatusStory
+			currentActivity={enrichCurrentActivity}
+			currentActivityHref={enrich.currentRepo ? `/repo/${enrich.currentRepo}` : null}
+			enriched={enrich.enrichedTotal}
+			thisRun={enrich.completed}
+			waiting={enrich.remaining}
+			coveragePercent={enrichPercent}
+			latestArchiveHour={data.latestArchiveHour}
+			archiveBacklog={data.archiveHourBacklog}
+			searchFallbackActive={data.searchFallbackActive}
+			workerLastRanLabel={data.discoveryStatus.lastIngestionAt
+				? timeAgo(data.discoveryStatus.lastIngestionAt)
+				: 'pending'}
+		/>
 		<div class="enrich-bar" role="progressbar" aria-valuenow={enrichPercent} aria-valuemin="0" aria-valuemax="100">
 			<span style={`width: ${Math.min(100, enrichPercent)}%`}></span>
 		</div>
-		{#if enrich.currentRepo}
-			<p class="enrich-current">
-				Now enriching
-				<a href={`/repo/${enrich.currentRepo}`}>{enrich.currentRepo}</a>
-			</p>
-		{:else if enrich.remaining > 0}
-			<p class="enrich-current">
-				{enrich.remaining.toLocaleString()} repositories queued — enrichment continues automatically.
-			</p>
-		{:else}
-			<p class="enrich-current">
-				Backlog clear for currently eligible tiers. Long-tail deferred repos enrich on a slower
-				cadence while discovery continues.
-			</p>
-		{/if}
 	</div>
 </section>
 
@@ -814,17 +798,6 @@
 	.enrich-panel {
 		display: grid;
 		gap: 1rem;
-	}
-
-	.enrich-counts {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-		gap: 0.75rem;
-	}
-
-	.enrich-counts > div {
-		display: grid;
-		gap: 0.2rem;
 	}
 
 	.enrich-bar {

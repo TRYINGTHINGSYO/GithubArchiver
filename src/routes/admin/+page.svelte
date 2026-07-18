@@ -703,55 +703,74 @@
 
 <section class="detail-section">
 	<h2 class="section-title">Ingestion & discovery</h2>
-	<dl class="detail-grid">
+	<div class="status-hierarchy">
 		<div>
-			<dt>Repos ingested (last hour)</dt>
-			<dd>{status.ingestion.reposLastHour.toLocaleString()}</dd>
-		</div>
-		<div>
-			<dt>Repos ingested (today UTC)</dt>
-			<dd>{status.ingestion.reposToday.toLocaleString()}</dd>
-		</div>
-		<div>
-			<dt>Historical Search-fallback discoveries</dt>
-			<dd>{status.discovery.githubSearchRepos.toLocaleString()}</dd>
-		</div>
-		<div>
-			<dt>Search fallback active</dt>
-			<dd>{status.discovery.searchFallbackActive ? 'Yes' : 'No'}</dd>
-		</div>
-		<div>
-			<dt>Worker last ran</dt>
-			<dd>
+			<h3 class="status-hierarchy-label">Current activity</h3>
+			<p class="admin-meta">
+				{#if status.ingestion.ingestRunning}
+					Ingest batch running
+				{:else if status.daemon.running}
+					Daemon loop active
+				{:else}
+					Workers idle
+				{/if}
+				· Worker last ran
 				{status.ingestion.workerLastRanAt
 					? timeAgo(status.ingestion.workerLastRanAt)
 					: '—'}
-				{#if status.ingestion.ingestRunning}
-					· <span class="badge pending">running</span>
-				{/if}
-			</dd>
+			</p>
 		</div>
 		<div>
-			<dt>Target hour (GH Archive)</dt>
-			<dd class="mono">{status.ingestion.targetHour}</dd>
+			<h3 class="status-hierarchy-label">Progress</h3>
+			<dl class="detail-grid">
+				<div>
+					<dt>Enriched</dt>
+					<dd>{status.stats.enrichedRepos.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Waiting</dt>
+					<dd>{status.stats.unenrichedRepos.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Repos ingested (last hour)</dt>
+					<dd>{status.ingestion.reposLastHour.toLocaleString()}</dd>
+				</div>
+				<div>
+					<dt>Repos ingested (today UTC)</dt>
+					<dd>{status.ingestion.reposToday.toLocaleString()}</dd>
+				</div>
+			</dl>
 		</div>
 		<div>
-			<dt>Latest completed archive hour</dt>
-			<dd class="mono">{status.ingestion.latestHour ?? '—'}</dd>
+			<h3 class="status-hierarchy-label">Discovery</h3>
+			<dl class="detail-grid">
+				<div>
+					<dt>Latest completed archive hour</dt>
+					<dd class="mono">{status.ingestion.latestHour ?? '—'}</dd>
+				</div>
+				<div>
+					<dt>Backlog</dt>
+					<dd>{status.ingestion.missingHours.length} hours</dd>
+				</div>
+				<div>
+					<dt>Search fallback active</dt>
+					<dd>{status.discovery.searchFallbackActive ? 'Yes' : 'No'}</dd>
+				</div>
+				<div>
+					<dt>Target hour (GH Archive)</dt>
+					<dd class="mono">{status.ingestion.targetHour}</dd>
+				</div>
+				<div>
+					<dt>Hours ingested</dt>
+					<dd>{status.ingestion.totalHours}</dd>
+				</div>
+				<div>
+					<dt>Historical Search-fallback discoveries</dt>
+					<dd>{status.discovery.githubSearchRepos.toLocaleString()}</dd>
+				</div>
+			</dl>
 		</div>
-		<div>
-			<dt>Hours ingested</dt>
-			<dd>{status.ingestion.totalHours}</dd>
-		</div>
-		<div>
-			<dt>Archive hour backlog</dt>
-			<dd>{status.ingestion.missingHours.length}</dd>
-		</div>
-		<div>
-			<dt>Unenriched repos</dt>
-			<dd>{status.stats.unenrichedRepos} / {status.stats.totalRepos}</dd>
-		</div>
-	</dl>
+	</div>
 	{#if status.ingestion.missingHours.length > 0}
 		<p class="admin-meta mono">{status.ingestion.missingHours.join(', ')}</p>
 	{/if}
@@ -879,6 +898,20 @@
 {/if}
 
 <style>
+	.status-hierarchy {
+		display: grid;
+		gap: 1.1rem;
+	}
+
+	.status-hierarchy-label {
+		margin: 0 0 0.4rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
 	.admin-hero,
 	.health-banner {
 		display: flex;
