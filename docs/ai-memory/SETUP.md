@@ -95,7 +95,11 @@ Each query prints **metrics** (candidates / expanded / ranked / returned / budge
 
 Default confidence filter: **confirmed only**. Metadata API version: `schema: 1`.
 
-Principle: **make important things easy to rediscover** — invest in evaluation and explainability before expanding the vault.
+Principle: **If retrieval fails, improve the knowledge — not the framework.**
+
+See `docs/ai-memory/seed/02 - Projects/GithubArchiver/Knowledge Engine Philosophy.md`.
+
+Success is retrieval precision, eval stability, time-to-context, and capture rate — not corpus size. New retrieval capabilities must earn their way in through observed limitations, not hypothetical ones.
 
 ## What to store (and what not to)
 

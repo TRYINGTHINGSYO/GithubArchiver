@@ -28,7 +28,8 @@ Retrieval never writes facts back into the vault.
 3. `npm run memory:query -- "<topic>" --budget 6000` — explained, ranked context
 4. `npm run memory:eval` after ranking/graph changes
 5. [[Timeline]] / [[Knowledge Graph]] / `index.json`
-6. [[Decisions]] / [[Architecture]] — enduring principles (`durability: permanent`)
+6. [[Knowledge Engine Philosophy]] — when to change knowledge vs framework
+7. [[Decisions]] / [[Architecture]] — enduring principles (`durability: permanent`)
 
 ## Current Operating Principles
 
