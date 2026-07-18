@@ -7,7 +7,7 @@ commit: ac157f3
 area:
   - memory
 type: feature
-status: open
+status: merged
 confidence: confirmed
 durability: permanent
 supersedes: feature-multistage-retrieval

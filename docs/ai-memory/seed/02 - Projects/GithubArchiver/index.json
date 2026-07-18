@@ -1,14 +1,14 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T01:48:15.032Z",
+  "generatedAt": "2026-07-18T01:51:07.396Z",
   "project": "githubarchiver",
   "entries": [
     {
       "id": "feature-stabilize-retrieval",
       "schema": 1,
       "type": "feature",
-      "status": "open",
+      "status": "merged",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-18",
@@ -43,10 +43,54 @@
       "summary": "No new vault features. Focus on predictability:"
     },
     {
+      "id": "release-knowledge-engine-on-main",
+      "schema": 1,
+      "type": "release",
+      "status": "merged",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": 13,
+      "commit": "603a5c9",
+      "migration": null,
+      "area": [
+        "memory",
+        "adoption"
+      ],
+      "related": [
+        "pr-13",
+        "feature-stabilize-retrieval",
+        "incident-search-fallback-stale",
+        "memory"
+      ],
+      "relationships": [
+        {
+          "type": "implemented-by",
+          "id": "pr-13"
+        },
+        {
+          "type": "references",
+          "id": "feature-stabilize-retrieval"
+        },
+        {
+          "type": "related",
+          "id": "incident-search-fallback-stale"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        }
+      ],
+      "supersedes": null,
+      "title": "Knowledge engine adopted on main (PRs #6–#13)",
+      "path": "entries/2026-07-18-release-knowledge-engine-on-main.md",
+      "summary": "Merged to `main`:"
+    },
+    {
       "id": "feature-multistage-retrieval",
       "schema": 1,
       "type": "feature",
-      "status": "open",
+      "status": "merged",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-18",
@@ -89,7 +133,7 @@
       "id": "feature-retrieval-scoring",
       "schema": 1,
       "type": "feature",
-      "status": "open",
+      "status": "merged",
       "confidence": "confirmed",
       "durability": "release",
       "date": "2026-07-18",
@@ -146,7 +190,7 @@
       "id": "feature-memory-retrieval",
       "schema": 1,
       "type": "feature",
-      "status": "open",
+      "status": "merged",
       "confidence": "confirmed",
       "durability": "release",
       "date": "2026-07-18",
@@ -213,7 +257,7 @@
       "id": "feature-digest-knowledge-graph",
       "schema": 1,
       "type": "feature",
-      "status": "open",
+      "status": "merged",
       "confidence": "confirmed",
       "durability": "release",
       "date": "2026-07-18",
@@ -266,7 +310,7 @@
       "id": "feature-structured-timeline",
       "schema": 1,
       "type": "feature",
-      "status": "open",
+      "status": "merged",
       "confidence": "confirmed",
       "durability": "release",
       "date": "2026-07-18",
@@ -309,7 +353,7 @@
       "id": "feature-cursor-memory-rules",
       "schema": 1,
       "type": "feature",
-      "status": "open",
+      "status": "merged",
       "confidence": "confirmed",
       "durability": "release",
       "date": "2026-07-18",
@@ -347,7 +391,7 @@
       "id": "incident-search-fallback-stale",
       "schema": 1,
       "type": "incident",
-      "status": "open",
+      "status": "merged",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-18",

@@ -6,7 +6,7 @@ commit: fd2e4b7
 area:
   - memory
 type: feature
-status: open
+status: merged
 confidence: confirmed
 durability: permanent
 supersedes: feature-retrieval-scoring

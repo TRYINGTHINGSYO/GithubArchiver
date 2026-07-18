@@ -6,7 +6,7 @@ commit: 5972b3c
 area:
   - memory
 type: feature
-status: open
+status: merged
 confidence: confirmed
 supersedes: feature-memory-retrieval
 related:

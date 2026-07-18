@@ -9,7 +9,7 @@ area:
   - daemon
   - status-ui
 type: incident
-status: open
+status: merged
 confidence: confirmed
 durability: permanent
 supersedes: null
