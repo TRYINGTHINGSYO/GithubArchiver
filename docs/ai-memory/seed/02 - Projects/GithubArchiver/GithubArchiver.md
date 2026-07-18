@@ -11,27 +11,24 @@ type: index
 GithubArchive+ is an evidence-first GitHub repository intelligence platform.
 It ingests repository creation signals, enriches repositories, classifies them, assigns clusters, calculates Interesting Scores, generates Archive Stories, and detects emerging themes.
 
-## Memory operating system
+## Knowledge operating system
 
 ```text
-entries/   append-only event log (source of truth)
-    ↓
-npm run memory:timeline
-    ↓
-┌───────────────────┬────────────────────┬──────────────────┐
-│ Timeline.md       │ Current Status.md  │ Project Digest.md│
-│ (chronological)   │ (living summary)   │ (AI one-pager)   │
-└───────────────────┴────────────────────┴──────────────────┘
-         + Knowledge Graph.md + indexes/<type>.md
+Append-only entries → Graph + index.json → Generated views
+                              ↓
+              Read-only retrieval (query / eval)
 ```
+
+Retrieval never writes facts back into the vault.
 
 **Load order for agents**
 
 1. [[Project Digest]] — if only one file fits
 2. [[Current Status]] — open work / debt / recent merges
-3. `npm run memory:query -- "<topic>" --budget 6000` — multi-stage ranked context
-4. [[Timeline]] / [[Knowledge Graph]] / `index.json` — deeper history
-5. [[Decisions]] / [[Architecture]] — enduring principles (prefer `durability: permanent`)
+3. `npm run memory:query -- "<topic>" --budget 6000` — explained, ranked context
+4. `npm run memory:eval` after ranking/graph changes
+5. [[Timeline]] / [[Knowledge Graph]] / `index.json`
+6. [[Decisions]] / [[Architecture]] — enduring principles (`durability: permanent`)
 
 ## Current Operating Principles
 

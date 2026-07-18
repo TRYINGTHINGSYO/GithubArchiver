@@ -53,6 +53,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `open` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
+  - edges: supersedes:[`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), validates:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #12 · `fd2e4b7` · `open` · `memory` — [Multi-stage retrieval with typed edges and token budgets](entries/2026-07-18-pr-12-multistage-retrieval.md)
   - edges: supersedes:[`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), references:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #11 · `5972b3c` · `open` · `memory` — [Ranked retrieval scoring model for memory query](entries/2026-07-18-pr-11-retrieval-scoring.md)
@@ -67,8 +69,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: related:[`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), related:[`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), related:[`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #6 · `10cdc46` · `open` · `search`, `search-fallback`, `daemon`, `status-ui` — [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md)
   - edges: caused-by:[`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), references:[`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md), implemented-by:[`pr-6`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md)
-- **2026-07-18** · `decision` · `confirmed` · `permanent` · PR #5 · `12f7ae4` · `verified` · `status-ui`, `daemon`, `search` — [Shared status hierarchy and clearer discovery/job semantics](entries/2026-07-18-pr-5-status-hierarchy.md)
-  - edges: references:[`bugfix-activity-copy`](entries/2026-07-18-pr-4-activity-copy.md), related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), implemented-by:[`pr-5`](entries/2026-07-18-pr-5-status-hierarchy.md), related:[`pr-6`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`status-ui`](entries/2026-07-18-pr-4-activity-copy.md)
 
 ## Open technical debt
 
@@ -77,6 +77,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `open` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
+  - edges: supersedes:[`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), validates:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #12 · `fd2e4b7` · `open` · `memory` — [Multi-stage retrieval with typed edges and token budgets](entries/2026-07-18-pr-12-multistage-retrieval.md)
   - edges: supersedes:[`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), references:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #11 · `5972b3c` · `open` · `memory` — [Ranked retrieval scoring model for memory query](entries/2026-07-18-pr-11-retrieval-scoring.md)

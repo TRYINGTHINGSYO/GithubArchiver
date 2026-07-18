@@ -1,17 +1,13 @@
 #!/usr/bin/env tsx
 /**
- * Multi-stage ranked retrieval over GithubArchiver memory.
+ * Multi-stage ranked retrieval (READ-ONLY) over the project knowledge engine.
  *
  *   Stage 1 — Candidate retrieval
  *   Stage 2 — Typed graph expansion
  *   Stage 3 — Re-rank
  *   Assemble under optional --budget tokens
  *
- * Usage:
- *   npm run memory:query -- "search fallback"
- *   npm run memory:query -- "search fallback" --budget 6000
- *   npm run memory:query -- "search fallback" --follow caused-by,references
- *   npm run memory:query -- "search fallback" --include-hypotheses --json
+ * This command never writes to the vault.
  */
 import {
 	RELATION_TYPES,
@@ -70,7 +66,7 @@ if (!query) {
 		[
 			'Usage: npm run memory:query -- "<terms or id>" [options]',
 			'',
-			'Pipeline: candidates → typed graph expand → re-rank → budget assemble',
+			'READ-ONLY retrieval. Durable knowledge is appended via entries/*.md only.',
 			'',
 			'Options:',
 			'  --candidates N            stage-1 pool (default 20)',
@@ -78,11 +74,9 @@ if (!query) {
 			'  --limit N                 max assembled hits (default 8)',
 			'  --budget N                approx token budget (chars/4)',
 			'  --follow a,b,c            edge types to expand (default all)',
-			'  --include-hypotheses      include confidence: hypothesis',
-			'  --include-deprecated      include confidence: deprecated',
-			'  --json',
-			'',
-			'Default confidence filter: confirmed only.'
+			'  --include-hypotheses',
+			'  --include-deprecated',
+			'  --json'
 		].join('\n')
 	);
 	process.exit(2);
@@ -102,6 +96,7 @@ const result = queryMemoryDetailed(entries, query, {
 const hits = result.assembled;
 const clusters = clusterHits(hits);
 const aliases = buildAliasIndex(entries);
+const m = result.metrics;
 
 const confidenceNote = includeHypotheses
 	? includeDeprecated
@@ -118,16 +113,16 @@ if (asJson) {
 				query,
 				root,
 				confidence: confidenceNote,
-				pipeline: result.stages,
-				tokensUsed: result.tokensUsed,
-				budget: result.budget,
-				ranking: hits.map((h) => ({
+				metrics: m,
+				ranking: hits.map((h, i) => ({
+					rank: i + 1,
 					score: Number(h.score.toFixed(1)),
 					id: h.entry.id,
 					type: h.entry.type,
 					confidence: h.entry.confidence,
 					durability: h.entry.durability,
 					edgeType: h.edgeType ?? null,
+					reasons: h.reasons,
 					breakdown: h.breakdown,
 					depth: h.depth,
 					via: h.via,
@@ -153,13 +148,13 @@ if (asJson) {
 					pr: h.entry.pr,
 					migration: h.entry.migration,
 					score: Number(h.score.toFixed(3)),
+					reasons: h.reasons,
 					breakdown: h.breakdown,
 					via: h.via,
 					edgeType: h.edgeType ?? null,
 					depth: h.depth,
 					title: h.entry.title,
 					relationships: h.entry.relationships,
-					related: h.entry.related,
 					path: h.entry.relPath,
 					summary: h.entry.summary
 				}))
@@ -178,25 +173,35 @@ if (hits.length === 0) {
 	process.exit(0);
 }
 
+const budgetLine =
+	m.budget != null
+		? `Budget: ${m.tokensUsed.toLocaleString()} / ${m.budget.toLocaleString()} tokens`
+		: `Tokens (est.): ${m.tokensUsed.toLocaleString()}`;
+
 const lines: string[] = [
 	`# Memory query: ${query}`,
 	'',
-	`Pipeline: candidates=${result.stages.candidates} → expanded=${result.stages.expanded} → ranked=${result.stages.ranked} → assembled=${result.stages.assembled}`,
-	`Confidence: **${confidenceNote}** · depth=${depth}` +
-		(budget != null ? ` · budget≈${budget} tokens (used≈${result.tokensUsed})` : ''),
+	'## Metrics',
 	'',
-	'## Ranking',
+	`Candidates: ${m.candidates}`,
+	`Expanded: ${m.expanded}`,
+	`Ranked: ${m.ranked}`,
+	`Returned: ${m.returned}`,
+	budgetLine,
+	`Confidence filter: ${confidenceNote}`,
 	'',
-	'| Score | ID | Type | Edge | Durability |',
-	'| ----: | --- | --- | --- | --- |',
-	...hits.map(
-		(h) =>
-			`| ${h.score.toFixed(0)} | \`${h.entry.id}\` | ${h.entry.type} | ${h.edgeType ?? 'seed'} | ${h.entry.durability} |`
-	),
+	'## Ranking (with explanations)',
 	''
 ];
 
-// Root-cause shortcuts from top hits
+hits.forEach((h, i) => {
+	lines.push(`${i + 1}. \`${h.entry.id}\` (${h.score.toFixed(0)}) — ${h.entry.title}`);
+	for (const reason of h.reasons) {
+		lines.push(`   ✓ ${reason}`);
+	}
+	lines.push('');
+});
+
 const causes = new Map<string, string>();
 for (const h of hits) {
 	for (const c of rootCauses(h.entry, aliases)) {
@@ -231,47 +236,12 @@ for (const [type, list] of clusters) {
 	lines.push('');
 	for (const h of list) {
 		const e = h.entry;
-		const meta = [
-			`score ${h.score.toFixed(0)}`,
-			e.confidence,
-			e.durability,
-			e.pr != null ? `PR #${e.pr}` : null,
-			e.migration != null ? `migration ${e.migration}` : null,
-			h.edgeType ? `via ${h.edgeType}` : null
-		]
-			.filter(Boolean)
-			.join(' · ');
-		lines.push(`- \`${e.id}\` — ${e.title} _(${meta})_`);
-		if (e.summary) lines.push(`  - ${e.summary}`);
-		const typed = e.relationships.filter((r) => r.type !== 'related');
-		if (typed.length) {
-			lines.push(
-				`  - edges: ${typed.map((r) => `\`${r.type}:${r.id}\``).join(', ')}`
-			);
-		}
-	}
-	lines.push('');
-}
-
-const openish = hits.filter(
-	(h) => h.entry.status === 'open' || h.entry.status === 'open-debt' || h.entry.status === 'verified'
-);
-if (openish.length) {
-	lines.push('## Current Status (from hits)');
-	lines.push('');
-	for (const h of openish) {
 		lines.push(
-			`- \`${h.entry.id}\` · \`${h.entry.status}\` · \`${h.entry.durability}\` — ${h.entry.title}`
+			`- \`${e.id}\` — ${e.title} _(score ${h.score.toFixed(0)} · ${e.durability})_`
 		);
+		if (e.summary) lines.push(`  - ${e.summary}`);
 	}
 	lines.push('');
 }
-
-lines.push('## Score model');
-lines.push('');
-lines.push(
-	'`total = concept(≤40) + edge(≤25) + confidence(≤15) + recency(≤10) + durability(≤5) + status(≤5)`'
-);
-lines.push('');
 
 console.log(lines.join('\n'));

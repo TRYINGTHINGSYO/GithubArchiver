@@ -26,6 +26,7 @@ For substantial work:
 7. Prefer append-only entries over rewriting history or creating thin ad-hoc notes.
 8. Never store secrets, API keys, passwords, tokens, or private credentials in the vault.
 9. Do not maintain daily conversation transcripts in the vault — store only durable outcomes.
-10. If only one memory file fits in context, read `Project Digest.md`. For a focused topic, run `npm run memory:query -- "<topic>" --budget 6000` (multi-stage: candidates → typed expand → re-rank → assemble).
+10. If only one memory file fits in context, read `Project Digest.md`. For a focused topic, run `npm run memory:query -- "<topic>" --budget 6000`. After ranking changes, run `npm run memory:eval`.
 11. Do not hand-edit generated files (`Timeline.md`, `Current Status.md`, `Project Digest.md`, `Knowledge Graph.md`, `index.json`, `indexes/*`).
-12. Prefer typed `relationships` with stable `id`s (`caused-by`, `implemented-by`, …). Set `confidence` and `durability` so retrieval can filter and rank correctly.
+12. Prefer typed `relationships` with stable `id`s. Set `schema`, `confidence`, and `durability`.
+13. **Retrieval is read-only.** Never let query/eval write vault “facts.” Append durable knowledge only via explicit `entries/*.md` checkpoints.

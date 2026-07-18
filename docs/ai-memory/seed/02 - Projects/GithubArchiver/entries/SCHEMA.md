@@ -10,6 +10,7 @@ Append-only event log. Do not rewrite history — add a new entry and point type
 
 ```yaml
 ---
+schema: 1                             # metadata API version (required going forward)
 id: incident-search-fallback-stale    # REQUIRED stable id
 date: 2026-07-18
 pr: 6
@@ -27,12 +28,12 @@ relationships:
     id: pr-6
   - type: references
     id: migration-030
-  - type: validates
-    id: feature-memory-retrieval
 title: Short headline
 migration: null
 ---
 ```
+
+Missing `schema` defaults to `1`. Bump `MEMORY_SCHEMA_VERSION` in code when making incompatible metadata changes.
 
 Legacy `related:` / `supersedes:` still work and are normalized into `relationships`.
 

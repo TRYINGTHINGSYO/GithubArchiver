@@ -1,0 +1,15 @@
+id: search-fallback
+query: search fallback
+must_include:
+  - incident-search-fallback-stale
+  - incident-gharchive-createevent
+should_include:
+  - decision-status-hierarchy
+  - debt-github-token
+must_not_include:
+  - research-does-not-exist
+should_not_include:
+  - pr-1-discovery-pipeline
+limit: 8
+depth: 2
+candidates: 20

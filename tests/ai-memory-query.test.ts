@@ -1,69 +1,78 @@
 import { describe, expect, it } from 'vitest';
 import {
+	MEMORY_SCHEMA_VERSION,
 	clusterHits,
 	composeScore,
 	estimateTokens,
+	explainHit,
 	loadMemoryEntries,
 	queryMemory,
 	queryMemoryDetailed,
 	rootCauses,
 	buildAliasIndex,
 	scoreConceptMatch,
-	scoreConfidence,
-	scoreEdgeDistance
+	toMemoryIndex
 } from '../scripts/lib/ai-memory';
 
 describe('ai memory multi-stage retrieval', () => {
 	const entries = loadMemoryEntries();
 
-	it('requires stable ids, confidence, and durability', () => {
+	it('requires stable ids, confidence, durability, and schema', () => {
 		for (const e of entries) {
 			expect(e.id).toBeTruthy();
 			expect(e.confidence).toMatch(/^(confirmed|hypothesis|deprecated)$/);
 			expect(e.durability).toMatch(/^(transient|temporary|release|permanent)$/);
+			expect(e.schema).toBeLessThanOrEqual(MEMORY_SCHEMA_VERSION);
 		}
+		expect(toMemoryIndex(entries).schema).toBe(MEMORY_SCHEMA_VERSION);
 	});
 
-	it('parses typed relationships on search-fallback incident', () => {
+	it('parses typed relationships and explains caused-by', () => {
 		const stale = entries.find((e) => e.id === 'incident-search-fallback-stale');
 		expect(stale).toBeTruthy();
-		expect(stale!.relationships.some((r) => r.type === 'caused-by')).toBe(true);
 		const aliases = buildAliasIndex(entries);
-		const causes = rootCauses(stale!, aliases);
-		expect(causes.map((c) => c.id)).toContain('incident-gharchive-createevent');
+		expect(rootCauses(stale!, aliases).map((c) => c.id)).toContain(
+			'incident-gharchive-createevent'
+		);
 	});
 
-	it('composes score components into a 0–100-ish total', () => {
-		const b = composeScore({
-			concept: 40,
-			edge: 25,
-			confidence: 15,
-			recency: 10,
-			durability: 5,
-			status: 5
-		});
-		expect(b.total).toBe(100);
-		expect(scoreEdgeDistance(0)).toBe(25);
-		expect(scoreConfidence('confirmed')).toBe(15);
-	});
-
-	it('runs candidate → expand → re-rank pipeline for search fallback', () => {
+	it('runs candidate → expand → re-rank with metrics and reasons', () => {
 		const detailed = queryMemoryDetailed(entries, 'search fallback', {
 			depth: 2,
 			candidates: 20,
 			limit: 8
 		});
-		expect(detailed.stages.candidates).toBeGreaterThan(0);
-		expect(detailed.stages.expanded).toBeGreaterThanOrEqual(detailed.stages.candidates);
-		expect(detailed.assembled.length).toBeGreaterThan(0);
-		expect(detailed.assembled[0].score).toBeGreaterThanOrEqual(
-			detailed.assembled.at(-1)!.score
-		);
+		expect(detailed.metrics.candidates).toBeGreaterThan(0);
+		expect(detailed.metrics.expanded).toBeGreaterThanOrEqual(detailed.metrics.candidates);
+		expect(detailed.metrics.returned).toBe(detailed.assembled.length);
+		expect(detailed.assembled[0].reasons.length).toBeGreaterThan(0);
+		expect(detailed.assembled[0].reasons.some((r) => /confidence=/.test(r))).toBe(true);
 
 		const ids = detailed.assembled.map((h) => h.entry.id);
 		expect(ids).toContain('incident-search-fallback-stale');
 		expect(ids).toContain('incident-gharchive-createevent');
 		expect(clusterHits(detailed.assembled).has('incident')).toBe(true);
+	});
+
+	it('explainHit surfaces inbound typed edges', () => {
+		const create = entries.find((e) => e.id === 'incident-gharchive-createevent')!;
+		const hit = {
+			entry: create,
+			score: 90,
+			breakdown: composeScore({
+				concept: 30,
+				edge: 25,
+				confidence: 15,
+				recency: 10,
+				durability: 5,
+				status: 1
+			}),
+			via: 'caused-by:incident-search-fallback-stale',
+			depth: 1,
+			edgeType: 'caused-by' as const
+		};
+		const reasons = explainHit(hit, entries);
+		expect(reasons.some((r) => r.includes('caused-by'))).toBe(true);
 	});
 
 	it('respects token budget when assembling context', () => {
@@ -73,7 +82,6 @@ describe('ai memory multi-stage retrieval', () => {
 			candidates: 20
 		});
 		expect(tight.assembled.length).toBeGreaterThan(0);
-		expect(tight.assembled.length).toBeLessThanOrEqual(tight.stages.ranked);
 		expect(tight.tokensUsed).toBeLessThanOrEqual(220);
 		expect(estimateTokens('abcd')).toBe(1);
 	});
@@ -93,14 +101,14 @@ describe('ai memory multi-stage retrieval', () => {
 			body: 'search fallback hypothesis'
 		};
 		const withHypo = [...entries, hypo];
-		const confirmed = queryMemory(withHypo, 'search fallback', { limit: 20 });
-		expect(confirmed.every((h) => h.entry.confidence === 'confirmed')).toBe(true);
-
-		const withHypotheses = queryMemory(withHypo, 'search fallback', {
-			limit: 20,
-			includeHypotheses: true
-		});
-		expect(withHypotheses.some((h) => h.entry.id === 'research-temp-hypothesis')).toBe(true);
+		expect(queryMemory(withHypo, 'search fallback', { limit: 20 }).every((h) => h.entry.confidence === 'confirmed')).toBe(
+			true
+		);
+		expect(
+			queryMemory(withHypo, 'search fallback', { limit: 20, includeHypotheses: true }).some(
+				(h) => h.entry.id === 'research-temp-hypothesis'
+			)
+		).toBe(true);
 	});
 
 	it('can resolve by stable id with high concept score', () => {

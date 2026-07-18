@@ -1,10 +1,50 @@
 {
+  "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T01:44:18.055Z",
+  "generatedAt": "2026-07-18T01:48:13.570Z",
   "project": "githubarchiver",
   "entries": [
     {
+      "id": "feature-stabilize-retrieval",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": 13,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "memory"
+      ],
+      "related": [
+        "feature-multistage-retrieval",
+        "feature-memory-retrieval",
+        "memory"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "feature-multistage-retrieval"
+        },
+        {
+          "type": "validates",
+          "id": "feature-memory-retrieval"
+        },
+        {
+          "type": "related",
+          "id": "memory"
+        }
+      ],
+      "supersedes": "feature-multistage-retrieval",
+      "title": "Stabilize knowledge engine with evals, explanations, and schema version",
+      "path": "entries/2026-07-18-pr-13-stabilize-retrieval.md",
+      "summary": "No new vault features. Focus on predictability:"
+    },
+    {
       "id": "feature-multistage-retrieval",
+      "schema": 1,
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
@@ -47,6 +87,7 @@
     },
     {
       "id": "feature-retrieval-scoring",
+      "schema": 1,
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
@@ -103,6 +144,7 @@
     },
     {
       "id": "feature-memory-retrieval",
+      "schema": 1,
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
@@ -169,6 +211,7 @@
     },
     {
       "id": "feature-digest-knowledge-graph",
+      "schema": 1,
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
@@ -221,6 +264,7 @@
     },
     {
       "id": "feature-structured-timeline",
+      "schema": 1,
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
@@ -263,6 +307,7 @@
     },
     {
       "id": "feature-cursor-memory-rules",
+      "schema": 1,
       "type": "feature",
       "status": "open",
       "confidence": "confirmed",
@@ -300,6 +345,7 @@
     },
     {
       "id": "incident-search-fallback-stale",
+      "schema": 1,
       "type": "incident",
       "status": "open",
       "confidence": "confirmed",
@@ -350,6 +396,7 @@
     },
     {
       "id": "decision-status-hierarchy",
+      "schema": 1,
       "type": "decision",
       "status": "verified",
       "confidence": "confirmed",
@@ -399,6 +446,7 @@
     },
     {
       "id": "bugfix-activity-copy",
+      "schema": 1,
       "type": "bugfix",
       "status": "merged",
       "confidence": "confirmed",
@@ -437,6 +485,7 @@
     },
     {
       "id": "debt-github-token",
+      "schema": 1,
       "type": "technical-debt",
       "status": "open-debt",
       "confidence": "confirmed",
@@ -471,6 +520,7 @@
     },
     {
       "id": "incident-gharchive-createevent",
+      "schema": 1,
       "type": "incident",
       "status": "merged",
       "confidence": "confirmed",
@@ -517,6 +567,7 @@
     },
     {
       "id": "incident-backlog-sleep-tiers",
+      "schema": 1,
       "type": "incident",
       "status": "merged",
       "confidence": "confirmed",
@@ -556,6 +607,7 @@
     },
     {
       "id": "pr-1-discovery-pipeline",
+      "schema": 1,
       "type": "feature",
       "status": "merged",
       "confidence": "confirmed",

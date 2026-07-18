@@ -1,5 +1,7 @@
 /**
- * Shared loader + multi-stage ranked retrieval for GithubArchiver memory.
+ * Shared loader + multi-stage ranked retrieval for the project knowledge engine.
+ *
+ * Retrieval is READ-ONLY. Durable knowledge enters only via append-only entries.
  *
  * Pipeline:
  *   Stage 1 — Candidate retrieval (top K by concept)
@@ -9,6 +11,9 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+
+/** Entry / index metadata API version. Bump when fields or edge types change incompatibly. */
+export const MEMORY_SCHEMA_VERSION = 1;
 
 export const ENTRY_TYPES = [
 	'decision',
@@ -64,6 +69,7 @@ export interface Relationship {
 }
 
 export interface MemoryEntry {
+	schema: number;
 	stem: string;
 	id: string;
 	date: string;
@@ -85,11 +91,13 @@ export interface MemoryEntry {
 }
 
 export interface MemoryIndexFile {
+	schema: number;
 	generated: true;
 	generatedAt: string;
 	project: 'githubarchiver';
 	entries: Array<{
 		id: string;
+		schema: number;
 		type: EntryType;
 		status: EntryStatus;
 		confidence: Confidence;
@@ -125,6 +133,8 @@ export interface QueryHit {
 	via: string;
 	depth: number;
 	edgeType?: RelationType;
+	/** Human-readable explainability for why this hit was included / ranked. */
+	reasons: string[];
 }
 
 export function defaultMemoryRoot(): string {
@@ -337,7 +347,18 @@ export function loadMemoryEntries(root: string = defaultMemoryRoot()): MemoryEnt
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`${file}: date must be YYYY-MM-DD`);
 		const { relationships, related, supersedes } = normalizeRelationships(fm);
 
+		const schema = fm.schema == null ? MEMORY_SCHEMA_VERSION : Number(fm.schema);
+		if (!Number.isFinite(schema) || schema < 1) {
+			throw new Error(`${file}: invalid schema version`);
+		}
+		if (schema > MEMORY_SCHEMA_VERSION) {
+			throw new Error(
+				`${file}: schema ${schema} newer than supported ${MEMORY_SCHEMA_VERSION}`
+			);
+		}
+
 		entries.push({
+			schema,
 			stem,
 			id,
 			date,
@@ -397,11 +418,13 @@ export function resolveRef(
 
 export function toMemoryIndex(entries: MemoryEntry[], generatedAt = new Date().toISOString()): MemoryIndexFile {
 	return {
+		schema: MEMORY_SCHEMA_VERSION,
 		generated: true,
 		generatedAt,
 		project: 'githubarchiver',
 		entries: entries.map((e) => ({
 			id: e.id,
+			schema: e.schema,
 			type: e.type,
 			status: e.status,
 			confidence: e.confidence,
@@ -419,6 +442,47 @@ export function toMemoryIndex(entries: MemoryEntry[], generatedAt = new Date().t
 			summary: e.summary
 		}))
 	};
+}
+
+/** Build explainability bullets from score breakdown + provenance. */
+export function explainHit(
+	h: Omit<QueryHit, 'reasons'>,
+	corpus: MemoryEntry[] = []
+): string[] {
+	const reasons: string[] = [];
+	const b = h.breakdown;
+	if (b.concept >= 20) reasons.push(`concept match (${b.concept.toFixed(0)})`);
+	else if (b.concept > 0) reasons.push(`weak concept signal (${b.concept.toFixed(0)})`);
+
+	if (h.depth === 0) reasons.push('stage-1 candidate seed');
+	else if (h.edgeType) reasons.push(`${h.edgeType} edge (depth ${h.depth})`);
+	else if (h.depth > 0) reasons.push(`graph expansion depth ${h.depth}`);
+
+	reasons.push(`confidence=${h.entry.confidence}`);
+	reasons.push(`durability=${h.entry.durability}`);
+
+	if (b.recency >= 8) reasons.push('high recency');
+	if (b.status >= 3) reasons.push(`status=${h.entry.status}`);
+
+	const via = h.via.match(/^(?:inv-)?([a-z-]+):(.+)$/);
+	if (via && via[1] !== 'stage1' && via[2] !== 'match') {
+		reasons.push(`reached via ${via[1]} ← ${via[2]}`);
+	}
+
+	if (corpus.length) {
+		const inbound = incomingEdges(h.entry, corpus)
+			.filter((r) => r.type !== 'related')
+			.slice(0, 4);
+		for (const rel of inbound) {
+			reasons.push(`${rel.type} from ${rel.from}`);
+		}
+	}
+
+	return reasons;
+}
+
+function withReasons(h: Omit<QueryHit, 'reasons'>, corpus: MemoryEntry[]): QueryHit {
+	return { ...h, reasons: explainHit(h, corpus) };
 }
 
 export function tokenizeQuery(q: string): string[] {
@@ -530,12 +594,13 @@ function outgoingEdges(entry: MemoryEntry): Relationship[] {
 	return entry.relationships;
 }
 
-function incomingEdges(
+export function incomingEdges(
 	entry: MemoryEntry,
 	entries: MemoryEntry[]
 ): Array<Relationship & { from: string }> {
 	const out: Array<Relationship & { from: string }> = [];
 	for (const other of entries) {
+		if (other.id === entry.id) continue; // ignore self edges via pr-/migration- aliases
 		for (const rel of other.relationships) {
 			if (
 				rel.id === entry.id ||
@@ -565,6 +630,15 @@ export interface QueryOptions {
 	budget?: number;
 }
 
+export interface QueryMetrics {
+	candidates: number;
+	expanded: number;
+	ranked: number;
+	returned: number;
+	tokensUsed: number;
+	budget: number | null;
+}
+
 export interface QueryResult {
 	hits: QueryHit[];
 	candidates: QueryHit[];
@@ -577,6 +651,7 @@ export interface QueryResult {
 		ranked: number;
 		assembled: number;
 	};
+	metrics: QueryMetrics;
 }
 
 /**
@@ -633,13 +708,18 @@ export function queryMemoryDetailed(
 			durability: scoreDurabilityMeta(e.durability),
 			status: scoreStatusBoost(e.status)
 		});
-		stage1.push({
-			entry: e,
-			score: breakdown.total,
-			breakdown,
-			via: 'stage1:match',
-			depth: 0
-		});
+		stage1.push(
+			withReasons(
+				{
+					entry: e,
+					score: breakdown.total,
+					breakdown,
+					via: 'stage1:match',
+					depth: 0
+				},
+				entries
+			)
+		);
 	}
 	stage1.sort((a, b) => b.breakdown.concept - a.breakdown.concept || b.score - a.score);
 	const candidates = stage1.slice(0, candidateN);
@@ -737,14 +817,19 @@ export function queryMemoryDetailed(
 			durability: scoreDurabilityMeta(entry.durability),
 			status: scoreStatusBoost(entry.status)
 		});
-		ranked.push({
-			entry,
-			score: breakdown.total,
-			breakdown,
-			via: r.via,
-			depth: r.depth,
-			edgeType: r.edgeType
-		});
+		ranked.push(
+			withReasons(
+				{
+					entry,
+					score: breakdown.total,
+					breakdown,
+					via: r.via,
+					depth: r.depth,
+					edgeType: r.edgeType
+				},
+				entries
+			)
+		);
 	}
 	ranked.sort((a, b) => b.score - a.score || (a.entry.date < b.entry.date ? 1 : -1));
 
@@ -769,17 +854,26 @@ export function queryMemoryDetailed(
 		tokensUsed = estimateTokens(assembled.map(formatHitChunk).join('\n'));
 	}
 
+	const stages = {
+		candidates: candidates.length,
+		expanded: reach.size,
+		ranked: ranked.length,
+		assembled: assembled.length
+	};
 	return {
 		hits: ranked,
 		candidates,
 		assembled,
 		tokensUsed,
 		budget,
-		stages: {
-			candidates: candidates.length,
-			expanded: reach.size,
-			ranked: ranked.length,
-			assembled: assembled.length
+		stages,
+		metrics: {
+			candidates: stages.candidates,
+			expanded: stages.expanded,
+			ranked: stages.ranked,
+			returned: stages.assembled,
+			tokensUsed,
+			budget
 		}
 	};
 }

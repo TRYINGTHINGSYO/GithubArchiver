@@ -1,6 +1,8 @@
-# AI Memory setup for Cursor (GithubArchiver)
+# Project Knowledge Engine (GithubArchiver)
 
-Adapted from the open-source AI Memory Vault approach (boot file + structured vault + job priming) for Cursor. The boot layer here is **Project Rules** in `.cursor/rules/` instead of a root `CLAUDE.md`. Daily-note updates on every coding chat are intentionally optional — store durable outcomes only.
+What began as an “AI memory vault” is now a **knowledge operating system** for the project: an append-only event log, typed knowledge graph, generated human views, and a read-only multi-stage retrieval engine.
+
+Cursor integration uses **Project Rules** in `.cursor/rules/`. Daily-note diaries are intentionally out of scope — store durable engineering knowledge only.
 
 ## Layout (outside code repos)
 
@@ -71,26 +73,29 @@ Primary generated artifacts:
 
 Plus convenience indexes (`PR Timeline.md`, `Production Incidents.md`, …) and `indexes/<type>.md`.
 
-### Retrieval (PR #10–#12)
-
-Multi-stage pipeline (scales past naive full-graph walks):
+### Retrieval (PR #10–#13) — read-only
 
 ```text
-Query → candidates (top K) → typed expand → re-rank → token-budget assemble
+Human / AI → Append Event → Validation → Graph → Generated Views → Retrieval
+```
+
+**Retrieval never writes to the vault.** Durable knowledge enters only through explicit `entries/*.md` appends.
+
+```text
+Query → candidates → typed expand → re-rank → budget assemble
 ```
 
 ```bash
 npm run memory:query -- "search fallback"
 npm run memory:query -- "search fallback" --budget 6000
-npm run memory:query -- "search fallback" --follow caused-by,references
-npm run memory:query -- "search fallback" --include-hypotheses
+npm run memory:eval
 ```
 
-Typed edges (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`) let agents ask for root cause without treating every link equally. Explicit `durability` separates permanent knowledge from temporary status.
+Each query prints **metrics** (candidates / expanded / ranked / returned / budget) and **explanations** per hit. Eval cases live in `docs/ai-memory/evals/`.
 
-Default confidence filter: **confirmed only**.
+Default confidence filter: **confirmed only**. Metadata API version: `schema: 1`.
 
-Principle: **make important things easy to rediscover** — smarter retrieval beats a larger vault.
+Principle: **make important things easy to rediscover** — invest in evaluation and explainability before expanding the vault.
 
 ## What to store (and what not to)
 

@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md) (`feature`, `confirmed`, `permanent`) — Stabilize knowledge engine with evals, explanations, and schema version
+  - `supersedes` → [`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), `validates` → [`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), `related` → [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - [`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md) (`feature`, `confirmed`, `permanent`) — Multi-stage retrieval with typed edges and token budgets
   - `supersedes` → [`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), `references` → [`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), `related` → [`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), `related` → [`memory`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - [`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md) (`feature`, `confirmed`, `release`) — Ranked retrieval scoring model for memory query
