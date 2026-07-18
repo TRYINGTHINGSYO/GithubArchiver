@@ -3,7 +3,7 @@ schema: 1
 id: incident-enrich-tier-flood
 date: 2026-07-18
 pr: null
-commit: null
+commit: 137f3a0
 area:
   - enrichment
   - priority
