@@ -205,7 +205,7 @@
 	</div>
 	<div class="browse-grid">
 		{#each data.discovery.clusters as cluster}
-			<a href="/discover/projects-to-watch?cluster={cluster.slug}">
+			<a href="/?cluster={cluster.slug}">
 				<strong>{cluster.name}</strong>
 				<span>{cluster.repo_count.toLocaleString()} repos</span>
 			</a>

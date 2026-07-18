@@ -7,6 +7,7 @@ import {
 	getEnrichmentProgress,
 	type EnrichmentProgress
 } from '$lib/server/enrichment-progress';
+import { cached } from '$lib/server/ttl-cache';
 import { getDaemonUiStatus } from '$lib/server/worker-control';
 
 const WORK_PHASES = new Set([
@@ -292,6 +293,10 @@ function findActiveWorkerJob() {
 }
 
 export function getDaemonActivity(): DaemonActivity {
+	return cached('daemon-activity', 5_000, () => computeDaemonActivity());
+}
+
+function computeDaemonActivity(): DaemonActivity {
 	const daemon = getDaemonUiStatus();
 	const bg = getBackgroundDaemonState();
 	const backlog = queryBacklogSnapshot({ rateLimitedUntil: bg.rateLimitedUntil });

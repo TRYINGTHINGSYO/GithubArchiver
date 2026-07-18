@@ -287,6 +287,30 @@ export function listClusterAnalytics(): ClusterAnalyticsRow[] {
 		.sort((a, b) => b.repo_count - a.repo_count);
 }
 
+/** Cheap browse list — uses maintained repo_clusters.repo_count (no per-cluster aggregates). */
+export function listActiveClusterSummaries(limit = 24): ClusterAnalyticsRow[] {
+	ensureClusterRegistry();
+	return listClusters()
+		.filter((cluster) => cluster.repo_count > 0)
+		.sort((a, b) => b.repo_count - a.repo_count)
+		.slice(0, Math.max(1, limit))
+		.map((cluster) => ({
+			slug: cluster.slug,
+			name: cluster.name,
+			description: cluster.description,
+			cluster_type: cluster.cluster_type,
+			repo_count: cluster.repo_count,
+			new_24h: 0,
+			new_7d: 0,
+			new_prev_7d: 0,
+			avg_interesting_score: null,
+			deleted_count: 0,
+			archived_count: 0,
+			top_languages: [],
+			growth_pct: null
+		}));
+}
+
 export function getClusterIdBySlug(slug: string): number | null {
 	return getClusterBySlug(slug)?.id ?? null;
 }

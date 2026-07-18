@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T20:02:17.595Z",
+  "generatedAt": "2026-07-18T20:19:03.382Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -596,6 +596,36 @@
       "title": "Fix activity bar copy so enrichment is not labeled as Search",
       "path": "entries/2026-07-18-pr-4-activity-copy.md",
       "summary": "Prefer enrichment messaging when backlog remains. Ingest-only copy: “Discovering repositories from the archive…” so the bar matches actual runtime work."
+    },
+    {
+      "id": "bugfix-nav-perf-clusters",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-18",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "discovery",
+        "performance",
+        "clusters"
+      ],
+      "related": [
+        "decision-enrich-stage-timings"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "decision-enrich-stage-timings"
+        }
+      ],
+      "supersedes": null,
+      "title": "Fix dead cluster links and slow page navigation",
+      "path": "entries/2026-07-18-bugfix-nav-perf-clusters.md",
+      "summary": "- Homepage ~8s, Discover ~4s on production"
     },
     {
       "id": "debt-github-token",

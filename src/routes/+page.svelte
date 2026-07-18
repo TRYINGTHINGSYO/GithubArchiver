@@ -354,7 +354,12 @@
 	<div class="cluster-grid">
 		{#each data.clusters.items as cluster}
 			<article class="cluster-card">
-				<a class="cluster-title" href="/discover/projects-to-watch?cluster={cluster.slug}">
+				<a
+					class="cluster-title"
+					href={data.clusters.mode === 'growth'
+						? `/discover/fastest-growing?cluster=${cluster.slug}`
+						: `/?cluster=${cluster.slug}`}
+				>
 					{cluster.name}
 				</a>
 				{#if cluster.description}<p>{cluster.description}</p>{/if}

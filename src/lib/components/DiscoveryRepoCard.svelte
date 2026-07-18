@@ -60,7 +60,7 @@
 	{#if repo.clusters.length > 0}
 		<div class="clusters" aria-label="Cluster matches">
 			{#each repo.clusters as cluster}
-				<a href="/discover/projects-to-watch?cluster={cluster.slug}" class="cluster-badge">
+				<a href="/?cluster={cluster.slug}" class="cluster-badge">
 					{cluster.name}
 					<span>{Math.round(cluster.confidence * 100)}%</span>
 				</a>

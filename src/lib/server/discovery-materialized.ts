@@ -1,5 +1,5 @@
 import { getDb } from './db/connection.js';
-import { listClusterAnalytics } from './db/clusters.js';
+import { listActiveClusterSummaries } from './db/clusters.js';
 import { countRepos, countUnenriched } from './db/repos.js';
 import { getLatestJobsByType } from './db/jobs.js';
 import type {
@@ -206,7 +206,8 @@ export function getMaterializedDiscoveryLanding(
 			limit
 		),
 		emergingTopics: readMaterializedPayloads('discovery_emerging_topics').slice(0, limit),
-		clusters: listClusterAnalytics().filter((cluster) => cluster.repo_count > 0).slice(0, 24)
+		// Use maintained repo_count — avoid N+1 analytics on every page load.
+		clusters: listActiveClusterSummaries(24)
 	};
 }
 
@@ -299,7 +300,7 @@ export function getDiscoverySystemStatus(): DiscoverySystemStatus {
 		};
 	}
 
-	updateDiscoverySystemStatus();
+	// Read-only on the request path. Daemon/materializer calls updateDiscoverySystemStatus().
 	const row = db.prepare('SELECT * FROM discovery_system_status WHERE id = 1').get() as
 		| {
 				repositories_discovered: number;

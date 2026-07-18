@@ -38,6 +38,7 @@ import {
 	pushStoryTimingSamples,
 	stagePercentilesToJson
 } from '../enrichment-stage-timings.js';
+import { cached } from '../ttl-cache.js';
 import { runArchiveStoryCycle } from './stories.js';
 import { runDiscoveryMaterializationCycle } from './discovery.js';
 
@@ -651,6 +652,10 @@ function sumEnrichJobWindow(sinceIso: string): {
 }
 
 export function getEnrichmentOpsSnapshot() {
+	return cached('enrichment-ops-snapshot', 10_000, () => computeEnrichmentOpsSnapshot());
+}
+
+function computeEnrichmentOpsSnapshot() {
 	const depths = countEnrichmentByDepth();
 	const tiers = countEnrichmentBacklogByTier();
 	const quota = getGitHubQuotaSnapshot();
