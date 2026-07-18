@@ -2,7 +2,7 @@
 schema: 1
 id: incident-enrichment-hourly-bottleneck
 date: 2026-07-18
-pr: null
+pr: 18
 commit: 3792bf9
 area:
   - enrichment

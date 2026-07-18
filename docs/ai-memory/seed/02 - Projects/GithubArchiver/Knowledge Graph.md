@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) (`incident`, `confirmed`, `permanent`) — Enrichment must be continuous concurrent queue not hourly trickle
+  - `related` → [`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), `related` → [`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - [`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md) (`feature`, `confirmed`, `permanent`) — Stabilize knowledge engine with evals, explanations, and schema version
   - `supersedes` → [`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), `validates` → [`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), `related` → [`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - [`release-knowledge-engine-on-main`](entries/2026-07-18-release-knowledge-engine-on-main.md) (`release`, `confirmed`, `permanent`) — Knowledge engine adopted on main (PRs #6–#13)
@@ -37,8 +39,6 @@ Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, 
   - `related` → [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), `related` → [`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 - [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md) (`decision`, `confirmed`, `permanent`) — Knowledge engine improves knowledge before framework
   - `references` → [`release-knowledge-engine-on-main`](entries/2026-07-18-release-knowledge-engine-on-main.md), `related` → [`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md), `related` → [`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
-- [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) (`incident`, `confirmed`, `permanent`) — Enrichment must be continuous concurrent queue not hourly trickle
-  - `related` → [`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), `related` → [`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - [`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md) (`incident`, `confirmed`, `permanent`) — Fix GH Archive CreateEvent matching (0 repo creates bug)
   - `references` → [`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), `related` → [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), `implemented-by` → [`pr-3`](entries/2026-07-17-pr-3-createevent-matching.md), `related` → [`pr-6`](entries/2026-07-18-pr-6-search-fallback-active.md)
 - [`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md) (`incident`, `confirmed`, `permanent`) — Fix backlog-sleep 300s stall and all-urgent enrichment tiers
