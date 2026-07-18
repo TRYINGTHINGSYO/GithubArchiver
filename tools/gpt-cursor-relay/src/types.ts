@@ -109,13 +109,13 @@ export interface RelayConfig {
   cursorAgentBin: string;
   cursorApiKey?: string;
   knownProjects?: Record<string, string>;
-  /** Require plan approval before Cursor edits (default true) */
+  /** Require plan approval before Cursor edits (default from project config / true) */
   requirePlanApproval?: boolean;
-  /** Enable supervisor interventions during Cursor runs (default true) */
+  /** Enable supervisor interventions during Cursor runs */
   supervisorEnabled?: boolean;
-  /** Run automatic verification after Cursor turns (default true) */
+  /** Run automatic verification after Cursor turns */
   autoVerify?: boolean;
-  /** Attempt browser verification for web apps (default false) */
+  /** Attempt browser verification for web apps */
   browserVerify?: boolean;
 }
 
@@ -280,6 +280,14 @@ export interface DetectedProject {
   reason: string;
 }
 
+export interface TimelineEventView {
+  id: string;
+  ts: string;
+  type: string;
+  message: string;
+  round?: number;
+}
+
 export interface RelaySnapshot {
   status: RelayStatus;
   round: number;
@@ -312,6 +320,15 @@ export interface RelaySnapshot {
     autoVerify: boolean;
     browserVerify: boolean;
   };
+  /** Structured execution timeline */
+  timeline: TimelineEventView[];
+  /** Active plugin ids */
+  plugins: string[];
+  /** Config source path if loaded */
+  configSource: string | null;
+  /** Opaque session id for crash recovery */
+  sessionId: string | null;
+  agentId: string;
 }
 
 export interface CursorRunResult {

@@ -2,8 +2,15 @@ import { randomUUID } from "node:crypto";
 import { access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import path from "node:path";
+import { adaptCursorRunner, type CodingAgent } from "./agent.js";
 import { detectApprovalNeeds } from "./approval.js";
 import { createCheckpoint, rollbackToCheckpoint } from "./checkpoint.js";
+import {
+  conflictAwareMergeInstruction,
+  detectWorkerConflicts,
+} from "./conflicts.js";
+import type { ApprovalPolicy, ProjectRelayConfig } from "./config.js";
+import { DEFAULT_APPROVAL, loadProjectConfig } from "./config.js";
 import { addRoundCost, emptyCost, formatCostSummary } from "./cost.js";
 import { CursorRunner } from "./cursor.js";
 import {
@@ -20,13 +27,24 @@ import {
   rememberTestResult,
   upsertRound,
 } from "./memory.js";
+import { recordTaskMetric } from "./metrics.js";
 import {
   formatLongMemoryForPrompt,
   loadProjectMemory,
   rememberSessionEnd,
 } from "./persist.js";
+import { discoverPlugins } from "./plugins/loader.js";
+import type { OrchestratorPlugin } from "./plugins/types.js";
+import {
+  clearRecoverableSession,
+  formatRecoverySummary,
+  loadRecoverableSession,
+  saveRecoverableSession,
+  type RecoverableSession,
+} from "./recovery.js";
 import { evaluateStopConditions, shouldRetryCursor } from "./stop.js";
 import { shouldSuperviseActivity, superviseActivity } from "./supervisor.js";
+import { Timeline } from "./timeline.js";
 import {
   formatVerifyForPrompt,
   runVerification,
@@ -105,6 +123,16 @@ export class RelaySession {
   private browserVerify = false;
   private planApproved = false;
   private longMemoryContext = "";
+  private sessionId: string | null = null;
+  private startedAtMs = 0;
+  private verifyFailureCount = 0;
+  private timeline = new Timeline();
+  private plugins: OrchestratorPlugin[] = [];
+  private pluginIds: string[] = [];
+  private configSource: string | null = null;
+  private approvalPolicy: ApprovalPolicy = { ...DEFAULT_APPROVAL };
+  private projectConfig: ProjectRelayConfig | null = null;
+  private agent: CodingAgent;
   private listeners = new Set<Listener>();
   private abortController: AbortController | null = null;
   private cursorAbort: AbortController | null = null;
@@ -127,6 +155,7 @@ export class RelaySession {
   constructor(deps: RelayDependencies) {
     this.gpt = deps.gpt;
     this.cursor = deps.cursor;
+    this.agent = adaptCursorRunner(deps.cursor);
     this.collectGitSnapshotFn = deps.collectGitSnapshot ?? collectGitSnapshot;
     this.runVerificationFn = deps.runVerification ?? runVerification;
     this.runParallelWorkersFn = deps.runParallelWorkers ?? runParallelWorkers;
@@ -192,6 +221,17 @@ export class RelaySession {
         autoVerify: this.autoVerify,
         browserVerify: this.browserVerify,
       },
+      timeline: this.timeline.all().map((e) => ({
+        id: e.id,
+        ts: e.ts,
+        type: e.type,
+        message: e.message,
+        round: e.round,
+      })),
+      plugins: [...this.pluginIds],
+      configSource: this.configSource,
+      sessionId: this.sessionId,
+      agentId: this.agent.id,
     };
   }
 
@@ -205,10 +245,28 @@ export class RelaySession {
     this.projectName = path.basename(config.projectPath) || config.projectPath;
     this.task = config.task.trim();
     this.maxRounds = Math.max(1, Math.min(50, config.maxRounds || 12));
-    this.requirePlanApproval = config.requirePlanApproval !== false;
-    this.supervisorEnabled = config.supervisorEnabled !== false;
-    this.autoVerify = config.autoVerify !== false;
-    this.browserVerify = Boolean(config.browserVerify);
+
+    const loaded = await loadProjectConfig(this.projectPath);
+    this.projectConfig = loaded.config;
+    this.configSource = loaded.source;
+    this.approvalPolicy = { ...DEFAULT_APPROVAL, ...loaded.config.approval };
+
+    // CLI/UI flags override config when explicitly provided
+    this.requirePlanApproval =
+      config.requirePlanApproval ?? loaded.config.require_plan_approval ?? true;
+    this.supervisorEnabled =
+      config.supervisorEnabled ?? loaded.config.supervisor ?? true;
+    this.autoVerify = config.autoVerify ?? loaded.config.auto_verify ?? true;
+    this.browserVerify =
+      config.browserVerify ?? loaded.config.browser_verify ?? false;
+
+    const discovered = await discoverPlugins(
+      this.projectPath,
+      loaded.config.plugins,
+    );
+    this.plugins = discovered.active;
+    this.pluginIds = discovered.active.map((p) => p.id);
+
     this.planApproved = !this.requirePlanApproval;
     this.round = 0;
     this.logs = [];
@@ -227,6 +285,10 @@ export class RelaySession {
     this.stopReason = null;
     this.error = null;
     this.pauseRequested = false;
+    this.verifyFailureCount = 0;
+    this.sessionId = randomUUID();
+    this.startedAtMs = Date.now();
+    this.timeline.clear();
     this.status = this.requirePlanApproval ? "planning" : "running";
     this.abortController = new AbortController();
     this.gpt.resetConversation();
@@ -246,15 +308,79 @@ export class RelaySession {
     this.log("system", `Task: ${this.task}`);
     this.log(
       "system",
+      `Agent=${this.agent.displayName} · config=${this.configSource ?? "(defaults)"} · plugins=${this.pluginIds.join(", ") || "(none)"}`,
+    );
+    this.log(
+      "system",
       `Flags: plan=${this.requirePlanApproval} supervisor=${this.supervisorEnabled} verify=${this.autoVerify} browser=${this.browserVerify}`,
     );
     this.log("system", `Checkpoint ${this.checkpoint.headSha.slice(0, 8)} ready for rollback`);
+    this.timeline.add("session_start", `Started task in ${this.projectName}`, {
+      meta: { sessionId: this.sessionId, plugins: this.pluginIds },
+    });
     if (long.style.prefers.length) {
       this.log(
         "style",
         long.style.prefers.map((p) => `✓ ${p}`).join("\n"),
       );
     }
+    await this.persistRecovery();
+    this.emit();
+
+    this.loopPromise = this.runLoop().finally(() => {
+      this.loopPromise = null;
+      this.abortController = null;
+      this.cursorAbort = null;
+    });
+    await this.loopPromise;
+  }
+
+  /** Resume a crash-recovered session (continues the autonomous loop). */
+  async resumeRecovered(sessionId: string): Promise<void> {
+    if (this.loopPromise) throw new Error("Relay already active");
+    const saved = await loadRecoverableSession(sessionId);
+    if (!saved) throw new Error(`No recoverable session ${sessionId}`);
+
+    this.sessionId = saved.sessionId;
+    this.projectPath = saved.projectPath;
+    this.projectName = saved.projectName;
+    this.task = saved.task;
+    this.round = saved.round;
+    this.maxRounds = saved.maxRounds;
+    this.planApproved = saved.planApproved;
+    this.pendingPlan = saved.pendingPlan;
+    this.workers = saved.workers;
+    this.checkpoint = saved.checkpoint;
+    this.summary = saved.summary;
+    this.stopReason = null;
+    this.error = null;
+    this.requirePlanApproval = saved.flags.requirePlanApproval;
+    this.supervisorEnabled = saved.flags.supervisorEnabled;
+    this.autoVerify = saved.flags.autoVerify;
+    this.browserVerify = saved.flags.browserVerify;
+    this.timeline.load(saved.timeline);
+    this.memory = createSessionMemory(this.task, this.projectPath);
+    this.memory.rounds = saved.rounds;
+    this.memory.cursorChatId = saved.cursorChatId;
+    this.pluginIds = saved.plugins;
+    this.startedAtMs = Date.now();
+    // Resume continues execution; skip re-prompting for an already-seen plan.
+    this.planApproved = true;
+    this.pendingPlan = null;
+    this.status = "running";
+    this.abortController = new AbortController();
+    this.gpt.resetConversation();
+
+    const loaded = await loadProjectConfig(this.projectPath);
+    this.projectConfig = loaded.config;
+    this.configSource = loaded.source;
+    this.approvalPolicy = { ...DEFAULT_APPROVAL, ...loaded.config.approval };
+    const discovered = await discoverPlugins(this.projectPath, saved.plugins);
+    this.plugins = discovered.active;
+
+    this.log("system", "Recovered session — resuming autonomous loop");
+    this.log("system", formatRecoverySummary(saved));
+    this.timeline.add("recovery_resumed", `Resumed session ${sessionId.slice(0, 8)}`);
     this.emit();
 
     this.loopPromise = this.runLoop().finally(() => {
@@ -333,9 +459,11 @@ export class RelaySession {
     if (approved) {
       this.planApproved = true;
       rememberDecision(this.memory, `Approved plan: ${this.pendingPlan.title}`);
+      this.timeline.add("plan_approved", `Plan approved: ${this.pendingPlan.title}`);
     } else {
       this.stopReason = "plan_rejected";
       this.status = "stopped";
+      this.timeline.add("plan_rejected", `Plan rejected: ${this.pendingPlan.title}`);
     }
     this.pendingPlan = null;
     if (approved) this.status = "running";
@@ -543,13 +671,19 @@ export class RelaySession {
           // Don't complete without verification when enabled
           if (this.autoVerify && !this.verification) {
             this.status = "verifying";
-            this.verification = await this.runVerificationFn({
-              projectPath: this.projectPath,
-              browserVerify: this.browserVerify,
-              signal: this.abortController?.signal,
+            this.timeline.add("verify_started", "Automatic verification", {
+              round: this.round,
             });
+            this.verification = await this.runVerify();
             verifyContext = formatVerifyForPrompt(this.verification);
             this.log("verify", this.verification.summary, this.round);
+            this.timeline.add(
+              "verify_finished",
+              this.verification.ok
+                ? "Verification passed"
+                : "Verification failed",
+              { round: this.round },
+            );
             const opinion = await this.gpt.verifyOpinion({
               task: this.task,
               cursorSummary: lastCursorResult ?? decision.summary ?? "",
@@ -561,8 +695,10 @@ export class RelaySession {
               this.round,
             );
             if (!opinion.accepts || !this.verification.ok) {
+              this.verifyFailureCount += 1;
               lastCursorResult = `Verification failed.\n${verifyContext}\nSupervisor notes: ${opinion.notes}`;
               this.status = "running";
+              await this.persistRecovery();
               this.emit();
               continue;
             }
@@ -571,6 +707,9 @@ export class RelaySession {
           this.nextImprovements = decision.next_improvements ?? [];
           this.status = "completed";
           this.stopReason = "gpt_complete";
+          this.timeline.add("session_end", "Task complete", {
+            round: this.round,
+          });
           rememberDecision(this.memory, `Complete: ${this.summary}`);
           break;
         }
@@ -619,7 +758,7 @@ export class RelaySession {
           break;
         }
 
-        const scan = detectApprovalNeeds(instruction);
+        const scan = detectApprovalNeeds(instruction, this.approvalPolicy);
         const needsApproval =
           decision.status === "needs_approval" || scan.categories.length > 0;
         if (needsApproval) {
@@ -671,14 +810,21 @@ export class RelaySession {
         if (this.autoVerify) {
           this.status = "verifying";
           this.live.cursorActivity = "Running automatic verification…";
-          this.emit();
-          this.verification = await this.runVerificationFn({
-            projectPath: this.projectPath,
-            browserVerify: this.browserVerify,
-            signal: this.abortController?.signal,
+          this.timeline.add("verify_started", "Automatic verification", {
+            round: this.round,
           });
+          this.emit();
+          this.verification = await this.runVerify();
           verifyContext = formatVerifyForPrompt(this.verification);
           this.log("verify", this.verification.summary, this.round);
+          this.timeline.add(
+            "verify_finished",
+            this.verification.ok
+              ? "Verification passed"
+              : "Verification failed",
+            { round: this.round },
+          );
+          if (!this.verification.ok) this.verifyFailureCount += 1;
           const opinion = await this.gpt.verifyOpinion({
             task: this.task,
             cursorSummary: result.stdout,
@@ -692,6 +838,7 @@ export class RelaySession {
           lastCursorResult += `\n\nVERIFICATION:\n${verifyContext}\nOpinion: ${opinion.notes}`;
           if (!this.isStopRequested()) this.status = "running";
         }
+        await this.persistRecovery();
 
         this.git = await this.collectGitSnapshotFn(this.projectPath);
         this.gitIntel = await enrichGitIntel(this.gpt, this.git).catch(() =>
@@ -772,6 +919,13 @@ export class RelaySession {
           this.memory,
           this.summary,
         ).catch(() => undefined);
+        await this.recordMetricsAndCleanup();
+        this.timeline.add(
+          "session_end",
+          `Finished status=${this.status}` +
+            (this.stopReason ? ` · ${this.stopReason}` : ""),
+          { round: this.round },
+        );
         this.log(
           "system",
           `Finished status=${this.status}` +
@@ -782,6 +936,13 @@ export class RelaySession {
               : "") +
             (this.checkpoint
               ? `\nRollback available → ${this.checkpoint.headSha.slice(0, 8)}`
+              : "") +
+            (this.sessionId
+              ? `\nSession ${this.sessionId.slice(0, 8)} ${
+                  this.status === "completed" && this.stopReason === "gpt_complete"
+                    ? "cleared"
+                    : "saved for recovery"
+                }`
               : ""),
         );
       }
@@ -800,12 +961,19 @@ export class RelaySession {
         workers.map((w) => `• ${w.role}: ${w.instruction.slice(0, 120)}`).join("\n"),
       this.round,
     );
+    for (const w of workers) {
+      this.timeline.add("worker_started", `Worker ${w.role} started`, {
+        round: this.round,
+        meta: { workerId: w.id },
+      });
+    }
     this.live.workers = {};
     this.emit();
 
     this.workers = await this.runParallelWorkersFn({
       projectPath: this.projectPath,
       workers,
+      agent: this.agent,
       cursor: this.cursor,
       signal: this.abortController?.signal,
       onWorkerActivity: (id, text) => {
@@ -821,13 +989,27 @@ export class RelaySession {
         `[${w.role}] ok=${w.ok} files=${w.filesChanged.length}\n${w.summary.slice(0, 800)}`,
         this.round,
       );
+      this.timeline.add(
+        "worker_finished",
+        `Worker ${w.role} ${w.ok ? "complete" : "failed"}`,
+        { round: this.round, meta: { files: w.filesChanged.length } },
+      );
     }
 
-    const merge =
+    const conflicts = detectWorkerConflicts(this.workers);
+    if (!conflicts.clean) {
+      this.log("system", conflicts.message, this.round);
+      this.timeline.add("conflict_detected", conflicts.message, {
+        round: this.round,
+      });
+    }
+
+    const baseMerge =
       mergeInstruction?.trim() ||
       `Integrate the parallel worker results into the main project. ` +
         `Worker outputs are summarized in the prompt. Resolve conflicts carefully, ` +
         `prefer the smallest coherent merge, then run tests.`;
+    const merge = conflictAwareMergeInstruction(baseMerge, conflicts);
 
     this.log("gpt", `Merge instruction:\n${merge}`, this.round);
     const mergeResult = await this.runCursorSupervised(merge);
@@ -840,13 +1022,80 @@ export class RelaySession {
 
     if (this.autoVerify) {
       this.status = "verifying";
-      this.verification = await this.runVerificationFn({
-        projectPath: this.projectPath,
-        browserVerify: this.browserVerify,
-        signal: this.abortController?.signal,
-      });
+      this.verification = await this.runVerify();
       this.log("verify", this.verification.summary, this.round);
+      if (!this.verification.ok) this.verifyFailureCount += 1;
       if (!this.isStopRequested()) this.status = "running";
+    }
+    await this.persistRecovery();
+  }
+
+  private async runVerify(): Promise<VerifyResult> {
+    return this.runVerificationFn({
+      projectPath: this.projectPath,
+      browserVerify: this.browserVerify,
+      signal: this.abortController?.signal,
+      plugins: this.plugins,
+      approval: this.approvalPolicy,
+    });
+  }
+
+  private async persistRecovery(): Promise<void> {
+    if (!this.sessionId) return;
+    const payload: RecoverableSession = {
+      version: 1,
+      sessionId: this.sessionId,
+      updatedAt: new Date().toISOString(),
+      projectPath: this.projectPath,
+      projectName: this.projectName,
+      task: this.task,
+      status: this.status,
+      round: this.round,
+      maxRounds: this.maxRounds,
+      planApproved: this.planApproved,
+      pendingPlan: this.pendingPlan,
+      workers: this.workers,
+      rounds: this.memory.rounds,
+      cursorChatId: this.memory.cursorChatId,
+      checkpoint: this.checkpoint,
+      timeline: this.timeline.all(),
+      summary: this.summary,
+      stopReason: this.stopReason,
+      flags: {
+        requirePlanApproval: this.requirePlanApproval,
+        supervisorEnabled: this.supervisorEnabled,
+        autoVerify: this.autoVerify,
+        browserVerify: this.browserVerify,
+      },
+      plugins: this.pluginIds,
+    };
+    await saveRecoverableSession(payload).catch(() => undefined);
+  }
+
+  private async recordMetricsAndCleanup(): Promise<void> {
+    if (!this.sessionId) return;
+    const success =
+      this.status === "completed" && this.stopReason === "gpt_complete";
+    await recordTaskMetric({
+      id: this.sessionId,
+      projectName: this.projectName,
+      task: this.task,
+      startedAt: new Date(this.startedAtMs).toISOString(),
+      endedAt: new Date().toISOString(),
+      status: this.status,
+      stopReason: this.stopReason,
+      rounds: this.round,
+      durationMs: Date.now() - this.startedAtMs,
+      costUsd: this.cost.totalUsd,
+      verifyFailures: this.verifyFailureCount,
+      success,
+    }).catch(() => undefined);
+
+    // Keep recovery file on unexpected stop so Resume works; clear on clean complete.
+    if (success) {
+      await clearRecoverableSession(this.sessionId).catch(() => undefined);
+    } else {
+      await this.persistRecovery();
     }
   }
 

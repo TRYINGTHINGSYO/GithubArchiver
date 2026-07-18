@@ -2,6 +2,9 @@ import { access, readFile } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import type { ApprovalPolicy } from "./config.js";
+import { DEFAULT_APPROVAL } from "./config.js";
+import type { OrchestratorPlugin } from "./plugins/types.js";
 import type { VerifyResult } from "./types.js";
 
 export interface VerifyOptions {
@@ -9,6 +12,8 @@ export interface VerifyOptions {
   browserVerify?: boolean;
   signal?: AbortSignal;
   timeoutMs?: number;
+  plugins?: OrchestratorPlugin[];
+  approval?: ApprovalPolicy;
 }
 
 async function readPkg(projectPath: string): Promise<Record<string, unknown> | null> {
@@ -176,7 +181,47 @@ async function browserSmoke(
 export async function runVerification(
   options: VerifyOptions,
 ): Promise<VerifyResult> {
-  const commands = await detectVerifyCommands(options.projectPath);
+  const base = await detectVerifyCommands(options.projectPath);
+  const pluginCmds: Array<{ name: string; command: string }> = [];
+  const pluginNotes: string[] = [];
+  const ctx = {
+    projectPath: options.projectPath,
+    approval: options.approval ?? DEFAULT_APPROVAL,
+    signal: options.signal,
+  };
+
+  for (const plugin of options.plugins ?? []) {
+    if (plugin.verifyCommands) {
+      try {
+        pluginCmds.push(...(await plugin.verifyCommands(ctx)));
+      } catch (err) {
+        pluginNotes.push(
+          `plugin ${plugin.id} verifyCommands failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+    if (plugin.verify) {
+      try {
+        const custom = await plugin.verify(ctx);
+        if (custom) {
+          pluginNotes.push(`[${plugin.id}] ${custom.summary}`);
+        }
+      } catch (err) {
+        pluginNotes.push(
+          `plugin ${plugin.id} verify failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+  }
+
+  // Deduplicate by command string; keep base first, then plugins (cap at 8)
+  const seen = new Set<string>();
+  const commands = [...base, ...pluginCmds].filter((c) => {
+    if (seen.has(c.command)) return false;
+    seen.add(c.command);
+    return true;
+  }).slice(0, 8);
+
   const results: VerifyResult["commands"] = [];
 
   for (const cmd of commands) {
@@ -218,6 +263,7 @@ export async function runVerification(
     browser
       ? `${browser.ok ? "✓" : "✗"} browser: ${browser.report}`
       : null,
+    ...pluginNotes,
   ]
     .filter(Boolean)
     .join("\n");

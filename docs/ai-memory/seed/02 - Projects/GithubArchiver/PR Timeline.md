@@ -11,6 +11,8 @@ generated: true
 
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor orchestrator v0.3](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md)
   - edges: supersedes:[`feature-gpt-cursor-relay-v15`](entries/2026-07-18-feature-gpt-cursor-relay-v15.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Orchestrator v0.4 — reliability platform](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md)
+  - edges: supersedes:[`feature-gpt-cursor-orchestrator-v03`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor relay v1.5 — autonomous loop](entries/2026-07-18-feature-gpt-cursor-relay-v15.md)
   - edges: supersedes:[`feature-gpt-cursor-relay`](entries/2026-07-18-feature-gpt-cursor-relay.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `6994512` · `open` · `tooling`, `automation` — [Local GPT ↔ Cursor Agent CLI relay (v1)](entries/2026-07-18-feature-gpt-cursor-relay.md)

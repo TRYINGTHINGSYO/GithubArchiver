@@ -441,6 +441,16 @@ button.danger {
   color: var(--muted);
 }
 
+.recovery {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.recovery button {
+  margin-top: 8px;
+}
+
 @media (max-width: 850px) {
   .dashboard,
   .live-grid {

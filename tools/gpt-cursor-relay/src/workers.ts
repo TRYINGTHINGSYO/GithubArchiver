@@ -2,6 +2,8 @@ import { mkdir, rm } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
+import type { CodingAgent } from "./agent.js";
+import { adaptCursorRunner } from "./agent.js";
 import type { CursorRunner } from "./cursor.js";
 import { collectGitSnapshot } from "./git.js";
 import type { WorkerResult, WorkerSpec } from "./types.js";
@@ -24,7 +26,10 @@ async function git(cwd: string, args: string[]): Promise<string> {
 export interface ParallelRunOptions {
   projectPath: string;
   workers: WorkerSpec[];
-  cursor: CursorRunner;
+  /** Preferred: CodingAgent abstraction */
+  agent?: CodingAgent;
+  /** Legacy: CursorRunner (adapted automatically) */
+  cursor?: CursorRunner;
   signal?: AbortSignal;
   onWorkerActivity?: (workerId: string, text: string) => void;
 }
@@ -32,6 +37,11 @@ export interface ParallelRunOptions {
 export async function runParallelWorkers(
   options: ParallelRunOptions,
 ): Promise<WorkerResult[]> {
+  const agent =
+    options.agent ??
+    (options.cursor ? adaptCursorRunner(options.cursor) : null);
+  if (!agent) throw new Error("runParallelWorkers requires agent or cursor");
+
   const base = path.join(options.projectPath, ".relay", "worktrees");
   await mkdir(base, { recursive: true });
   const head = (await git(options.projectPath, ["rev-parse", "HEAD"])).trim();
@@ -66,11 +76,11 @@ export async function runParallelWorkers(
       `Stay scoped to your role. Prefer not to rewrite unrelated areas.${focus}\n\n` +
       worker.instruction;
 
-    const result = await options.cursor.run({
+    const result = await agent.startTask({
       projectPath: worktreePath,
       instruction,
       signal: options.signal,
-      onActivity: (event) => {
+      onEvent: (event) => {
         options.onWorkerActivity?.(worker.id, `[${worker.role}] ${event.text}`);
       },
     });

@@ -301,7 +301,7 @@ data/                  # SQLite DB, archives, backups (gitignored)
 
 ### GPT ⇄ Cursor Orchestrator (local)
 
-Plan → parallel Cursor workers → supervisor oversight → automatic verification → rollback:
+Local AI development OS: plugins, approval policies, CodingAgent abstraction, timeline, crash recovery, metrics:
 
 ```bash
 cd tools/gpt-cursor-relay

@@ -48,6 +48,9 @@ const els = {
   improvementsPanel: document.getElementById("improvementsPanel"),
   improvementsList: document.getElementById("improvementsList"),
   continueImprovementsBtn: document.getElementById("continueImprovementsBtn"),
+  timelinePanel: document.getElementById("timelinePanel"),
+  metricsPanel: document.getElementById("metricsPanel"),
+  recoveryPanel: document.getElementById("recoveryPanel"),
 };
 
 const saved = JSON.parse(localStorage.getItem("gpt-cursor-relay") || "{}");
@@ -217,6 +220,13 @@ function render(state) {
   els.summary.textContent = state.summary || state.error || "(not finished yet)";
   renderDiff(git);
 
+  els.timelinePanel.textContent = (state.timeline || []).length
+    ? state.timeline
+        .slice(-40)
+        .map((e) => `${e.ts.slice(11, 19)}  ${e.message}`)
+        .join("\n")
+    : "(no events yet)";
+
   if (state.status === "awaiting_plan" && state.pendingPlan) {
     const p = state.pendingPlan;
     els.planPanel.classList.remove("hidden");
@@ -374,6 +384,50 @@ if (!bootstrap.hasOpenAiKey) {
     "OPENAI_API_KEY is missing. Copy tools/gpt-cursor-relay/.env.example to .env";
 }
 
+async function refreshMetricsAndRecovery() {
+  try {
+    const metrics = await fetch("/api/metrics").then((r) => r.json());
+    els.metricsPanel.textContent = [
+      `Tasks: ${metrics.tasks}`,
+      `Success rate: ${Math.round((metrics.successRate || 0) * 100)}%`,
+      `Avg rounds: ${(metrics.averageRounds || 0).toFixed(1)}`,
+      `Avg cost: $${(metrics.averageCostUsd || 0).toFixed(4)}`,
+      `Verify failures: ${metrics.verifyFailures || 0}`,
+      "",
+      "Stop reasons:",
+      ...Object.entries(metrics.stopReasons || {}).map(
+        ([k, v]) => `• ${k}: ${v}`,
+      ),
+    ].join("\n");
+  } catch {
+    els.metricsPanel.textContent = "(metrics unavailable)";
+  }
+
+  try {
+    const data = await fetch("/api/recovery").then((r) => r.json());
+    const sessions = data.sessions || [];
+    if (!sessions.length) {
+      els.recoveryPanel.innerHTML = "<em>No crashed sessions to recover.</em>";
+      return;
+    }
+    const top = sessions[0];
+    els.recoveryPanel.innerHTML = `
+      <strong>Recovered session available</strong>
+      <pre class="code" style="max-height:160px;overflow:auto">${escapeHtml(top.summary)}</pre>
+      <button id="resumeBtnSession" type="button" class="ok">Resume</button>
+    `;
+    document.getElementById("resumeBtnSession")?.addEventListener("click", () => {
+      post("/api/resume", { sessionId: top.sessionId }).catch(alert);
+    });
+  } catch {
+    els.recoveryPanel.textContent = "";
+  }
+}
+
 render(await fetch("/api/state").then((r) => r.json()));
+await refreshMetricsAndRecovery();
 const events = new EventSource("/api/events");
-events.onmessage = (event) => render(JSON.parse(event.data));
+events.onmessage = (event) => {
+  render(JSON.parse(event.data));
+};
+setInterval(refreshMetricsAndRecovery, 15000);

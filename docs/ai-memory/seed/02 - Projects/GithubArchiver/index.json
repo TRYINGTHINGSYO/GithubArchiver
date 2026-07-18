@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T21:12:50.468Z",
+  "generatedAt": "2026-07-18T21:20:01.032Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -37,6 +37,40 @@
       "title": "GPT ↔ Cursor orchestrator v0.3",
       "path": "entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md",
       "summary": "Upgraded `tools/gpt-cursor-relay` into an AI software engineering orchestrator (v0.3)."
+    },
+    {
+      "id": "feature-gpt-cursor-orchestrator-v04",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-18",
+      "pr": 26,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "tooling",
+        "automation"
+      ],
+      "related": [
+        "feature-gpt-cursor-orchestrator-v03",
+        "pr-26"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "feature-gpt-cursor-orchestrator-v03"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-26"
+        }
+      ],
+      "supersedes": "feature-gpt-cursor-orchestrator-v03",
+      "title": "Orchestrator v0.4 — reliability platform",
+      "path": "entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md",
+      "summary": "Shifted from feature expansion to reliability/modularity for `tools/gpt-cursor-relay`."
     },
     {
       "id": "feature-gpt-cursor-relay-v15",

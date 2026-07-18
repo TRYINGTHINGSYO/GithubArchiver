@@ -1,0 +1,23 @@
+# Copy to a project as relay.config.yaml (or .relay/config.yaml)
+
+plugins:
+  - playwright
+  - railway
+  - sqlite
+
+approval:
+  before_database_changes: true
+  before_deleting_files: true
+  before_dependency_updates: true
+  before_commits: false
+  before_pushes: true
+  before_deploys: true
+  before_secret_changes: true
+
+require_plan_approval: true
+supervisor: true
+auto_verify: true
+browser_verify: false
+
+# Future: which coding agent backend to use
+# agent: cursor

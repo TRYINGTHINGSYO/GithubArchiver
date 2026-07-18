@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { detectApprovalNeeds, requiresApproval } from "../src/approval.js";
+import { DEFAULT_APPROVAL } from "../src/config.js";
 
 describe("detectApprovalNeeds", () => {
   it("flags git push", () => {
@@ -21,6 +22,16 @@ describe("detectApprovalNeeds", () => {
   it("flags secret changes", () => {
     const match = detectApprovalNeeds("Update OPENAI_API_KEY in .env");
     expect(match.categories).toContain("secrets");
+  });
+
+  it("respects approval policy for commits", () => {
+    const text = "Please git commit -am 'fix'";
+    expect(requiresApproval(text, { ...DEFAULT_APPROVAL, before_commits: true })).toBe(
+      true,
+    );
+    expect(
+      requiresApproval(text, { ...DEFAULT_APPROVAL, before_commits: false }),
+    ).toBe(false);
   });
 
   it("allows ordinary coding work", () => {

@@ -63,6 +63,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor orchestrator v0.3](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md)
   - edges: supersedes:[`feature-gpt-cursor-relay-v15`](entries/2026-07-18-feature-gpt-cursor-relay-v15.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Orchestrator v0.4 — reliability platform](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md)
+  - edges: supersedes:[`feature-gpt-cursor-orchestrator-v03`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor relay v1.5 — autonomous loop](entries/2026-07-18-feature-gpt-cursor-relay-v15.md)
   - edges: supersedes:[`feature-gpt-cursor-relay`](entries/2026-07-18-feature-gpt-cursor-relay.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `6994512` · `open` · `tooling`, `automation` — [Local GPT ↔ Cursor Agent CLI relay (v1)](entries/2026-07-18-feature-gpt-cursor-relay.md)
@@ -75,8 +77,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), references:[`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
   - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
-- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `ac157f3` · `merged` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
-  - edges: supersedes:[`feature-multistage-retrieval`](entries/2026-07-18-pr-12-multistage-retrieval.md), validates:[`feature-memory-retrieval`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 
 ## Open technical debt
 
@@ -87,6 +87,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor orchestrator v0.3](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md)
   - edges: supersedes:[`feature-gpt-cursor-relay-v15`](entries/2026-07-18-feature-gpt-cursor-relay-v15.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
+- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Orchestrator v0.4 — reliability platform](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md)
+  - edges: supersedes:[`feature-gpt-cursor-orchestrator-v03`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor relay v1.5 — autonomous loop](entries/2026-07-18-feature-gpt-cursor-relay-v15.md)
   - edges: supersedes:[`feature-gpt-cursor-relay`](entries/2026-07-18-feature-gpt-cursor-relay.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `6994512` · `open` · `tooling`, `automation` — [Local GPT ↔ Cursor Agent CLI relay (v1)](entries/2026-07-18-feature-gpt-cursor-relay.md)

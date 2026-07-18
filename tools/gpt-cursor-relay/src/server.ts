@@ -4,12 +4,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CursorRunner } from "./cursor.js";
 import { GptClient } from "./gpt.js";
+import { loadMetrics, summarizeMetrics } from "./metrics.js";
 import {
   buildProjectIndex,
   defaultSearchRoots,
   detectProjectsFromTask,
   parseKnownProjects,
 } from "./projects.js";
+import {
+  formatRecoverySummary,
+  listRecoverableSessions,
+} from "./recovery.js";
 import { RelaySession } from "./relay.js";
 import type { RelaySnapshot } from "./types.js";
 
@@ -256,6 +261,60 @@ export function createRelayServer(options: ServerOptions) {
         void session.continueWithImprovements().catch((err) => {
           console.error("[orchestrator] continue-improvements failed:", err);
         });
+        return;
+      }
+
+      if (method === "GET" && pathname === "/api/recovery") {
+        const sessions = await listRecoverableSessions();
+        sendJson(res, 200, {
+          sessions: sessions.map((s) => ({
+            sessionId: s.sessionId,
+            projectName: s.projectName,
+            projectPath: s.projectPath,
+            task: s.task,
+            round: s.round,
+            maxRounds: s.maxRounds,
+            status: s.status,
+            updatedAt: s.updatedAt,
+            summary: formatRecoverySummary(s),
+          })),
+        });
+        return;
+      }
+
+      if (method === "POST" && pathname === "/api/resume") {
+        const body = (await readJson(req)) as { sessionId?: string };
+        if (!body.sessionId) {
+          sendJson(res, 400, { error: "sessionId is required" });
+          return;
+        }
+        const snap = session.snapshot();
+        if (
+          [
+            "planning",
+            "awaiting_plan",
+            "running",
+            "paused",
+            "awaiting_approval",
+            "awaiting_user",
+            "verifying",
+            "supervising",
+          ].includes(snap.status)
+        ) {
+          sendJson(res, 409, { error: "Orchestrator already active" });
+          return;
+        }
+        resetSession();
+        sendJson(res, 202, { ok: true, sessionId: body.sessionId });
+        void session.resumeRecovered(body.sessionId).catch((err) => {
+          console.error("[orchestrator] resume failed:", err);
+        });
+        return;
+      }
+
+      if (method === "GET" && pathname === "/api/metrics") {
+        const tasks = await loadMetrics();
+        sendJson(res, 200, summarizeMetrics(tasks));
         return;
       }
 
