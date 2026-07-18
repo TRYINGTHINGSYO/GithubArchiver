@@ -61,6 +61,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-07-18** · `decision` · `confirmed` · `permanent` · PR #22 · `d6c1647` · migration 33 · `open` · `enrichment`, `throughput`, `observability` — [Profile enrichment with per-stage timings before more architecture changes](entries/2026-07-18-decision-enrich-stage-timings.md)
+  - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), references:[`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
   - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #13 · `ac157f3` · `merged` · `memory` — [Stabilize knowledge engine with evals, explanations, and schema version](entries/2026-07-18-pr-13-stabilize-retrieval.md)
@@ -75,8 +77,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: related:[`feature-digest-knowledge-graph`](entries/2026-07-18-pr-9-digest-graph.md), related:[`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md), related:[`feature-retrieval-scoring`](entries/2026-07-18-pr-11-retrieval-scoring.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`incident-gharchive-createevent`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`migration-030`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), supersedes:[`feature-digest-knowledge-graph`](entries/2026-07-18-pr-9-digest-graph.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #9 · `9b0d012` · `merged` · `memory` — [Richer entry types, related graph, and Project Digest](entries/2026-07-18-pr-9-digest-graph.md)
   - edges: related:[`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), related:[`pr-8`](entries/2026-07-18-pr-8-structured-timeline.md), related:[`pr-10`](entries/2026-07-18-pr-10-memory-retrieval.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`decision-status-hierarchy`](entries/2026-07-18-pr-5-status-hierarchy.md), supersedes:[`feature-structured-timeline`](entries/2026-07-18-pr-8-structured-timeline.md)
-- **2026-07-18** · `feature` · `confirmed` · `release` · PR #8 · `feda976` · `merged` · `memory` — [Structured checkpoint metadata and generated project timeline](entries/2026-07-18-pr-8-structured-timeline.md)
-  - edges: related:[`pr-7`](entries/2026-07-18-pr-7-cursor-memory-rules.md), related:[`pr-9`](entries/2026-07-18-pr-9-digest-graph.md), related:[`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), supersedes:[`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 
 ## Open technical debt
 
@@ -85,10 +85,10 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-07-18** · `decision` · `confirmed` · `permanent` · PR #22 · `d6c1647` · migration 33 · `open` · `enrichment`, `throughput`, `observability` — [Profile enrichment with per-stage timings before more architecture changes](entries/2026-07-18-decision-enrich-stage-timings.md)
+  - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), references:[`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
   - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
-- **2026-07-18** · `decision` · `confirmed` · `permanent` · migration 33 · `open` · `enrichment`, `throughput`, `observability` — [Profile enrichment with per-stage timings before more architecture changes](entries/2026-07-18-decision-enrich-stage-timings.md)
-  - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), references:[`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · `eb58221` · migration 32 · `open` · `enrichment`, `priority` — [Defer empty CreateEvent spam — backlog is days-old births not years-old repos](entries/2026-07-18-incident-empty-createevent-defer.md)
   - edges: caused-by:[`incident-enrich-tier-flood`](entries/2026-07-18-incident-enrich-tier-flood.md), related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · `137f3a0` · migration 31 · `open` · `enrichment`, `priority`, `throughput` — [Bulk ingest marked ~all repos high tier and forced deep enrich](entries/2026-07-18-incident-enrich-tier-flood.md)

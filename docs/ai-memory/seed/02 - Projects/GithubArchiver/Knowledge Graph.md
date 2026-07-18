@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md) (`decision`, `confirmed`, `permanent`) — Profile enrichment with per-stage timings before more architecture changes
+  - `caused-by` → [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), `references` → [`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) (`incident`, `confirmed`, `permanent`) — Enrichment must be continuous concurrent queue not hourly trickle
   - `related` → [`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), `related` → [`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - [`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md) (`feature`, `confirmed`, `permanent`) — Stabilize knowledge engine with evals, explanations, and schema version
@@ -37,8 +39,6 @@ Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, 
   - `related` → [`pr-5`](entries/2026-07-18-pr-5-status-hierarchy.md), `related` → [`status-ui`](entries/2026-07-18-pr-4-activity-copy.md), `related` → [`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 - [`debt-github-token`](entries/2026-07-18-debt-github-token.md) (`technical-debt`, `confirmed`, `temporary`) — Production Railway needs a real GITHUB_TOKEN
   - `related` → [`search-fallback`](entries/2026-07-17-pr-3-createevent-matching.md), `related` → [`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
-- [`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md) (`decision`, `confirmed`, `permanent`) — Profile enrichment with per-stage timings before more architecture changes
-  - `caused-by` → [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), `references` → [`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 - [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md) (`decision`, `confirmed`, `permanent`) — Knowledge engine improves knowledge before framework
   - `references` → [`release-knowledge-engine-on-main`](entries/2026-07-18-release-knowledge-engine-on-main.md), `related` → [`feature-stabilize-retrieval`](entries/2026-07-18-pr-13-stabilize-retrieval.md), `related` → [`memory`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - [`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md) (`incident`, `confirmed`, `permanent`) — Defer empty CreateEvent spam — backlog is days-old births not years-old repos
