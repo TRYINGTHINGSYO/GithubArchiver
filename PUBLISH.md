@@ -1,19 +1,55 @@
 # Publish TRYINGTHINGSYO/Foundry
 
-This package is already standalone in structure. Create the **standalone GitHub
-repository** from a machine where you are authenticated to GitHub with org
-create rights (the Cursor cloud agent token cannot call `createRepository`).
+**Status:** `TRYINGTHINGSYO/Foundry` does **not** exist on GitHub yet (404).
+The code lives only on branch `foundry-standalone` inside
+`TRYINGTHINGSYO/GithubArchiver`. Nothing auto-publishes it — you must run
+`gh repo create` from a machine logged into GitHub with org create rights.
+
+The Cursor cloud agent token cannot call `createRepository`.
 
 Do **not** use `gh repo create --remote=origin` while `origin` still points at
 GithubArchiver — rename that remote first.
 
-## From a `foundry-standalone` checkout
+---
+
+## 1. Get a Foundry checkout
+
+```powershell
+git clone -b foundry-standalone --single-branch https://github.com/TRYINGTHINGSYO/GithubArchiver.git Foundry
+cd Foundry
+```
+
+Confirm you are in the right place:
+
+```powershell
+git branch --show-current
+git remote -v
+gh auth status
+```
+
+Expect branch `foundry-standalone` (or `main` after you rename it below), and
+`origin` pointing at GithubArchiver before the rename step.
+
+---
+
+## 2. Create the repo (PowerShell-safe)
+
+Backslashes are **not** line continuations in PowerShell. Use one line per command:
+
+```powershell
+git remote rename origin githubarchiver-source
+
+gh repo create TRYINGTHINGSYO/Foundry --private --description "Local AI software engineering orchestrator" --source=. --remote=origin
+
+git branch -M main
+git push -u origin main
+
+git remote remove githubarchiver-source
+```
+
+### Bash / Git Bash / macOS / Linux
 
 ```bash
-git clone -b foundry-standalone --single-branch \
-  https://github.com/TRYINGTHINGSYO/GithubArchiver.git Foundry
-cd Foundry
-
 git remote rename origin githubarchiver-source
 
 gh repo create TRYINGTHINGSYO/Foundry \
@@ -28,12 +64,14 @@ git push -u origin main
 git remote remove githubarchiver-source
 ```
 
-## Verify
+---
 
-```bash
+## 3. Verify
+
+```powershell
 git remote -v
 git status
-gh repo view TRYINGTHINGSYO/Foundry
+gh repo view TRYINGTHINGSYO/Foundry --web
 
 npm ci
 npm run typecheck
@@ -42,28 +80,19 @@ npm run build
 npm start
 ```
 
-Keep `"private": true` until beta acceptance tests pass on a clean machine
-(new project birth, crash recovery, rollback, approval interception, Cursor
-auth failure, missing `git` / `gh`).
+Then:
 
-## Next milestone after the remote exists
-
-End-to-end project birth (not more agents or marketplace features):
-
-```text
-Create a brand-new project from a plain-English idea
-→ scaffold it
-→ verify it
-→ initialize Git
-→ create the initial commit
-→ ask for approval
-→ create a new private GitHub repository
-→ push main
-→ return the final URL and verification report
+```powershell
+FOUNDRY_ACCEPTANCE_GITHUB=1 npm run acceptance:github
+git tag -a v0.5.0-beta.1 -m "Foundry v0.5 — standalone project birth"
+git push origin v0.5.0-beta.1
 ```
 
-Acceptance:
+Keep `"private": true` until beta acceptance on a clean machine.
 
-> Starting with only a natural-language idea and an empty destination,
-> Foundry produces a working, tested, committed project and—after one explicit
-> remote approval—a new private GitHub repository containing that project.
+---
+
+## Why the dashboard is empty
+
+The repository creation command has not been run successfully on your computer
+yet. Until it has, GitHub will keep returning 404 for `TRYINGTHINGSYO/Foundry`.
