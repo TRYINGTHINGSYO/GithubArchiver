@@ -20,5 +20,8 @@ supervisor: true
 auto_verify: true
 browser_verify: false
 
+# Trust level: read_only | safe_edits | local_autonomous | full_automation
+trust: safe_edits
+
 # Coding agent backend (cursor today; claude-code / openai-codex adapters coming)
 agent: cursor

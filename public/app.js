@@ -1,62 +1,85 @@
+const $ = (id) => document.getElementById(id);
+
 const els = {
-  projectPath: document.getElementById("projectPath"),
-  projectName: document.getElementById("projectName"),
-  task: document.getElementById("task"),
-  maxRounds: document.getElementById("maxRounds"),
-  status: document.getElementById("status"),
-  roundLabel: document.getElementById("roundLabel"),
-  gitMetric: document.getElementById("gitMetric"),
-  costMetric: document.getElementById("costMetric"),
-  log: document.getElementById("log"),
-  summary: document.getElementById("summary"),
-  costDetail: document.getElementById("costDetail"),
-  startBtn: document.getElementById("startBtn"),
-  pauseBtn: document.getElementById("pauseBtn"),
-  resumeBtn: document.getElementById("resumeBtn"),
-  stopBtn: document.getElementById("stopBtn"),
-  rollbackBtn: document.getElementById("rollbackBtn"),
-  detectBtn: document.getElementById("detectBtn"),
-  detectResult: document.getElementById("detectResult"),
-  flagPlan: document.getElementById("flagPlan"),
-  flagSupervisor: document.getElementById("flagSupervisor"),
-  flagVerify: document.getElementById("flagVerify"),
-  flagBrowser: document.getElementById("flagBrowser"),
-  planPanel: document.getElementById("planPanel"),
-  planText: document.getElementById("planText"),
-  approvePlanBtn: document.getElementById("approvePlanBtn"),
-  rejectPlanBtn: document.getElementById("rejectPlanBtn"),
-  approvalPanel: document.getElementById("approvalPanel"),
-  approvalReason: document.getElementById("approvalReason"),
-  approvalInstruction: document.getElementById("approvalInstruction"),
-  approveBtn: document.getElementById("approveBtn"),
-  denyBtn: document.getElementById("denyBtn"),
-  questionPanel: document.getElementById("questionPanel"),
-  questionText: document.getElementById("questionText"),
-  userReply: document.getElementById("userReply"),
-  answerBtn: document.getElementById("answerBtn"),
-  gptLive: document.getElementById("gptLive"),
-  cursorLive: document.getElementById("cursorLive"),
-  cursorActivity: document.getElementById("cursorActivity"),
-  gptLiveHint: document.getElementById("gptLiveHint"),
-  diffView: document.getElementById("diffView"),
-  diffStat: document.getElementById("diffStat"),
-  stopReason: document.getElementById("stopReason"),
-  gitIntel: document.getElementById("gitIntel"),
-  verifyPanel: document.getElementById("verifyPanel"),
-  workersPanel: document.getElementById("workersPanel"),
-  stylePanel: document.getElementById("stylePanel"),
-  improvementsPanel: document.getElementById("improvementsPanel"),
-  improvementsList: document.getElementById("improvementsList"),
-  continueImprovementsBtn: document.getElementById("continueImprovementsBtn"),
-  timelinePanel: document.getElementById("timelinePanel"),
-  metricsPanel: document.getElementById("metricsPanel"),
-  recoveryPanel: document.getElementById("recoveryPanel"),
-  graphPanel: document.getElementById("graphPanel"),
-  graphView: document.getElementById("graphView"),
-  graphProgress: document.getElementById("graphProgress"),
-  agentsPanel: document.getElementById("agentsPanel"),
-  marketplacePanel: document.getElementById("marketplacePanel"),
-  productTitle: document.getElementById("productTitle"),
+  productTitle: $("productTitle"),
+  status: $("status"),
+  trustLabel: $("trustLabel"),
+  projectName: $("projectName"),
+  taskDisplay: $("taskDisplay"),
+  statusDetail: $("statusDetail"),
+  progressLabel: $("progressLabel"),
+  currentAction: $("currentAction"),
+  costMetric: $("costMetric"),
+  elapsedLabel: $("elapsedLabel"),
+  agentsStrip: $("agentsStrip"),
+  task: $("task"),
+  projectPath: $("projectPath"),
+  maxRounds: $("maxRounds"),
+  startBtn: $("startBtn"),
+  pauseBtn: $("pauseBtn"),
+  resumeBtn: $("resumeBtn"),
+  stopBtn: $("stopBtn"),
+  detectBtn: $("detectBtn"),
+  detectResult: $("detectResult"),
+  flagPlan: $("flagPlan"),
+  flagSupervisor: $("flagSupervisor"),
+  flagVerify: $("flagVerify"),
+  flagBrowser: $("flagBrowser"),
+  actionBanner: $("actionBanner"),
+  actionBannerLead: $("actionBannerLead"),
+  actionEffects: $("actionEffects"),
+  actionAgent: $("actionAgent"),
+  actionCwd: $("actionCwd"),
+  actionPolicy: $("actionPolicy"),
+  actionRisk: $("actionRisk"),
+  actionCommand: $("actionCommand"),
+  questionBlock: $("questionBlock"),
+  questionText: $("questionText"),
+  userReply: $("userReply"),
+  planBlock: $("planBlock"),
+  planText: $("planText"),
+  approveOnceBtn: $("approveOnceBtn"),
+  approveRunBtn: $("approveRunBtn"),
+  denyBtn: $("denyBtn"),
+  approvePlanBtn: $("approvePlanBtn"),
+  rejectPlanBtn: $("rejectPlanBtn"),
+  answerBtn: $("answerBtn"),
+  notifySound: $("notifySound"),
+  completionReport: $("completionReport"),
+  reportResult: $("reportResult"),
+  reportChanged: $("reportChanged"),
+  reportRisk: $("reportRisk"),
+  reportConfidence: $("reportConfidence"),
+  reportVerify: $("reportVerify"),
+  reportEvidence: $("reportEvidence"),
+  reportChanges: $("reportChanges"),
+  viewChangesBtn: $("viewChangesBtn"),
+  rollbackBtn: $("rollbackBtn"),
+  rollbackPreview: $("rollbackPreview"),
+  followUpsPanel: $("followUpsPanel"),
+  followUpsList: $("followUpsList"),
+  startFollowUpBtn: $("startFollowUpBtn"),
+  graphProgress: $("graphProgress"),
+  graphView: $("graphView"),
+  gptLive: $("gptLive"),
+  cursorLive: $("cursorLive"),
+  cursorActivity: $("cursorActivity"),
+  contextPanel: $("contextPanel"),
+  recoveryPanel: $("recoveryPanel"),
+  metricsPanel: $("metricsPanel"),
+  diffView: $("diffView"),
+  diffStat: $("diffStat"),
+  gitIntel: $("gitIntel"),
+  verifyPanel: $("verifyPanel"),
+  workersPanel: $("workersPanel"),
+  timelinePanel: $("timelinePanel"),
+  log: $("log"),
+  stopReason: $("stopReason"),
+  costDetail: $("costDetail"),
+  stylePanel: $("stylePanel"),
+  agentsPanel: $("agentsPanel"),
+  marketplacePanel: $("marketplacePanel"),
+  credentialHint: $("credentialHint"),
 };
 
 const STORAGE_KEY = "foundry";
@@ -74,6 +97,10 @@ if (typeof saved.flagSupervisor === "boolean") {
 }
 if (typeof saved.flagVerify === "boolean") els.flagVerify.checked = saved.flagVerify;
 if (typeof saved.flagBrowser === "boolean") els.flagBrowser.checked = saved.flagBrowser;
+if (typeof saved.notifySound === "boolean") els.notifySound.checked = saved.notifySound;
+
+let lastNeedsAction = false;
+let elapsedTimer = null;
 
 function persist() {
   localStorage.setItem(
@@ -86,6 +113,7 @@ function persist() {
       flagSupervisor: els.flagSupervisor.checked,
       flagVerify: els.flagVerify.checked,
       flagBrowser: els.flagBrowser.checked,
+      notifySound: els.notifySound.checked,
     }),
   );
 }
@@ -97,54 +125,252 @@ function escapeHtml(text) {
     .replaceAll(">", "&gt;");
 }
 
-function kindGlyph(kind) {
-  return (
-    { added: "+", removed: "-", modified: "~", untracked: "?", renamed: "~" }[
-      kind
-    ] || "•"
-  );
+function formatElapsed(ms) {
+  const s = Math.floor((ms || 0) / 1000);
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
+  }
+  return m ? `${m}m ${r}s` : `${r}s`;
+}
+
+function formatDuration(ms) {
+  if (ms == null) return "";
+  if (ms < 1000) return `${ms}ms`;
+  return formatElapsed(ms);
 }
 
 function graphMark(status) {
   return (
     {
       passed: "✓",
-      failed: "✗",
+      failed: "✕",
       running: "●",
       verifying: "●",
       ready: "○",
       blocked: "■",
       skipped: "–",
-      pending: "·",
+      pending: "○",
     }[status] || "·"
   );
 }
 
+function activeStatuses(status) {
+  return [
+    "planning",
+    "awaiting_plan",
+    "running",
+    "paused",
+    "awaiting_approval",
+    "awaiting_user",
+    "verifying",
+    "supervising",
+  ].includes(status);
+}
+
+function notifyActionNeeded() {
+  if (!els.notifySound.checked) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.value = 0.04;
+    o.start();
+    setTimeout(() => {
+      o.stop();
+      ctx.close();
+    }, 180);
+  } catch {
+    // ignore
+  }
+  if (document.hidden && "Notification" in window && Notification.permission === "granted") {
+    new Notification("Foundry needs you", {
+      body: "Approval or input required",
+    });
+  }
+}
+
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach((t) => {
+    t.classList.toggle("active", t.dataset.tab === name);
+  });
+  document.querySelectorAll(".tab-panel").forEach((p) => {
+    p.classList.toggle("hidden", p.id !== `tab-${name}`);
+  });
+}
+
+document.querySelectorAll(".tab").forEach((tab) => {
+  tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+});
+
+function renderAgentsStrip(state) {
+  const chips = [];
+  chips.push({
+    label: "Planner",
+    state:
+      state.status === "planning" || state.status === "awaiting_plan"
+        ? "active"
+        : state.round > 0 || state.pendingPlan || state.taskGraph
+          ? "done"
+          : "wait",
+  });
+  if (state.taskGraph?.nodes?.length) {
+    for (const n of state.taskGraph.nodes.slice(0, 6)) {
+      chips.push({
+        label: n.role || n.title.slice(0, 18),
+        state:
+          n.status === "running" || n.status === "verifying"
+            ? "active"
+            : n.status === "passed" || n.status === "skipped"
+              ? "done"
+              : "wait",
+      });
+    }
+  } else if (state.workers?.length) {
+    for (const w of state.workers) {
+      chips.push({
+        label: w.role,
+        state: w.ok ? "done" : "active",
+      });
+    }
+  } else {
+    chips.push({
+      label: "Coding agent",
+      state: ["running", "verifying", "supervising"].includes(state.status)
+        ? "active"
+        : state.status === "completed"
+          ? "done"
+          : "wait",
+    });
+  }
+  chips.push({
+    label: "Reviewer",
+    state:
+      state.status === "verifying"
+        ? "active"
+        : state.verification
+          ? "done"
+          : "wait",
+  });
+  els.agentsStrip.innerHTML = chips
+    .map(
+      (c) =>
+        `<span class="agent-chip ${c.state}">${c.state === "done" ? "✓" : c.state === "active" ? "●" : "○"} ${escapeHtml(c.label)}</span>`,
+    )
+    .join("");
+}
+
+function renderActionBanner(state) {
+  const needsApproval = state.status === "awaiting_approval" && state.pendingApproval;
+  const needsPlan = state.status === "awaiting_plan" && state.pendingPlan;
+  const needsUser = state.status === "awaiting_user" && state.pendingQuestion;
+  const needs = Boolean(needsApproval || needsPlan || needsUser);
+
+  if (needs && !lastNeedsAction) notifyActionNeeded();
+  lastNeedsAction = needs;
+
+  document.body.classList.toggle("needs-user", needs);
+  els.actionBanner.classList.toggle("hidden", !needs);
+
+  els.approveOnceBtn.classList.toggle("hidden", !needsApproval);
+  els.approveRunBtn.classList.toggle("hidden", !needsApproval);
+  els.denyBtn.classList.toggle("hidden", !(needsApproval || needsPlan));
+  els.approvePlanBtn.classList.toggle("hidden", !needsPlan);
+  els.rejectPlanBtn.classList.toggle("hidden", !needsPlan);
+  els.answerBtn.classList.toggle("hidden", !needsUser);
+  els.questionBlock.classList.toggle("hidden", !needsUser);
+  els.planBlock.classList.toggle("hidden", !needsPlan);
+
+  if (needsApproval) {
+    const a = state.pendingApproval;
+    els.actionBannerLead.textContent =
+      a.requestedBy || "An agent"
+        ? `${a.requestedBy || "Agent"} wants to proceed with a sensitive operation`
+        : a.reason;
+    els.actionEffects.innerHTML = (a.effects?.length ? a.effects : [a.reason])
+      .map((e) => `<li>${escapeHtml(e)}</li>`)
+      .join("");
+    els.actionAgent.textContent = a.requestedBy || "Coding agent";
+    els.actionCwd.textContent = a.workingDirectory || state.projectPath || "—";
+    els.actionPolicy.textContent = a.policy || a.reason;
+    els.actionRisk.textContent = (a.risk || "medium").toUpperCase();
+    els.actionCommand.textContent = a.command || a.instruction || "";
+  } else if (needsPlan) {
+    const p = state.pendingPlan;
+    els.actionBannerLead.textContent = `Approve plan: ${p.title}`;
+    els.actionEffects.innerHTML = p.steps
+      .map(
+        (s) =>
+          `<li>${escapeHtml(s.id)}. ${escapeHtml(s.title)}${s.dependsOn?.length ? ` ← ${s.dependsOn.join(", ")}` : ""}</li>`,
+      )
+      .join("");
+    els.actionAgent.textContent = "Planner";
+    els.actionCwd.textContent = state.projectPath || "—";
+    els.actionPolicy.textContent = "Plan approval required";
+    els.actionRisk.textContent = (p.risk || "medium").toUpperCase();
+    els.actionCommand.textContent = "";
+    els.planText.textContent = [
+      p.title,
+      "",
+      ...p.steps.map((s) => `${s.id}. ${s.title}\n   ${s.detail}`),
+      "",
+      `Estimated: ${p.estimatedMinutes} min · Risk: ${p.risk}`,
+    ].join("\n");
+  } else if (needsUser) {
+    els.actionBannerLead.textContent = "Foundry needs your input";
+    els.actionEffects.innerHTML = "";
+    els.actionAgent.textContent = "Supervisor";
+    els.actionCwd.textContent = state.projectPath || "—";
+    els.actionPolicy.textContent = "needs_user";
+    els.actionRisk.textContent = "—";
+    els.actionCommand.textContent = "";
+    els.questionText.textContent = state.pendingQuestion;
+  }
+}
+
 function renderGraph(graph) {
-  if (!graph || !graph.nodes?.length) {
-    els.graphPanel.classList.add("hidden");
+  if (!graph?.nodes?.length) {
+    els.graphView.innerHTML = "<p class='hint'>No task graph for this run yet.</p>";
+    els.graphProgress.textContent = "";
     return;
   }
-  els.graphPanel.classList.remove("hidden");
   const p = graph.progress || {};
   els.graphProgress.textContent = `${p.passed ?? 0}/${p.total ?? 0} passed` +
     (p.failed ? ` · ${p.failed} failed` : "") +
-    (p.blocked ? ` · ${p.blocked} blocked` : "") +
     (p.complete ? " · complete" : "");
   els.graphView.innerHTML = graph.nodes
     .map((n) => {
-      const deps = n.dependsOn?.length ? ` ← ${n.dependsOn.join(", ")}` : "";
-      const err = n.error ? `<div class="graph-meta">${escapeHtml(n.error)}</div>` : "";
+      const deps = n.dependsOn?.length ? `Depends on ${n.dependsOn.join(", ")}` : "No prerequisites";
+      const dur = n.durationMs != null ? formatDuration(n.durationMs) : "";
+      const files = n.filesChanged?.length
+        ? `${n.filesChanged.length} file(s) changed`
+        : "";
+      const worker = n.workerLabel ? `Worker: ${n.workerLabel}` : "";
+      const action =
+        n.status === "running" || n.status === "verifying"
+          ? n.currentAction || "Working…"
+          : n.status === "pending" || n.status === "ready"
+            ? n.status === "ready"
+              ? "Ready"
+              : "Waiting on prerequisites"
+            : n.verifySummary || n.error || "";
       const retry =
         n.status === "failed"
-          ? `<button type="button" data-retry="${escapeHtml(n.id)}" class="ghost">Retry</button>`
+          ? `<div class="graph-actions">
+              <button type="button" data-retry="${escapeHtml(n.id)}">Retry</button>
+            </div>`
           : "";
       return `<div class="graph-node ${escapeHtml(n.status)}">
         <span class="graph-mark">${graphMark(n.status)}</span>
         <div>
-          <div class="graph-title">${escapeHtml(n.id)} · ${escapeHtml(n.title)}</div>
-          <div class="graph-meta">${escapeHtml(n.status)}${escapeHtml(deps)}${n.role ? ` · ${escapeHtml(n.role)}` : ""}</div>
-          ${err}
+          <div class="graph-title">${escapeHtml(n.title)}</div>
+          <div class="graph-meta">${escapeHtml([dur, worker, files, deps].filter(Boolean).join(" · "))}</div>
+          <div class="graph-meta">${escapeHtml(action)}</div>
         </div>
         ${retry}
       </div>`;
@@ -169,48 +395,87 @@ function renderDiff(git) {
   if (git.diffFiles?.length) {
     els.diffView.innerHTML = git.diffFiles
       .map((file) => {
-        const head = `${kindGlyph(file.kind)} ${escapeHtml(file.path)} (+${file.additions}/-${file.deletions})`;
+        const head = `${file.path} (+${file.additions}/-${file.deletions})`;
         const body = (file.lines || [])
           .map(
             (line) =>
               `<div class="diff-line ${line.type || "ctx"}">${escapeHtml(line.text)}</div>`,
           )
           .join("");
-        return `<div class="diff-file"><div class="diff-file-head">${head}</div>${body}</div>`;
+        return `<div class="diff-file"><div class="diff-file-head">${escapeHtml(head)}</div>${body}</div>`;
       })
       .join("");
     return;
   }
   els.diffView.innerHTML = git.files
-    .map(
-      (f) =>
-        `<div class="diff-line meta">${kindGlyph(f.kind)} ${escapeHtml(f.path)}</div>`,
-    )
+    .map((f) => `<div class="diff-line meta">${escapeHtml(f.path)}</div>`)
     .join("");
 }
 
+function renderCompletion(state) {
+  const done = state.status === "completed" && state.runReport;
+  els.completionReport.classList.toggle("hidden", !done && state.status !== "completed");
+  if (state.status !== "completed") {
+    els.completionReport.classList.add("hidden");
+    return;
+  }
+  els.completionReport.classList.remove("hidden");
+  const r = state.runReport;
+  els.reportResult.textContent = r?.result || state.summary || "Task complete.";
+  els.reportChanged.textContent = r
+    ? `${r.filesChanged} files · +${r.additions} / -${r.deletions}`
+    : `${state.git?.files?.length ?? 0} files`;
+  els.reportRisk.textContent = (r?.risk || state.gitIntel?.risk || "—").toString();
+  els.reportConfidence.textContent = r
+    ? `${r.confidence}% — ${r.confidenceSummary}`
+    : "—";
+  els.reportVerify.innerHTML = (r?.verificationLines || [])
+    .map((l) => `<li>${escapeHtml(l)}</li>`)
+    .join("") || "<li>(none)</li>";
+  els.reportEvidence.innerHTML = (r?.evidence || [])
+    .map(
+      (e) =>
+        `<li>${e.ok ? "✓" : "⚠"} ${escapeHtml(e.label)}${e.note ? ` — ${escapeHtml(e.note)}` : ""}</li>`,
+    )
+    .join("") || "<li>(none)</li>";
+  els.reportChanges.innerHTML = (r?.importantChanges || [])
+    .map((c) => `<li>${escapeHtml(c)}</li>`)
+    .join("") || "<li>(see Changes tab)</li>";
+
+  const followUps = state.followUps || state.nextImprovements || [];
+  if (followUps.length) {
+    els.followUpsPanel.classList.remove("hidden");
+    els.followUpsList.innerHTML = followUps
+      .map(
+        (item, i) =>
+          `<li><label><input type="checkbox" data-fu="${i}" /> ${escapeHtml(item)}</label></li>`,
+      )
+      .join("");
+  } else {
+    els.followUpsPanel.classList.add("hidden");
+  }
+}
+
 function render(state) {
+  if (state.productName) els.productTitle.textContent = state.productName;
   els.status.textContent = state.status;
   els.status.className = `status ${state.status}`;
-  els.roundLabel.textContent = `${state.round} / ${state.maxRounds}`;
+  els.trustLabel.textContent = state.trustLabel || state.trustLevel || "Safe edits";
   els.projectName.textContent = state.projectName || "—";
-
-  const git = state.git;
-  els.gitMetric.textContent = git
-    ? `${git.files?.length ?? 0} files · +${git.additions ?? 0}/-${git.deletions ?? 0}`
-    : "0 files";
+  els.taskDisplay.textContent = state.task || els.task.value || "—";
+  els.statusDetail.textContent = state.currentAction || state.status;
+  els.currentAction.textContent = state.currentAction || "—";
   els.costMetric.textContent = `$${(state.cost?.totalUsd ?? 0).toFixed(2)}`;
+  els.elapsedLabel.textContent = formatElapsed(state.elapsedMs);
 
-  const active = [
-    "planning",
-    "awaiting_plan",
-    "running",
-    "paused",
-    "awaiting_approval",
-    "awaiting_user",
-    "verifying",
-    "supervising",
-  ].includes(state.status);
+  const g = state.taskGraph?.progress;
+  if (g) {
+    els.progressLabel.textContent = `${g.passed} of ${g.total} tasks complete`;
+  } else {
+    els.progressLabel.textContent = `Round ${state.round} / ${state.maxRounds}`;
+  }
+
+  const active = activeStatuses(state.status);
   els.startBtn.disabled = active;
   els.pauseBtn.disabled = !["running", "verifying"].includes(state.status);
   els.resumeBtn.disabled = state.status !== "paused";
@@ -221,29 +486,43 @@ function render(state) {
   els.maxRounds.disabled = active;
   els.detectBtn.disabled = active;
 
+  renderAgentsStrip(state);
+  renderActionBanner(state);
+  renderGraph(state.taskGraph);
+  renderDiff(state.git);
+  renderCompletion(state);
+
   els.gptLive.textContent = state.live?.gpt || "(waiting)";
   els.cursorLive.textContent = state.live?.cursor || "(waiting)";
   els.cursorActivity.textContent = state.live?.cursorActivity
     ? `· ${state.live.cursorActivity}`
     : "";
-  els.gptLive.scrollTop = els.gptLive.scrollHeight;
-  els.cursorLive.scrollTop = els.cursorLive.scrollHeight;
   els.stopReason.textContent = state.stopReason ? `stop: ${state.stopReason}` : "";
 
-  if (state.gitIntel) {
-    els.gitIntel.textContent = [
-      state.gitIntel.theme,
-      "",
-      ...(state.gitIntel.bullets || []),
-      "",
-      `Risk: ${state.gitIntel.risk}`,
-      `Breaking changes: ${state.gitIntel.breakingChanges}`,
-      `Migration: ${state.gitIntel.migration}`,
+  if (state.contextBudget) {
+    const b = state.contextBudget;
+    els.contextPanel.textContent = [
+      "Context estimate (approx tokens)",
+      `Task and plan       ${b.taskTokens}`,
+      `Relevant memory     ${b.codeTokens}`,
+      `Git diff            ${b.diffTokens}`,
+      `Previous rounds     ${b.historyTokens}`,
+      `Logs                ${b.logTokens}`,
+      `Total               ${b.totalTokens}`,
     ].join("\n");
   } else {
-    els.gitIntel.textContent = "(none yet)";
+    els.contextPanel.textContent = "(shown after a completed turn)";
   }
 
+  els.gitIntel.textContent = state.gitIntel
+    ? [
+        state.gitIntel.theme,
+        "",
+        ...(state.gitIntel.bullets || []),
+        "",
+        `Risk: ${state.gitIntel.risk}`,
+      ].join("\n")
+    : "(none yet)";
   els.verifyPanel.textContent = state.verification?.summary || "(none yet)";
   els.workersPanel.textContent = state.workers?.length
     ? state.workers
@@ -253,14 +532,21 @@ function render(state) {
         )
         .join("\n\n")
     : "(none)";
+  els.timelinePanel.textContent = (state.timeline || []).length
+    ? state.timeline
+        .slice(-50)
+        .map((e) => `${e.ts.slice(11, 19)}  ${e.message}`)
+        .join("\n")
+    : "(no events yet)";
 
-  const style = state.memory?.style;
-  els.stylePanel.textContent = style?.prefers?.length
-    ? [
-        ...style.prefers.map((p) => `✓ ${p}`),
-        ...(style.avoids || []).map((a) => `✗ avoid ${a}`),
-      ].join("\n")
-    : "(none yet)";
+  els.log.innerHTML = (state.logs || [])
+    .map((entry) => {
+      const round = entry.round != null ? ` r${entry.round}` : "";
+      const head = `${entry.ts.slice(11, 19)} [${entry.source}${round}]`;
+      return `<div><strong>${escapeHtml(head)}</strong>\n${escapeHtml(entry.text)}\n</div>`;
+    })
+    .join("\n");
+  els.log.scrollTop = els.log.scrollHeight;
 
   const cost = state.cost || {};
   els.costDetail.textContent = (cost.rounds || []).length
@@ -273,87 +559,16 @@ function render(state) {
       ].join("\n\n")
     : "(none yet)";
 
-  els.log.innerHTML = (state.logs || [])
-    .map((entry) => {
-      const round = entry.round != null ? ` r${entry.round}` : "";
-      const head = `${entry.ts.slice(11, 19)} [${entry.source}${round}]`;
-      return `<div class="src-${entry.source}"><strong>${escapeHtml(head)}</strong>\n${escapeHtml(entry.text)}\n</div>`;
-    })
-    .join("\n");
-  els.log.scrollTop = els.log.scrollHeight;
+  const style = state.memory?.style;
+  els.stylePanel.textContent = style?.prefers?.length
+    ? [
+        ...style.prefers.map((p) => `✓ ${p}`),
+        ...(style.avoids || []).map((a) => `✗ avoid ${a}`),
+      ].join("\n")
+    : "(none yet)";
 
-  els.summary.textContent = state.summary || state.error || "(not finished yet)";
-  renderDiff(git);
-
-  els.timelinePanel.textContent = (state.timeline || []).length
-    ? state.timeline
-        .slice(-40)
-        .map((e) => `${e.ts.slice(11, 19)}  ${e.message}`)
-        .join("\n")
-    : "(no events yet)";
-
-  if (state.productName && els.productTitle) {
-    els.productTitle.textContent = state.productName;
-  }
-
-  renderGraph(state.taskGraph);
-
-  if (state.status === "awaiting_plan" && state.pendingPlan) {
-    const p = state.pendingPlan;
-    els.planPanel.classList.remove("hidden");
-    const graphLines = state.taskGraph?.nodes?.length
-      ? [
-          "",
-          "Task graph:",
-          ...state.taskGraph.nodes.map((n) => {
-            const deps = n.dependsOn?.length ? ` ← ${n.dependsOn.join(", ")}` : "";
-            return `${graphMark(n.status)} ${n.id} ${n.title}${deps}`;
-          }),
-        ]
-      : [];
-    els.planText.textContent = [
-      p.title,
-      "",
-      ...p.steps.map((s) => {
-        const deps = s.dependsOn?.length ? ` (after ${s.dependsOn.join(", ")})` : "";
-        return `${s.id}. ${s.title}${deps}\n   ${s.detail}`;
-      }),
-      ...graphLines,
-      "",
-      `Estimated: ${p.estimatedMinutes} minutes`,
-      `Files likely touched: ${p.filesLikelyTouched?.join(", ") || "(unspecified)"}`,
-      `Risk: ${p.risk}`,
-      p.notes ? `Notes: ${p.notes}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-  } else {
-    els.planPanel.classList.add("hidden");
-  }
-
-  if (state.status === "awaiting_approval" && state.pendingApproval) {
-    els.approvalPanel.classList.remove("hidden");
-    els.approvalReason.textContent = state.pendingApproval.reason;
-    els.approvalInstruction.textContent = state.pendingApproval.instruction;
-  } else {
-    els.approvalPanel.classList.add("hidden");
-  }
-
-  if (state.status === "awaiting_user" && state.pendingQuestion) {
-    els.questionPanel.classList.remove("hidden");
-    els.questionText.textContent = state.pendingQuestion;
-  } else {
-    els.questionPanel.classList.add("hidden");
-  }
-
-  const improvements = state.nextImprovements || [];
-  if (state.status === "completed" && improvements.length) {
-    els.improvementsPanel.classList.remove("hidden");
-    els.improvementsList.innerHTML = improvements
-      .map((item) => `<li>${escapeHtml(item)}</li>`)
-      .join("");
-  } else {
-    els.improvementsPanel.classList.add("hidden");
+  if (state.credentialStoreLabel) {
+    els.credentialHint.textContent = `Credentials: ${state.credentialStoreLabel}`;
   }
 }
 
@@ -389,9 +604,7 @@ els.startBtn.addEventListener("click", async () => {
   persist();
   try {
     if (!els.projectPath.value.trim() && els.task.value.trim()) {
-      const data = await post("/api/detect-project", {
-        task: els.task.value.trim(),
-      });
+      const data = await post("/api/detect-project", { task: els.task.value.trim() });
       const best = data.matches?.[0];
       if (best) {
         const ok = confirm(`Detected:\n✓ ${best.name}\n\n${best.path}\n\nRun?`);
@@ -399,6 +612,9 @@ els.startBtn.addEventListener("click", async () => {
         els.projectPath.value = best.path;
         persist();
       }
+    }
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => undefined);
     }
     await post("/api/start", {
       projectPath: els.projectPath.value.trim(),
@@ -417,13 +633,21 @@ els.startBtn.addEventListener("click", async () => {
 els.pauseBtn.addEventListener("click", () => post("/api/pause").catch(alert));
 els.resumeBtn.addEventListener("click", () => post("/api/resume").catch(alert));
 els.stopBtn.addEventListener("click", () => post("/api/stop").catch(alert));
-els.rollbackBtn.addEventListener("click", async () => {
-  if (!confirm("Undo last autonomous run? This runs git reset --hard + clean.")) {
-    return;
-  }
+
+els.approveOnceBtn.addEventListener("click", () =>
+  post("/api/approve", { approved: true, scope: "once" }).catch(alert),
+);
+els.approveRunBtn.addEventListener("click", () =>
+  post("/api/approve", { approved: true, scope: "run" }).catch(alert),
+);
+els.denyBtn.addEventListener("click", async () => {
   try {
-    const result = await post("/api/rollback");
-    alert(result.message || "Rolled back");
+    const snap = await fetch("/api/state").then((r) => r.json());
+    if (snap.status === "awaiting_plan") {
+      await post("/api/approve-plan", { approved: false });
+    } else {
+      await post("/api/approve", { approved: false });
+    }
   } catch (err) {
     alert(err.message);
   }
@@ -434,12 +658,6 @@ els.approvePlanBtn.addEventListener("click", () =>
 els.rejectPlanBtn.addEventListener("click", () =>
   post("/api/approve-plan", { approved: false }).catch(alert),
 );
-els.approveBtn.addEventListener("click", () =>
-  post("/api/approve", { approved: true }).catch(alert),
-);
-els.denyBtn.addEventListener("click", () =>
-  post("/api/approve", { approved: false }).catch(alert),
-);
 els.answerBtn.addEventListener("click", () =>
   post("/api/answer", { reply: els.userReply.value })
     .then(() => {
@@ -447,9 +665,42 @@ els.answerBtn.addEventListener("click", () =>
     })
     .catch(alert),
 );
-els.continueImprovementsBtn.addEventListener("click", () =>
-  post("/api/continue-improvements").catch(alert),
-);
+
+els.viewChangesBtn.addEventListener("click", () => switchTab("changes"));
+
+els.rollbackBtn.addEventListener("click", async () => {
+  try {
+    const preview = await fetch("/api/rollback-preview").then((r) => r.json());
+    if (preview.error) throw new Error(preview.error);
+    els.rollbackPreview.classList.remove("hidden");
+    els.rollbackPreview.textContent = preview.summary || JSON.stringify(preview, null, 2);
+    if (!confirm(`${preview.summary}\n\nProceed with rollback?`)) return;
+    const result = await post("/api/rollback");
+    alert(result.message || "Rolled back");
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+els.startFollowUpBtn.addEventListener("click", async () => {
+  const selected = [...els.followUpsList.querySelectorAll("input[data-fu]:checked")].map(
+    (el) => el.parentElement.textContent.trim(),
+  );
+  if (!selected.length) {
+    alert("Select at least one follow-up");
+    return;
+  }
+  try {
+    const data = await post("/api/follow-up-task", { selected });
+    els.task.value = data.task;
+    if (data.projectPath) els.projectPath.value = data.projectPath;
+    persist();
+    alert("Follow-up loaded as a new task. Press Start to begin a separate run.");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    alert(err.message);
+  }
+});
 
 for (const el of [
   els.projectPath,
@@ -459,20 +710,18 @@ for (const el of [
   els.flagSupervisor,
   els.flagVerify,
   els.flagBrowser,
+  els.notifySound,
 ]) {
   el.addEventListener("change", persist);
 }
 
 const bootstrap = await fetch("/api/health").then((r) => r.json());
-if (bootstrap.product && els.productTitle) {
-  els.productTitle.textContent = bootstrap.product;
-}
+if (bootstrap.product) els.productTitle.textContent = bootstrap.product;
 if (!bootstrap.hasOpenAiKey) {
-  els.summary.textContent =
-    "OPENAI_API_KEY is missing. Run: foundry setup  (or copy tools/foundry/.env.example)";
+  els.taskDisplay.textContent = "Set API key via foundry setup (locally encrypted credential file)";
 }
 
-async function refreshMetricsAndRecovery() {
+async function refreshSidePanels() {
   try {
     const metrics = await fetch("/api/metrics").then((r) => r.json());
     els.metricsPanel.textContent = [
@@ -480,65 +729,60 @@ async function refreshMetricsAndRecovery() {
       `Success rate: ${Math.round((metrics.successRate || 0) * 100)}%`,
       `Avg rounds: ${(metrics.averageRounds || 0).toFixed(1)}`,
       `Avg cost: $${(metrics.averageCostUsd || 0).toFixed(4)}`,
-      `Verify failures: ${metrics.verifyFailures || 0}`,
-      "",
-      "Stop reasons:",
-      ...Object.entries(metrics.stopReasons || {}).map(
-        ([k, v]) => `• ${k}: ${v}`,
-      ),
     ].join("\n");
   } catch {
     els.metricsPanel.textContent = "(metrics unavailable)";
   }
-
   try {
     const data = await fetch("/api/recovery").then((r) => r.json());
     const sessions = data.sessions || [];
     if (!sessions.length) {
-      els.recoveryPanel.innerHTML = "<em>No crashed sessions to recover.</em>";
-      return;
+      els.recoveryPanel.innerHTML = "<em>No crashed sessions.</em>";
+    } else {
+      const top = sessions[0];
+      els.recoveryPanel.innerHTML = `
+        <strong>Recoverable session</strong>
+        <pre class="code" style="max-height:120px">${escapeHtml(top.summary)}</pre>
+        <button id="recoverBtn" type="button" class="ok">Resume</button>`;
+      $("recoverBtn")?.addEventListener("click", () => {
+        post("/api/recover", { sessionId: top.sessionId }).catch(alert);
+      });
     }
-    const top = sessions[0];
-    els.recoveryPanel.innerHTML = `
-      <strong>Recovered session available</strong>
-      <pre class="code" style="max-height:160px;overflow:auto">${escapeHtml(top.summary)}</pre>
-      <button id="resumeBtnSession" type="button" class="ok">Resume</button>
-    `;
-    document.getElementById("resumeBtnSession")?.addEventListener("click", () => {
-      post("/api/recover", { sessionId: top.sessionId }).catch(alert);
-    });
   } catch {
     els.recoveryPanel.textContent = "";
   }
-}
-
-async function refreshAgentsAndMarketplace() {
   try {
     const data = await fetch("/api/agents").then((r) => r.json());
     els.agentsPanel.textContent = (data.agents || [])
       .map((a) => `${a.available ? "✓" : "·"} ${a.displayName}\n  ${a.notes}`)
       .join("\n");
   } catch {
-    els.agentsPanel.textContent = "(agents unavailable)";
+    els.agentsPanel.textContent = "(unavailable)";
   }
   try {
     const data = await fetch("/api/marketplace").then((r) => r.json());
     els.marketplacePanel.textContent = (data.plugins || [])
-      .map(
-        (p) =>
-          `${p.installed ? "✓" : "·"} ${p.name} [${p.category}] v${p.version}\n  ${p.description}`,
-      )
+      .map((p) => `${p.installed ? "✓" : "·"} ${p.name} — ${p.description}`)
       .join("\n");
   } catch {
-    els.marketplacePanel.textContent = "(marketplace unavailable)";
+    els.marketplacePanel.textContent = "(unavailable)";
   }
 }
 
 render(await fetch("/api/state").then((r) => r.json()));
-await refreshMetricsAndRecovery();
-await refreshAgentsAndMarketplace();
+await refreshSidePanels();
 const events = new EventSource("/api/events");
 events.onmessage = (event) => {
   render(JSON.parse(event.data));
 };
-setInterval(refreshMetricsAndRecovery, 15000);
+setInterval(refreshSidePanels, 15000);
+elapsedTimer = setInterval(async () => {
+  try {
+    const s = await fetch("/api/state").then((r) => r.json());
+    if (activeStatuses(s.status)) {
+      els.elapsedLabel.textContent = formatElapsed(s.elapsedMs);
+    }
+  } catch {
+    // ignore
+  }
+}, 1000);

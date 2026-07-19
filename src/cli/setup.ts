@@ -27,13 +27,15 @@ async function main() {
   const openai = (await rl.question("OpenAI API key (leave blank to skip): ")).trim();
   if (openai) {
     await setSecret("OPENAI_API_KEY", openai);
-    console.log("Saved OPENAI_API_KEY to encrypted vault (~/.foundry/secrets.enc.json)");
+    console.log(
+      "Saved OPENAI_API_KEY to locally encrypted credential file (~/.foundry/secrets.enc.json)",
+    );
   }
 
   const cursor = (await rl.question("Cursor API key optional (leave blank to skip): ")).trim();
   if (cursor) {
     await setSecret("CURSOR_API_KEY", cursor);
-    console.log("Saved CURSOR_API_KEY to encrypted vault");
+    console.log("Saved CURSOR_API_KEY to locally encrypted credential file");
   }
 
   const createEnv = (await rl.question("Also write tools/foundry/.env? [y/N]: ")).trim().toLowerCase();

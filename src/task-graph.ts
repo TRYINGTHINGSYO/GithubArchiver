@@ -24,6 +24,14 @@ export interface TaskNode {
   attempts: number;
   startedAt?: string;
   finishedAt?: string;
+  /** Wall-clock duration for the latest attempt */
+  durationMs?: number;
+  /** Worker / agent label assigned to this node */
+  workerLabel?: string;
+  /** Files touched while this node ran (best-effort) */
+  filesChanged?: string[];
+  /** Current action string while running */
+  currentAction?: string;
 }
 
 export interface TaskGraph {
@@ -122,6 +130,10 @@ export function markPassed(node: TaskNode, verifySummary?: string): void {
   node.status = "passed";
   node.verifySummary = verifySummary;
   node.finishedAt = new Date().toISOString();
+  if (node.startedAt) {
+    node.durationMs = Date.parse(node.finishedAt) - Date.parse(node.startedAt);
+  }
+  node.currentAction = undefined;
 }
 
 export function markFailed(node: TaskNode, error: string, verifySummary?: string): void {
@@ -129,6 +141,10 @@ export function markFailed(node: TaskNode, error: string, verifySummary?: string
   node.error = error;
   node.verifySummary = verifySummary;
   node.finishedAt = new Date().toISOString();
+  if (node.startedAt) {
+    node.durationMs = Date.parse(node.finishedAt) - Date.parse(node.startedAt);
+  }
+  node.currentAction = undefined;
 }
 
 /** Reset a failed node (and clear blocked descendants) so only that branch reruns. */

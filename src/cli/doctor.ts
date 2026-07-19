@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 import { listAgentDescriptors } from "../agents/registry.js";
 import { loadProjectConfig } from "../config.js";
 import { discoverPlugins } from "../plugins/loader.js";
+import { credentialStoreInfo } from "../credentials.js";
 import { resolveApiKeys } from "../secrets.js";
+import { TRUST_LABELS, normalizeTrustLevel } from "../trust.js";
 import { checkForUpdate } from "../version.js";
 import { which } from "./which.js";
 
@@ -30,6 +32,10 @@ async function main() {
   const node = process.version;
   console.log(`✓ Node ${node} (${process.platform}/${process.arch})`);
 
+  const creds = credentialStoreInfo();
+  console.log(`· Credentials: ${creds.label}`);
+  console.log(`  ${creds.description}`);
+
   const keys = await resolveApiKeys();
   if (keys.openaiApiKey) {
     console.log(`✓ OpenAI API key (${keys.source})`);
@@ -52,6 +58,8 @@ async function main() {
       ? `✓ Project config: ${cfg.source}`
       : `· No foundry.config.yaml in ${project} (using defaults)`,
   );
+  const trust = normalizeTrustLevel(cfg.config.trust);
+  console.log(`· Trust: ${TRUST_LABELS[trust]}`);
 
   const plugins = await discoverPlugins(project, cfg.config.plugins);
   console.log(

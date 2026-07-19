@@ -284,8 +284,14 @@ export function createRelayServer(options: ServerOptions) {
         return;
       }
       if (method === "POST" && pathname === "/api/approve") {
-        const body = (await readJson(req)) as { approved?: boolean };
-        session.resolveApproval(Boolean(body.approved));
+        const body = (await readJson(req)) as {
+          approved?: boolean;
+          scope?: "once" | "run";
+        };
+        session.resolveApproval(
+          Boolean(body.approved),
+          body.scope === "run" ? "run" : "once",
+        );
         sendJson(res, 200, session.snapshot());
         return;
       }
@@ -301,6 +307,17 @@ export function createRelayServer(options: ServerOptions) {
         sendJson(res, 200, session.snapshot());
         return;
       }
+      if (method === "GET" && pathname === "/api/rollback-preview") {
+        try {
+          const preview = await session.previewRollback();
+          sendJson(res, 200, preview);
+        } catch (err) {
+          sendJson(res, 400, {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
       if (method === "POST" && pathname === "/api/rollback") {
         const result = await session.rollback();
         sendJson(res, result.ok ? 200 : 400, {
@@ -309,10 +326,27 @@ export function createRelayServer(options: ServerOptions) {
         });
         return;
       }
+      if (method === "POST" && pathname === "/api/follow-up-task") {
+        const body = (await readJson(req)) as { selected?: string[] };
+        try {
+          const task = session.buildFollowUpTask(body.selected ?? []);
+          sendJson(res, 200, {
+            task,
+            projectPath: session.snapshot().projectPath,
+            note: "Start this as a new run — it will not continue the completed task.",
+          });
+        } catch (err) {
+          sendJson(res, 400, {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+        return;
+      }
+      // Legacy endpoint — intentionally disabled (follow-ups are new runs only)
       if (method === "POST" && pathname === "/api/continue-improvements") {
-        sendJson(res, 202, { ok: true });
-        void session.continueWithImprovements().catch((err) => {
-          console.error("[orchestrator] continue-improvements failed:", err);
+        sendJson(res, 400, {
+          error:
+            "Follow-ups must start as a new run. Use /api/follow-up-task then /api/start.",
         });
         return;
       }

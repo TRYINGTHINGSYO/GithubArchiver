@@ -3,8 +3,12 @@ import { access } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import path from "node:path";
 import { adaptCursorRunner, type CodingAgent } from "./agent.js";
-import { detectApprovalNeeds } from "./approval.js";
-import { createCheckpoint, rollbackToCheckpoint } from "./checkpoint.js";
+import {
+  createCheckpoint,
+  previewRollback,
+  rollbackToCheckpoint,
+} from "./checkpoint.js";
+import { scoreCompletion } from "./confidence.js";
 import {
   conflictAwareMergeInstruction,
   detectWorkerConflicts,
@@ -12,7 +16,14 @@ import {
 import type { ApprovalPolicy, ProjectRelayConfig } from "./config.js";
 import { DEFAULT_APPROVAL, loadProjectConfig } from "./config.js";
 import { addRoundCost, emptyCost, formatCostSummary } from "./cost.js";
+import { credentialStoreInfo } from "./credentials.js";
 import { CursorRunner } from "./cursor.js";
+import { gateOperation } from "./policy.js";
+import {
+  normalizeTrustLevel,
+  TRUST_LABELS,
+  type TrustLevel,
+} from "./trust.js";
 import {
   collectGitSnapshot,
   formatGitForPrompt,
@@ -149,6 +160,10 @@ export class RelaySession {
   private projectConfig: ProjectRelayConfig | null = null;
   private agent: CodingAgent;
   private taskGraph: TaskGraph | null = null;
+  private trustLevel: TrustLevel = "safe_edits";
+  private runApprovals = new Set<string>();
+  private contextBudget: RelaySnapshot["contextBudget"] = null;
+  private runReport: RelaySnapshot["runReport"] = null;
   private listeners = new Set<Listener>();
   private abortController: AbortController | null = null;
   private cursorAbort: AbortController | null = null;
@@ -261,11 +276,24 @@ export class RelaySession {
               status: n.status,
               attempts: n.attempts,
               error: n.error,
+              durationMs: n.durationMs,
+              workerLabel: n.workerLabel,
+              filesChanged: n.filesChanged,
+              currentAction: n.currentAction,
+              verifySummary: n.verifySummary,
             })),
             progress: graphProgress(this.taskGraph),
           }
         : null,
       productName: PRODUCT_NAME,
+      trustLevel: this.trustLevel,
+      trustLabel: TRUST_LABELS[this.trustLevel],
+      currentAction: this.deriveCurrentAction(),
+      elapsedMs: this.startedAtMs ? Date.now() - this.startedAtMs : 0,
+      contextBudget: this.contextBudget,
+      runReport: this.runReport,
+      followUps: [...this.nextImprovements],
+      credentialStoreLabel: credentialStoreInfo().label,
     };
   }
 
@@ -284,6 +312,10 @@ export class RelaySession {
     this.projectConfig = loaded.config;
     this.configSource = loaded.source;
     this.approvalPolicy = { ...DEFAULT_APPROVAL, ...loaded.config.approval };
+    this.trustLevel = normalizeTrustLevel(loaded.config.trust);
+    this.runApprovals = new Set();
+    this.contextBudget = null;
+    this.runReport = null;
 
     // CLI/UI flags override config when explicitly provided
     this.requirePlanApproval =
@@ -347,8 +379,9 @@ export class RelaySession {
     );
     this.log(
       "system",
-      `Flags: plan=${this.requirePlanApproval} supervisor=${this.supervisorEnabled} verify=${this.autoVerify} browser=${this.browserVerify}`,
+      `Trust=${TRUST_LABELS[this.trustLevel]} · plan=${this.requirePlanApproval} supervisor=${this.supervisorEnabled} verify=${this.autoVerify} browser=${this.browserVerify}`,
     );
+    this.log("system", `Credentials: ${credentialStoreInfo().label}`);
     this.log("system", `Checkpoint ${this.checkpoint.headSha.slice(0, 8)} ready for rollback`);
     this.timeline.add("session_start", `Started task in ${this.projectName}`, {
       meta: { sessionId: this.sessionId, plugins: this.pluginIds },
@@ -462,14 +495,22 @@ export class RelaySession {
     if (this.loopPromise) await this.loopPromise.catch(() => undefined);
   }
 
-  resolveApproval(approved: boolean): void {
+  resolveApproval(
+    approved: boolean,
+    scope: "once" | "run" = "once",
+  ): void {
     if (!this.approvalWaiter || !this.pendingApproval) {
       throw new Error("No pending approval");
+    }
+    if (approved && scope === "run") {
+      for (const cat of this.pendingApproval.categories) {
+        this.runApprovals.add(cat);
+      }
     }
     this.log(
       "approval",
       approved
-        ? `Approved: ${this.pendingApproval.reason}`
+        ? `Approved (${scope}): ${this.pendingApproval.reason}`
         : `Denied: ${this.pendingApproval.reason}`,
     );
     this.pendingApproval = null;
@@ -524,6 +565,11 @@ export class RelaySession {
     waiter.resolve(text);
   }
 
+  async previewRollback(): Promise<Awaited<ReturnType<typeof previewRollback>>> {
+    if (!this.checkpoint) throw new Error("No checkpoint available");
+    return previewRollback(this.checkpoint);
+  }
+
   async rollback(): Promise<{ ok: boolean; message: string }> {
     if (this.isActive()) {
       throw new Error("Stop the run before rolling back");
@@ -539,31 +585,31 @@ export class RelaySession {
       this.summary = `Rolled back: ${result.message}`;
       this.status = "stopped";
       this.stopReason = "rollback";
+      this.runReport = null;
     }
     this.emit();
     return result;
   }
 
+  /**
+   * Follow-ups are NEVER continued inside the completed task.
+   * Returns a task string for starting a brand-new run.
+   */
+  buildFollowUpTask(selected: string[]): string {
+    if (!selected.length) throw new Error("Select at least one follow-up");
+    const list = selected.map((i, n) => `${n + 1}. ${i}`).join("\n");
+    return (
+      `New run (not a continuation of the prior task).\n` +
+      `Prior completed task was: ${this.task}\n\n` +
+      `Implement only these selected follow-ups:\n${list}`
+    );
+  }
+
+  /** @deprecated Use buildFollowUpTask + /api/start — never auto-continues. */
   async continueWithImprovements(): Promise<void> {
-    if (this.status !== "completed" || !this.nextImprovements.length) {
-      throw new Error("No next improvements to continue with");
-    }
-    const followUp = this.nextImprovements
-      .map((i, n) => `${n + 1}. ${i}`)
-      .join("\n");
-    const prior = this.task;
-    await this.start({
-      projectPath: this.projectPath,
-      task: `Continue from prior completed task (${prior}). Implement these next improvements:\n${followUp}`,
-      maxRounds: this.maxRounds,
-      openaiApiKey: "",
-      openaiModel: "",
-      cursorAgentBin: "",
-      requirePlanApproval: this.requirePlanApproval,
-      supervisorEnabled: this.supervisorEnabled,
-      autoVerify: this.autoVerify,
-      browserVerify: this.browserVerify,
-    });
+    throw new Error(
+      "Follow-ups must start as a new run. Use buildFollowUpTask + Start.",
+    );
   }
 
   private isActive(): boolean {
@@ -766,6 +812,7 @@ export class RelaySession {
           this.nextImprovements = decision.next_improvements ?? [];
           this.status = "completed";
           this.stopReason = "gpt_complete";
+          this.buildRunReport(this.summary);
           this.timeline.add("session_end", "Task complete", {
             round: this.round,
           });
@@ -817,22 +864,39 @@ export class RelaySession {
           break;
         }
 
-        const scan = detectApprovalNeeds(instruction, this.approvalPolicy);
+        const gate = gateOperation(instruction, {
+          policy: this.approvalPolicy,
+          trust: this.trustLevel,
+          runApprovals: this.runApprovals,
+        });
+        if (gate.action === "deny") {
+          this.log("approval", `Blocked by trust: ${gate.message}`, this.round);
+          this.status = "stopped";
+          this.stopReason = "trust_blocked";
+          this.summary = gate.message;
+          break;
+        }
         const needsApproval =
-          decision.status === "needs_approval" || scan.categories.length > 0;
+          decision.status === "needs_approval" || gate.action === "approve";
         if (needsApproval) {
-          const reason =
-            decision.approval_reason ||
-            scan.reasons.join("; ") ||
-            "Sensitive action requires approval";
+          const classified = gate.classified;
           const approved = await this.waitForApproval({
             id: randomUUID(),
             round: this.round,
-            reason,
+            reason:
+              decision.approval_reason ||
+              gate.message ||
+              "Sensitive action requires approval",
             instruction,
-            categories: scan.categories.length
-              ? scan.categories
+            categories: classified.categories.length
+              ? classified.categories
               : ["push", "deploy", "deletion", "secrets"],
+            command: classified.command.slice(0, 500),
+            requestedBy: `${this.agent.displayName} (supervisor)`,
+            workingDirectory: this.projectPath,
+            policy: classified.reasons[0] || "approval policy",
+            risk: classified.risk,
+            effects: classified.reasons,
           });
           if (!approved || this.isStopRequested()) {
             this.status = "stopped";
@@ -1027,6 +1091,11 @@ export class RelaySession {
     await Promise.all(
       ready.map(async (node) => {
         markRunning(node);
+        node.workerLabel =
+          node.agentHint || node.role
+            ? `${node.agentHint ?? this.agent.displayName}${node.role ? ` · ${node.role}` : ""}`
+            : this.agent.displayName;
+        node.currentAction = `Starting ${node.title}`;
         this.timeline.add("cursor_started", `Graph node ${node.id}: ${node.title}`, {
           round: this.round,
         });
@@ -1039,9 +1108,25 @@ export class RelaySession {
           `Implement only this node. Do not start dependent work.`;
 
         try {
+          const filesBefore = new Set(
+            (await this.collectGitSnapshotFn(this.projectPath)).files.map(
+              (f) => f.path,
+            ),
+          );
           const result = await this.runCursorSupervised(instruction);
+          node.currentAction = "Verifying…";
           markVerifying(node);
           this.emit();
+
+          const gitAfter = await this.collectGitSnapshotFn(this.projectPath);
+          node.filesChanged = gitAfter.files
+            .map((f) => f.path)
+            .filter((p) => !filesBefore.has(p) || gitAfter.diffHash);
+          // Prefer files listed in current snapshot for this node attempt
+          if (!node.filesChanged.length) {
+            node.filesChanged = gitAfter.files.map((f) => f.path).slice(0, 20);
+          }
+          this.git = gitAfter;
 
           let verifySummary = "verify skipped";
           if (this.autoVerify) {
@@ -1189,6 +1274,8 @@ export class RelaySession {
       signal: this.abortController?.signal,
       plugins: this.plugins,
       approval: this.approvalPolicy,
+      trust: this.trustLevel,
+      runApprovals: this.runApprovals,
     });
   }
 
@@ -1411,9 +1498,99 @@ export class RelaySession {
       request.round,
     );
     this.emit();
+    // Best-effort desktop notification (ignored if unavailable)
+    try {
+      if (typeof process !== "undefined" && process.stdout?.isTTY) {
+        process.stdout.write("\u0007"); // terminal bell
+      }
+    } catch {
+      // ignore
+    }
     return new Promise((resolve) => {
       this.approvalWaiter = { resolve };
     });
+  }
+
+  private deriveCurrentAction(): string {
+    if (this.status === "awaiting_approval") return "Waiting for your approval";
+    if (this.status === "awaiting_plan") return "Waiting for plan approval";
+    if (this.status === "awaiting_user") return "Waiting for your input";
+    if (this.status === "verifying") return "Running verification";
+    if (this.status === "planning") return "Planning";
+    if (this.status === "paused") return "Paused";
+    if (this.live.cursorActivity) return this.live.cursorActivity;
+    if (this.taskGraph) {
+      const running = this.taskGraph.nodes.find(
+        (n) => n.status === "running" || n.status === "verifying",
+      );
+      if (running?.currentAction) return running.currentAction;
+      if (running) return `Working on ${running.title}`;
+    }
+    if (this.status === "running") return "Working…";
+    if (this.status === "completed") return "Complete";
+    if (this.status === "stopped") return "Stopped";
+    return "Idle";
+  }
+
+  private buildRunReport(result: string): void {
+    const conf = scoreCompletion({
+      verification: this.verification,
+      git: this.git,
+      summary: result,
+      browserVerifyRequested: this.browserVerify,
+    });
+    const verificationLines = (this.verification?.commands ?? []).map(
+      (s) => `${s.ok ? "✓" : "✗"} ${s.name}`,
+    );
+    if (this.verification?.browser?.attempted) {
+      verificationLines.push(
+        `${this.verification.browser.ok ? "✓" : "✗"} Browser smoke`,
+      );
+    }
+    if (!verificationLines.length && this.verification?.summary) {
+      verificationLines.push(this.verification.summary);
+    }
+    const importantChanges = (this.gitIntel?.bullets ?? [])
+      .slice(0, 5)
+      .map((b) => b.replace(/^[-•]\s*/, ""));
+    this.runReport = {
+      result,
+      filesChanged: this.git?.files?.length ?? 0,
+      additions: this.git?.additions ?? 0,
+      deletions: this.git?.deletions ?? 0,
+      verificationLines,
+      risk: this.gitIntel?.risk ?? "low",
+      confidence: conf.score,
+      confidenceSummary: conf.summary,
+      evidence: conf.evidence,
+      importantChanges,
+    };
+    // Rough context budget estimate for the latest turn (not exact tokenizer)
+    const approx = (text: string) => Math.ceil((text?.length ?? 0) / 4);
+    this.contextBudget = {
+      taskTokens: approx(this.task) + approx(this.summary ?? ""),
+      codeTokens: approx(this.longMemoryContext),
+      diffTokens: approx(this.git?.diffPatch ?? ""),
+      historyTokens: approx(
+        this.memory.rounds
+          .slice(-4)
+          .map((r) => r.instruction ?? "")
+          .join("\n"),
+      ),
+      logTokens: approx(
+        this.logs
+          .slice(-20)
+          .map((l) => l.text)
+          .join("\n"),
+      ),
+      totalTokens: 0,
+    };
+    this.contextBudget.totalTokens =
+      this.contextBudget.taskTokens +
+      this.contextBudget.codeTokens +
+      this.contextBudget.diffTokens +
+      this.contextBudget.historyTokens +
+      this.contextBudget.logTokens;
   }
 
   private waitForPlan(): Promise<boolean> {
