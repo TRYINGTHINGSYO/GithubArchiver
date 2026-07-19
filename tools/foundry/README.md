@@ -40,6 +40,7 @@ git clone -b foundry-standalone --single-branch \
 cd Foundry
 npm ci
 npm run build
+npm run acceptance   # local project-birth proof
 npm start
 ```
 
