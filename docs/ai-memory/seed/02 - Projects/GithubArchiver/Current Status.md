@@ -20,6 +20,8 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Open work
 
+- **2026-07-19** · `decision` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Foundry v0.5 is feature-complete — use it, don't expand it](entries/2026-07-19-decision-foundry-v05-complete.md)
+  - edges: supersedes:[`feature-foundry-v05`](entries/2026-07-19-feature-foundry-v05.md), related:[`feature-foundry-standalone`](entries/2026-07-19-feature-foundry-standalone.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Extract Foundry to standalone product (retire tools/foundry)](entries/2026-07-19-feature-foundry-standalone.md)
   - edges: supersedes:[`feature-foundry-ux-trust`](entries/2026-07-19-feature-foundry-ux-trust.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), related:[`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md)
 - **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation`, `ux` — [Foundry UX + trust-boundary refinement (no new features)](entries/2026-07-19-feature-foundry-ux-trust.md)

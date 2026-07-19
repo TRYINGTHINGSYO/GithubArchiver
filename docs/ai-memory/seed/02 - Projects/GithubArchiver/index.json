@@ -1,9 +1,48 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-19T00:52:42.318Z",
+  "generatedAt": "2026-07-19T03:05:58.197Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "decision-foundry-v05-complete",
+      "schema": 1,
+      "type": "decision",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-19",
+      "pr": 26,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "tooling",
+        "automation"
+      ],
+      "related": [
+        "feature-foundry-v05",
+        "feature-foundry-standalone",
+        "pr-26"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "feature-foundry-v05"
+        },
+        {
+          "type": "related",
+          "id": "feature-foundry-standalone"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-26"
+        }
+      ],
+      "supersedes": "feature-foundry-v05",
+      "title": "Foundry v0.5 is feature-complete — use it, don't expand it",
+      "path": "entries/2026-07-19-decision-foundry-v05-complete.md",
+      "summary": "Foundry **v0.5 is feature-complete** for the original goal: replace ChatGPT ↔ Cursor copy/paste with a standalone orchestrator that can create and manage projects."
+    },
     {
       "id": "feature-foundry-standalone",
       "schema": 1,
