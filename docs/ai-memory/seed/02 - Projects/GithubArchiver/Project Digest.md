@@ -61,6 +61,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Extract Foundry to standalone product (retire tools/foundry)](entries/2026-07-19-feature-foundry-standalone.md)
+  - edges: supersedes:[`feature-foundry-ux-trust`](entries/2026-07-19-feature-foundry-ux-trust.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), related:[`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md)
 - **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation`, `ux` — [Foundry UX + trust-boundary refinement (no new features)](entries/2026-07-19-feature-foundry-ux-trust.md)
   - edges: supersedes:[`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Rename to Foundry — task graphs, product readiness, marketplace seed](entries/2026-07-18-feature-foundry-product.md)
@@ -75,8 +77,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), related:[`feature-cursor-memory-rules`](entries/2026-07-18-pr-7-cursor-memory-rules.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #25 · `76f91e5` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
   - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
-- **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #23 · `30d6fd9` · `open` · `discovery`, `performance`, `clusters` — [Fix dead cluster links and slow page navigation](entries/2026-07-18-bugfix-nav-perf-clusters.md)
-  - edges: related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
 
 ## Open technical debt
 
@@ -85,6 +85,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Extract Foundry to standalone product (retire tools/foundry)](entries/2026-07-19-feature-foundry-standalone.md)
+  - edges: supersedes:[`feature-foundry-ux-trust`](entries/2026-07-19-feature-foundry-ux-trust.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), related:[`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md)
 - **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation`, `ux` — [Foundry UX + trust-boundary refinement (no new features)](entries/2026-07-19-feature-foundry-ux-trust.md)
   - edges: supersedes:[`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Rename to Foundry — task graphs, product readiness, marketplace seed](entries/2026-07-18-feature-foundry-product.md)

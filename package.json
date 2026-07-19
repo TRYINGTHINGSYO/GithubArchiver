@@ -49,12 +49,10 @@
     "memory:timeline:check": "tsx scripts/ai-memory-timeline.ts --check",
     "memory:query": "tsx scripts/ai-memory-query.ts",
     "memory:eval": "tsx scripts/ai-memory-eval.ts",
-    "foundry": "npm --prefix tools/foundry start",
-    "foundry:test": "npm --prefix tools/foundry test",
-    "foundry:setup": "npm --prefix tools/foundry run setup",
-    "foundry:doctor": "npm --prefix tools/foundry run doctor",
-    "relay": "npm --prefix tools/foundry start",
-    "relay:test": "npm --prefix tools/foundry test"
+    "foundry": "node tools/create-foundry/index.js",
+    "foundry:test": "node -e \"console.error('Foundry moved: clone foundry-standalone or TRYINGTHINGSYO/Foundry'); process.exit(1)\"",
+    "foundry:setup": "node tools/create-foundry/index.js",
+    "foundry:doctor": "node tools/create-foundry/index.js"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.12",

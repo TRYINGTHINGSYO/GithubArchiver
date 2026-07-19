@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`feature-foundry-standalone`](entries/2026-07-19-feature-foundry-standalone.md) (`feature`, `confirmed`, `permanent`) — Extract Foundry to standalone product (retire tools/foundry)
+  - `supersedes` → [`feature-foundry-ux-trust`](entries/2026-07-19-feature-foundry-ux-trust.md), `implemented-by` → [`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), `related` → [`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md)
 - [`feature-foundry-ux-trust`](entries/2026-07-19-feature-foundry-ux-trust.md) (`feature`, `confirmed`, `permanent`) — Foundry UX + trust-boundary refinement (no new features)
   - `supersedes` → [`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md), `implemented-by` → [`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - [`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md) (`feature`, `confirmed`, `permanent`) — Rename to Foundry — task graphs, product readiness, marketplace seed

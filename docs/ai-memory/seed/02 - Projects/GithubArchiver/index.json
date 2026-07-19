@@ -1,9 +1,48 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-19T00:32:12.626Z",
+  "generatedAt": "2026-07-19T00:44:31.391Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-foundry-standalone",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-19",
+      "pr": 26,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "tooling",
+        "automation"
+      ],
+      "related": [
+        "feature-foundry-ux-trust",
+        "pr-26",
+        "feature-foundry-product"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "feature-foundry-ux-trust"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-26"
+        },
+        {
+          "type": "related",
+          "id": "feature-foundry-product"
+        }
+      ],
+      "supersedes": "feature-foundry-ux-trust",
+      "title": "Extract Foundry to standalone product (retire tools/foundry)",
+      "path": "entries/2026-07-19-feature-foundry-standalone.md",
+      "summary": "Foundry is no longer developed under `tools/foundry`. The package was subtree-split and extended as a standalone root (`src/`, `public/`, `plugins/`, `adapters/`) with:"
+    },
     {
       "id": "feature-foundry-ux-trust",
       "schema": 1,
