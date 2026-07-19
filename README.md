@@ -1,6 +1,6 @@
 # Foundry
 
-Local **AI software engineering orchestrator**: create new projects, open existing ones, plan with a supervisor, run coding agents against a task graph, verify, and report.
+**v0.5** — Local AI software engineering orchestrator: create, open, build, test, and manage any project.
 
 Cursor is one adapter — not the product identity. Foundry is not tied to any parent application repository.
 
@@ -14,116 +14,83 @@ Cursor is one adapter — not the product identity. Foundry is not tied to any p
      ┌──────────────┼──────────────┐
      ▼              ▼              ▼
  Planner       Memory Engine   Policy Engine
-     │              │              │
-     └──────────────┼──────────────┘
-                    ▼
-             Task Dependency Graph
                     │
-      ┌─────────────┼─────────────┐
-      ▼             ▼             ▼
- Cursor        Claude Code*     Codex*
-      ▼             ▼             ▼
-        Verification & Merge
+                    ▼
+             Task Dependency Graph → Coding agents → Verify
 ```
-
-\* adapter stubs — detection ready, execution next
 
 ## Quick start
 
 ```bash
 npm install
-npm run setup          # or: node bin/foundry.js setup
-npm start              # http://127.0.0.1:8787
+npm run build
+npm run setup          # optional onboarding
+npm start              # http://127.0.0.1:8787  (node dist/index.js)
 ```
 
-Global-style entry:
+Development (TypeScript watch — not required for production):
 
 ```bash
-node bin/foundry.js            # start UI
-node bin/foundry.js doctor     # agents + keys
+npm run dev
+```
+
+CLI:
+
+```bash
+node bin/foundry.js            # start UI (loads dist/)
+node bin/foundry.js doctor
 node bin/foundry.js diagnostics
 ```
 
-When published:
-
-```bash
-npx foundry
-# or: npm i -g foundry && foundry
-```
+Package remains `"private": true` while beta. Do not publish to npm yet.
 
 ## Modes
 
-The UI starts with three choices:
+1. **Create a new project** — name, description, destination, template/custom brief, Git init, optional GitHub (approval required)
+2. **Open an existing project** — folder + task
+3. **Resume a previous run** — crash recovery
 
-1. **Create a new project** — name, description, destination, template (or blank/custom), Git init, optional GitHub repo (approval required)
-2. **Open an existing project** — point at a folder and describe a task
-3. **Resume a previous run** — recover a crashed or interrupted session
+New projects stage under `~/.foundry/staging/`, verify, then move to the destination only on success.
 
-New projects are built in an isolated staging directory under `~/.foundry/staging/`, verified (install + test/build), then moved to the destination only on success.
+## GitHub remote (approval required)
 
-## Project templates
+Local `git init` + initial commit need no remote approval. Creating a GitHub repository, pushing, changing visibility, or deleting a remote **always** requires an explicit UI/API approval (`approved: true`).
 
-Built-in templates include web app, API service, desktop app, CLI, automation script, static site, Discord bot, data pipeline, existing repository, and blank/custom. A natural-language brief is stored as `PROJECT.md` so the supervisor can refine structure in follow-up runs.
+Authenticate once with `gh auth login` (also prompted during `foundry setup`).
 
-## Git & GitHub
+## Self-project boundary
 
-Local Git init and the initial commit run without remote side effects. Creating a GitHub repository, pushing, changing visibility, or deleting a remote **always requires explicit approval** via the UI or `POST /api/projects/github-create` with `{ "approved": true, ... }`.
+When Foundry opens **its own** repository, it forces:
 
-## State layout
+- Plan approval required
+- Push / dependency / deploy / self-update approvals required
+- Trust capped at `safe_edits`
 
-Global state (override with `FOUNDRY_HOME`):
+See `foundry.config.yaml` and `src/self-boundary.ts`.
 
-```text
-~/.foundry/
-├─ projects.json
-├─ sessions/
-├─ memory/
-├─ plugins/
-├─ templates/
-├─ credentials/   # secrets.enc.json (locally encrypted credential file)
-├─ staging/
-└─ metrics/
-```
-
-Per managed project (optional):
+## State
 
 ```text
-foundry.config.yaml
-.foundry/
-├─ project-memory.json
-└─ local-plugins/
+~/.foundry/          # projects.json, sessions, memory, staging, metrics, secrets
+foundry.config.yaml  # per managed project
 ```
 
-Register any existing folder (including apps you already maintain) through the UI or `POST /api/projects/register`. Foundry core does not import or hardcode those applications.
+## Scripts
 
-## Project config
+| Script | Purpose |
+|--------|---------|
+| `npm run build` | Compile `src/` → `dist/` |
+| `npm start` | `node dist/index.js` |
+| `npm run typecheck` | `tsc` (build + tests) |
+| `npm test` | Vitest |
+| `npm run prepublishOnly` | typecheck + test + build (blocked while private) |
 
-Copy `foundry.config.example.yaml` into a project as `foundry.config.yaml`:
+CI (GitHub Actions): `npm ci` → typecheck → test → build on every push/PR.
 
-```yaml
-plugins:
-  - playwright
-  - railway
-  - sqlite
+## Standalone repository
 
-approval:
-  before_database_changes: true
-  before_deleting_files: true
-  before_dependency_updates: true
-  before_commits: false
-  before_pushes: true
-
-agent: cursor
-trust: safe_edits   # read_only | safe_edits | local_autonomous | full_automation
-```
+If you are still on the interim `foundry-standalone` branch inside GithubArchiver, publish the real remote with [PUBLISH.md](./PUBLISH.md).
 
 ## Extraction history
 
-This repository was extracted from `GithubArchiver/tools/foundry` via `git subtree split`. See [EXTRACTION.md](./EXTRACTION.md).
-
-## Tests
-
-```bash
-npm test
-npm run typecheck
-```
+See [EXTRACTION.md](./EXTRACTION.md).

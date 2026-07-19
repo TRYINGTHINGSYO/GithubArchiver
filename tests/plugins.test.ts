@@ -51,6 +51,7 @@ describe("discoverPlugins", () => {
         before_pushes: true,
         before_deploys: true,
         before_secret_changes: true,
+        before_self_updates: true,
       },
     });
     expect(cmds[0]?.command).toBe("true");

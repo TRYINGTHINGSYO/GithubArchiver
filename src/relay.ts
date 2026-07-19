@@ -309,26 +309,42 @@ export class RelaySession {
     this.maxRounds = Math.max(1, Math.min(50, config.maxRounds || 12));
 
     const loaded = await loadProjectConfig(this.projectPath);
-    this.projectConfig = loaded.config;
+    const { isFoundrySelfProject, applySelfBoundary, FOUNDRY_SELF_BOUNDARY } =
+      await import("./self-boundary.js");
+    const selfProject = await isFoundrySelfProject(this.projectPath);
+    const effectiveConfig = selfProject
+      ? applySelfBoundary(loaded.config)
+      : loaded.config;
+    this.projectConfig = effectiveConfig;
     this.configSource = loaded.source;
-    this.approvalPolicy = { ...DEFAULT_APPROVAL, ...loaded.config.approval };
-    this.trustLevel = normalizeTrustLevel(loaded.config.trust);
+    this.approvalPolicy = {
+      ...DEFAULT_APPROVAL,
+      ...effectiveConfig.approval,
+    };
+    this.trustLevel = normalizeTrustLevel(effectiveConfig.trust);
+    if (selfProject) {
+      this.log("system", FOUNDRY_SELF_BOUNDARY.message, 0);
+    }
     this.runApprovals = new Set();
     this.contextBudget = null;
     this.runReport = null;
 
-    // CLI/UI flags override config when explicitly provided
-    this.requirePlanApproval =
-      config.requirePlanApproval ?? loaded.config.require_plan_approval ?? true;
+    // CLI/UI flags override config when explicitly provided.
+    // Self-project boundary still forces plan approval.
+    this.requirePlanApproval = selfProject
+      ? true
+      : (config.requirePlanApproval ??
+        effectiveConfig.require_plan_approval ??
+        true);
     this.supervisorEnabled =
-      config.supervisorEnabled ?? loaded.config.supervisor ?? true;
-    this.autoVerify = config.autoVerify ?? loaded.config.auto_verify ?? true;
+      config.supervisorEnabled ?? effectiveConfig.supervisor ?? true;
+    this.autoVerify = config.autoVerify ?? effectiveConfig.auto_verify ?? true;
     this.browserVerify =
-      config.browserVerify ?? loaded.config.browser_verify ?? false;
+      config.browserVerify ?? effectiveConfig.browser_verify ?? false;
 
     const discovered = await discoverPlugins(
       this.projectPath,
-      loaded.config.plugins,
+      effectiveConfig.plugins,
     );
     this.plugins = discovered.active;
     this.pluginIds = discovered.active.map((p) => p.id);
@@ -440,9 +456,23 @@ export class RelaySession {
     this.gpt.resetConversation();
 
     const loaded = await loadProjectConfig(this.projectPath);
-    this.projectConfig = loaded.config;
+    const { isFoundrySelfProject, applySelfBoundary, FOUNDRY_SELF_BOUNDARY } =
+      await import("./self-boundary.js");
+    const selfProject = await isFoundrySelfProject(this.projectPath);
+    const effectiveConfig = selfProject
+      ? applySelfBoundary(loaded.config)
+      : loaded.config;
+    this.projectConfig = effectiveConfig;
     this.configSource = loaded.source;
-    this.approvalPolicy = { ...DEFAULT_APPROVAL, ...loaded.config.approval };
+    this.approvalPolicy = {
+      ...DEFAULT_APPROVAL,
+      ...effectiveConfig.approval,
+    };
+    this.trustLevel = normalizeTrustLevel(effectiveConfig.trust);
+    if (selfProject) {
+      this.requirePlanApproval = true;
+      this.log("system", FOUNDRY_SELF_BOUNDARY.message, 0);
+    }
     const discovered = await discoverPlugins(this.projectPath, saved.plugins);
     this.plugins = discovered.active;
 

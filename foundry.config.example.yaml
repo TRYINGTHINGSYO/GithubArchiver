@@ -14,6 +14,7 @@ approval:
   before_pushes: true
   before_deploys: true
   before_secret_changes: true
+  before_self_updates: true
 
 require_plan_approval: true
 supervisor: true

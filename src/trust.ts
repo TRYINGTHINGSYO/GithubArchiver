@@ -44,9 +44,14 @@ export function trustAllowsCategory(
   }
   if (trust === "safe_edits") {
     if (
-      ["push", "deploy", "commit", "remote_destructive", "force_git"].includes(
-        category,
-      )
+      [
+        "push",
+        "deploy",
+        "commit",
+        "remote_destructive",
+        "force_git",
+        "self_update",
+      ].includes(category)
     ) {
       return {
         allowed: false,

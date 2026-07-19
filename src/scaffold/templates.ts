@@ -58,16 +58,21 @@ coverage/
 
 function foundryConfig(): string {
   return `plugins: []
+
 approval:
-  before_pushes: true
-  before_deploys: true
   before_database_changes: true
+  before_deleting_files: true
   before_dependency_updates: true
   before_commits: false
-trust: safe_edits
+  before_pushes: true
+  before_deploys: true
+  before_secret_changes: true
+  before_self_updates: true
+
 require_plan_approval: true
 supervisor: true
 auto_verify: true
+trust: safe_edits
 `;
 }
 

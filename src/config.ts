@@ -9,6 +9,8 @@ export interface ApprovalPolicy {
   before_pushes: boolean;
   before_deploys: boolean;
   before_secret_changes: boolean;
+  /** Foundry editing Foundry / publishing itself */
+  before_self_updates: boolean;
 }
 
 export type TrustLevelConfig =
@@ -37,6 +39,7 @@ export const DEFAULT_APPROVAL: ApprovalPolicy = {
   before_pushes: true,
   before_deploys: true,
   before_secret_changes: true,
+  before_self_updates: true,
 };
 
 export const DEFAULT_CONFIG: ProjectRelayConfig = {

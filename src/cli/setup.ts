@@ -68,11 +68,33 @@ async function main() {
     console.log(`Wrote ${path.join(cwd, "foundry.config.yaml")}`);
   }
 
+  const gh = (
+    await rl.question(
+      "Authenticate GitHub CLI for optional remote repo creation? (gh auth login) [y/N]: ",
+    )
+  )
+    .trim()
+    .toLowerCase();
+  if (gh === "y" || gh === "yes") {
+    console.log(`
+Remote repositories are never created silently.
+
+After \`gh auth login\`, Foundry's Create Project flow will:
+  1. Scaffold + verify locally
+  2. Initialize Git + initial commit
+  3. Show an approval screen (owner / name / visibility / push)
+  4. Only then run \`gh repo create\` if you choose Create and push
+
+Run manually if needed:  gh auth login
+`);
+  }
+
   await mkdir(path.join(root, "public"), { recursive: true });
   console.log(`
 Setup complete.
 
 Next:
+  npm run build
   npm start          # or: node bin/foundry.js
   open http://127.0.0.1:8787
   foundry doctor     # health check

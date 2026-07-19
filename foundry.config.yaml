@@ -1,0 +1,24 @@
+# Foundry self-project boundary (this repository).
+# When Foundry opens its own tree, these approvals are forced on regardless.
+
+plugins: []
+
+approval:
+  before_database_changes: true
+  before_deleting_files: true
+  before_dependency_updates: true
+  before_commits: true
+  before_pushes: true
+  before_deploys: true
+  before_secret_changes: true
+  before_self_updates: true
+
+require_plan_approval: true
+supervisor: true
+auto_verify: true
+browser_verify: false
+
+# Cap autonomous trust — never full_automation on the orchestrator itself.
+trust: safe_edits
+
+agent: cursor

@@ -1,21 +1,36 @@
 {
   "name": "foundry",
-  "version": "1.0.0-beta.1",
+  "version": "0.5.0-beta.1",
   "private": true,
   "type": "module",
-  "description": "Foundry — local AI software engineering orchestrator (multi-agent, task graphs, plugins)",
+  "description": "Foundry — local AI software engineering orchestrator",
   "bin": {
     "foundry": "./bin/foundry.js"
   },
+  "files": [
+    "bin",
+    "dist",
+    "public",
+    "plugins",
+    "adapters",
+    "templates",
+    "foundry.config.example.yaml",
+    "README.md"
+  ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
-    "setup": "tsx src/cli/setup.ts",
-    "doctor": "tsx src/cli/doctor.ts",
-    "diagnostics": "tsx src/cli/diagnostics.ts",
+    "start": "node dist/index.js",
+    "setup": "node dist/cli/setup.js",
+    "doctor": "node dist/cli/doctor.js",
+    "diagnostics": "node dist/cli/diagnostics.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "dotenv": "^16.5.0"

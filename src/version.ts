@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export const PACKAGE_VERSION = "1.0.0-beta.1";
+export const PACKAGE_VERSION = "0.5.0-beta.1";
 
 /** Read package.json version (fallback to constant). */
 export async function readPackageVersion(): Promise<string> {

@@ -10,7 +10,8 @@ export type ApprovalCategory =
   | "remote_destructive"
   | "database"
   | "dependency"
-  | "commit";
+  | "commit"
+  | "self_update";
 
 export interface ApprovalMatch {
   categories: ApprovalCategory[];
@@ -106,6 +107,20 @@ const RULES: Rule[] = [
     pattern: /\bgit\s+commit\b|\bcommit\s+the\s+changes\b|\bcreate\s+a\s+commit\b/i,
     reason: "Instruction creates a git commit",
     policyKey: "before_commits",
+  },
+  {
+    category: "self_update",
+    pattern:
+      /\b(npm\s+publish|prepublishOnly|bump\s+version|release\s+foundry|self[-\s]?update|update\s+foundry\s+itself)\b/i,
+    reason: "Instruction updates or publishes Foundry itself",
+    policyKey: "before_self_updates",
+  },
+  {
+    category: "self_update",
+    pattern:
+      /\b(src\/(relay|policy|approval|trust|self-boundary)\.ts|bin\/foundry\.js)\b/i,
+    reason: "Instruction edits Foundry core control-plane files",
+    policyKey: "before_self_updates",
   },
 ];
 

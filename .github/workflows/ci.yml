@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main, foundry-standalone]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Production start smoke
+        run: |
+          node dist/index.js &
+          pid=$!
+          sleep 2
+          curl -sf http://127.0.0.1:8787/api/health
+          kill "$pid"
+        env:
+          PORT: "8787"

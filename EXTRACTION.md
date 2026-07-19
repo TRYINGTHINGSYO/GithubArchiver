@@ -29,15 +29,20 @@ git filter-repo --subdirectory-filter tools/foundry
 - [x] Scaffold engine with staging → verify → destination
 - [x] Local Git init; GitHub remote requires approval
 - [x] Global state under `~/.foundry`
-- [ ] Publish / install globally (`npx foundry`)
+- [ ] Publish / install globally (`npx foundry`) — keep `private: true` until beta acceptance
 - [x] Remove `tools/foundry` from GithubArchiver (pointer README on PR #26)
-- [ ] Register GithubArchiver in `~/.foundry/projects.json` as an ordinary managed project (per machine)
+- [x] Register GithubArchiver in `~/.foundry/projects.json` as an ordinary managed project (per machine)
+- [x] Production `npm run build` → `dist/` + `npm start` via Node (no tsx at runtime)
+- [x] GitHub Actions CI (typecheck / test / build)
+- [x] Self-project release boundary
 
 ## Remote
 
 Intended repository: `TRYINGTHINGSYO/Foundry`
 
-The cloud agent GitHub token could not call `createRepository`. Until the org repo exists, the full standalone tree is mirrored on GithubArchiver branch **`foundry-standalone`**:
+Follow **[PUBLISH.md](./PUBLISH.md)** (rename GithubArchiver remote, then `gh repo create`).
+
+The cloud agent GitHub token cannot call `createRepository`. Until the org repo exists, the tree is mirrored on GithubArchiver branch **`foundry-standalone`**:
 
 ```bash
 git clone -b foundry-standalone --single-branch \
@@ -45,10 +50,3 @@ git clone -b foundry-standalone --single-branch \
 ```
 
 Prototype history: branch **`foundry-split`**.
-
-To publish the real remote (from an account with org create rights):
-
-```bash
-gh repo create TRYINGTHINGSYO/Foundry --private --source=. --remote=origin --push
-# with cwd = Foundry checkout (foundry-standalone or local extract)
-```
