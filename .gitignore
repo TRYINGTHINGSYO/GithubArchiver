@@ -6,3 +6,6 @@ build
 !.env.example
 data/
 .DS_Store
+
+# Local knowledge-graph tooling
+.understand-anything/
