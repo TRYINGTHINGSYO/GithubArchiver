@@ -25,7 +25,6 @@ gh repo create TRYINGTHINGSYO/Foundry \
   --source=. \
   --remote=origin
 
-git push -u origin HEAD:main
 git branch -M main
 git push -u origin main
 git remote remove githubarchiver-source
