@@ -57,3 +57,13 @@ curl -X POST http://127.0.0.1:8787/api/projects/register \
 ```
 
 Do not re-expand Foundry under `tools/foundry`.
+
+## Local Windows home
+
+Preferred checkout path:
+
+```text
+A:\chatgptcodex\foundry-main
+```
+
+Clone steps: see `MOVE-TO-WINDOWS.md` on branch `foundry-standalone`.
