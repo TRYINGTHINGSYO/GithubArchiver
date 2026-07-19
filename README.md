@@ -83,7 +83,11 @@ foundry.config.yaml  # per managed project
 | `npm start` | `node dist/index.js` |
 | `npm run typecheck` | `tsc` (build + tests) |
 | `npm test` | Vitest |
+| `npm run acceptance` | Local project-birth acceptance |
+| `npm run acceptance:github` | Same + remote create (needs `gh` org rights) |
 | `npm run prepublishOnly` | typecheck + test + build (blocked while private) |
+
+See [ACCEPTANCE.md](./ACCEPTANCE.md) and [PUBLISH.md](./PUBLISH.md).
 
 CI (GitHub Actions): `npm ci` → typecheck → test → build on every push/PR.
 

@@ -27,6 +27,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.json --noEmit",
+    "acceptance": "npm run build && node scripts/acceptance-project-birth.mjs",
+    "acceptance:github": "npm run build && FOUNDRY_ACCEPTANCE_GITHUB=1 node scripts/acceptance-project-birth.mjs",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "engines": {

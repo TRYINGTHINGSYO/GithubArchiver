@@ -119,39 +119,6 @@ export async function scaffoldProject(
       const gi = await run("git", ["init", "-b", "main"], stagingPath);
       if (!gi.ok) throw new Error(`git init failed: ${gi.output}`);
       gitInitialized = true;
-      await run("git", ["add", "."], stagingPath);
-      const commit = await run(
-        "git",
-        [
-          "-c",
-          "user.email=foundry@localhost",
-          "-c",
-          "user.name=Foundry",
-          "commit",
-          "-m",
-          "Initial project",
-        ],
-        stagingPath,
-      );
-      initialCommit = commit.ok;
-      if (!commit.ok) {
-        // allow empty-commit environments — still keep tree
-        await run(
-          "git",
-          [
-            "-c",
-            "user.email=foundry@localhost",
-            "-c",
-            "user.name=Foundry",
-            "commit",
-            "--allow-empty",
-            "-m",
-            "Initial project",
-          ],
-          stagingPath,
-        );
-        initialCommit = true;
-      }
     }
 
     const install = await run(
@@ -189,6 +156,42 @@ export async function scaffoldProject(
         message,
         error: "verify_failed",
       };
+    }
+
+    // Commit only after install + verify so lockfiles and verified tree are included.
+    if (initGit) {
+      await run("git", ["add", "."], stagingPath);
+      const commit = await run(
+        "git",
+        [
+          "-c",
+          "user.email=foundry@localhost",
+          "-c",
+          "user.name=Foundry",
+          "commit",
+          "-m",
+          "Initial project",
+        ],
+        stagingPath,
+      );
+      initialCommit = commit.ok;
+      if (!commit.ok) {
+        await run(
+          "git",
+          [
+            "-c",
+            "user.email=foundry@localhost",
+            "-c",
+            "user.name=Foundry",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "Initial project",
+          ],
+          stagingPath,
+        );
+        initialCommit = true;
+      }
     }
 
     await mkdir(path.dirname(destination), { recursive: true });
