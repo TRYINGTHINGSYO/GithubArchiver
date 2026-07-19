@@ -87,7 +87,9 @@ foundry.config.yaml  # per managed project
 | `npm run acceptance:github` | Same + remote create (needs `gh` org rights) |
 | `npm run prepublishOnly` | typecheck + test + build (blocked while private) |
 
-See [ACCEPTANCE.md](./ACCEPTANCE.md) and [PUBLISH.md](./PUBLISH.md).
+See [ACCEPTANCE.md](./ACCEPTANCE.md), [PUBLISH.md](./PUBLISH.md), and [ROADMAP.md](./ROADMAP.md).
+
+**v0.6 rule:** only ship changes that remove friction found while building a real project.
 
 CI (GitHub Actions): `npm ci` → typecheck → test → build on every push/PR.
 
