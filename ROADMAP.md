@@ -36,8 +36,12 @@ project) is built with Foundry.*
 |----------|----------------|-----|---------|
 | *(none yet)* | | | |
 
-When something forces a manual step or annoyance, add a row here first, then
-implement. Do not invent work if the log stays empty.
+When something forces a manual step or annoyance, log it in [FRICTION.md](./FRICTION.md)
+(Task / Expectation / Reality / Fix / Validated), add a row here, then implement.
+Do not invent work if the log stays empty.
+
+**After publish + `acceptance:github`:** tag `v0.5.0-beta.1` and do not touch
+core while building Inventory unless an entry appears in FRICTION.md.
 
 ---
 
