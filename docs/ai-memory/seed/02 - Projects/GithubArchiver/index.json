@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-19T00:44:31.391Z",
+  "generatedAt": "2026-07-19T00:52:42.318Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -77,6 +77,40 @@
       "title": "Foundry UX + trust-boundary refinement (no new features)",
       "path": "entries/2026-07-19-feature-foundry-ux-trust.md",
       "summary": "Stopped adding capabilities; redesigned Foundry around clarity and hard safety boundaries."
+    },
+    {
+      "id": "feature-foundry-v05",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-19",
+      "pr": 26,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "tooling",
+        "automation"
+      ],
+      "related": [
+        "feature-foundry-standalone",
+        "pr-26"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "feature-foundry-standalone"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-26"
+        }
+      ],
+      "supersedes": "feature-foundry-standalone",
+      "title": "Foundry v0.5 — build/dist, CI, self-boundary (awaiting org repo)",
+      "path": "entries/2026-07-19-feature-foundry-v05.md",
+      "summary": "Foundry **v0.5.0-beta.1** on branch `foundry-standalone`:"
     },
     {
       "id": "feature-foundry-product",

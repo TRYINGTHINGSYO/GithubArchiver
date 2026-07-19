@@ -4,31 +4,53 @@ Foundry is a **standalone product**. It no longer lives inside GithubArchiver.
 
 ## Where to get it
 
-Intended repository (create if missing):
+### Intended repository
 
 ```text
 https://github.com/TRYINGTHINGSYO/Foundry
 ```
 
-Until that repository exists, the extracted tree (with create/open/resume scaffolding) is preserved on this repo as branch **`foundry-standalone`**:
+Create it (from an account with org create rights) using the exact remote-safe flow in `PUBLISH.md` on the extract branch:
 
 ```bash
 git clone -b foundry-standalone --single-branch \
   https://github.com/TRYINGTHINGSYO/GithubArchiver.git Foundry
 cd Foundry
-npm install
+
+git remote rename origin githubarchiver-source
+
+gh repo create TRYINGTHINGSYO/Foundry \
+  --private \
+  --description "Local AI software engineering orchestrator" \
+  --source=. \
+  --remote=origin
+
+git push -u origin HEAD:main
+git branch -M main
+git push -u origin main
+git remote remove githubarchiver-source
+```
+
+### Until that repository exists
+
+Use branch **`foundry-standalone`** (v0.5: `dist/` build, CI, self-boundary):
+
+```bash
+git clone -b foundry-standalone --single-branch \
+  https://github.com/TRYINGTHINGSYO/GithubArchiver.git Foundry
+cd Foundry
+npm ci
+npm run build
 npm start
 ```
 
-Prototype history (pre-extraction `tools/foundry` commits) is on branch **`foundry-split`** (`git subtree split --prefix=tools/foundry`).
+Prototype history: branch **`foundry-split`**.
 
 ## GithubArchiver is just a managed project
 
-Register this repo with Foundry like any other folder:
+Register this repo with Foundry like any other folder via Open project or:
 
 ```bash
-# From Foundry UI: Open an existing project → path to GithubArchiver
-# Or via API:
 curl -X POST http://127.0.0.1:8787/api/projects/register \
   -H 'content-type: application/json' \
   -d "{\"name\":\"GithubArchiver\",\"path\":\"$(pwd)\"}"
