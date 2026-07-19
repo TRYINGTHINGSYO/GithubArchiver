@@ -30,9 +30,25 @@ git filter-repo --subdirectory-filter tools/foundry
 - [x] Local Git init; GitHub remote requires approval
 - [x] Global state under `~/.foundry`
 - [ ] Publish / install globally (`npx foundry`)
-- [ ] Remove `tools/foundry` from GithubArchiver (pointer README)
-- [ ] Register GithubArchiver in `~/.foundry/projects.json` as an ordinary managed project
+- [x] Remove `tools/foundry` from GithubArchiver (pointer README on PR #26)
+- [ ] Register GithubArchiver in `~/.foundry/projects.json` as an ordinary managed project (per machine)
 
 ## Remote
 
 Intended repository: `TRYINGTHINGSYO/Foundry`
+
+The cloud agent GitHub token could not call `createRepository`. Until the org repo exists, the full standalone tree is mirrored on GithubArchiver branch **`foundry-standalone`**:
+
+```bash
+git clone -b foundry-standalone --single-branch \
+  https://github.com/TRYINGTHINGSYO/GithubArchiver.git Foundry
+```
+
+Prototype history: branch **`foundry-split`**.
+
+To publish the real remote (from an account with org create rights):
+
+```bash
+gh repo create TRYINGTHINGSYO/Foundry --private --source=. --remote=origin --push
+# with cwd = Foundry checkout (foundry-standalone or local extract)
+```
