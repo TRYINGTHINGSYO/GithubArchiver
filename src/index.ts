@@ -8,8 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 
 dotenv.config({ path: path.join(root, ".env") });
-// Also allow repo-root .env when launched from the monorepo.
-dotenv.config({ path: path.resolve(root, "../../.env") });
+// Optional: parent directory .env when Foundry is nested during migration.
+dotenv.config({ path: path.resolve(root, "../.env") });
 
 const port = Number(process.env.PORT ?? 8787) || 8787;
 const keys = await resolveApiKeys();
@@ -33,7 +33,7 @@ await app.listen();
 console.log(`Foundry listening on http://127.0.0.1:${port}`);
 if (!openaiApiKey) {
   console.warn(
-    "Warning: OPENAI_API_KEY is not set. Run: foundry setup  (or copy tools/foundry/.env.example)",
+    "Warning: OPENAI_API_KEY is not set. Run: foundry setup  (or copy .env.example)",
   );
 } else {
   console.log(`API keys: ${keys.source}`);

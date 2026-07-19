@@ -38,7 +38,7 @@ async function main() {
     console.log("Saved CURSOR_API_KEY to locally encrypted credential file");
   }
 
-  const createEnv = (await rl.question("Also write tools/foundry/.env? [y/N]: ")).trim().toLowerCase();
+  const createEnv = (await rl.question("Also write .env in this package? [y/N]: ")).trim().toLowerCase();
   if (createEnv === "y" || createEnv === "yes") {
     const lines = [
       openai ? `OPENAI_API_KEY=${openai}` : "# OPENAI_API_KEY=",

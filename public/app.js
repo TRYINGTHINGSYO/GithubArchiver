@@ -4,6 +4,31 @@ const els = {
   productTitle: $("productTitle"),
   status: $("status"),
   trustLabel: $("trustLabel"),
+  landing: $("landing"),
+  workspace: $("workspace"),
+  modeCreate: $("modeCreate"),
+  modeOpen: $("modeOpen"),
+  modeResume: $("modeResume"),
+  createPanel: $("createPanel"),
+  resumePanel: $("resumePanel"),
+  newName: $("newName"),
+  newDesc: $("newDesc"),
+  newDest: $("newDest"),
+  newTemplate: $("newTemplate"),
+  newGit: $("newGit"),
+  newGithub: $("newGithub"),
+  newGhOwner: $("newGhOwner"),
+  createProjectBtn: $("createProjectBtn"),
+  cancelCreateBtn: $("cancelCreateBtn"),
+  createResult: $("createResult"),
+  githubApprove: $("githubApprove"),
+  githubApproveDetail: $("githubApproveDetail"),
+  githubCreatePush: $("githubCreatePush"),
+  githubLocalOnly: $("githubLocalOnly"),
+  githubCancel: $("githubCancel"),
+  landingRecovery: $("landingRecovery"),
+  cancelResumeBtn: $("cancelResumeBtn"),
+  backLanding: $("backLanding"),
   projectName: $("projectName"),
   taskDisplay: $("taskDisplay"),
   statusDetail: $("statusDetail"),
@@ -81,6 +106,202 @@ const els = {
   marketplacePanel: $("marketplacePanel"),
   credentialHint: $("credentialHint"),
 };
+
+let pendingGithub = null;
+
+function showLanding() {
+  els.landing?.classList.remove("hidden");
+  els.workspace?.classList.add("hidden");
+  els.createPanel?.classList.add("hidden");
+  els.resumePanel?.classList.add("hidden");
+  els.githubApprove?.classList.add("hidden");
+  pendingGithub = null;
+}
+
+function showWorkspace() {
+  els.landing?.classList.add("hidden");
+  els.workspace?.classList.remove("hidden");
+}
+
+function showCreatePanel() {
+  els.createPanel?.classList.remove("hidden");
+  els.resumePanel?.classList.add("hidden");
+}
+
+async function loadTemplates() {
+  if (!els.newTemplate) return;
+  try {
+    const data = await fetch("/api/templates").then((r) => r.json());
+    const templates = data.templates || [];
+    els.newTemplate.innerHTML = templates
+      .map(
+        (t) =>
+          `<option value="${escapeHtml(t.id)}">${escapeHtml(t.label)} — ${escapeHtml(t.description)}</option>`,
+      )
+      .join("");
+  } catch {
+    els.newTemplate.innerHTML =
+      '<option value="blank">Blank project</option><option value="web-app">Web application</option>';
+  }
+}
+
+async function renderLandingRecovery() {
+  if (!els.landingRecovery) return;
+  try {
+    const data = await fetch("/api/recovery").then((r) => r.json());
+    const sessions = data.sessions || [];
+    if (!sessions.length) {
+      els.landingRecovery.innerHTML = "<em>No recoverable sessions.</em>";
+      return;
+    }
+    els.landingRecovery.innerHTML = sessions
+      .slice(0, 5)
+      .map(
+        (s, i) => `
+        <div class="recovery-card">
+          <pre class="code">${escapeHtml(s.summary || s.sessionId)}</pre>
+          <button type="button" class="ok resume-session" data-id="${escapeHtml(s.sessionId)}" data-i="${i}">Resume</button>
+        </div>`,
+      )
+      .join("");
+    els.landingRecovery.querySelectorAll(".resume-session").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        await post("/api/recover", { sessionId: btn.dataset.id });
+        showWorkspace();
+      });
+    });
+  } catch {
+    els.landingRecovery.innerHTML = "<em>Could not load sessions.</em>";
+  }
+}
+
+els.modeCreate?.addEventListener("click", () => {
+  showCreatePanel();
+  loadTemplates();
+});
+
+els.modeOpen?.addEventListener("click", () => {
+  showWorkspace();
+});
+
+els.modeResume?.addEventListener("click", () => {
+  els.resumePanel?.classList.remove("hidden");
+  els.createPanel?.classList.add("hidden");
+  renderLandingRecovery();
+});
+
+els.cancelCreateBtn?.addEventListener("click", showLanding);
+els.cancelResumeBtn?.addEventListener("click", showLanding);
+els.backLanding?.addEventListener("click", showLanding);
+
+els.createProjectBtn?.addEventListener("click", async () => {
+  const name = els.newName?.value.trim();
+  const destination = els.newDest?.value.trim();
+  if (!name || !destination) {
+    alert("Name and destination folder are required");
+    return;
+  }
+  els.createResult?.classList.remove("hidden");
+  els.createResult.textContent = "Creating project…";
+  els.githubApprove?.classList.add("hidden");
+  try {
+    const res = await fetch("/api/projects/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        description: els.newDesc?.value.trim() || name,
+        brief: els.newDesc?.value.trim() || name,
+        destination,
+        template: els.newTemplate?.value || "blank",
+        initGit: els.newGit?.checked !== false,
+        createGithubRepo: Boolean(els.newGithub?.checked),
+        githubOwner: els.newGhOwner?.value.trim() || undefined,
+        githubVisibility: "private",
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      els.createResult.textContent = data.message || data.error || "Create failed";
+      return;
+    }
+    const lines = [
+      data.message,
+      `Files created: ${data.filesCreated}`,
+      `Git initialized: ${data.gitInitialized ? "yes" : "no"}`,
+      `Initial commit: ${data.initialCommit ? "yes" : "no"}`,
+      data.verifySummary || "",
+    ].filter(Boolean);
+    els.createResult.textContent = lines.join("\n");
+    if (data.destinationPath) {
+      els.projectPath.value = data.destinationPath;
+      persist();
+    }
+    if (data.pendingGithub) {
+      pendingGithub = data.pendingGithub;
+      els.githubApprove?.classList.remove("hidden");
+      els.githubApproveDetail.textContent = [
+        `GitHub repository: ${pendingGithub.owner}/${pendingGithub.name}`,
+        `Visibility: ${pendingGithub.visibility || "private"}`,
+        `Initial branch: main`,
+        `Local path: ${pendingGithub.cwd}`,
+        "",
+        data.githubPolicy || "",
+      ].join("\n");
+    } else {
+      showWorkspace();
+    }
+  } catch (err) {
+    els.createResult.textContent = err.message || String(err);
+  }
+});
+
+els.githubCreatePush?.addEventListener("click", async () => {
+  if (!pendingGithub) return;
+  try {
+    const res = await fetch("/api/projects/github-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        approved: true,
+        owner: pendingGithub.owner,
+        name: pendingGithub.name,
+        visibility: pendingGithub.visibility || "private",
+        cwd: pendingGithub.cwd,
+        push: true,
+      }),
+    });
+    const data = await res.json();
+    els.createResult.textContent = [
+      els.createResult.textContent,
+      "",
+      data.ok
+        ? `GitHub: ${data.url || "created"}`
+        : `GitHub failed: ${data.message || data.error}`,
+    ].join("\n");
+    if (data.ok) {
+      els.githubApprove?.classList.add("hidden");
+      pendingGithub = null;
+      showWorkspace();
+    }
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+els.githubLocalOnly?.addEventListener("click", () => {
+  els.githubApprove?.classList.add("hidden");
+  pendingGithub = null;
+  if (els.createResult) {
+    els.createResult.textContent += "\nGitHub repository: Not created — local only";
+  }
+  showWorkspace();
+});
+
+els.githubCancel?.addEventListener("click", () => {
+  els.githubApprove?.classList.add("hidden");
+  pendingGithub = null;
+});
 
 const STORAGE_KEY = "foundry";
 const saved = JSON.parse(

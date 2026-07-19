@@ -98,7 +98,7 @@ export async function listMarketplace(): Promise<MarketplacePlugin[]> {
   }));
 }
 
-/** Install a registry stub plugin as local plugin.json under tools/foundry/plugins */
+/** Install a registry stub plugin as local plugin.json under ./plugins */
 export async function installMarketplacePlugin(id: string): Promise<{
   ok: boolean;
   path?: string;

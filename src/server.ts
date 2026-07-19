@@ -2,6 +2,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  createGithubRepository,
+  GITHUB_REMOTE_POLICY,
+} from "./adapters/github.js";
 import { listAgentDescriptors } from "./agents/registry.js";
 import { CursorRunner } from "./cursor.js";
 import { GptClient } from "./gpt.js";
@@ -20,7 +24,14 @@ import {
   formatRecoverySummary,
   listRecoverableSessions,
 } from "./recovery.js";
+import {
+  loadRegistry,
+  upsertProject,
+} from "./registry/projects.js";
 import { PRODUCT_NAME, RelaySession } from "./relay.js";
+import { scaffoldProject } from "./scaffold/engine.js";
+import { TEMPLATE_CATALOG } from "./scaffold/templates.js";
+import type { ProjectTemplateId, ScaffoldRequest } from "./scaffold/types.js";
 import type { RelaySnapshot } from "./types.js";
 import { PACKAGE_VERSION } from "./version.js";
 
@@ -118,7 +129,101 @@ export function createRelayServer(options: ServerOptions) {
           cursorAgentBin: options.cursorAgentBin,
           defaultMaxRounds: options.defaultMaxRounds,
           orchestrator: true,
+          standalone: true,
         });
+        return;
+      }
+
+      if (method === "GET" && pathname === "/api/templates") {
+        sendJson(res, 200, { templates: TEMPLATE_CATALOG });
+        return;
+      }
+
+      if (method === "GET" && pathname === "/api/projects") {
+        const registry = await loadRegistry();
+        sendJson(res, 200, { projects: registry.projects });
+        return;
+      }
+
+      if (method === "POST" && pathname === "/api/projects/register") {
+        const body = (await readJson(req)) as {
+          name?: string;
+          path?: string;
+          lastTask?: string;
+        };
+        if (!body.name?.trim() || !body.path?.trim()) {
+          sendJson(res, 400, { error: "name and path are required" });
+          return;
+        }
+        const entry = await upsertProject({
+          name: body.name.trim(),
+          path: body.path.trim(),
+          lastTask: body.lastTask,
+        });
+        sendJson(res, 200, { project: entry });
+        return;
+      }
+
+      if (method === "POST" && pathname === "/api/projects/create") {
+        const body = (await readJson(req)) as Partial<ScaffoldRequest>;
+        if (!body.name?.trim() || !body.destination?.trim()) {
+          sendJson(res, 400, { error: "name and destination are required" });
+          return;
+        }
+        const result = await scaffoldProject({
+          name: body.name.trim(),
+          description: body.description?.trim() || body.brief?.trim() || body.name,
+          destination: body.destination.trim(),
+          template: (body.template as ProjectTemplateId) || "blank",
+          packageManager: body.packageManager || "npm",
+          initGit: body.initGit !== false,
+          createGithubRepo: Boolean(body.createGithubRepo),
+          githubVisibility: body.githubVisibility || "private",
+          githubOwner: body.githubOwner,
+          brief: body.brief,
+        });
+        if (result.ok && result.destinationPath) {
+          await upsertProject({
+            name: body.name.trim(),
+            path: result.destinationPath,
+            lastTask: "Project created",
+          });
+        }
+        sendJson(res, result.ok ? 201 : 400, {
+          ...result,
+          githubPolicy: GITHUB_REMOTE_POLICY,
+        });
+        return;
+      }
+
+      if (method === "POST" && pathname === "/api/projects/github-create") {
+        const body = (await readJson(req)) as {
+          approved?: boolean;
+          owner?: string;
+          name?: string;
+          visibility?: "private" | "public";
+          cwd?: string;
+          push?: boolean;
+        };
+        if (!body.approved) {
+          sendJson(res, 403, {
+            error: "Remote repository creation requires explicit approval",
+            policy: GITHUB_REMOTE_POLICY,
+          });
+          return;
+        }
+        if (!body.owner || !body.name || !body.cwd) {
+          sendJson(res, 400, { error: "owner, name, and cwd are required" });
+          return;
+        }
+        const result = await createGithubRepository({
+          owner: body.owner,
+          name: body.name,
+          visibility: body.visibility || "private",
+          cwd: body.cwd,
+          push: body.push !== false,
+        });
+        sendJson(res, result.ok ? 200 : 400, result);
         return;
       }
 
@@ -249,6 +354,13 @@ export function createRelayServer(options: ServerOptions) {
         }
 
         resetSession();
+        if (projectPath) {
+          void upsertProject({
+            name: projectPath.split(/[\\/]/).filter(Boolean).pop() || projectPath,
+            path: projectPath,
+            lastTask: task,
+          });
+        }
         sendJson(res, 202, { ok: true, projectPath });
         void session
           .start({
@@ -264,7 +376,7 @@ export function createRelayServer(options: ServerOptions) {
             autoVerify: body.autoVerify !== false,
             browserVerify: Boolean(body.browserVerify),
           })
-          .catch((err) => console.error("[orchestrator] start failed:", err));
+          .catch((err) => console.error("[foundry] start failed:", err));
         return;
       }
 

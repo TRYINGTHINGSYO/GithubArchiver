@@ -17,7 +17,7 @@
       <header class="top">
         <div class="brand-block">
           <h1 id="productTitle">Foundry</h1>
-          <p class="tagline">What is it doing · Is it working · Does it need me · What changed</p>
+          <p class="tagline">Create, open, build, and manage any software project</p>
         </div>
         <div class="top-meta">
           <div class="trust-pill" title="Project trust level">
@@ -30,6 +30,66 @@
           </div>
         </div>
       </header>
+
+      <!-- Landing: create / open / resume -->
+      <section id="landing" class="landing">
+        <h2>What do you want to do?</h2>
+        <div class="landing-actions">
+          <button type="button" id="modeCreate" class="landing-card">
+            <strong>Create a new project</strong>
+            <span>Scaffold, verify, and optionally open a GitHub repo</span>
+          </button>
+          <button type="button" id="modeOpen" class="landing-card">
+            <strong>Open an existing project</strong>
+            <span>Point Foundry at a folder and describe a task</span>
+          </button>
+          <button type="button" id="modeResume" class="landing-card">
+            <strong>Resume a previous run</strong>
+            <span>Recover a crashed or interrupted session</span>
+          </button>
+        </div>
+
+        <div id="createPanel" class="mode-panel hidden">
+          <h3>New project</h3>
+          <label class="field"><span>Name</span><input id="newName" type="text" placeholder="Inventory" /></label>
+          <label class="field"><span>Description / brief</span><textarea id="newDesc" rows="3" placeholder="Home inventory with barcode scanning…"></textarea></label>
+          <label class="field"><span>Destination folder</span><input id="newDest" type="text" spellcheck="false" placeholder="/path/to/Projects/Inventory" /></label>
+          <label class="field"><span>Template</span>
+            <select id="newTemplate"></select>
+          </label>
+          <div class="flags">
+            <label><input id="newGit" type="checkbox" checked /> Initialize Git + initial commit</label>
+            <label><input id="newGithub" type="checkbox" /> Offer GitHub repository (requires approval)</label>
+          </div>
+          <label class="field compact"><span>GitHub owner</span><input id="newGhOwner" type="text" placeholder="your-org" /></label>
+          <div class="buttons">
+            <button type="button" id="createProjectBtn" class="ok">Create project</button>
+            <button type="button" id="cancelCreateBtn" class="ghost">Back</button>
+          </div>
+          <pre id="createResult" class="summary hidden"></pre>
+          <div id="githubApprove" class="action-banner hidden" style="margin-top:12px">
+            <div class="action-banner-inner">
+              <h2>ACTION REQUIRED</h2>
+              <p class="action-lead">Foundry wants to create a GitHub repository</p>
+              <pre id="githubApproveDetail" class="code"></pre>
+              <div class="buttons">
+                <button type="button" id="githubCreatePush" class="ok">Create and push</button>
+                <button type="button" id="githubLocalOnly" class="ghost">Keep local only</button>
+                <button type="button" id="githubCancel" class="danger">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="resumePanel" class="mode-panel hidden">
+          <h3>Recoverable sessions</h3>
+          <div id="landingRecovery"></div>
+          <button type="button" id="cancelResumeBtn" class="ghost">Back</button>
+        </div>
+      </section>
+
+      <div id="workspace" class="hidden">
+      <p class="hint" style="margin:0 0 10px"><button type="button" id="backLanding" class="ghost">← Home</button></p>
 
       <!-- ACTION REQUIRED banner — impossible to miss -->
       <section id="actionBanner" class="action-banner hidden" role="alert">
@@ -277,6 +337,7 @@
         </div>
         <p class="hint" id="credentialHint"></p>
       </section>
+      </div>
     </div>
     <script src="/app.js" type="module"></script>
   </body>

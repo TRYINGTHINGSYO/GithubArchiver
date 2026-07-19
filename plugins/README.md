@@ -2,7 +2,7 @@
 
 Built-in plugins live in `src/plugins/builtin.ts`. Extra plugins can be dropped under:
 
-- `tools/foundry/plugins/<id>/plugin.json` (marketplace installs)
+- `plugins/<id>/plugin.json` (marketplace installs)
 - `<project>/.foundry/plugins/`
 - `<project>/.relay/plugins/` (legacy)
 

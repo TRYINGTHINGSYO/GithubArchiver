@@ -3,24 +3,29 @@ import { detectProjectsFromTask } from "../src/projects.js";
 
 describe("detectProjectsFromTask", () => {
   const index = {
-    GithubArchiver: "/repos/GithubArchiver",
-    SiegeQueue: "/repos/SiegeQueue",
+    Inventory: "/repos/Inventory",
+    PlexRequests: "/repos/PlexRequests",
   };
 
-  it("detects explicit project name in task", () => {
+  it("matches by name mention", () => {
     const hits = detectProjectsFromTask(
-      "Fix SiegeQueue mobile overlay",
+      "Improve barcode scanning in Inventory",
       index,
     );
-    expect(hits[0]?.name).toBe("SiegeQueue");
-    expect(hits[0]?.path).toBe("/repos/SiegeQueue");
+    expect(hits[0]?.name).toBe("Inventory");
+    expect(hits[0]?.confidence).toBeGreaterThan(0.9);
   });
 
-  it("detects GithubArchiver via pattern hints", () => {
+  it("matches compact name variants", () => {
+    const hits = detectProjectsFromTask("fix plexrequests login", index);
+    expect(hits.some((h) => h.name === "PlexRequests")).toBe(true);
+  });
+
+  it("does not hardcode parent-repo names", () => {
     const hits = detectProjectsFromTask(
-      "Fix the cluster link on the archive homepage",
+      "Fix GH Archive CreateEvent matching",
       index,
     );
-    expect(hits.some((h) => h.name === "GithubArchiver")).toBe(true);
+    expect(hits.length).toBe(0);
   });
 });

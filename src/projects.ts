@@ -2,6 +2,7 @@ import { access, readdir } from "node:fs/promises";
 import { constants as fsConstants } from "node:fs";
 import path from "node:path";
 import type { DetectedProject } from "./types.js";
+import { registryAsKnownMap } from "./registry/projects.js";
 
 export interface ProjectCatalog {
   /** Explicit name → absolute path */
@@ -9,17 +10,6 @@ export interface ProjectCatalog {
   /** Directories to scan for project folders */
   searchRoots: string[];
 }
-
-const DEFAULT_HINTS: Array<{ name: string; patterns: RegExp[] }> = [
-  {
-    name: "GithubArchiver",
-    patterns: [/github\s*archiv/i, /githubarchiv/i, /cluster link/i, /gh archive/i],
-  },
-  {
-    name: "SiegeQueue",
-    patterns: [/siege\s*queue/i, /siegequeue/i, /mobile overlay/i],
-  },
-];
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -55,7 +45,9 @@ export async function buildProjectIndex(
   catalog: ProjectCatalog,
 ): Promise<Record<string, string>> {
   const discovered = await discoverFromRoots(catalog.searchRoots);
-  return { ...discovered, ...catalog.known };
+  const registered = await registryAsKnownMap();
+  // Priority: explicit known > registry > filesystem discovery
+  return { ...discovered, ...registered, ...catalog.known };
 }
 
 export function detectProjectsFromTask(
@@ -76,7 +68,6 @@ export function detectProjectsFromTask(
       });
       continue;
     }
-    // kebab/snake variants
     const compact = nameLower.replace(/[^a-z0-9]/g, "");
     if (compact && lowerTask.replace(/[^a-z0-9]/g, "").includes(compact)) {
       hits.push({
@@ -88,29 +79,12 @@ export function detectProjectsFromTask(
     }
   }
 
-  for (const hint of DEFAULT_HINTS) {
-    if (hits.some((h) => h.name.toLowerCase() === hint.name.toLowerCase())) {
-      continue;
-    }
-    if (!hint.patterns.some((p) => p.test(task))) continue;
-    const matchKey = Object.keys(index).find(
-      (k) => k.toLowerCase() === hint.name.toLowerCase(),
-    );
-    if (!matchKey) continue;
-    hits.push({
-      name: matchKey,
-      path: index[matchKey],
-      confidence: 0.75,
-      reason: `Task matches known patterns for ${hint.name}`,
-    });
-  }
-
   return hits.sort((a, b) => b.confidence - a.confidence);
 }
 
 export function defaultSearchRoots(env: NodeJS.ProcessEnv = process.env): string[] {
   const roots: string[] = [];
-  const projectRoots = env.FOUNDRY_PROJECT_ROOTS || env.RELAY_PROJECT_ROOTS;
+  const projectRoots = env.FOUNDRY_PROJECT_ROOTS;
   if (projectRoots) {
     roots.push(
       ...projectRoots
@@ -119,14 +93,13 @@ export function defaultSearchRoots(env: NodeJS.ProcessEnv = process.env): string
         .filter(Boolean),
     );
   }
-  if (env.HOME) {
-    roots.push(path.join(env.HOME, "Projects"));
-    roots.push(path.join(env.HOME, "Developer"));
-    roots.push(path.join(env.HOME, "code"));
-    roots.push(path.join(env.HOME, "src"));
+  if (env.HOME || env.USERPROFILE) {
+    const home = env.HOME || env.USERPROFILE!;
+    roots.push(path.join(home, "Projects"));
+    roots.push(path.join(home, "Developer"));
+    roots.push(path.join(home, "code"));
+    roots.push(path.join(home, "src"));
   }
-  // Common cloud/workspace locations
-  roots.push("/workspace");
   roots.push(path.resolve(process.cwd(), ".."));
   roots.push(process.cwd());
   return [...new Set(roots)];
@@ -135,7 +108,7 @@ export function defaultSearchRoots(env: NodeJS.ProcessEnv = process.env): string
 export function parseKnownProjects(
   env: NodeJS.ProcessEnv = process.env,
 ): Record<string, string> {
-  const raw = env.FOUNDRY_KNOWN_PROJECTS || env.RELAY_KNOWN_PROJECTS;
+  const raw = env.FOUNDRY_KNOWN_PROJECTS;
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw) as Record<string, string>;
