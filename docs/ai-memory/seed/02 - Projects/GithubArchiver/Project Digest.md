@@ -63,6 +63,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 - **2026-07-19** · `decision` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Foundry v0.5 is feature-complete — use it, don't expand it](entries/2026-07-19-decision-foundry-v05-complete.md)
   - edges: supersedes:[`feature-foundry-v05`](entries/2026-07-19-feature-foundry-v05.md), related:[`feature-foundry-standalone`](entries/2026-07-19-feature-foundry-standalone.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
+- **2026-07-19** · `decision` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Foundry v0.6 rule — only friction from real projects; ROADMAP.md](entries/2026-07-19-decision-foundry-v06-friction-rule.md)
+  - edges: related:[`decision-foundry-v05-complete`](entries/2026-07-19-decision-foundry-v05-complete.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Extract Foundry to standalone product (retire tools/foundry)](entries/2026-07-19-feature-foundry-standalone.md)
   - edges: supersedes:[`feature-foundry-ux-trust`](entries/2026-07-19-feature-foundry-ux-trust.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), related:[`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md)
 - **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation`, `ux` — [Foundry UX + trust-boundary refinement (no new features)](entries/2026-07-19-feature-foundry-ux-trust.md)
@@ -75,8 +77,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: supersedes:[`feature-gpt-cursor-relay-v15`](entries/2026-07-18-feature-gpt-cursor-relay-v15.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Orchestrator v0.4 — reliability platform](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md)
   - edges: supersedes:[`feature-gpt-cursor-orchestrator-v03`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
-- **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor relay v1.5 — autonomous loop](entries/2026-07-18-feature-gpt-cursor-relay-v15.md)
-  - edges: supersedes:[`feature-gpt-cursor-relay`](entries/2026-07-18-feature-gpt-cursor-relay.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 
 ## Open technical debt
 
@@ -87,6 +87,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 - **2026-07-19** · `decision` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Foundry v0.5 is feature-complete — use it, don't expand it](entries/2026-07-19-decision-foundry-v05-complete.md)
   - edges: supersedes:[`feature-foundry-v05`](entries/2026-07-19-feature-foundry-v05.md), related:[`feature-foundry-standalone`](entries/2026-07-19-feature-foundry-standalone.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
+- **2026-07-19** · `decision` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Foundry v0.6 rule — only friction from real projects; ROADMAP.md](entries/2026-07-19-decision-foundry-v06-friction-rule.md)
+  - edges: related:[`decision-foundry-v05-complete`](entries/2026-07-19-decision-foundry-v05-complete.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Extract Foundry to standalone product (retire tools/foundry)](entries/2026-07-19-feature-foundry-standalone.md)
   - edges: supersedes:[`feature-foundry-ux-trust`](entries/2026-07-19-feature-foundry-ux-trust.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md), related:[`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md)
 - **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation`, `ux` — [Foundry UX + trust-boundary refinement (no new features)](entries/2026-07-19-feature-foundry-ux-trust.md)

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-19T03:05:58.197Z",
+  "generatedAt": "2026-07-19T03:08:41.637Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -42,6 +42,40 @@
       "title": "Foundry v0.5 is feature-complete — use it, don't expand it",
       "path": "entries/2026-07-19-decision-foundry-v05-complete.md",
       "summary": "Foundry **v0.5 is feature-complete** for the original goal: replace ChatGPT ↔ Cursor copy/paste with a standalone orchestrator that can create and manage projects."
+    },
+    {
+      "id": "decision-foundry-v06-friction-rule",
+      "schema": 1,
+      "type": "decision",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-19",
+      "pr": 26,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "tooling",
+        "automation"
+      ],
+      "related": [
+        "decision-foundry-v05-complete",
+        "pr-26"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "decision-foundry-v05-complete"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-26"
+        }
+      ],
+      "supersedes": null,
+      "title": "Foundry v0.6 rule — only friction from real projects; ROADMAP.md",
+      "path": "entries/2026-07-19-decision-foundry-v06-friction-rule.md",
+      "summary": "After v0.5 freeze, every Foundry change must eliminate friction encountered"
     },
     {
       "id": "feature-foundry-standalone",
