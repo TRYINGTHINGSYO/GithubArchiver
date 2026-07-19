@@ -4,7 +4,9 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import type { ApprovalPolicy } from "./config.js";
 import { DEFAULT_APPROVAL } from "./config.js";
+import { gateOperation } from "./policy.js";
 import type { OrchestratorPlugin } from "./plugins/types.js";
+import type { TrustLevel } from "./trust.js";
 import type { VerifyResult } from "./types.js";
 
 export interface VerifyOptions {
@@ -14,6 +16,9 @@ export interface VerifyOptions {
   timeoutMs?: number;
   plugins?: OrchestratorPlugin[];
   approval?: ApprovalPolicy;
+  trust?: TrustLevel;
+  /** Categories approved for this run — verify still refuses deploys/pushes */
+  runApprovals?: Set<string>;
 }
 
 async function readPkg(projectPath: string): Promise<Record<string, unknown> | null> {
@@ -30,6 +35,11 @@ function runCommand(
   cwd: string,
   signal?: AbortSignal,
   timeoutMs = 10 * 60 * 1000,
+  gate?: {
+    approval?: ApprovalPolicy;
+    trust?: TrustLevel;
+    runApprovals?: Set<string>;
+  },
 ): Promise<{ ok: boolean; exitCode: number | null; output: string; durationMs: number }> {
   const started = Date.now();
   return new Promise((resolve) => {
@@ -41,6 +51,33 @@ function runCommand(
         durationMs: 0,
       });
       return;
+    }
+    // Execution-time policy: plugins/verify cannot bypass via direct spawn
+    if (gate) {
+      const decision = gateOperation(command, {
+        policy: gate.approval,
+        trust: gate.trust ?? "safe_edits",
+        runApprovals: gate.runApprovals,
+      });
+      // Verify commands that need deploy/push/secret approval are denied here
+      // (approval UI is for agent instructions; verify stays local-safe).
+      if (
+        decision.action === "deny" ||
+        (decision.action === "approve" &&
+          decision.classified.categories.some((c) =>
+            ["deploy", "push", "remote_destructive", "secrets", "force_git"].includes(
+              c,
+            ),
+          ))
+      ) {
+        resolve({
+          ok: false,
+          exitCode: null,
+          output: `Blocked by execution policy: ${decision.message}`,
+          durationMs: Date.now() - started,
+        });
+        return;
+      }
     }
     const child = spawn(command, {
       cwd,
@@ -230,6 +267,11 @@ export async function runVerification(
       options.projectPath,
       options.signal,
       options.timeoutMs,
+      {
+        approval: options.approval,
+        trust: options.trust,
+        runApprovals: options.runApprovals,
+      },
     );
     results.push({
       name: cmd.name,

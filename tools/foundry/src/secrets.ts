@@ -86,7 +86,7 @@ export async function getSecret(key: string): Promise<string | undefined> {
   return secrets[key];
 }
 
-/** Prefer env, then encrypted vault. */
+/** Prefer env, then locally encrypted credential file. */
 export async function resolveApiKeys(): Promise<{
   openaiApiKey: string;
   cursorApiKey?: string;

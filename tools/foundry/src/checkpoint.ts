@@ -64,6 +64,62 @@ export async function createCheckpoint(
   };
 }
 
+export interface RollbackPreview {
+  headSha: string;
+  modified: string[];
+  untracked: string[];
+  /** Files that exist now but not at checkpoint (best-effort via status) */
+  willRestore: string[];
+  willDelete: string[];
+  preserveNote: string;
+  remoteSafe: true;
+  summary: string;
+}
+
+/** Explain exactly what rollback will do before mutating. */
+export async function previewRollback(
+  checkpoint: RollbackCheckpoint,
+): Promise<RollbackPreview> {
+  const { projectPath, headSha } = checkpoint;
+  const status = await git(projectPath, ["status", "--porcelain"]);
+  const modified: string[] = [];
+  const untracked: string[] = [];
+  for (const line of status.stdout.split("\n")) {
+    if (!line.trim()) continue;
+    const code = line.slice(0, 2);
+    const file = line.slice(3).trim();
+    if (code.includes("?")) untracked.push(file);
+    else modified.push(file);
+  }
+  // Files different from checkpoint HEAD
+  const diff = await git(projectPath, [
+    "diff",
+    "--name-only",
+    headSha,
+  ]);
+  const willRestore = diff.stdout
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const willDelete = untracked; // clean -fd removes untracked created during run
+  return {
+    headSha,
+    modified,
+    untracked,
+    willRestore,
+    willDelete,
+    preserveNote:
+      "Untracked files that existed before the run may still be removed by git clean -fd if they remain untracked.",
+    remoteSafe: true,
+    summary:
+      `Rollback to checkpoint ${headSha.slice(0, 8)}\n` +
+      `This will:\n` +
+      `• restore ${willRestore.length} modified tracked file(s)\n` +
+      `• delete ${willDelete.length} untracked file(s) via git clean -fd\n` +
+      `• not alter remote branches`,
+  };
+}
+
 /** Undo autonomous edits: hard-reset to checkpoint HEAD and remove untracked files. */
 export async function rollbackToCheckpoint(
   checkpoint: RollbackCheckpoint,

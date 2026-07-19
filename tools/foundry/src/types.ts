@@ -100,6 +100,15 @@ export interface ApprovalRequest {
   reason: string;
   instruction: string;
   categories: string[];
+  /** Exact command/operation when known */
+  command?: string;
+  /** Requesting agent / worker label */
+  requestedBy?: string;
+  workingDirectory?: string;
+  policy?: string;
+  risk?: "low" | "medium" | "high";
+  /** Bullet list of intended effects */
+  effects?: string[];
 }
 
 export interface RelayConfig {
@@ -344,6 +353,11 @@ export interface RelaySnapshot {
       status: string;
       attempts: number;
       error?: string;
+      durationMs?: number;
+      workerLabel?: string;
+      filesChanged?: string[];
+      currentAction?: string;
+      verifySummary?: string;
     }>;
     progress: {
       total: number;
@@ -356,6 +370,38 @@ export interface RelaySnapshot {
     };
   } | null;
   productName: string;
+  /** Project trust level */
+  trustLevel: string;
+  trustLabel: string;
+  /** Human-readable current action */
+  currentAction: string;
+  /** Elapsed ms since run start */
+  elapsedMs: number;
+  /** Optional context budget for the latest GPT turn */
+  contextBudget: {
+    taskTokens: number;
+    codeTokens: number;
+    diffTokens: number;
+    historyTokens: number;
+    logTokens: number;
+    totalTokens: number;
+  } | null;
+  /** Final run report when completed */
+  runReport: {
+    result: string;
+    filesChanged: number;
+    additions: number;
+    deletions: number;
+    verificationLines: string[];
+    risk: "low" | "medium" | "high";
+    confidence: number;
+    confidenceSummary: string;
+    evidence: Array<{ label: string; ok: boolean; note?: string }>;
+    importantChanges: string[];
+  } | null;
+  /** Follow-ups are optional separate runs — never auto-continued */
+  followUps: string[];
+  credentialStoreLabel: string;
 }
 
 export interface CursorRunResult {

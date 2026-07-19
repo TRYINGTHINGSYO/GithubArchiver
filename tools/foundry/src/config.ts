@@ -11,10 +11,18 @@ export interface ApprovalPolicy {
   before_secret_changes: boolean;
 }
 
+export type TrustLevelConfig =
+  | "read_only"
+  | "safe_edits"
+  | "local_autonomous"
+  | "full_automation";
+
 export interface ProjectRelayConfig {
   plugins: string[];
   approval: ApprovalPolicy;
   agent?: string;
+  /** Project trust boundary (default: safe_edits) */
+  trust?: TrustLevelConfig;
   require_plan_approval?: boolean;
   supervisor?: boolean;
   auto_verify?: boolean;
@@ -34,6 +42,7 @@ export const DEFAULT_APPROVAL: ApprovalPolicy = {
 export const DEFAULT_CONFIG: ProjectRelayConfig = {
   plugins: [],
   approval: { ...DEFAULT_APPROVAL },
+  trust: "safe_edits",
   require_plan_approval: true,
   supervisor: true,
   auto_verify: true,
@@ -139,9 +148,27 @@ export function normalizeConfig(raw: Record<string, unknown>): ProjectRelayConfi
     ? raw.plugins.filter((p): p is string => typeof p === "string")
     : [];
 
+  const trustRaw = typeof raw.trust === "string" ? raw.trust : undefined;
+  const trust =
+    trustRaw === "read_only" ||
+    trustRaw === "safe_edits" ||
+    trustRaw === "local_autonomous" ||
+    trustRaw === "full_automation"
+      ? trustRaw
+      : trustRaw === "read-only"
+        ? "read_only"
+        : trustRaw === "safe-edits"
+          ? "safe_edits"
+          : trustRaw === "local-autonomous"
+            ? "local_autonomous"
+            : trustRaw === "full-automation"
+              ? "full_automation"
+              : DEFAULT_CONFIG.trust;
+
   return {
     plugins,
     approval,
+    trust,
     agent: typeof raw.agent === "string" ? raw.agent : undefined,
     require_plan_approval:
       typeof raw.require_plan_approval === "boolean"

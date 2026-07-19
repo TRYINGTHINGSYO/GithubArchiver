@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`feature-foundry-ux-trust`](entries/2026-07-19-feature-foundry-ux-trust.md) (`feature`, `confirmed`, `permanent`) — Foundry UX + trust-boundary refinement (no new features)
+  - `supersedes` → [`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md), `implemented-by` → [`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - [`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md) (`feature`, `confirmed`, `permanent`) — Rename to Foundry — task graphs, product readiness, marketplace seed
   - `supersedes` → [`feature-gpt-cursor-orchestrator-v04`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md), `implemented-by` → [`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - [`feature-gpt-cursor-orchestrator-v03`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md) (`feature`, `confirmed`, `permanent`) — GPT ↔ Cursor orchestrator v0.3

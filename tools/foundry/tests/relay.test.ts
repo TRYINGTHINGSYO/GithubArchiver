@@ -271,6 +271,12 @@ describe("RelaySession orchestrator", () => {
 
   it("pauses for approval on git push instructions", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "relay-"));
+    // Push requires full_automation trust; otherwise Foundry hard-blocks.
+    await writeFile(
+      path.join(dir, "foundry.config.yaml"),
+      "trust: full_automation\napproval:\n  before_pushes: true\n",
+      "utf8",
+    );
     const gpt = mockGpt([
       {
         status: "continue",
@@ -298,9 +304,39 @@ describe("RelaySession orchestrator", () => {
     }
 
     expect(session.snapshot().status).toBe("awaiting_approval");
+    expect(session.snapshot().trustLevel).toBe("full_automation");
+    expect(session.snapshot().pendingApproval?.risk).toBeTruthy();
     session.resolveApproval(false);
     await started;
     expect(session.snapshot().status).toBe("stopped");
+    expect(cursor.run).not.toHaveBeenCalled();
+  });
+
+  it("hard-blocks push under safe_edits trust", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "relay-"));
+    const gpt = mockGpt([
+      {
+        status: "continue",
+        instruction: "git push origin HEAD",
+      },
+    ]);
+    const cursor = mockCursor();
+    const session = new RelaySession(baseDeps(gpt, cursor));
+
+    await session.start({
+      projectPath: dir,
+      task: "Ship it",
+      maxRounds: 3,
+      openaiApiKey: "test",
+      openaiModel: "gpt-test",
+      cursorAgentBin: "agent",
+      requirePlanApproval: false,
+      autoVerify: false,
+      supervisorEnabled: false,
+    });
+
+    expect(session.snapshot().status).toBe("stopped");
+    expect(session.snapshot().stopReason).toBe("trust_blocked");
     expect(cursor.run).not.toHaveBeenCalled();
   });
 });

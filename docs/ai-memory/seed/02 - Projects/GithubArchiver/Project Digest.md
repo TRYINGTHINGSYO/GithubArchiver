@@ -61,6 +61,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation`, `ux` — [Foundry UX + trust-boundary refinement (no new features)](entries/2026-07-19-feature-foundry-ux-trust.md)
+  - edges: supersedes:[`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Rename to Foundry — task graphs, product readiness, marketplace seed](entries/2026-07-18-feature-foundry-product.md)
   - edges: supersedes:[`feature-gpt-cursor-orchestrator-v04`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor orchestrator v0.3](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md)
@@ -75,8 +77,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #23 · `30d6fd9` · `open` · `discovery`, `performance`, `clusters` — [Fix dead cluster links and slow page navigation](entries/2026-07-18-bugfix-nav-perf-clusters.md)
   - edges: related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md)
-- **2026-07-18** · `decision` · `confirmed` · `permanent` · PR #22 · `5e6a396` · migration 34 · `open` · `enrichment`, `throughput`, `observability` — [Profile enrichment with per-stage timings before more architecture changes](entries/2026-07-18-decision-enrich-stage-timings.md)
-  - edges: caused-by:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), references:[`incident-empty-createevent-defer`](entries/2026-07-18-incident-empty-createevent-defer.md)
 
 ## Open technical debt
 
@@ -85,6 +85,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-07-19** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation`, `ux` — [Foundry UX + trust-boundary refinement (no new features)](entries/2026-07-19-feature-foundry-ux-trust.md)
+  - edges: supersedes:[`feature-foundry-product`](entries/2026-07-18-feature-foundry-product.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [Rename to Foundry — task graphs, product readiness, marketplace seed](entries/2026-07-18-feature-foundry-product.md)
   - edges: supersedes:[`feature-gpt-cursor-orchestrator-v04`](entries/2026-07-18-feature-gpt-cursor-orchestrator-v04.md), implemented-by:[`pr-26`](entries/2026-07-18-feature-gpt-cursor-relay.md)
 - **2026-07-18** · `feature` · `confirmed` · `permanent` · PR #26 · `open` · `tooling`, `automation` — [GPT ↔ Cursor orchestrator v0.3](entries/2026-07-18-feature-gpt-cursor-orchestrator-v03.md)

@@ -1,9 +1,44 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T21:27:25.151Z",
+  "generatedAt": "2026-07-19T00:32:12.626Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-foundry-ux-trust",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-19",
+      "pr": 26,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "tooling",
+        "automation",
+        "ux"
+      ],
+      "related": [
+        "feature-foundry-product",
+        "pr-26"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "feature-foundry-product"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-26"
+        }
+      ],
+      "supersedes": "feature-foundry-product",
+      "title": "Foundry UX + trust-boundary refinement (no new features)",
+      "path": "entries/2026-07-19-feature-foundry-ux-trust.md",
+      "summary": "Stopped adding capabilities; redesigned Foundry around clarity and hard safety boundaries."
+    },
     {
       "id": "feature-foundry-product",
       "schema": 1,

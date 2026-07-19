@@ -4,79 +4,215 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Foundry</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="app">
       <header class="top">
-        <div>
+        <div class="brand-block">
           <h1 id="productTitle">Foundry</h1>
-          <p class="tagline">
-            Local AI orchestration — task graphs, multi-agent adapters, plugins,
-            verification, and rollback.
-          </p>
+          <p class="tagline">What is it doing · Is it working · Does it need me · What changed</p>
         </div>
-        <div class="status-block">
-          <span class="label">Status</span>
-          <span id="status" class="status idle">idle</span>
+        <div class="top-meta">
+          <div class="trust-pill" title="Project trust level">
+            <span class="label">Trust</span>
+            <strong id="trustLabel">Safe edits</strong>
+          </div>
+          <div class="status-block">
+            <span class="label">Status</span>
+            <span id="status" class="status idle">idle</span>
+          </div>
         </div>
       </header>
 
-      <section class="dashboard">
-        <div class="metric"><span class="label">Project</span><strong id="projectName">—</strong></div>
-        <div class="metric"><span class="label">Round</span><strong id="roundLabel">0 / 12</strong></div>
-        <div class="metric"><span class="label">Git</span><strong id="gitMetric">0 files</strong></div>
-        <div class="metric"><span class="label">Cost</span><strong id="costMetric">$0.00</strong></div>
+      <!-- ACTION REQUIRED banner — impossible to miss -->
+      <section id="actionBanner" class="action-banner hidden" role="alert">
+        <div class="action-banner-inner">
+          <h2>ACTION REQUIRED</h2>
+          <p id="actionBannerLead" class="action-lead"></p>
+          <ul id="actionEffects" class="action-effects"></ul>
+          <div class="action-meta">
+            <div><span class="label">Requested by</span> <span id="actionAgent">—</span></div>
+            <div><span class="label">Working directory</span> <span id="actionCwd">—</span></div>
+            <div><span class="label">Policy</span> <span id="actionPolicy">—</span></div>
+            <div><span class="label">Risk</span> <span id="actionRisk">—</span></div>
+          </div>
+          <pre id="actionCommand" class="code"></pre>
+          <div id="questionBlock" class="hidden">
+            <p id="questionText"></p>
+            <textarea id="userReply" rows="2" placeholder="Your reply…"></textarea>
+          </div>
+          <div id="planBlock" class="hidden">
+            <pre id="planText" class="code"></pre>
+          </div>
+          <div class="buttons action-buttons">
+            <button id="approveOnceBtn" type="button" class="ok">Approve once</button>
+            <button id="approveRunBtn" type="button" class="ok ghost">Approve for this run</button>
+            <button id="denyBtn" type="button" class="danger">Deny</button>
+            <button id="approvePlanBtn" type="button" class="ok hidden">Approve plan</button>
+            <button id="rejectPlanBtn" type="button" class="danger hidden">Reject plan</button>
+            <button id="answerBtn" type="button" class="ok hidden">Send reply</button>
+          </div>
+          <label class="notify-opt">
+            <input id="notifySound" type="checkbox" checked /> Sound when action needed
+          </label>
+        </div>
       </section>
 
-      <section class="controls">
-        <label class="field">
-          <span>Task</span>
-          <textarea id="task" rows="3" placeholder="Build authentication"></textarea>
-        </label>
-
-        <div class="detect-row">
-          <button id="detectBtn" type="button" class="ghost">Detect project</button>
-          <div id="detectResult" class="detect-result"></div>
+      <!-- RUN SCREEN — answers the four questions -->
+      <section class="run-screen">
+        <div class="run-grid">
+          <div class="run-field">
+            <span class="label">Project</span>
+            <strong id="projectName">—</strong>
+          </div>
+          <div class="run-field wide">
+            <span class="label">Task</span>
+            <strong id="taskDisplay">—</strong>
+          </div>
+          <div class="run-field">
+            <span class="label">Status</span>
+            <strong id="statusDetail">Idle</strong>
+          </div>
+          <div class="run-field">
+            <span class="label">Progress</span>
+            <strong id="progressLabel">—</strong>
+          </div>
+          <div class="run-field wide">
+            <span class="label">Current action</span>
+            <strong id="currentAction">—</strong>
+          </div>
+          <div class="run-field">
+            <span class="label">Cost</span>
+            <strong id="costMetric">$0.00</strong>
+          </div>
+          <div class="run-field">
+            <span class="label">Elapsed</span>
+            <strong id="elapsedLabel">0s</strong>
+          </div>
         </div>
 
-        <label class="field">
-          <span>Project folder</span>
-          <input id="projectPath" type="text" spellcheck="false" placeholder="/path/to/project" />
-        </label>
+        <div id="agentsStrip" class="agents-strip"></div>
 
-        <div class="flags">
-          <label><input id="flagPlan" type="checkbox" checked /> Plan approval</label>
-          <label><input id="flagSupervisor" type="checkbox" checked /> Supervisor</label>
-          <label><input id="flagVerify" type="checkbox" checked /> Auto verify</label>
-          <label><input id="flagBrowser" type="checkbox" /> Browser smoke</label>
-        </div>
-
-        <div class="row">
-          <label class="field compact">
-            <span>Max rounds</span>
-            <input id="maxRounds" type="number" min="1" max="50" value="12" />
+        <div class="run-controls">
+          <label class="field grow">
+            <span>Task</span>
+            <textarea id="task" rows="2" placeholder="What should Foundry do?"></textarea>
           </label>
-          <div class="buttons">
+          <label class="field">
+            <span>Project folder</span>
+            <input id="projectPath" type="text" spellcheck="false" placeholder="/path/to/project" />
+          </label>
+          <div class="run-actions">
+            <button id="detectBtn" type="button" class="ghost">Detect</button>
+            <label class="field compact">
+              <span>Max rounds</span>
+              <input id="maxRounds" type="number" min="1" max="50" value="12" />
+            </label>
             <button id="startBtn" type="button">Start</button>
             <button id="pauseBtn" type="button" disabled>Pause</button>
             <button id="resumeBtn" type="button" disabled>Resume</button>
             <button id="stopBtn" type="button" disabled>Stop</button>
-            <button id="rollbackBtn" type="button" class="danger" disabled>Undo last run</button>
+          </div>
+          <div id="detectResult" class="detect-result"></div>
+          <div class="flags">
+            <label><input id="flagPlan" type="checkbox" checked /> Plan approval</label>
+            <label><input id="flagSupervisor" type="checkbox" checked /> Supervisor</label>
+            <label><input id="flagVerify" type="checkbox" checked /> Auto verify</label>
+            <label><input id="flagBrowser" type="checkbox" /> Browser smoke</label>
           </div>
         </div>
       </section>
 
-      <section id="planPanel" class="panel hidden">
-        <h2>Approve plan / task graph</h2>
-        <pre id="planText" class="code"></pre>
+      <!-- Final completion report -->
+      <section id="completionReport" class="completion-report hidden">
+        <h2>Task completed</h2>
+        <p id="reportResult" class="report-result"></p>
+        <div class="report-grid">
+          <div>
+            <span class="label">Changed</span>
+            <strong id="reportChanged">—</strong>
+          </div>
+          <div>
+            <span class="label">Risk</span>
+            <strong id="reportRisk">—</strong>
+          </div>
+          <div>
+            <span class="label">Confidence</span>
+            <strong id="reportConfidence">—</strong>
+          </div>
+        </div>
+        <div class="report-cols">
+          <div>
+            <h3>Verification</h3>
+            <ul id="reportVerify"></ul>
+          </div>
+          <div>
+            <h3>Evidence</h3>
+            <ul id="reportEvidence"></ul>
+          </div>
+        </div>
+        <div>
+          <h3>Important changes</h3>
+          <ul id="reportChanges"></ul>
+        </div>
         <div class="buttons">
-          <button id="approvePlanBtn" type="button" class="ok">Approve Plan</button>
-          <button id="rejectPlanBtn" type="button" class="danger">Reject</button>
+          <button id="viewChangesBtn" type="button" class="ghost">View changes</button>
+          <button id="rollbackBtn" type="button" class="danger" disabled>Undo run</button>
+          <button id="commitHintBtn" type="button" class="ghost" disabled title="Commit from your terminal or Cursor">Create commit</button>
+          <button id="prHintBtn" type="button" class="ghost" disabled title="Open a PR from your git host">Open pull request</button>
+        </div>
+        <pre id="rollbackPreview" class="code hidden"></pre>
+        <div id="followUpsPanel" class="followups hidden">
+          <h3>Original task is complete</h3>
+          <p class="hint">Possible follow-ups — these are <em>not</em> part of the completed task.</p>
+          <ul id="followUpsList"></ul>
+          <button id="startFollowUpBtn" type="button" class="ok">Start selected as new run</button>
         </div>
       </section>
 
-      <section id="graphPanel" class="panel hidden">
+      <!-- Tabs for detailed material -->
+      <nav class="tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="overview">Overview</button>
+        <button type="button" class="tab" data-tab="graph">Task Graph</button>
+        <button type="button" class="tab" data-tab="changes">Changes</button>
+        <button type="button" class="tab" data-tab="verify">Verification</button>
+        <button type="button" class="tab" data-tab="timeline">Timeline</button>
+        <button type="button" class="tab" data-tab="logs">Logs</button>
+        <button type="button" class="tab" data-tab="intel">Project Intelligence</button>
+      </nav>
+
+      <section id="tab-overview" class="tab-panel">
+        <div class="live-grid">
+          <div class="live-card">
+            <h2>Planner / Supervisor</h2>
+            <pre id="gptLive" class="live">(waiting)</pre>
+          </div>
+          <div class="live-card">
+            <h2>Coding agent <span id="cursorActivity" class="hint"></span></h2>
+            <pre id="cursorLive" class="live">(waiting)</pre>
+          </div>
+        </div>
+        <div class="intel-grid">
+          <div class="panel">
+            <h2>Context budget</h2>
+            <pre id="contextPanel" class="summary">(none yet)</pre>
+          </div>
+          <div class="panel">
+            <h2>Recovery</h2>
+            <div id="recoveryPanel" class="recovery"></div>
+            <pre id="metricsPanel" class="summary">(metrics…)</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-graph" class="tab-panel hidden">
         <div class="log-header">
           <h2>Task graph</h2>
           <span id="graphProgress" class="hint"></span>
@@ -84,102 +220,62 @@
         <div id="graphView" class="graph-view"></div>
       </section>
 
-      <section id="approvalPanel" class="panel hidden">
-        <h2>Approval required</h2>
-        <p id="approvalReason"></p>
-        <pre id="approvalInstruction" class="code"></pre>
-        <div class="buttons">
-          <button id="approveBtn" type="button" class="ok">Approve</button>
-          <button id="denyBtn" type="button" class="danger">Deny</button>
-        </div>
-      </section>
-
-      <section id="questionPanel" class="panel hidden">
-        <h2>Needs your input</h2>
-        <p id="questionText"></p>
-        <textarea id="userReply" rows="3"></textarea>
-        <div class="buttons">
-          <button id="answerBtn" type="button">Send reply</button>
-        </div>
-      </section>
-
-      <section class="live-grid">
-        <div class="live-card">
-          <h2>GPT / Supervisor <span id="gptLiveHint" class="hint"></span></h2>
-          <pre id="gptLive" class="live gpt-live">(waiting)</pre>
-        </div>
-        <div class="live-card">
-          <h2>Coding agent <span id="cursorActivity" class="hint"></span></h2>
-          <pre id="cursorLive" class="live cursor-live">(waiting)</pre>
-        </div>
-      </section>
-
-      <section class="intel-grid">
-        <div class="panel">
-          <h2>Git intelligence</h2>
-          <pre id="gitIntel" class="summary">(none yet)</pre>
-        </div>
-        <div class="panel">
-          <h2>Verification</h2>
-          <pre id="verifyPanel" class="summary">(none yet)</pre>
-        </div>
-      </section>
-
-      <section class="intel-grid">
-        <div class="panel">
-          <h2>Agents</h2>
-          <pre id="agentsPanel" class="summary">(loading…)</pre>
-        </div>
-        <div class="panel">
-          <h2>Plugin marketplace</h2>
-          <pre id="marketplacePanel" class="summary">(loading…)</pre>
-        </div>
-      </section>
-
-      <section class="diff-wrap">
+      <section id="tab-changes" class="tab-panel hidden">
         <div class="log-header">
           <h2>Visual diff</h2>
           <span id="diffStat">—</span>
         </div>
         <div id="diffView" class="diff-view">(no changes yet)</div>
+        <h2>Git intelligence</h2>
+        <pre id="gitIntel" class="summary">(none yet)</pre>
       </section>
 
-      <section class="intel-grid">
-        <div class="panel">
-          <h2>Execution timeline</h2>
-          <pre id="timelinePanel" class="summary">(no events yet)</pre>
-        </div>
-        <div class="panel">
-          <h2>Metrics</h2>
-          <pre id="metricsPanel" class="summary">(loading…)</pre>
-          <div id="recoveryPanel" class="recovery"></div>
-        </div>
+      <section id="tab-verify" class="tab-panel hidden">
+        <pre id="verifyPanel" class="summary">(none yet)</pre>
+        <h2>Workers</h2>
+        <pre id="workersPanel" class="summary">(none)</pre>
       </section>
 
-      <section class="log-wrap">
+      <section id="tab-timeline" class="tab-panel hidden">
+        <pre id="timelinePanel" class="summary">(no events yet)</pre>
+      </section>
+
+      <section id="tab-logs" class="tab-panel hidden">
         <div class="log-header">
           <h2>Live conversation</h2>
           <span id="stopReason" class="hint"></span>
         </div>
         <pre id="log" class="log" aria-live="polite"></pre>
-      </section>
-
-      <section class="summary-wrap">
-        <h2>Final summary</h2>
-        <pre id="summary" class="summary">(not finished yet)</pre>
-        <div id="improvementsPanel" class="hidden">
-          <h2>Next improvements</h2>
-          <ul id="improvementsList"></ul>
-          <div class="buttons">
-            <button id="continueImprovementsBtn" type="button" class="ok">Continue with these</button>
-          </div>
-        </div>
-        <h2>Workers</h2>
-        <pre id="workersPanel" class="summary">(none)</pre>
+        <h2>Cost detail</h2>
+        <pre id="costDetail" class="summary">(none yet)</pre>
         <h2>Style memory</h2>
         <pre id="stylePanel" class="summary">(none yet)</pre>
-        <h2>Cost</h2>
-        <pre id="costDetail" class="summary">(none yet)</pre>
+      </section>
+
+      <section id="tab-intel" class="tab-panel hidden">
+        <div class="intel-intro">
+          <h2>Project Intelligence</h2>
+          <p class="hint">
+            Architecture map, guided tour, and dependency graph live in the
+            separate Understand Anything index — not rebuilt on every coding run.
+          </p>
+          <ul class="intel-list">
+            <li>Architecture map → <code>.understand-anything/knowledge-graph.json</code></li>
+            <li>Guided tour → run <code>/understand</code> then open the dashboard</li>
+            <li>Refresh index incrementally when files change (do not full-rebuild per task)</li>
+          </ul>
+        </div>
+        <div class="intel-grid">
+          <div class="panel">
+            <h2>Detected agents</h2>
+            <pre id="agentsPanel" class="summary">(loading…)</pre>
+          </div>
+          <div class="panel">
+            <h2>Plugins</h2>
+            <pre id="marketplacePanel" class="summary">(loading…)</pre>
+          </div>
+        </div>
+        <p class="hint" id="credentialHint"></p>
       </section>
     </div>
     <script src="/app.js" type="module"></script>
