@@ -70,6 +70,6 @@ describe('archive story migration', () => {
 
 		const stored = getStoredArchiveStory(inserted.id!);
 		expect(stored?.story_text).toBe(result.story);
-		expect(stored?.story_version).toBe(1);
+		expect(stored?.story_version).toBe(2);
 	});
 });

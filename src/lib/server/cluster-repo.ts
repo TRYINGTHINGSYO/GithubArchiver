@@ -11,12 +11,15 @@ export interface ClusterMatchEvidence {
 	textMatches?: string[];
 	files?: string[];
 	languages?: string[];
+	weakMatches?: string[];
+	negativeMatches?: string[];
 	scoreBreakdown: {
 		topics: number;
 		name: number;
 		readme: number;
 		files: number;
 		language: number;
+		weak: number;
 	};
 }
 
@@ -42,6 +45,7 @@ const TOPIC_WEIGHT = 50;
 const NAME_WEIGHT = 25;
 const README_WEIGHT = 15;
 const FILE_WEIGHT = 10;
+const WEAK_WEIGHT = 5;
 
 function categoryAllowed(def: ClusterDefinition, category: string | null): boolean {
 	if (!def.categories?.length) return true;
@@ -51,12 +55,21 @@ function categoryAllowed(def: ClusterDefinition, category: string | null): boole
 	return def.categories.includes(normalized);
 }
 
+/** Prefer exact/substring topic hits; never let short tokens fuzzy-match long patterns. */
+function topicMatchesPattern(topic: string, pattern: string): boolean {
+	if (topic === pattern) return true;
+	if (topic.includes(pattern)) return true;
+	// Only allow pattern⊇topic when the topic token is long enough to be specific.
+	if (topic.length >= 4 && pattern.includes(topic)) return true;
+	return false;
+}
+
 function scoreTopics(def: ClusterDefinition, topics: string[]): { score: number; matched: string[] } {
 	if (!def.topicPatterns?.length || topics.length === 0) return { score: 0, matched: [] };
 	const matched: string[] = [];
 	for (const topic of topics) {
 		for (const pattern of def.topicPatterns) {
-			if (topic.includes(pattern) || pattern.includes(topic)) {
+			if (topicMatchesPattern(topic, pattern)) {
 				matched.push(topic);
 				break;
 			}
@@ -101,6 +114,22 @@ function scoreReadme(
 	return { score: Math.round(README_WEIGHT * strength), matched: [...new Set(matched)] };
 }
 
+function scoreWeakText(
+	def: ClusterDefinition,
+	description: string | null,
+	readmeExcerpt: string | null | undefined
+): { score: number; matched: string[] } {
+	const text = `${description ?? ''}\n${readmeExcerpt ?? ''}`.trim();
+	if (!text || !def.weakTextPatterns?.length) return { score: 0, matched: [] };
+
+	const matched: string[] = [];
+	for (const re of def.weakTextPatterns) {
+		if (re.test(text)) matched.push(re.source);
+	}
+	if (matched.length === 0) return { score: 0, matched: [] };
+	return { score: Math.min(WEAK_WEIGHT, matched.length * 2), matched: [...new Set(matched)] };
+}
+
 function scoreFiles(def: ClusterDefinition, filePaths: string[]): { score: number; matched: string[] } {
 	if (!def.filePatterns?.length || filePaths.length === 0) return { score: 0, matched: [] };
 	const matched: string[] = [];
@@ -124,24 +153,68 @@ function scoreLanguage(def: ClusterDefinition, language: string | null): { score
 	return { score: FILE_WEIGHT, matched };
 }
 
+function collectNegativeMatches(
+	def: ClusterDefinition,
+	topics: string[],
+	description: string | null,
+	readmeExcerpt: string | null | undefined,
+	name: string,
+	fullName: string
+): string[] {
+	const matched: string[] = [];
+	const text = `${name} ${fullName}\n${description ?? ''}\n${readmeExcerpt ?? ''}`;
+
+	for (const topic of topics) {
+		for (const pattern of def.negativeTopicPatterns ?? []) {
+			if (topicMatchesPattern(topic, pattern) || topic === pattern) {
+				matched.push(`topic:${topic}`);
+			}
+		}
+	}
+	for (const re of def.negativeTextPatterns ?? []) {
+		if (re.test(text)) matched.push(re.source);
+	}
+	return [...new Set(matched)];
+}
+
 export function matchCluster(def: ClusterDefinition, input: ClusterRepoInput): ClusterMatchResult | null {
 	if (!categoryAllowed(def, input.category)) return null;
 
-	const topics = scoreTopics(def, input.topics.map((t) => t.toLowerCase()));
+	const topicsLower = input.topics.map((t) => t.toLowerCase());
+	const negative = collectNegativeMatches(
+		def,
+		topicsLower,
+		input.description,
+		input.readmeExcerpt,
+		input.name,
+		input.full_name
+	);
+	if (negative.length > 0) {
+		return null;
+	}
+
+	const topics = scoreTopics(def, topicsLower);
 	const name = scoreName(def, input.name.toLowerCase(), input.full_name.toLowerCase());
 	const readme = scoreReadme(def, input.description, input.readmeExcerpt);
 	const files = scoreFiles(def, (input.filePaths ?? []).map((p) => p.toLowerCase()));
 	const language = scoreLanguage(def, input.language);
+	const weak = scoreWeakText(def, input.description, input.readmeExcerpt);
 
-	const rawScore = topics.score + name.score + readme.score + files.score + language.score;
+	const strongScore = topics.score + name.score + readme.score + files.score;
+	const rawScore = strongScore + language.score + weak.score;
 	if (rawScore === 0) return null;
+
+	if (def.requireStrongEvidence && strongScore === 0) {
+		return null;
+	}
 
 	const strongest = Math.max(
 		topics.score / TOPIC_WEIGHT,
 		name.score / NAME_WEIGHT,
 		readme.score / README_WEIGHT,
 		files.score / FILE_WEIGHT,
-		language.score / FILE_WEIGHT
+		language.score > 0 ? language.score / FILE_WEIGHT : 0,
+		weak.score > 0 ? weak.score / WEAK_WEIGHT : 0
 	);
 	const confidence =
 		Math.round(Math.min(1, strongest * 0.55 + (rawScore / 100) * 0.45) * 1000) / 1000;
@@ -153,7 +226,8 @@ export function matchCluster(def: ClusterDefinition, input: ClusterRepoInput): C
 			name: name.score,
 			readme: readme.score,
 			files: files.score,
-			language: language.score
+			language: language.score,
+			weak: weak.score
 		}
 	};
 	if (topics.matched.length) evidence.topics = topics.matched;
@@ -161,6 +235,7 @@ export function matchCluster(def: ClusterDefinition, input: ClusterRepoInput): C
 	if (readme.matched.length) evidence.readmeMatches = readme.matched;
 	if (files.matched.length) evidence.files = files.matched;
 	if (language.matched.length) evidence.languages = language.matched;
+	if (weak.matched.length) evidence.weakMatches = weak.matched;
 
 	return { slug: def.slug, confidence, evidence };
 }
@@ -176,4 +251,8 @@ export function clusterRepo(input: ClusterRepoInput): ClusterMatchResult[] {
 
 export function clusterRepoSlugs(input: ClusterRepoInput): string[] {
 	return clusterRepo(input).map((match) => match.slug);
+}
+
+export function getClusterMinimumScore(slug: string): number {
+	return CLUSTER_DEFINITIONS.find((def) => def.slug === slug)?.minimumScore ?? 0.45;
 }

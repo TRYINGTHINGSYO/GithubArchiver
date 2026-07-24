@@ -97,7 +97,8 @@ describe('classify-repo', () => {
 	it('exports the full taxonomy', () => {
 		expect(REPO_CATEGORIES).toContain('ai-project');
 		expect(REPO_CATEGORIES).toContain('spam-template');
-		expect(REPO_CATEGORIES).toHaveLength(15);
+		expect(REPO_CATEGORIES).toContain('awesome-list');
+		expect(REPO_CATEGORIES).toHaveLength(16);
 	});
 });
 

@@ -13,7 +13,8 @@ const CATEGORY_SEARCH_QUALIFIERS: Partial<Record<RepoCategory, string>> = {
 	security: 'topic:security',
 	'mobile-app': 'topic:android',
 	'hardware-iot': 'topic:arduino',
-	portfolio: 'topic:portfolio'
+	portfolio: 'topic:portfolio',
+	'awesome-list': 'topic:awesome-list'
 };
 
 export function categorySearchQualifier(category: string): string | null {

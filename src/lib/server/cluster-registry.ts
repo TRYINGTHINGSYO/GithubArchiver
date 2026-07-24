@@ -1,7 +1,7 @@
 import type { RepoCategory } from '$lib/server/classify-repo';
 
 /** Bump when cluster rules change; repos below this version are re-clustered. */
-export const CURRENT_CLUSTER_VERSION = 1;
+export const CURRENT_CLUSTER_VERSION = 2;
 
 export type ClusterDefinition = {
 	slug: string;
@@ -9,9 +9,20 @@ export type ClusterDefinition = {
 	description?: string;
 	categories?: RepoCategory[];
 	topicPatterns?: string[];
+	/** Strong positive text evidence (full weight). */
 	textPatterns?: RegExp[];
+	/** Weak supporting text — never enough alone to clear minimumScore. */
+	weakTextPatterns?: RegExp[];
 	filePatterns?: RegExp[];
 	languagePatterns?: string[];
+	/** Reject the cluster when these dominate the repo identity. */
+	negativeTextPatterns?: RegExp[];
+	negativeTopicPatterns?: string[];
+	/**
+	 * When true, language / weak text alone cannot clear the threshold —
+	 * at least one strong topic, name, readme, or file signal is required.
+	 */
+	requireStrongEvidence?: boolean;
 	minimumScore: number;
 };
 
@@ -88,7 +99,7 @@ export const CLUSTER_DEFINITIONS: ClusterDefinition[] = [
 		slug: 'e-commerce-apps',
 		name: 'E-commerce Apps',
 		description: 'Online stores, checkout flows, and commerce platforms.',
-		categories: ['product', 'web-app'],
+		categories: ['product'],
 		topicPatterns: ['ecommerce', 'e-commerce', 'shopify', 'woocommerce', 'stripe'],
 		textPatterns: [/\be-?commerce\b/i, /online store/i, /shopping cart/i, /checkout flow/i],
 		minimumScore: 0.45
@@ -165,11 +176,79 @@ export const CLUSTER_DEFINITIONS: ClusterDefinition[] = [
 		name: 'CV / Computer Vision',
 		description: 'Computer vision models, pipelines, and demos.',
 		categories: ['data-science', 'ai-project'],
-		topicPatterns: ['computer-vision', 'opencv', 'yolo', 'object-detection', 'image-segmentation'],
-		textPatterns: [/computer vision/i, /\bcv\b/i, /object detection/i, /image classification/i],
-		languagePatterns: ['Python'],
-		filePatterns: [/opencv/i, /\.ipynb$/],
-		minimumScore: 0.45
+		topicPatterns: [
+			'computer-vision',
+			'opencv',
+			'yolo',
+			'object-detection',
+			'image-segmentation',
+			'image-classification',
+			'image-processing',
+			'vision-transformer',
+			'ocr',
+			'bounding-box',
+			'webcam',
+			'detectron',
+			'ultralytics',
+			'mediapipe'
+		],
+		textPatterns: [
+			/computer[- ]vision/i,
+			/\bopencv\b/i,
+			/\byolo\b/i,
+			/object[- ]detection/i,
+			/image[- ]classification/i,
+			/image[- ]segmentation/i,
+			/image[- ]processing/i,
+			/vision[- ]transformer/i,
+			/\bocr\b/i,
+			/bounding[- ]box(es)?/i,
+			/\bwebcam\b/i,
+			/\bdetectron2?\b/i,
+			/\bultralytics\b/i,
+			/\bmediapipe\b/i,
+			/semantic segmentation/i,
+			/instance segmentation/i
+		],
+		// Generic AI/agent/model wording is supporting only — never sufficient alone.
+		weakTextPatterns: [
+			/\b(ai|ml|machine learning|deep learning|neural network|model|agent)\b/i
+		],
+		filePatterns: [
+			/opencv/i,
+			/yolo/i,
+			/detectron/i,
+			/ultralytics/i,
+			/mediapipe/i,
+			/vision_transformer/i,
+			/object_detect/i
+		],
+		negativeTextPatterns: [
+			/\bcrewai\b/i,
+			/\blanggraph\b/i,
+			/\blangchain\b/i,
+			/text[- ]to[- ]sql/i,
+			/\bsql agent\b/i,
+			/\bai agent\b/i,
+			/agent (framework|orchestr|workflow|template)/i,
+			/multi[- ]agent/i,
+			/\brag (pipeline|app|application)\b/i,
+			/retrieval[- ]augmented/i,
+			/llm orchestr/i,
+			/chatbot framework/i
+		],
+		negativeTopicPatterns: [
+			'crewai',
+			'langgraph',
+			'langchain',
+			'text-to-sql',
+			'rag',
+			'ai-agent',
+			'llm-agent',
+			'autonomous-agent'
+		],
+		requireStrongEvidence: true,
+		minimumScore: 0.5
 	},
 	{
 		slug: 'trading-bots',

@@ -2,6 +2,7 @@ export const REPO_CATEGORIES = [
 	'product',
 	'library',
 	'framework',
+	'awesome-list',
 	'personal-website',
 	'portfolio',
 	'school-assignment',
@@ -55,6 +56,7 @@ type Matcher = (ctx: MatchContext) => number;
 interface MatchContext {
 	name: string;
 	owner: string;
+	fullName: string;
 	topics: string[];
 	paths: string[];
 	readme: string;
@@ -64,11 +66,13 @@ interface MatchContext {
 	forks: number;
 	homepage: string;
 	ownerType: string | null;
+	blob: string;
 }
 
 const CATEGORY_PRIORITY: RepoCategory[] = [
 	'school-assignment',
 	'spam-template',
+	'awesome-list',
 	'ai-project',
 	'game',
 	'hardware-iot',
@@ -83,6 +87,114 @@ const CATEGORY_PRIORITY: RepoCategory[] = [
 	'personal-website',
 	'unknown'
 ];
+
+const DATABASE_PLATFORM_NAME_RE =
+	/\b(supabase|firebase|appwrite|pocketbase|hasura|prisma|drizzle|planetscale|neon\.tech|cockroachdb|mongodb|postgres|postgresql|mysql|redis|cassandra|elasticsearch|meilisearch|typesense|nhost|xata)\b/i;
+
+const DATABASE_PLATFORM_TOPIC = new Set([
+	'supabase',
+	'firebase',
+	'appwrite',
+	'pocketbase',
+	'hasura',
+	'prisma',
+	'drizzle',
+	'postgres',
+	'postgresql',
+	'mysql',
+	'mongodb',
+	'redis',
+	'database',
+	'backend',
+	'baas',
+	'paas'
+]);
+
+const DATABASE_IDENTITY_RE =
+	/\b(open source firebase alternative|backend.?as.?a.?service|postgres(ql)? (database|platform|backend)|database platform|self[- ]hosted backend|backend platform|auth(,| and) storage)\b/i;
+
+const AI_APPLICATION_MENTION_RE =
+	/\b(build (ai|llm|gpt)|ai (apps?|applications?|features?)|vector (embeddings?|search)|llm (apps?|applications?)|powered by ai|with ai)\b/i;
+
+const AWESOME_LIST_NAME_RE = /\bawesome[-_]?/i;
+const AWESOME_LIST_TEXT_RE =
+	/\b(awesome[- ]list|curated list of|a curated list|list of awesome|self[- ]hosted software|software that can be self[- ]hosted)\b/i;
+
+function isAwesomeList(ctx: MatchContext): number {
+	if (AWESOME_LIST_NAME_RE.test(ctx.name) || AWESOME_LIST_NAME_RE.test(ctx.fullName)) return 0.96;
+	if (ctx.topics.some((t) => t === 'awesome' || t === 'awesome-list' || t.startsWith('awesome-'))) {
+		return 0.94;
+	}
+	if (AWESOME_LIST_TEXT_RE.test(`${ctx.desc} ${ctx.readme}`)) return 0.9;
+	if (ctx.name.includes('awesome') && /\b(list|curated|collection)\b/i.test(ctx.desc)) return 0.88;
+	return 0;
+}
+
+function isDatabaseOrBackendPlatform(ctx: MatchContext): boolean {
+	if (DATABASE_PLATFORM_NAME_RE.test(ctx.name) || DATABASE_PLATFORM_NAME_RE.test(ctx.fullName)) {
+		return true;
+	}
+	if (ctx.topics.some((t) => DATABASE_PLATFORM_TOPIC.has(t))) return true;
+	if (DATABASE_IDENTITY_RE.test(`${ctx.desc} ${ctx.readme}`)) return true;
+	return false;
+}
+
+/** AI wording about what users can build — weak unless the repo itself is an AI system. */
+function hasIncidentalAiWording(ctx: MatchContext): boolean {
+	return AI_APPLICATION_MENTION_RE.test(`${ctx.desc} ${ctx.readme}`);
+}
+
+function strongAiIdentity(ctx: MatchContext): number {
+	const identityTopics = ctx.topics.filter((t) =>
+		[
+			'llm',
+			'gpt',
+			'openai',
+			'claude',
+			'mcp',
+			'rag',
+			'langchain',
+			'langgraph',
+			'crewai',
+			'ai-agent',
+			'autonomous-agent',
+			'chatbot'
+		].includes(t)
+	);
+	if (identityTopics.length > 0) return 0.9;
+
+	if (
+		/\b(llm|large language model|ai agent|mcp server|rag pipeline|langchain|langgraph|crewai|openai api|anthropic)\b/i.test(
+			`${ctx.name} ${ctx.fullName}`
+		)
+	) {
+		return 0.88;
+	}
+
+	if (
+		/\b(llm (wrapper|client|sdk|server)|ai agent (framework|orchestr)|mcp server|retrieval[- ]augmented|langgraph|crewai|text[- ]to[- ]sql agent)\b/i.test(
+			`${ctx.desc} ${ctx.readme}`
+		)
+	) {
+		return 0.85;
+	}
+
+	if (ctx.name.endsWith('-mcp') || ctx.name.includes('mcp-server')) return 0.85;
+	if (ctx.name.endsWith('-bot') && ctx.topics.some((t) => t.includes('ai') || t === 'llm')) {
+		return 0.8;
+	}
+
+	return 0;
+}
+
+function weakAiMentionScore(ctx: MatchContext): number {
+	if (ctx.topics.includes('ai') || ctx.topics.includes('machine-learning')) return 0.45;
+	if (/\b(artificial intelligence|\bai\b)\b/i.test(ctx.desc) && !isDatabaseOrBackendPlatform(ctx)) {
+		return 0.4;
+	}
+	if (hasIncidentalAiWording(ctx)) return 0.25;
+	return 0;
+}
 
 const CATEGORY_MATCHERS: Record<RepoCategory, Matcher[]> = {
 	'school-assignment': [
@@ -107,21 +219,18 @@ const CATEGORY_MATCHERS: Record<RepoCategory, Matcher[]> = {
 				: 0,
 		(ctx) => (ctx.name === 'hello-world' && ctx.stars < 5 ? 0.7 : 0)
 	],
+	'awesome-list': [(ctx) => isAwesomeList(ctx)],
 	'ai-project': [
-		(ctx) =>
-			ctx.topics.some((t) =>
-				['ai', 'llm', 'gpt', 'openai', 'claude', 'mcp', 'rag', 'agent', 'chatbot', 'langchain'].includes(t)
-			)
-				? 0.9
-				: 0,
-		(ctx) =>
-			/\b(llm|large language model|ai agent|mcp server|rag pipeline|openai|anthropic|langchain)\b/i.test(
-				`${ctx.desc} ${ctx.readme}`
-			)
-				? 0.82
-				: 0,
-		(ctx) => (ctx.name.endsWith('-bot') && ctx.topics.some((t) => t.includes('ai')) ? 0.8 : 0),
-		(ctx) => (ctx.name.endsWith('-mcp') || ctx.name.includes('mcp-server') ? 0.85 : 0)
+		(ctx) => {
+			if (isAwesomeList(ctx) > 0) return 0;
+			if (isDatabaseOrBackendPlatform(ctx)) {
+				// Platform identity wins over "build AI apps with our product" wording.
+				return Math.min(0.35, weakAiMentionScore(ctx));
+			}
+			const strong = strongAiIdentity(ctx);
+			if (strong > 0) return strong;
+			return weakAiMentionScore(ctx);
+		}
 	],
 	game: [
 		(ctx) =>
@@ -145,7 +254,10 @@ const CATEGORY_MATCHERS: Record<RepoCategory, Matcher[]> = {
 			ctx.paths.some((p) => p.includes('platformio') || p.includes('.ino') || p.includes('firmware/'))
 				? 0.82
 				: 0,
-		(ctx) => (/\b(arduino|esp32|raspberry pi|embedded|firmware)\b/i.test(`${ctx.desc} ${ctx.readme}`) ? 0.75 : 0)
+		(ctx) =>
+			/\b(arduino|esp32|raspberry pi|embedded|firmware)\b/i.test(`${ctx.desc} ${ctx.readme}`)
+				? 0.75
+				: 0
 	],
 	'mobile-app': [
 		(ctx) =>
@@ -178,7 +290,8 @@ const CATEGORY_MATCHERS: Record<RepoCategory, Matcher[]> = {
 			)
 				? 0.78
 				: 0,
-		(ctx) => (ctx.paths.some((p) => p.includes('security.md') || p.includes('.github/security')) ? 0.55 : 0)
+		(ctx) =>
+			ctx.paths.some((p) => p.includes('security.md') || p.includes('.github/security')) ? 0.55 : 0
 	],
 	devops: [
 		(ctx) =>
@@ -193,7 +306,9 @@ const CATEGORY_MATCHERS: Record<RepoCategory, Matcher[]> = {
 				: 0,
 		(ctx) =>
 			ctx.topics.some((t) =>
-				['devops', 'kubernetes', 'docker', 'terraform', 'ansible', 'ci-cd', 'infrastructure'].includes(t)
+				['devops', 'kubernetes', 'docker', 'terraform', 'ansible', 'ci-cd', 'infrastructure'].includes(
+					t
+				)
 			)
 				? 0.85
 				: 0
@@ -248,6 +363,11 @@ const CATEGORY_MATCHERS: Record<RepoCategory, Matcher[]> = {
 		(ctx) => (ctx.name.endsWith('-bot') && ctx.stars < 50 ? 0.6 : 0)
 	],
 	product: [
+		(ctx) => {
+			if (isAwesomeList(ctx) > 0) return 0;
+			if (isDatabaseOrBackendPlatform(ctx)) return 0.86;
+			return 0;
+		},
 		(ctx) =>
 			ctx.paths.some(
 				(p) =>
@@ -271,20 +391,27 @@ const CATEGORY_MATCHERS: Record<RepoCategory, Matcher[]> = {
 		(ctx) => (ctx.name.endsWith('-bot') && ctx.stars >= 5 ? 0.7 : 0)
 	],
 	portfolio: [
-		(ctx) =>
-			/\b(portfolio|resume|cv|personal site|about me)\b/i.test(`${ctx.name} ${ctx.desc} ${ctx.readme}`)
+		(ctx) => {
+			if (isAwesomeList(ctx) > 0) return 0;
+			return /\b(portfolio|resume|cv|personal site|about me)\b/i.test(
+				`${ctx.name} ${ctx.desc} ${ctx.readme}`
+			)
 				? 0.85
-				: 0,
-		(ctx) => (ctx.topics.includes('portfolio') ? 0.88 : 0),
+				: 0;
+		},
+		(ctx) => (isAwesomeList(ctx) > 0 ? 0 : ctx.topics.includes('portfolio') ? 0.88 : 0),
 		(ctx) =>
-			ctx.homepage.includes('github.io') &&
-			ctx.paths.some((p) => p.includes('index.html') || p.includes('_config.yml'))
-				? 0.7
-				: 0
+			isAwesomeList(ctx) > 0
+				? 0
+				: ctx.homepage.includes('github.io') &&
+					  ctx.paths.some((p) => p.includes('index.html') || p.includes('_config.yml'))
+					? 0.7
+					: 0
 	],
 	'personal-website': [
-		(ctx) =>
-			ctx.paths.some(
+		(ctx) => {
+			if (isAwesomeList(ctx) > 0) return 0;
+			return ctx.paths.some(
 				(p) =>
 					p.includes('_config.yml') ||
 					p.includes('hugo.toml') ||
@@ -292,16 +419,26 @@ const CATEGORY_MATCHERS: Record<RepoCategory, Matcher[]> = {
 					p.includes('astro.config')
 			)
 				? 0.8
-				: 0,
-		(ctx) =>
-			/\b(blog|personal website|my site|jekyll|hugo|gatsby)\b/i.test(`${ctx.desc} ${ctx.readme}`)
+				: 0;
+		},
+		(ctx) => {
+			if (isAwesomeList(ctx) > 0) return 0;
+			// Mentions of jekyll/hugo as listed software must not win for curated lists.
+			return /\b(blog|personal website|my site)\b/i.test(`${ctx.desc} ${ctx.readme}`) ||
+				(/\b(jekyll|hugo|gatsby)\b/i.test(`${ctx.desc} ${ctx.readme}`) &&
+					/\b(personal|my (blog|site|website)|homepage)\b/i.test(`${ctx.desc} ${ctx.readme}`))
 				? 0.75
-				: 0,
-		(ctx) => (ctx.name === ctx.owner && ctx.paths.length < 30 ? 0.68 : 0),
+				: 0;
+		},
+		(ctx) => (isAwesomeList(ctx) > 0 ? 0 : ctx.name === ctx.owner && ctx.paths.length < 30 ? 0.68 : 0),
 		(ctx) =>
-			ctx.readme.includes('documentation') && ctx.paths.length < 8 && !ctx.topics.includes('library')
-				? 0.6
-				: 0
+			isAwesomeList(ctx) > 0
+				? 0
+				: ctx.readme.includes('documentation') &&
+					  ctx.paths.length < 8 &&
+					  !ctx.topics.includes('library')
+					? 0.6
+					: 0
 	],
 	unknown: [() => 0.35]
 };
@@ -316,6 +453,7 @@ export function classifyRepo(input: ClassifyRepoInput): ClassifyRepoResult {
 	const ctx: MatchContext = {
 		name: input.name.toLowerCase(),
 		owner: input.owner.toLowerCase(),
+		fullName: input.full_name.toLowerCase(),
 		topics: input.topics.map((t) => t.toLowerCase()),
 		paths: (input.filePaths ?? []).map((p) => p.toLowerCase()),
 		readme: (input.readmeExcerpt ?? '').toLowerCase(),
@@ -324,8 +462,10 @@ export function classifyRepo(input: ClassifyRepoInput): ClassifyRepoResult {
 		stars: input.stars ?? 0,
 		forks: input.forks ?? 0,
 		homepage: (input.homepage ?? '').toLowerCase(),
-		ownerType: input.owner_type ?? null
+		ownerType: input.owner_type ?? null,
+		blob: ''
 	};
+	ctx.blob = `${ctx.name} ${ctx.fullName} ${ctx.desc} ${ctx.readme} ${ctx.topics.join(' ')}`;
 
 	const scores = new Map<RepoCategory, number>();
 
@@ -351,6 +491,19 @@ export function classifyRepo(input: ClassifyRepoInput): ClassifyRepoResult {
 		if (score != null && score > bestScore) {
 			bestScore = score;
 			winner = category;
+		}
+	}
+
+	// Require a meaningful margin when AI only has weak incidental wording.
+	if (winner === 'ai-project' && bestScore < 0.55) {
+		const runnerUp = [...scores.entries()]
+			.filter(([cat]) => cat !== 'ai-project')
+			.sort((a, b) => b[1] - a[1])[0];
+		if (runnerUp && runnerUp[1] >= 0.55) {
+			winner = runnerUp[0];
+			bestScore = runnerUp[1];
+		} else if (bestScore < 0.5) {
+			return { category: 'unknown', confidence: 0.4 };
 		}
 	}
 

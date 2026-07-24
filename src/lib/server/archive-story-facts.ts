@@ -15,6 +15,7 @@ import {
 import { getRepoClusterMemberships } from '$lib/server/db/clusters';
 import { getDb } from '$lib/server/db/connection';
 import type { RepoRow } from '$lib/server/db/types';
+import { computeGrowthPercent, isGrowthFromZero } from '$lib/server/growth';
 import type { SignalTier } from '$lib/server/score-repo';
 
 function weekBoundsUtc(iso: string): { weekStart: string; weekEnd: string } {
@@ -44,14 +45,16 @@ function evidenceScore(evidenceJson: string): number {
 			name: 0,
 			readme: 0,
 			files: 0,
-			language: 0
+			language: 0,
+			weak: 0
 		};
 		return (
 			breakdown.topics +
 			breakdown.name +
 			breakdown.readme +
 			breakdown.files +
-			(breakdown.language ?? 0)
+			(breakdown.language ?? 0) +
+			(breakdown.weak ?? 0)
 		);
 	} catch {
 		return 0;
@@ -107,17 +110,13 @@ function buildWeeklyContext(
 		previous.weekEnd
 	);
 
-	let growthPercent: number | null = null;
-	let growthFromZero = false;
-	let surge = false;
-
-	if (previousWeekCount >= STORY_MIN_GROWTH_PREVIOUS_WEEK) {
-		growthPercent =
-			Math.round(((repoCount - previousWeekCount) / previousWeekCount) * 1000) / 10;
-		surge = growthPercent >= STORY_SURGE_GROWTH_PERCENT;
-	} else if (previousWeekCount === 0 && repoCount > 0) {
-		growthFromZero = true;
-	}
+	const growthPercent = computeGrowthPercent(
+		repoCount,
+		previousWeekCount,
+		STORY_MIN_GROWTH_PREVIOUS_WEEK
+	);
+	const growthFromZero = isGrowthFromZero(repoCount, previousWeekCount);
+	const surge = growthPercent != null && growthPercent >= STORY_SURGE_GROWTH_PERCENT;
 
 	return {
 		weekStart,

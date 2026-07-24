@@ -1,4 +1,5 @@
 import { getStoredArchiveStory } from '$lib/server/db/archive-story';
+import { getClusterDefinition } from '$lib/server/cluster-registry';
 import {
 	getRepoClusterMemberships,
 	listActiveClusterSummaries,
@@ -12,6 +13,7 @@ import type { RepoRow } from '$lib/server/db/types';
 import { DISCOVERY_PRESETS, type DiscoveryPreset } from '$lib/server/discovery-presets';
 import { getMaterializedDiscoveryLanding } from '$lib/server/discovery-materialized';
 import { listEmergingTopics, type EmergingTopicRow } from '$lib/server/emerging-topics';
+import { computeGrowthPercent } from '$lib/server/growth';
 
 export type DiscoveryPeriod = '7d' | '14d' | '30d';
 
@@ -62,6 +64,7 @@ export interface DiscoveryRepoCard {
 	hasMetadata: boolean;
 	rankScore: number;
 	rankingReason: string;
+	incompleteSignals?: IncompleteSignal[];
 }
 
 export interface ProjectsToWatchItem extends DiscoveryRepoCard {
@@ -104,10 +107,29 @@ export interface ActiveClusterCard {
 	metricLabel: 'week-over-week growth' | 'recent activity';
 }
 
-const MIN_CLUSTER_CURRENT_COUNT = 20;
-const MIN_CLUSTER_PREVIOUS_COUNT = 5;
-const MIN_PROJECT_GROWTH = 25;
+export type IncompleteSignal =
+	| 'unknown-category'
+	| 'missing-language'
+	| 'no-topics'
+	| 'low-classification-confidence'
+	| 'no-cluster-match'
+	| 'conflicting-evidence';
+
+export const MIN_CLUSTER_CURRENT_COUNT = 20;
+export const MIN_CLUSTER_PREVIOUS_COUNT = 5;
+export const MIN_PROJECT_GROWTH = 25;
+export const MIN_HOMEPAGE_CLASSIFICATION_CONFIDENCE = 0.55;
+export const MIN_HOMEPAGE_ENRICHMENT_LEVEL = 1;
 const DEFAULT_LIMIT = 50;
+
+const INCOMPLETE_SIGNAL_LABELS: Record<IncompleteSignal, string> = {
+	'unknown-category': 'unknown category',
+	'missing-language': 'missing language',
+	'no-topics': 'no topics',
+	'low-classification-confidence': 'low classification confidence',
+	'no-cluster-match': 'no cluster match',
+	'conflicting-evidence': 'conflicting classification evidence'
+};
 
 export function parseDiscoveryQuery(url: URL): DiscoveryQuery {
 	const periodRaw = url.searchParams.get('period') ?? '7d';
@@ -151,7 +173,14 @@ function cachedClusterAnalytics(): ClusterAnalyticsRow[] {
 export function getFastestGrowingClusters(opts: Partial<DiscoveryQuery> = {}): DiscoveryClusterCard[] {
 	const query = normalizeQuery(opts);
 	const clusters = cachedClusterAnalytics()
-		.filter((cluster) => cluster.growth_pct != null)
+		.filter((cluster) => {
+			const growth = computeGrowthPercent(
+				cluster.new_7d,
+				cluster.new_prev_7d,
+				MIN_CLUSTER_PREVIOUS_COUNT
+			);
+			return growth != null;
+		})
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
 		.filter((cluster) => cluster.new_7d >= MIN_CLUSTER_CURRENT_COUNT)
 		.filter((cluster) => cluster.new_prev_7d >= MIN_CLUSTER_PREVIOUS_COUNT)
@@ -165,18 +194,22 @@ export function getFastestGrowingClusters(opts: Partial<DiscoveryQuery> = {}): D
 		})
 		.slice(0, query.limit);
 
-	return clusters.map((cluster) => ({
-		slug: cluster.slug,
-		name: cluster.name,
-		description: cluster.description,
-		currentWeekCount: cluster.new_7d,
-		previousWeekCount: cluster.new_prev_7d,
-		growthPercent: cluster.growth_pct ?? 0,
-		avgInterestingScore: cluster.avg_interesting_score,
-		topLanguages: cluster.top_languages,
-		topRepos: listTopReposForCluster(cluster.slug, query),
-		rankingReason: `${cluster.name} grew ${Math.round(cluster.growth_pct ?? 0)}% over the previous week, with ${cluster.new_7d.toLocaleString()} repositories in the current period.`
-	}));
+	return clusters.map((cluster) => {
+		const growthPercent =
+			computeGrowthPercent(cluster.new_7d, cluster.new_prev_7d, MIN_CLUSTER_PREVIOUS_COUNT) ?? 0;
+		return {
+			slug: cluster.slug,
+			name: cluster.name,
+			description: cluster.description,
+			currentWeekCount: cluster.new_7d,
+			previousWeekCount: cluster.new_prev_7d,
+			growthPercent,
+			avgInterestingScore: cluster.avg_interesting_score,
+			topLanguages: cluster.top_languages,
+			topRepos: listTopReposForCluster(cluster.slug, query),
+			rankingReason: `${cluster.name} grew ${Math.round(growthPercent)}% over the previous week, with ${cluster.new_7d.toLocaleString()} repositories in the current period.`
+		};
+	});
 }
 
 export function getProjectsToWatch(opts: Partial<DiscoveryQuery> = {}): ProjectsToWatchItem[] {
@@ -187,8 +220,11 @@ export function getProjectsToWatch(opts: Partial<DiscoveryQuery> = {}): Projects
 	const rows = queryProjectRows(query, [...growingClusters.keys()], false);
 	const items = rows
 		.map((row) => {
-			const cluster = growingClusters.get(row.cluster_slug);
+			if (!isHomepageIntelligenceEligible(row)) return null;
+			const cluster = growingClusters.get(row.cluster_slug ?? '');
 			if (!cluster) return null;
+			const minClusterConfidence = getClusterDefinition(cluster.slug)?.minimumScore ?? 0.45;
+			if (row.cluster_confidence < minClusterConfidence) return null;
 			const normalizedGrowth = Math.min(100, Math.max(0, cluster.growthPercent));
 			const discoveryScore =
 				(row.interesting_score ?? 0) * 0.6 +
@@ -295,21 +331,28 @@ export function getPreliminaryGrowingClusters(opts: Partial<DiscoveryQuery> = {}
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
 		.sort((a, b) => b.new_24h - a.new_24h || b.repo_count - a.repo_count)
 		.slice(0, query.limit)
-		.map((cluster) => ({
-			slug: cluster.slug,
-			name: cluster.name,
-			description: cluster.description,
-			currentWeekCount: cluster.new_7d,
-			previousWeekCount: cluster.new_prev_7d,
-			growthPercent: cluster.growth_pct ?? 0,
-			avgInterestingScore: cluster.avg_interesting_score,
-			topLanguages: cluster.top_languages,
-			topRepos: listTopReposForCluster(cluster.slug, { ...query, minScore: 40, limit: 3 }),
-			rankingReason:
-				cluster.new_prev_7d < MIN_CLUSTER_PREVIOUS_COUNT
-					? `${cluster.name}: +${cluster.new_24h.toLocaleString()} repositories in the last 24 hours. Preliminary trend — limited week-over-week history.`
-					: `${cluster.name} grew ${Math.round(cluster.growth_pct ?? 0)}% over the previous week.`
-		}));
+		.map((cluster) => {
+			const growthPercent = computeGrowthPercent(
+				cluster.new_7d,
+				cluster.new_prev_7d,
+				MIN_CLUSTER_PREVIOUS_COUNT
+			);
+			return {
+				slug: cluster.slug,
+				name: cluster.name,
+				description: cluster.description,
+				currentWeekCount: cluster.new_7d,
+				previousWeekCount: cluster.new_prev_7d,
+				growthPercent: growthPercent ?? 0,
+				avgInterestingScore: cluster.avg_interesting_score,
+				topLanguages: cluster.top_languages,
+				topRepos: listTopReposForCluster(cluster.slug, { ...query, minScore: 40, limit: 3 }),
+				rankingReason:
+					growthPercent == null
+						? `${cluster.name}: +${cluster.new_24h.toLocaleString()} repositories in the last 24 hours. Preliminary trend — limited week-over-week history.`
+						: `${cluster.name} grew ${Math.round(growthPercent)}% over the previous week.`
+			};
+		});
 }
 
 export function getDeletedGems(opts: Partial<DiscoveryQuery> = {}): DeletedGemItem[] {
@@ -360,19 +403,31 @@ export function getNewHighSignalRepos(opts: Partial<DiscoveryQuery> = {}): Disco
 			 FROM repos r
 			 WHERE r.deleted_at IS NULL
 			   AND COALESCE(r.signal_tier, 'normal') IN ('normal', 'high')
+			   AND r.interesting_score IS NOT NULL
 			   AND COALESCE(r.interesting_score, 0) >= ?
+			   AND COALESCE(r.enrichment_level, 0) >= ?
+			   AND COALESCE(r.category, 'unknown') != 'unknown'
+			   AND COALESCE(r.category_confidence, 0) >= ?
 			 ORDER BY r.interesting_score DESC, r.first_seen_at DESC
 			 LIMIT ?`
 		)
-		.all(Math.max(40, query.minScore - 10), query.limit) as DiscoveryRepoRow[];
+		.all(
+			Math.max(40, query.minScore - 10),
+			MIN_HOMEPAGE_ENRICHMENT_LEVEL,
+			MIN_HOMEPAGE_CLASSIFICATION_CONFIDENCE,
+			query.limit * 3
+		) as DiscoveryRepoRow[];
 
-	return rows.map((row) =>
-		toDiscoveryRepoCard(
-			row,
-			row.interesting_score ?? 0,
-			`Shown because it is a normal/high-signal repository with an Interesting Score of ${Math.round(row.interesting_score ?? 0)}, sorted ahead of raw star-count feeds.`
-		)
-	);
+	return rows
+		.filter((row) => isHomepageIntelligenceEligible(row))
+		.slice(0, query.limit)
+		.map((row) =>
+			toDiscoveryRepoCard(
+				row,
+				row.interesting_score ?? 0,
+				`Shown because it is a normal/high-signal repository with an Interesting Score of ${Math.round(row.interesting_score ?? 0)}, sorted ahead of raw star-count feeds.`
+			)
+		);
 }
 
 /**
@@ -407,6 +462,51 @@ export function getActiveQualityClusters(opts: Partial<DiscoveryQuery> = {}): Ac
 		}));
 }
 
+export function detectIncompleteSignals(row: {
+	category: string | null;
+	language: string | null;
+	topics: string | null;
+	category_confidence: number | null;
+	cluster_count?: number;
+	conflicting_evidence?: boolean;
+}): IncompleteSignal[] {
+	const signals: IncompleteSignal[] = [];
+	const category = row.category ?? 'unknown';
+	if (category === 'unknown') signals.push('unknown-category');
+	if (!row.language || row.language.trim() === '') signals.push('missing-language');
+
+	const topics = parseTopics(row.topics);
+	if (topics.length === 0) signals.push('no-topics');
+
+	if (
+		row.category_confidence == null ||
+		row.category_confidence < MIN_HOMEPAGE_CLASSIFICATION_CONFIDENCE
+	) {
+		signals.push('low-classification-confidence');
+	}
+
+	if ((row.cluster_count ?? 0) === 0) signals.push('no-cluster-match');
+	if (row.conflicting_evidence) signals.push('conflicting-evidence');
+
+	return signals;
+}
+
+export function formatIncompleteSignalExplanation(
+	interestingScore: number | null,
+	signals: IncompleteSignal[]
+): string {
+	const score = Math.round(interestingScore ?? 0);
+	if (signals.length === 0) {
+		return `Surfaced because it has an Interesting Score of ${score} with incomplete intelligence signals.`;
+	}
+	const listed = signals.map((signal) => INCOMPLETE_SIGNAL_LABELS[signal]);
+	const detail =
+		listed.length === 1
+			? listed[0]
+			: `${listed.slice(0, -1).join(', ')}, and ${listed[listed.length - 1]}`;
+	return `Surfaced because it has an Interesting Score of ${score} but still has incomplete signals: ${detail}.`;
+}
+
 export function getUnusualFinds(opts: Partial<DiscoveryQuery> = {}): DiscoveryRepoCard[] {
 	const query = normalizeQuery(opts);
 	const db = getDb();
@@ -419,35 +519,70 @@ export function getUnusualFinds(opts: Partial<DiscoveryQuery> = {}): DiscoveryRe
 			        EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'readme') AS has_readme,
 			        EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id AND a.snapshot_type = 'source') AS has_source,
 			        EXISTS (SELECT 1 FROM archive_snapshots a WHERE a.repo_id = r.id) AS has_any_archive,
-			        NULL as rarest_cluster_count
+			        NULL as rarest_cluster_count,
+			        (SELECT COUNT(*) FROM repository_cluster_memberships m WHERE m.repository_id = r.id) AS cluster_count
 			 FROM repos r
 			 WHERE r.deleted_at IS NULL
 			   AND COALESCE(r.signal_tier, 'normal') != 'low'
+			   AND r.interesting_score IS NOT NULL
 			   AND COALESCE(r.interesting_score, 0) >= ?
-			   AND (r.category = 'unknown' OR r.language IS NULL OR r.topics IS NULL OR r.topics = '[]')
+			   AND (
+			     COALESCE(r.category, 'unknown') = 'unknown'
+			     OR r.language IS NULL OR TRIM(r.language) = ''
+			     OR r.topics IS NULL OR r.topics = '[]' OR TRIM(r.topics) = ''
+			     OR COALESCE(r.category_confidence, 0) < ?
+			     OR NOT EXISTS (
+			       SELECT 1 FROM repository_cluster_memberships m WHERE m.repository_id = r.id
+			     )
+			   )
 			 ORDER BY r.interesting_score DESC, r.first_seen_at DESC
 			 LIMIT ?`
 		)
-		.all(Math.max(40, query.minScore - 10), query.limit) as DiscoveryRepoRow[];
+		.all(
+			Math.max(40, query.minScore - 10),
+			MIN_HOMEPAGE_CLASSIFICATION_CONFIDENCE,
+			query.limit * 4
+		) as (DiscoveryRepoRow & { cluster_count: number })[];
 
-	return rows.map((row) =>
-		toDiscoveryRepoCard(
-			row,
-			row.interesting_score ?? 0,
-			`Surfaced because it has an Interesting Score of ${Math.round(row.interesting_score ?? 0)} but still lacks a clear category, language, or topic trail.`
-		)
-	);
+	return rows
+		.map((row) => {
+			const signals = detectIncompleteSignals({
+				category: row.category,
+				language: row.language,
+				topics: row.topics,
+				category_confidence: row.category_confidence,
+				cluster_count: row.cluster_count
+			});
+			if (signals.length === 0) return null;
+			const card = toDiscoveryRepoCard(
+				row,
+				row.interesting_score ?? 0,
+				formatIncompleteSignalExplanation(row.interesting_score, signals)
+			);
+			return { ...card, incompleteSignals: signals };
+		})
+		.filter((item): item is DiscoveryRepoCard => item != null)
+		.slice(0, query.limit);
 }
 
 function listTopReposForCluster(slug: string, query: DiscoveryQuery): DiscoveryRepoCard[] {
-	const rows = queryProjectRows({ ...query, minScore: Math.max(45, query.minScore - 10), limit: 3 }, [slug], true);
-	return rows.slice(0, 3).map((row) =>
-		toDiscoveryRepoCard(
-			row,
-			row.interesting_score ?? 0,
-			`Featured because it is one of the highest-scoring recent repositories in ${row.cluster_name ?? slug}.`
-		)
+	const rows = queryProjectRows(
+		{ ...query, minScore: Math.max(45, query.minScore - 10), limit: 6 },
+		[slug],
+		true
 	);
+	const minConfidence = getClusterDefinition(slug)?.minimumScore ?? 0.45;
+	return rows
+		.filter((row) => isHomepageIntelligenceEligible(row))
+		.filter((row) => row.cluster_confidence >= minConfidence)
+		.slice(0, 3)
+		.map((row) =>
+			toDiscoveryRepoCard(
+				row,
+				row.interesting_score ?? 0,
+				`Featured because it is one of the highest-scoring recent repositories in ${row.cluster_name ?? slug}.`
+			)
+		);
 }
 
 type GrowingCluster = {
@@ -484,6 +619,31 @@ interface DiscoveryRepoRow extends RepoRow {
 	rarest_cluster_count: number | null;
 }
 
+/** Primary homepage intelligence cards must clear enrichment + classification floors. */
+export function isHomepageIntelligenceEligible(row: {
+	enrichment_level?: number | null;
+	category?: string | null;
+	interesting_score?: number | null;
+	signal_tier?: string | null;
+	category_confidence?: number | null;
+}): boolean {
+	if ((row.enrichment_level ?? 0) < MIN_HOMEPAGE_ENRICHMENT_LEVEL) return false;
+	if (!row.category || row.category === 'unknown') return false;
+	if (row.interesting_score == null) return false;
+	if (!row.signal_tier) return false;
+	if ((row.category_confidence ?? 0) < MIN_HOMEPAGE_CLASSIFICATION_CONFIDENCE) return false;
+	return true;
+}
+
+export function filterEligibleClusterBadges(
+	memberships: { slug: string; name: string; confidence: number }[]
+): { slug: string; name: string; confidence: number }[] {
+	return memberships.filter((membership) => {
+		const min = getClusterDefinition(membership.slug)?.minimumScore ?? 0.45;
+		return membership.confidence >= min;
+	});
+}
+
 function queryProjectRows(query: DiscoveryQuery, clusterSlugs: string[], allowCoursework: boolean): DiscoveryRepoRow[] {
 	if (clusterSlugs.length === 0) return [];
 	const db = getDb();
@@ -493,8 +653,12 @@ function queryProjectRows(query: DiscoveryQuery, clusterSlugs: string[], allowCo
 		`c.slug IN (${clusterSlugs.map(() => '?').join(',')})`,
 		`r.created_at >= ?`,
 		`COALESCE(r.signal_tier, 'normal') != 'low'`,
+		`r.interesting_score IS NOT NULL`,
 		`COALESCE(r.interesting_score, 0) >= ?`,
-		`r.deleted_at IS NULL`
+		`r.deleted_at IS NULL`,
+		`COALESCE(r.enrichment_level, 0) >= ${MIN_HOMEPAGE_ENRICHMENT_LEVEL}`,
+		`COALESCE(r.category, 'unknown') != 'unknown'`,
+		`COALESCE(r.category_confidence, 0) >= ${MIN_HOMEPAGE_CLASSIFICATION_CONFIDENCE}`
 	];
 
 	if (query.language) {
@@ -582,13 +746,15 @@ function queryDeletedRows(query: DiscoveryQuery): DiscoveryRepoRow[] {
 }
 
 function toDiscoveryRepoCard(row: DiscoveryRepoRow, rankScore: number, reason?: string): DiscoveryRepoCard {
-	const clusters = getRepoClusterMemberships(row.id)
-		.slice(0, 4)
-		.map((membership) => ({
-			slug: membership.slug,
-			name: membership.name,
-			confidence: membership.confidence
-		}));
+	const clusters = filterEligibleClusterBadges(
+		getRepoClusterMemberships(row.id)
+			.slice(0, 8)
+			.map((membership) => ({
+				slug: membership.slug,
+				name: membership.name,
+				confidence: membership.confidence
+			}))
+	).slice(0, 4);
 	// Never generate stories on GET — workers own that. Read stored text only.
 	const storedStory = getStoredArchiveStory(row.id);
 	const preservationState = getPreservationState(row);

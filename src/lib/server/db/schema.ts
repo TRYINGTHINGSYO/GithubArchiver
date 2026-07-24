@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 34;
+export const CURRENT_SCHEMA_VERSION = 35;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1245,6 +1245,28 @@ function migration034(database: Database.Database) {
 	}
 }
 
+function migration035(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS intelligence_reviews (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			repository_id INTEGER NOT NULL,
+			outcome TEXT NOT NULL,
+			notes TEXT,
+			reviewed_category TEXT,
+			reviewed_cluster_slug TEXT,
+			reviewed_at TEXT NOT NULL,
+			reviewed_by TEXT,
+			FOREIGN KEY (repository_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_intelligence_reviews_repo
+		  ON intelligence_reviews(repository_id, reviewed_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_intelligence_reviews_outcome
+		  ON intelligence_reviews(outcome, reviewed_at DESC);
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -1279,7 +1301,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	31: migration031,
 	32: migration032,
 	33: migration033,
-	34: migration034
+	34: migration034,
+	35: migration035
 };
 
 export interface MigrationRunResult {

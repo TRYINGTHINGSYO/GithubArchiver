@@ -5,7 +5,8 @@
 		{ href: '/admin', label: 'Control' },
 		{ href: '/admin/jobs', label: 'Job history' },
 		{ href: '/admin/doctor', label: 'Health' },
-		{ href: '/admin/storage', label: 'Storage' }
+		{ href: '/admin/storage', label: 'Storage' },
+		{ href: '/admin/intelligence', label: 'Intelligence' }
 	];
 
 	let { children } = $props();

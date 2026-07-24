@@ -2,6 +2,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 	product: 'Product',
 	library: 'Library',
 	framework: 'Framework',
+	'awesome-list': 'Awesome list',
 	'personal-website': 'Personal website',
 	portfolio: 'Portfolio',
 	'school-assignment': 'School assignment',

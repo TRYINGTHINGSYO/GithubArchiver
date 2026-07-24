@@ -1,7 +1,7 @@
 import type { RepoCategory } from '$lib/server/classify-repo';
 import type { SignalTier } from '$lib/server/score-repo';
 
-export const CURRENT_STORY_VERSION = 1;
+export const CURRENT_STORY_VERSION = 2;
 
 export const STORY_MIN_PERCENTILE_SAMPLE = 20;
 export const STORY_MIN_GROWTH_PREVIOUS_WEEK = 5;

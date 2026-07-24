@@ -1,6 +1,7 @@
 import { getDb } from './connection.js';
 import { CLUSTER_DEFINITIONS, CURRENT_CLUSTER_VERSION } from '$lib/server/cluster-registry';
 import type { ClusterMatchEvidence } from '$lib/server/cluster-repo';
+import { computeGrowthPercent } from '$lib/server/growth';
 import type { RepoRow } from './types.js';
 
 export { CURRENT_CLUSTER_VERSION };
@@ -252,12 +253,7 @@ export function getClusterAnalytics(slug: string): ClusterAnalyticsRow | null {
 		)
 		.all(cluster.id) as { language: string; count: number }[];
 
-	const growthPct =
-		counts.new_prev_7d > 0
-			? Math.round(((counts.new_7d - counts.new_prev_7d) / counts.new_prev_7d) * 1000) / 10
-			: counts.new_7d > 0
-				? 100
-				: null;
+	const growthPct = computeGrowthPercent(counts.new_7d, counts.new_prev_7d);
 
 	return {
 		slug: cluster.slug,
