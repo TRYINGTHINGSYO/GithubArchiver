@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T21:42:51.915Z",
+  "generatedAt": "2026-07-30T22:44:07.322Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -584,6 +584,56 @@
       "summary": "Live homepage review on [production](https://new-production-9120.up.railway.app/) shows classification/story/cluster surfaces healthy, but **freshness** is not."
     },
     {
+      "id": "incident-ingest-timeout-covers-db-writes",
+      "schema": 1,
+      "type": "incident",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ingest",
+        "gharchive",
+        "emerging"
+      ],
+      "related": [
+        "feature-ingest-timeout-hour-backoff",
+        "bugfix-ingest-fetch-timeout",
+        "bugfix-dashboard-trust-semantics",
+        "migration-036-ingest-hour-backoff",
+        "research-enrichment-selection-bound"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "feature-ingest-timeout-hour-backoff"
+        },
+        {
+          "type": "caused-by",
+          "id": "bugfix-ingest-fetch-timeout"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-dashboard-trust-semantics"
+        },
+        {
+          "type": "references",
+          "id": "migration-036-ingest-hour-backoff"
+        },
+        {
+          "type": "related",
+          "id": "research-enrichment-selection-bound"
+        }
+      ],
+      "supersedes": null,
+      "title": "The 30s GH Archive ceiling covers DB writes, so every hour fails and the frontier is frozen",
+      "path": "entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md",
+      "summary": "Ingest has failed 100% of hours since ~19:02Z. Every cycle records"
+    },
+    {
       "id": "migration-036-ingest-hour-backoff",
       "schema": 1,
       "type": "migration",
@@ -687,6 +737,45 @@
       "summary": "- Latest ingested hour: `2026-07-25-20` (~118h lag vs current UTC hour)"
     },
     {
+      "id": "research-enrichment-selection-bound",
+      "schema": 1,
+      "type": "research",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "enrich",
+        "metrics"
+      ],
+      "related": [
+        "research-enrichment-throughput-ceiling",
+        "incident-ingest-timeout-covers-db-writes",
+        "bugfix-dashboard-trust-semantics"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "research-enrichment-throughput-ceiling"
+        },
+        {
+          "type": "related",
+          "id": "incident-ingest-timeout-covers-db-writes"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-dashboard-trust-semantics"
+        }
+      ],
+      "supersedes": "research-enrichment-throughput-ceiling",
+      "title": "Enrichment is selection-bound and already 99.2% complete on the eligible corpus",
+      "path": "entries/2026-07-30-research-enrichment-selection-bound.md",
+      "summary": "Measured on production via `npm run measure:enrichment`. The 1.1M \"backlog\" is"
+    },
+    {
       "id": "research-enrichment-throughput-ceiling",
       "schema": 1,
       "type": "research",
@@ -729,6 +818,35 @@
       "title": "Enrichment throughput, not ingest, is the constraint on every downstream feature",
       "path": "entries/2026-07-30-research-enrichment-throughput-ceiling.md",
       "summary": "Live production, daemon healthy and actively enriching:"
+    },
+    {
+      "id": "research-homepage-readiness-cache",
+      "schema": 1,
+      "type": "research",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ui",
+        "metrics"
+      ],
+      "related": [
+        "bugfix-dashboard-trust-semantics"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "bugfix-dashboard-trust-semantics"
+        }
+      ],
+      "supersedes": null,
+      "title": "The homepage is fast when warm; a 30s readiness TTL costs 6.4s per expiry",
+      "path": "entries/2026-07-30-research-homepage-readiness-cache.md",
+      "summary": "Measured against production by timing sequential requests:"
     },
     {
       "id": "status-emerging-scheduled-in-process",
