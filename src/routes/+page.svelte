@@ -10,11 +10,11 @@
 
 	const enrich = $derived(data.enrichmentProgress);
 	const enrichOps = $derived(data.enrichmentOps);
+	/** Corpus-wide, not queue-relative: a drained claimable queue must not read as 100% coverage. */
 	const enrichPercent = $derived.by(() => {
-		const waiting = enrichOps.claimableBacklog ?? enrich.remaining;
-		const total = enrich.enrichedTotal + waiting;
-		if (total <= 0) return 100;
-		return Math.round((enrich.enrichedTotal / total) * 1000) / 10;
+		const total = data.readiness.totalRepos;
+		if (total <= 0) return 0;
+		return Math.round((data.readiness.enrichedRepos / total) * 1000) / 10;
 	});
 	const enrichCurrentActivity = $derived.by(() => {
 		if (enrich.currentRepo) return `Enriching ${enrich.currentRepo}`;
@@ -194,7 +194,7 @@
 			currentActivityHref={enrich.currentRepo ? `/repo/${enrich.currentRepo}` : null}
 			enriched={enrich.enrichedTotal}
 			thisRun={enrich.completed}
-			waiting={enrichOps.claimableBacklog ?? enrich.remaining}
+			waiting={enrichOps.totalUnenriched ?? enrich.remaining}
 			coveragePercent={enrichPercent}
 			latestArchiveHour={data.latestArchiveHour}
 			archiveBacklog={data.archiveHourBacklog}

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+	ensureBackgroundWorker,
+	resetBackgroundDaemonForTests
+} from '$lib/server/background-daemon';
+import {
 	maybeReconcileStaleJobRuns,
 	resetDaemonCadenceForTests
 } from '$lib/server/daemon-cadence';
@@ -16,10 +20,15 @@ describe('orphan job reconciliation', () => {
 	beforeEach(() => {
 		setupTestDb();
 		resetDaemonCadenceForTests();
+		resetBackgroundDaemonForTests();
 		delete process.env.ORPHAN_JOB_AGE_MS;
 		delete process.env.DAEMON_RECONCILE_INTERVAL_MS;
 	});
-	afterEach(() => teardownTestDb());
+	afterEach(() => {
+		delete process.env.BACKGROUND_WORKER;
+		resetBackgroundDaemonForTests();
+		teardownTestDb();
+	});
 
 	it('marks stale running jobs interrupted on age-based reconcile', () => {
 		const nowMs = Date.parse('2026-07-07T10:00:00.000Z');
@@ -75,6 +84,33 @@ describe('orphan job reconciliation', () => {
 			.prepare(`SELECT COUNT(*) AS c FROM job_runs WHERE status = 'running'`)
 			.get() as { c: number };
 		expect(left.c).toBe(0);
+	});
+
+	it('boot reconcile runs at maxAgeMs=0 even when the daemon is disabled', () => {
+		// The healthcheck fix once moved this inside the start delay and behind the
+		// enabled gate, so a web-only process never reclaimed orphans at all.
+		process.env.BACKGROUND_WORKER = '0';
+		delete process.env.RAILWAY_ENVIRONMENT;
+		delete process.env.RAILWAY_PROJECT_ID;
+
+		const orphan = startJobRun('ingest', { daemon_action: 'ingest' });
+		// 1s old: far under every periodic ceiling, so only maxAgeMs=0 can reclaim it.
+		getDb()
+			.prepare('UPDATE job_runs SET started_at = ? WHERE id = ?')
+			.run(new Date(Date.now() - 1000).toISOString(), orphan);
+		expect(getJobRunById(orphan)?.status).toBe('running');
+
+		ensureBackgroundWorker();
+
+		const reclaimed = getJobRunById(orphan);
+		expect(reclaimed?.status).toBe('interrupted');
+		expect(reclaimed?.error).toContain('orphaned');
+
+		// Proves the reconcile was not a side effect of the daemon starting.
+		const daemonRuns = getDb()
+			.prepare(`SELECT COUNT(*) AS c FROM job_runs WHERE job_type = 'daemon'`)
+			.get() as { c: number };
+		expect(daemonRuns.c).toBe(0);
 	});
 
 	it('periodic safety net closes a stuck running row inserted only via the DB', () => {

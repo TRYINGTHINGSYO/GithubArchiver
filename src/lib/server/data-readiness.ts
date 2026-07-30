@@ -1,6 +1,7 @@
 import { getDb } from '$lib/server/db/connection';
 import { countRepos, countUnenriched } from '$lib/server/db/repos';
 import { countReposByEnrichmentLevel } from '$lib/server/db/pipeline';
+import { MIN_COMPARABLE_HOUR_COVERAGE, getWindowHourCoverage } from '$lib/server/emerging-topics';
 import { hasGitHubToken } from '$lib/server/github';
 import { cached } from '$lib/server/ttl-cache';
 
@@ -28,6 +29,11 @@ export type DataReadiness = {
 	windowStart: string;
 	windowEnd: string;
 	emergingDetectionReady: boolean;
+	/** Detection can run but week-over-week growth is suppressed until both windows are near-fully ingested. */
+	growthComparisonReady: boolean;
+	currentWindowHoursExpected: number;
+	currentWindowHoursProcessed: number;
+	previousWindowHoursProcessed: number;
 	readinessReasons: string[];
 	hasGitHubAuth: boolean;
 };
@@ -188,6 +194,19 @@ function computeDataReadiness(opts: {
 		);
 	}
 
+	const currentHourCoverage = getWindowHourCoverage(windowStart, windowEnd);
+	const previousHourCoverage = getWindowHourCoverage(previousWindowStart, previousWindowEnd);
+	const growthComparisonReady =
+		currentHourCoverage.ratio >= MIN_COMPARABLE_HOUR_COVERAGE &&
+		previousHourCoverage.ratio >= MIN_COMPARABLE_HOUR_COVERAGE;
+
+	if (!growthComparisonReady) {
+		const pct = (ratio: number) => `${Math.round(ratio * 100)}%`;
+		readinessReasons.push(
+			`Growth comparison is suppressed: the current window has ${currentHourCoverage.hoursProcessed}/${currentHourCoverage.hoursExpected} hours ingested (${pct(currentHourCoverage.ratio)}) and the previous window ${previousHourCoverage.hoursProcessed}/${previousHourCoverage.hoursExpected} (${pct(previousHourCoverage.ratio)}), while ${pct(MIN_COMPARABLE_HOUR_COVERAGE)} is required. Emerging topics will still be detected, but without week-over-week growth.`
+		);
+	}
+
 	const emergingDetectionReady =
 		currentWindowEnrichedRepos >= minEnriched && distinctOwnersInWindow >= minOwners;
 
@@ -212,6 +231,10 @@ function computeDataReadiness(opts: {
 		windowStart,
 		windowEnd,
 		emergingDetectionReady,
+		growthComparisonReady,
+		currentWindowHoursExpected: currentHourCoverage.hoursExpected,
+		currentWindowHoursProcessed: currentHourCoverage.hoursProcessed,
+		previousWindowHoursProcessed: previousHourCoverage.hoursProcessed,
 		readinessReasons,
 		hasGitHubAuth: hasGitHubToken()
 	};

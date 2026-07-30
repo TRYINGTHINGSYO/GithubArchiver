@@ -522,7 +522,7 @@
 				</div>
 				<div>
 					<dt>Search fallback</dt>
-					<dd>{status.discovery.searchFallbackActive ? 'Yes' : 'No'}</dd>
+					<dd>{status.discovery.searchFallbackActive ? 'Running now' : 'Idle'}</dd>
 				</div>
 				<div>
 					<dt>Historical Search-fallback discoveries</dt>

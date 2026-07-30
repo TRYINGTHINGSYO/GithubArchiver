@@ -579,6 +579,10 @@ export function ensureBackgroundWorker(): void {
 	}
 	autoStartAttempted = true;
 
+	// Boot reconcile is a local DB update — it never fetches, so it cannot threaten
+	// /api/health and must not be coupled to the daemon delay or the enabled gate.
+	reconcileOrphanedJobsOnce();
+
 	const mode = process.env.BACKGROUND_WORKER ?? 'auto';
 	const onRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID);
 	const enabled =
@@ -587,12 +591,11 @@ export function ensureBackgroundWorker(): void {
 		(mode === 'auto' && onRailway);
 
 	if (enabled && !running) {
-		// Quiet window for Railway /api/health — do not reconcile or ingest until then.
+		// Quiet window for Railway /api/health — do not start ingest work until then.
 		const delayMs = Math.max(0, Number(process.env.BACKGROUND_WORKER_DELAY_MS ?? 15_000));
 		console.log(`[daemon] auto-starting background worker in ${delayMs}ms`);
 		setTimeout(() => {
 			if (running || stopRequested) return;
-			reconcileOrphanedJobsOnce();
 			startBackgroundDaemon();
 		}, delayMs);
 	}

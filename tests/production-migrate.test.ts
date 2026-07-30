@@ -66,9 +66,12 @@ describe('production migration entry point from pre-014 schema', () => {
 
 		const first = migrateDatabase({ path: dbPath });
 		expect(first.before).toBe(13);
-		expect(first.applied).toEqual([
-			14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35
-		]);		expect(first.after).toBe(CURRENT_SCHEMA_VERSION);
+		const expectedApplied = Array.from(
+			{ length: CURRENT_SCHEMA_VERSION - 13 },
+			(_, i) => 14 + i
+		);
+		expect(first.applied).toEqual(expectedApplied);
+		expect(first.after).toBe(CURRENT_SCHEMA_VERSION);
 		expect(first.status.interestingScoreExists).toBe(true);
 		expect(first.status.repositoryCount).toBe(1);
 

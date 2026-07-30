@@ -313,6 +313,44 @@ function normalizeIngestionSource(raw: string): EmergingIngestionSource {
 	return 'unknown';
 }
 
+export interface WindowHourCoverage {
+	hoursExpected: number;
+	hoursProcessed: number;
+	ratio: number;
+}
+
+/**
+ * Ingested-hour completeness for a window — the input behind `insufficient-hour-coverage`.
+ * Shared with data-readiness so operator status and detection cannot disagree.
+ */
+export function getWindowHourCoverage(windowStart: string, windowEnd: string): WindowHourCoverage {
+	const db = getDb();
+	const startKey = isoToHourKey(windowStart);
+	const endKey = isoToHourKey(windowEnd);
+	const hoursExpected = Math.max(
+		0,
+		Math.round((Date.parse(windowEnd) - Date.parse(windowStart)) / 3_600_000)
+	);
+	const hoursProcessed = (
+		db
+			.prepare(
+				`SELECT COUNT(*) AS c FROM (
+				   SELECT hour_key FROM ingestion_state WHERE hour_key >= ? AND hour_key < ?
+				   UNION
+				   SELECT hour_key FROM search_ingest_stats
+				   WHERE hour_key >= ? AND hour_key < ? AND status = 'completed'
+				 )`
+			)
+			.get(startKey, endKey, startKey, endKey) as { c: number }
+	).c;
+
+	return {
+		hoursExpected,
+		hoursProcessed,
+		ratio: hoursExpected > 0 ? hoursProcessed / hoursExpected : 0
+	};
+}
+
 /** Provenance for one detection window: where its repos came from and how completely the hours were ingested. */
 export function getDetectionWindowMetadata(windowStart: string, windowEnd: string): DetectionWindowMetadata {
 	const db = getDb();
@@ -339,24 +377,7 @@ export function getDetectionWindowMetadata(windowStart: string, windowEnd: strin
 			dominant.c / totalObservedRepos >= 0.9 ? normalizeIngestionSource(dominant.src) : 'mixed';
 	}
 
-	const startKey = isoToHourKey(windowStart);
-	const endKey = isoToHourKey(windowEnd);
-	const hoursExpected = Math.max(
-		0,
-		Math.round((Date.parse(windowEnd) - Date.parse(windowStart)) / 3_600_000)
-	);
-	const hoursProcessed = (
-		db
-			.prepare(
-				`SELECT COUNT(*) AS c FROM (
-				   SELECT hour_key FROM ingestion_state WHERE hour_key >= ? AND hour_key < ?
-				   UNION
-				   SELECT hour_key FROM search_ingest_stats
-				   WHERE hour_key >= ? AND hour_key < ? AND status = 'completed'
-				 )`
-			)
-			.get(startKey, endKey, startKey, endKey) as { c: number }
-	).c;
+	const coverage = getWindowHourCoverage(windowStart, windowEnd);
 
 	return {
 		windowStart,
@@ -366,8 +387,8 @@ export function getDetectionWindowMetadata(windowStart: string, windowEnd: strin
 		enrichedRepos,
 		enrichedCoverage:
 			totalObservedRepos > 0 ? Math.round((enrichedRepos / totalObservedRepos) * 1000) / 1000 : 0,
-		hoursExpected,
-		hoursProcessed,
+		hoursExpected: coverage.hoursExpected,
+		hoursProcessed: coverage.hoursProcessed,
 		deduplicationVersion: DETECTION_DEDUPLICATION_VERSION
 	};
 }

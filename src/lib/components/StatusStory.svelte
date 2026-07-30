@@ -107,7 +107,8 @@
 				: 'Time spent per repository';
 		const footnote =
 			n > 0
-				? '\n\nTotal P50/P95 = enrich path. Story is timed separately (README P50/P95 = deep path only).'
+				? '\n\nTotal P50/P95 = enrich path. Story is timed separately (README P50/P95 = deep path only).' +
+					`\navg is the most recent cycle; P50/P95 are a rolling n=${n.toLocaleString()} sample, so avg below P50 is expected.`
 				: '';
 		return `${header}
 
@@ -250,7 +251,7 @@ ${stageLine('Total:', stageTimings.totalMs, pct?.total)}${footnote}`;
 				{#if searchFallbackActive != null}
 					<div>
 						<dt>Search fallback</dt>
-						<dd>{searchFallbackActive ? 'Yes' : 'No'}</dd>
+						<dd>{searchFallbackActive ? 'Running now' : 'Idle'}</dd>
 					</div>
 				{/if}
 			</dl>
