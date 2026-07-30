@@ -81,10 +81,33 @@ export class GhArchiveTimeoutError extends Error {
 	}
 }
 
-/** Per-hour fetch+stream ceiling. Env: GH_ARCHIVE_FETCH_TIMEOUT_MS (default 30s). */
+function envMs(name: string, fallback: number): number {
+	const n = Number(process.env[name] ?? fallback);
+	return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
+/** Connection + response-headers ceiling. Env: GH_ARCHIVE_FETCH_TIMEOUT_MS (default 30s). */
 export function ghArchiveFetchTimeoutMs(): number {
-	const n = Number(process.env.GH_ARCHIVE_FETCH_TIMEOUT_MS ?? 30_000);
-	return Number.isFinite(n) && n > 0 ? Math.floor(n) : 30_000;
+	return envMs('GH_ARCHIVE_FETCH_TIMEOUT_MS', 30_000);
+}
+
+/**
+ * Longest permitted wait for the *next* body chunk. Deliberately not a budget for
+ * the whole hour: parsing 172k events and inserting the repository creates they
+ * imply is legitimate work that took ~27s of a 30s total budget in production and
+ * failed every hour as a result. Stall time is the only thing a transfer guard
+ * can meaningfully police.
+ */
+export function ghArchiveStallTimeoutMs(): number {
+	return envMs('GH_ARCHIVE_STALL_TIMEOUT_MS', 30_000);
+}
+
+/**
+ * Absolute per-hour ceiling, so a pathological hour still fails and enters
+ * ingest_hour_backoff rather than occupying the daemon indefinitely.
+ */
+export function ghArchiveHourMaxMs(): number {
+	return envMs('GH_ARCHIVE_HOUR_MAX_MS', 900_000);
 }
 
 function isAbortError(err: unknown): boolean {
@@ -94,8 +117,11 @@ function isAbortError(err: unknown): boolean {
 }
 
 /**
- * Run `fn` with an AbortSignal that fires after the hour timeout.
- * Covers connection, headers, and body stream — not just the initial fetch().
+ * Run `fn` with an AbortSignal that fires after a fixed deadline.
+ *
+ * Only appropriate where the whole operation is transfer. Do not wrap a read
+ * loop that also parses or writes: the deadline then measures our own work and
+ * reports it as a fetch timeout.
  */
 export async function withGhArchiveTimeout<T>(
 	url: string,
@@ -295,6 +321,50 @@ async function readHourStream(
 	return gunzip;
 }
 
+/**
+ * Yield chunks while timing only the wait for each next chunk.
+ *
+ * The timer is cleared before yielding, so whatever the consumer does with a
+ * chunk — parse it, insert rows — runs with no deadline attached. `abort` fires
+ * on stall so readHourStream's listener can tear both streams down through the
+ * same path a fetch cancellation uses.
+ */
+async function* readChunksWithStallTimeout(
+	source: AsyncIterable<Buffer>,
+	url: string,
+	abort: () => void,
+	stallMs: number = ghArchiveStallTimeoutMs(),
+	maxMs: number = ghArchiveHourMaxMs()
+): AsyncGenerator<Buffer> {
+	const iterator = source[Symbol.asyncIterator]();
+	const startedAt = Date.now();
+
+	while (true) {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		let next: IteratorResult<Buffer>;
+		try {
+			next = await Promise.race([
+				iterator.next(),
+				new Promise<never>((_resolve, reject) => {
+					timer = setTimeout(() => {
+						abort();
+						reject(new GhArchiveTimeoutError(url, stallMs));
+					}, stallMs);
+				})
+			]);
+		} finally {
+			clearTimeout(timer);
+		}
+
+		if (next.done) return;
+		if (Date.now() - startedAt > maxMs) {
+			abort();
+			throw new GhArchiveTimeoutError(url, maxMs);
+		}
+		yield next.value;
+	}
+}
+
 function assertGhArchiveHttpOk(url: string, res: Response): void {
 	if (res.status === 404 || res.status === 403) {
 		throw new GhArchiveUnavailableError(url, res.status);
@@ -331,10 +401,20 @@ export async function streamRepositoryCreates(
 	url: string,
 	onCreate?: (event: RepoCreateEvent) => void | Promise<void>
 ): Promise<HourStreamStats> {
-	return withGhArchiveTimeout(url, async (signal) => {
-		const res = await fetchGhArchiveResponse(url, signal);
+	const controller = new AbortController();
+	const signal = controller.signal;
+	// The deadline covers connection and headers only; it is cleared before the
+	// body is read so parse and insert work cannot be reported as a fetch timeout.
+	const connectTimer = setTimeout(() => controller.abort(), ghArchiveFetchTimeoutMs());
+	let res: Response;
+	try {
+		res = await fetchGhArchiveResponse(url, signal);
 		assertGhArchiveHttpOk(url, res);
+	} finally {
+		clearTimeout(connectTimer);
+	}
 
+	return (async () => {
 		const combined = await readHourStream(url, res, signal);
 		const stats: HourStreamStats = {
 			parsedEvents: 0,
@@ -360,10 +440,9 @@ export async function streamRepositoryCreates(
 
 		let buffer = '';
 		try {
-			for await (const chunk of combined) {
-				if (signal.aborted) {
-					throw new GhArchiveTimeoutError(url, ghArchiveFetchTimeoutMs());
-				}
+			for await (const chunk of readChunksWithStallTimeout(combined, url, () =>
+				controller.abort()
+			)) {
 				buffer += chunk.toString('utf8');
 				const lines = buffer.split('\n');
 				buffer = lines.pop() ?? '';
@@ -378,10 +457,6 @@ export async function streamRepositoryCreates(
 				}
 			}
 
-			if (signal.aborted) {
-				throw new GhArchiveTimeoutError(url, ghArchiveFetchTimeoutMs());
-			}
-
 			if (buffer.trim()) {
 				try {
 					await observe(JSON.parse(buffer) as GhArchiveEvent);
@@ -394,56 +469,52 @@ export async function streamRepositoryCreates(
 		}
 
 		return stats;
-	});
+	})();
 }
 
 /** Stream all parsed events from a GH Archive hour file (for inspection/debug). */
 export async function* streamHourEvents(url: string): AsyncGenerator<GhArchiveEvent> {
-	// Generators can't wrap the whole body in withGhArchiveTimeout easily; abort covers fetch+stream.
-	const timeoutMs = ghArchiveFetchTimeoutMs();
 	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	const connectTimer = setTimeout(() => controller.abort(), ghArchiveFetchTimeoutMs());
+	let res: Response;
 	try {
-		const res = await fetchGhArchiveResponse(url, controller.signal);
+		res = await fetchGhArchiveResponse(url, controller.signal);
 		assertGhArchiveHttpOk(url, res);
-
-		const combined = await readHourStream(url, res, controller.signal);
-		let buffer = '';
-
-		try {
-			for await (const chunk of combined) {
-				if (controller.signal.aborted) {
-					throw new GhArchiveTimeoutError(url, timeoutMs);
-				}
-				buffer += chunk.toString('utf8');
-				const lines = buffer.split('\n');
-				buffer = lines.pop() ?? '';
-
-				for (const line of lines) {
-					if (!line.trim()) continue;
-					try {
-						yield JSON.parse(line) as GhArchiveEvent;
-					} catch {
-						// skip malformed lines
-					}
-				}
-			}
-
-			if (controller.signal.aborted) {
-				throw new GhArchiveTimeoutError(url, timeoutMs);
-			}
-
-			if (buffer.trim()) {
-				try {
-					yield JSON.parse(buffer) as GhArchiveEvent;
-				} catch {
-					// ignore trailing partial line
-				}
-			}
-		} catch (err) {
-			rethrowGhArchiveStreamError(url, err);
-		}
 	} finally {
-		clearTimeout(timer);
+		clearTimeout(connectTimer);
+	}
+
+	const combined = await readHourStream(url, res, controller.signal);
+	let buffer = '';
+
+	try {
+		// Consumers of this generator do arbitrary work per event, so the same
+		// stall-only accounting applies here as in streamRepositoryCreates.
+		for await (const chunk of readChunksWithStallTimeout(combined, url, () =>
+			controller.abort()
+		)) {
+			buffer += chunk.toString('utf8');
+			const lines = buffer.split('\n');
+			buffer = lines.pop() ?? '';
+
+			for (const line of lines) {
+				if (!line.trim()) continue;
+				try {
+					yield JSON.parse(line) as GhArchiveEvent;
+				} catch {
+					// skip malformed lines
+				}
+			}
+		}
+
+		if (buffer.trim()) {
+			try {
+				yield JSON.parse(buffer) as GhArchiveEvent;
+			} catch {
+				// ignore trailing partial line
+			}
+		}
+	} catch (err) {
+		rethrowGhArchiveStreamError(url, err);
 	}
 }
