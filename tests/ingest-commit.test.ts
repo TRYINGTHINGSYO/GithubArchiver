@@ -30,8 +30,18 @@ describe('commitGhArchiveCreates', () => {
 		const events = getDb()
 			.prepare(`SELECT COUNT(*) AS c FROM repository_events WHERE event_type = 'first_seen'`)
 			.get() as { c: number };
+		const fts = getDb().prepare('SELECT COUNT(*) AS c FROM repos_fts').get() as { c: number };
 		expect(repos.c).toBe(25);
 		expect(events.c).toBe(25);
+		expect(fts.c).toBe(25);
+
+		// Zero-metadata CreateEvents must land as deferred, not flood the enrich queue.
+		const tiers = getDb()
+			.prepare(`SELECT enrichment_tier, enrichment_status, COUNT(*) c FROM repos GROUP BY 1, 2`)
+			.all() as Array<{ enrichment_tier: string; enrichment_status: string; c: number }>;
+		expect(tiers).toEqual([
+			{ enrichment_tier: 'deferred', enrichment_status: 'deferred', c: 25 }
+		]);
 	});
 
 	it('skips duplicates without aborting the rest of the batch', async () => {

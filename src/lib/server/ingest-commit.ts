@@ -1,6 +1,6 @@
 import { getDb } from '$lib/server/db/connection';
-import { insertRepo } from '$lib/server/db/repos';
-import { appendRepoEvent } from '$lib/server/events';
+import { publishLiveEvent } from '$lib/server/event-bus';
+import { scoreEnrichmentPriority } from '$lib/server/enrichment-priority';
 import type { RepoCreateEvent } from '$lib/server/gharchive';
 
 export interface GhArchiveCreateCommit {
@@ -18,44 +18,103 @@ export function ingestCommitBatchSize(): number {
 /**
  * Persist a slice of GH Archive repository creates in one write transaction.
  *
- * better-sqlite3 transactions are synchronous and block the Node event loop for
- * their whole duration. Callers must not pass an entire busy hour here — use
- * `commitGhArchiveCreates` which chunks and yields between batches.
+ * Deliberately does not call insertRepo / seedEnrichmentPriority / indexRepoFtsById:
+ * those paths each do SELECT + COUNT + UPDATE + FTS rebuild per row (~130ms on the
+ * production volume). Scoring from CreateEvent fields is pure CPU and matches what
+ * seedEnrichmentPriorityForInsert would compute for a brand-new zero-metadata repo.
  */
 export function commitGhArchiveCreateBatch(
 	events: RepoCreateEvent[],
 	firstSeenAt: string
 ): GhArchiveCreateCommit {
 	const db = getDb();
-	return db.transaction(() => {
+	const insert = db.prepare(
+		`INSERT OR IGNORE INTO repos
+		 (owner, name, full_name, github_url, event_id, created_at, first_seen_at,
+		  discovery_source, enrichment_status, enrichment_priority, enrichment_tier,
+		  enrichment_depth, next_enrichment_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, 'gharchive', ?, ?, ?, 'none', ?)`
+	);
+	const insertEvent = db.prepare(
+		`INSERT INTO repository_events (repo_id, event_type, event_time, payload_json)
+		 VALUES (?, 'first_seen', ?, ?)`
+	);
+	const insertFts = db.prepare(
+		`INSERT INTO repos_fts
+		 (full_name, owner, name, description, language, license, topics, readme_text, repo_id)
+		 VALUES (?, ?, ?, '', '', '', '', '', ?)`
+	);
+
+	const live: Array<{ repoId: number; event: RepoCreateEvent }> = [];
+
+	const result = db.transaction(() => {
 		let inserted = 0;
 		let skipped = 0;
 		for (const event of events) {
-			const result = insertRepo({
-				...event,
+			const scored = scoreEnrichmentPriority({
+				owner: event.owner,
+				name: event.name,
+				full_name: event.full_name,
+				created_at: event.created_at,
 				first_seen_at: firstSeenAt,
-				discovery_source: 'gharchive'
+				event_count: 1,
+				stars: 0
 			});
-			if (result.status === 'inserted' && result.id) {
-				inserted++;
-				appendRepoEvent(
-					result.id,
-					'first_seen',
-					{
+			const status = scored.tier === 'deferred' ? 'deferred' : 'pending';
+			const row = insert.run(
+				event.owner,
+				event.name,
+				event.full_name,
+				event.github_url,
+				event.event_id,
+				event.created_at,
+				firstSeenAt,
+				status,
+				scored.priority,
+				scored.tier,
+				firstSeenAt
+			);
+			if (row.changes > 0) {
+				const id = Number(row.lastInsertRowid);
+				insertEvent.run(
+					id,
+					firstSeenAt,
+					JSON.stringify({
 						full_name: event.full_name,
 						github_url: event.github_url,
 						event_id: event.event_id,
 						created_at: event.created_at,
 						discovery_source: 'gharchive'
-					},
-					firstSeenAt
+					})
 				);
+				insertFts.run(event.full_name, event.owner, event.name, id);
+				live.push({ repoId: id, event });
+				inserted++;
 			} else {
 				skipped++;
 			}
 		}
 		return { inserted, skipped };
 	})();
+
+	// Publish after commit so a rolled-back chunk never appears on the live bus.
+	for (const item of live) {
+		publishLiveEvent({
+			type: 'repo.created',
+			repo_id: item.repoId,
+			event_time: firstSeenAt,
+			payload: {
+				full_name: item.event.full_name,
+				github_url: item.event.github_url,
+				event_id: item.event.event_id,
+				created_at: item.event.created_at,
+				discovery_source: 'gharchive',
+				archive_event_type: 'first_seen'
+			}
+		});
+	}
+
+	return result;
 }
 
 /**
@@ -64,9 +123,8 @@ export function commitGhArchiveCreateBatch(
  *
  * History: per-event auto-commits (~5 fsyncs each under synchronous=FULL) made
  * every hour exceed the 10-minute wall-clock. A single transaction for the whole
- * hour fixed the fsync tax but blocked the event loop for minutes on a busy
- * hour, so the wall-clock timer and Railway healthchecks could not fire. Chunked
- * commits keep the fsync amortization and give the event loop a tick every batch.
+ * hour fixed the fsync tax but blocked the event loop for minutes. Chunked
+ * commits keep the amortization and give the event loop a tick every batch.
  */
 export async function commitGhArchiveCreates(
 	events: RepoCreateEvent[],
@@ -80,8 +138,6 @@ export async function commitGhArchiveCreates(
 		const result = commitGhArchiveCreateBatch(slice, firstSeenAt);
 		inserted += result.inserted;
 		skipped += result.skipped;
-		// setImmediate, not setTimeout(0): yield after the current I/O callbacks
-		// so a waiting wall-clock rejection can win the Promise.race.
 		if (i + batchSize < events.length) {
 			await new Promise<void>((resolve) => setImmediate(resolve));
 		}
