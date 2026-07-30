@@ -164,21 +164,82 @@ safe("eligible coverage", () => {
     `eligible coverage:   ${((eligible.enriched / denom) * 100).toFixed(2)}%`,
   );
 
-  console.log("\nif eligibility widened, how many deferred repos qualify:");
-  for (const [label, where] of [
-    ["stars >= 1", "stars >= 1"],
-    ["stars >= 5", "stars >= 5"],
-    ["stars >= 10", "stars >= 10"],
-    ["interesting_score >= 40", "COALESCE(interesting_score,0) >= 40"],
-    ["has description", "description IS NOT NULL AND length(description) > 0"],
-  ] as const) {
-    const r = one<{ c: number }>(
-      `SELECT COUNT(*) c FROM repos
-        WHERE enriched_at IS NULL AND deleted_at IS NULL
-          AND COALESCE(enrichment_tier,'normal') = 'deferred'
-          AND ${where}`,
+  // stars/description/interesting_score are populated BY enrichment, so they
+  // cannot size a widened policy — an unenriched repo has them empty by
+  // definition. Only event-derived signals are available at selection time.
+  console.log("\ndeferred repos by enrichment_priority (event-derived):");
+  for (const r of all<{ bucket: string; c: number }>(
+    `SELECT CASE
+              WHEN enrichment_priority >= 70 THEN '70+'
+              WHEN enrichment_priority >= 50 THEN '50-69'
+              WHEN enrichment_priority >= 25 THEN '25-49'
+              WHEN enrichment_priority >= 10 THEN '10-24'
+              ELSE '0-9'
+            END bucket, COUNT(*) c
+     FROM repos
+     WHERE enriched_at IS NULL AND deleted_at IS NULL
+       AND COALESCE(enrichment_tier,'normal') = 'deferred'
+     GROUP BY bucket ORDER BY bucket DESC`,
+  )) {
+    console.log(`  ${r.bucket.padEnd(10)}${pad(r.c)}`);
+  }
+
+  const withEvents = one<{ c: number }>(
+    `SELECT COUNT(*) c FROM repos r
+      WHERE r.enriched_at IS NULL AND r.deleted_at IS NULL
+        AND COALESCE(r.enrichment_tier,'normal') = 'deferred'
+        AND EXISTS (SELECT 1 FROM repository_events e WHERE e.repo_id = r.id)`,
+  );
+  console.log(`  deferred with >=1 event: ${withEvents?.c}`);
+});
+
+// The archive frontier is the input to emerging-topics hour coverage, so a
+// stalled ingest silently suppresses growth comparison downstream.
+hr("INGEST FRONTIER + HOUR BACKOFF");
+safe("ingest backoff", () => {
+  const backoff = one<{ total: number; cooling: number }>(
+    `SELECT COUNT(*) total, SUM(next_retry_at > ?) cooling FROM ingest_hour_backoff`,
+    NOW_ISO,
+  );
+  console.log(`hours with backoff rows: ${backoff?.total}`);
+  console.log(`hours cooling down now:  ${backoff?.cooling}`);
+  console.log("\nworst offenders:");
+  for (const r of all<{
+    hour_key: string;
+    consecutive_failures: number;
+    next_retry_at: string;
+    last_error: string;
+  }>(
+    `SELECT hour_key, consecutive_failures, next_retry_at,
+            substr(COALESCE(last_error,''),1,60) last_error
+     FROM ingest_hour_backoff
+     ORDER BY consecutive_failures DESC, next_retry_at ASC LIMIT 15`,
+  )) {
+    console.log(
+      `  ${r.hour_key}  fails=${pad(r.consecutive_failures, 2)}  retry_at=${r.next_retry_at}  ${r.last_error}`,
     );
-    console.log(`  ${label.padEnd(26)}${pad(r?.c ?? 0)}`);
+  }
+});
+
+safe("recent ingest runs", () => {
+  console.log("\nrecent ingest job_runs:");
+  for (const r of all<{
+    id: number;
+    started_at: string;
+    sec: number;
+    status: string;
+    error: string;
+    detail_json: string;
+  }>(
+    `SELECT id, started_at,
+            ROUND((julianday(COALESCE(finished_at,'now')) - julianday(started_at)) * 86400, 1) sec,
+            status, substr(COALESCE(error,''),1,70) error, detail_json
+     FROM job_runs WHERE job_type = 'ingest' ORDER BY id DESC LIMIT 12`,
+  )) {
+    console.log(
+      `  ${pad(r.id, 7)} ${r.started_at} ${pad(r.sec, 7)}s ${r.status.padEnd(12)} ${r.error}`,
+    );
+    console.log(`          detail: ${r.detail_json.slice(0, 200)}`);
   }
 });
 
