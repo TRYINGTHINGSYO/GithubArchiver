@@ -13,6 +13,8 @@ Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, 
 
 - [`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md) (`bugfix`, `confirmed`, `release`) — Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched
   - `caused-by` → [`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), `related` → [`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), `related` → [`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
+- [`bugfix-deploy-healthcheck-race`](entries/2026-07-30-bugfix-deploy-healthcheck-race.md) (`bugfix`, `confirmed`, `permanent`) — Railway healthcheck on / raced daemon ingest — deploy failed, site 502
+  - `caused-by` → [`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), `related` → [`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
 - [`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md) (`bugfix`, `confirmed`, `release`) — GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat
   - `caused-by` → [`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), `related` → [`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
 - [`bugfix-periodic-job-reconcile`](entries/2026-07-30-bugfix-periodic-job-reconcile.md) (`bugfix`, `confirmed`, `permanent`) — Periodic job_runs reconcile + boot age-0 so stuck running cannot last forever

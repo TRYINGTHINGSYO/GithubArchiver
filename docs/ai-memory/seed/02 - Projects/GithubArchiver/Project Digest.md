@@ -65,6 +65,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `enrichment`, `daemon`, `observability` — [Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
+- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `done` · `deploy`, `daemon` — [Railway healthcheck on / raced daemon ingest — deploy failed, site 502](entries/2026-07-30-bugfix-deploy-healthcheck-race.md)
+  - edges: caused-by:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), related:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `done` · `daemon`, `ingest`, `jobs` — [Periodic job_runs reconcile + boot age-0 so stuck running cannot last forever](entries/2026-07-30-bugfix-periodic-job-reconcile.md)
@@ -77,8 +79,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
 - **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `daemon`, `discovery`, `enrichment`, `observability` — [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md)
   - edges: caused-by:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md)
-- **2026-07-30** · `incident` · `confirmed` · `permanent` · `done` · `ingest`, `gharchive`, `deploy` — [Mid-stream GH Archive abort crashed Node and failed Railway deploy](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
-  - edges: caused-by:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md)
 
 ## Open technical debt
 

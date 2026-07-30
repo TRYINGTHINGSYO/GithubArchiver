@@ -572,7 +572,6 @@ export function ensureBackgroundWorker(): void {
 	}
 	autoStartAttempted = true;
 
-	reconcileOrphanedJobsOnce();
 	const mode = process.env.BACKGROUND_WORKER ?? 'auto';
 	const onRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID);
 	const enabled =
@@ -581,8 +580,14 @@ export function ensureBackgroundWorker(): void {
 		(mode === 'auto' && onRailway);
 
 	if (enabled && !running) {
-		console.log('[daemon] auto-starting background worker');
-		startBackgroundDaemon();
+		// Quiet window for Railway /api/health — do not reconcile or ingest until then.
+		const delayMs = Math.max(0, Number(process.env.BACKGROUND_WORKER_DELAY_MS ?? 15_000));
+		console.log(`[daemon] auto-starting background worker in ${delayMs}ms`);
+		setTimeout(() => {
+			if (running || stopRequested) return;
+			reconcileOrphanedJobsOnce();
+			startBackgroundDaemon();
+		}, delayMs);
 	}
 }
 

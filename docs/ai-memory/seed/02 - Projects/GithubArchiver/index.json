@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T19:05:00.434Z",
+  "generatedAt": "2026-07-30T20:33:16.320Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -43,6 +43,40 @@
       "title": "Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched",
       "path": "entries/2026-07-30-bugfix-claimable-retry-hygiene.md",
       "summary": "`countClaimableEnrichmentBacklog` omitted `enrichment_attempts < ENRICH_RETRY_LIMIT` while `claimEnrichmentBatch` enforced it. That produced:"
+    },
+    {
+      "id": "bugfix-deploy-healthcheck-race",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "done",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "deploy",
+        "daemon"
+      ],
+      "related": [
+        "feature-ingest-timeout-hour-backoff",
+        "incident-deploy-abort-stream-crash"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "feature-ingest-timeout-hour-backoff"
+        },
+        {
+          "type": "related",
+          "id": "incident-deploy-abort-stream-crash"
+        }
+      ],
+      "supersedes": null,
+      "title": "Railway healthcheck on / raced daemon ingest — deploy failed, site 502",
+      "path": "entries/2026-07-30-bugfix-deploy-healthcheck-race.md",
+      "summary": "Deploy `ac9dccc` migrated to schema 36, started listening, ran ingest/backoff correctly, then Railway **Stopping Container** / FAILED. Prod left at 502 (0/1). Healthcheck was `GET /` (heavy homepage + boots daemon)."
     },
     {
       "id": "bugfix-ingest-fetch-timeout",

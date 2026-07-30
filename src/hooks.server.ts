@@ -10,13 +10,16 @@ const PROBE_RE =
 let workerBooted = false;
 
 export const handle: Handle = async ({ event, resolve }) => {
+	const path = event.url.pathname;
+
 	if (!workerBooted) {
 		workerBooted = true;
 		ensureDatabaseReady();
+		// Daemon start is delayed inside ensureBackgroundWorker so Railway's
+		// /api/health check is not racing ingest for SQLite.
 		ensureBackgroundWorker();
 	}
 
-	const path = event.url.pathname;
 	event.locals.isAdmin = verifyAdminSessionValue(event.cookies.get(ADMIN_COOKIE));
 
 	if (PROBE_RE.test(path) || /^\/(?:en|es)\//i.test(path)) {

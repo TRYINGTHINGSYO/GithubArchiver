@@ -3,7 +3,9 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-healthcheckPath = "/"
+# Keep this lightweight — `/` boots the daemon and runs heavy homepage queries,
+# which raced ingest during deploy and failed the ac9dccc healthcheck (502).
+healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
