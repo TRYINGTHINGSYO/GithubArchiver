@@ -17,6 +17,18 @@ const WINDOWS = [
   { label: "24h", hours: 24 },
 ];
 
+/**
+ * Timestamps are stored as JS ISO-8601 ('2026-07-30T22:07:43.973Z'), so they
+ * must not be compared against datetime('now', ...) ('2026-07-30 21:09:30').
+ * 'T' sorts above ' ', which makes every row from the current date match any
+ * same-day cutoff and silently collapses every window to "today".
+ */
+function isoSince(hours: number): string {
+	return new Date(Date.now() - hours * 3_600_000).toISOString();
+}
+
+const NOW_ISO = new Date().toISOString();
+
 function resolveDbPath(): string {
   const explicit = process.argv[2] ?? process.env.DATABASE_PATH;
   if (explicit) return explicit;
@@ -117,33 +129,73 @@ safe("claimable", () => {
 		  WHERE enriched_at IS NULL AND deleted_at IS NULL
 		    AND enrichment_status IN ('pending','retry')
 		    AND enrichment_tier IN ('urgent','high','normal','low')
-		    AND (next_enrichment_at IS NULL OR next_enrichment_at <= datetime('now'))
-		    AND (enrichment_claim_expires_at IS NULL OR enrichment_claim_expires_at < datetime('now'))
+		    AND (next_enrichment_at IS NULL OR next_enrichment_at <= ?)
+		    AND (enrichment_claim_expires_at IS NULL OR enrichment_claim_expires_at < ?)
 		    AND enrichment_attempts < 5`,
+    NOW_ISO,
+    NOW_ISO,
   );
   console.log(`\nclaimable right now: ${claimable?.c}`);
   const inFlight = one<{ c: number }>(
     `SELECT COUNT(*) c FROM repos
 		  WHERE enrichment_status = 'claimed'
-		    AND enrichment_claim_expires_at > datetime('now')`,
+		    AND enrichment_claim_expires_at > ?`,
+    NOW_ISO,
   );
   console.log(`in-flight (claimed, unexpired): ${inFlight?.c}`);
+});
+
+// Corpus-wide coverage measures against a denominator the tiering policy never
+// intends to enrich. Eligible coverage is the number that reflects pipeline health.
+hr("ELIGIBLE-CORPUS COVERAGE");
+safe("eligible coverage", () => {
+  const eligible = one<{ enriched: number; pending: number }>(
+    `SELECT SUM(enriched_at IS NOT NULL) enriched,
+            SUM(enriched_at IS NULL AND deleted_at IS NULL
+                AND COALESCE(enrichment_tier,'normal') != 'deferred') pending
+     FROM repos`,
+  );
+  if (!eligible) return;
+  const denom = eligible.enriched + eligible.pending;
+  console.log(`enriched:            ${eligible.enriched}`);
+  console.log(`eligible + pending:  ${eligible.pending}`);
+  console.log(`eligible corpus:     ${denom}`);
+  console.log(
+    `eligible coverage:   ${((eligible.enriched / denom) * 100).toFixed(2)}%`,
+  );
+
+  console.log("\nif eligibility widened, how many deferred repos qualify:");
+  for (const [label, where] of [
+    ["stars >= 1", "stars >= 1"],
+    ["stars >= 5", "stars >= 5"],
+    ["stars >= 10", "stars >= 10"],
+    ["interesting_score >= 40", "COALESCE(interesting_score,0) >= 40"],
+    ["has description", "description IS NOT NULL AND length(description) > 0"],
+  ] as const) {
+    const r = one<{ c: number }>(
+      `SELECT COUNT(*) c FROM repos
+        WHERE enriched_at IS NULL AND deleted_at IS NULL
+          AND COALESCE(enrichment_tier,'normal') = 'deferred'
+          AND ${where}`,
+    );
+    console.log(`  ${label.padEnd(26)}${pad(r?.c ?? 0)}`);
+  }
 });
 
 // ------------------------------------------------------- throughput + net burn
 hr("THROUGHPUT / NET BACKLOG BURN");
 console.log("window   completed    arrivals    net_burn   compl/hr   arriv/hr");
 for (const w of WINDOWS) {
-  const since = `-${w.hours} hours`;
+  const since = isoSince(w.hours);
   const completed =
     one<{ c: number }>(
-      `SELECT COUNT(*) c FROM repos WHERE enriched_at >= datetime('now', ?)`,
+      `SELECT COUNT(*) c FROM repos WHERE enriched_at >= ?`,
       since,
     )?.c ?? 0;
   // Newly eligible = newly discovered and not already enriched on arrival.
   const arrivals =
     one<{ c: number }>(
-      `SELECT COUNT(*) c FROM repos WHERE first_seen_at >= datetime('now', ?)`,
+      `SELECT COUNT(*) c FROM repos WHERE first_seen_at >= ?`,
       since,
     )?.c ?? 0;
   const net = completed - arrivals;
@@ -156,10 +208,12 @@ for (const w of WINDOWS) {
 const backlog = corpus?.unenriched ?? 0;
 const burn24 =
   (one<{ c: number }>(
-    `SELECT COUNT(*) c FROM repos WHERE enriched_at >= datetime('now','-24 hours')`,
+    `SELECT COUNT(*) c FROM repos WHERE enriched_at >= ?`,
+    isoSince(24),
   )?.c ?? 0) -
   (one<{ c: number }>(
-    `SELECT COUNT(*) c FROM repos WHERE first_seen_at >= datetime('now','-24 hours')`,
+    `SELECT COUNT(*) c FROM repos WHERE first_seen_at >= ?`,
+    isoSince(24),
   )?.c ?? 0);
 console.log(`\nbacklog: ${backlog}`);
 console.log(`net burn (24h): ${burn24}`);
@@ -179,7 +233,7 @@ console.log(
   "note: sums overlapping runs, so duty% can exceed 100 when jobs nest",
 );
 for (const w of WINDOWS) {
-  const since = `-${w.hours} hours`;
+  const since = isoSince(w.hours);
   const rows = all<{
     job_type: string;
     runs: number;
@@ -190,7 +244,7 @@ for (const w of WINDOWS) {
 		        ROUND(SUM((julianday(finished_at) - julianday(started_at)) * 86400), 1) total_sec,
 		        ROUND(AVG((julianday(finished_at) - julianday(started_at)) * 86400), 1) avg_sec
 		 FROM job_runs
-		 WHERE finished_at IS NOT NULL AND finished_at >= datetime('now', ?)
+		 WHERE finished_at IS NOT NULL AND finished_at >= ?
 		 GROUP BY job_type ORDER BY total_sec DESC`,
     since,
   );
@@ -210,8 +264,8 @@ safe("daemon_decisions", () => {
   for (const w of WINDOWS) {
     const rows = all<{ action: string; c: number }>(
       `SELECT action, COUNT(*) c FROM daemon_decisions
-			 WHERE decided_at >= datetime('now', ?) GROUP BY action ORDER BY c DESC`,
-      `-${w.hours} hours`,
+			 WHERE decided_at >= ? GROUP BY action ORDER BY c DESC`,
+      isoSince(w.hours),
     );
     const total = rows.reduce((s, r) => s + r.c, 0);
     console.log(`\n-- last ${w.label} (${total} decisions)`);
