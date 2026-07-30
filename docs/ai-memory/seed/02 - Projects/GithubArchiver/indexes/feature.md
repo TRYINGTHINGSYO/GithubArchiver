@@ -11,6 +11,8 @@ generated: true
 
 - **2026-07-30** · `feature` · `confirmed` · `permanent` · `done` · `emerging`, `daemon` — [Wire emerging into in-process daemon on own cadence](entries/2026-07-30-feature-emerging-in-process-cadence.md)
   - edges: caused-by:[`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md)
+- **2026-07-30** · `feature` · `confirmed` · `permanent` · `done` · `ingest`, `gharchive` — [Per-hour fetch/timeout backoff so sticky hours stop taxing every cycle](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md)
+  - edges: caused-by:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md), references:[`migration-036-ingest-hour-backoff`](entries/2026-07-30-migration-036-ingest-hour-backoff.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 - **2026-07-30** · `feature` · `confirmed` · `release` · `open` · `observability`, `daemon`, `ux` — [Surface longest running job_runs age on homepage Discovery panel](entries/2026-07-30-feature-running-job-age-homepage.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
 - **2026-07-30** · `feature` · `confirmed` · `permanent` · `done` · `emerging`, `daemon` — [Emerging scheduling gap closed in production path](entries/2026-07-30-status-emerging-scheduled-in-process.md)

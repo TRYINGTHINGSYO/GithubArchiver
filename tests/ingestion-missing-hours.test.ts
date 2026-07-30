@@ -86,7 +86,8 @@ describe('gharchive-hours', () => {
 	});
 
 	it('grace-excluded hours yield missingGhArchiveHours=0 in pickAction path', () => {
-		const nowMs = Date.parse('2026-07-07T09:30:00.000Z');
+		// Distinct nowMs so missing-hours TTL cache from sibling tests cannot leak.
+		const nowMs = Date.parse('2026-07-07T09:31:00.000Z');
 		process.env.DAEMON_INGEST_FROM = '2026-07-07-08';
 		recordHourUnavailable('2026-07-07-08', 404);
 

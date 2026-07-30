@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T18:35:19.641Z",
+  "generatedAt": "2026-07-30T19:05:00.434Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -152,6 +152,45 @@
       "title": "Wire emerging into in-process daemon on own cadence",
       "path": "entries/2026-07-30-feature-emerging-in-process-cadence.md",
       "summary": "Emerging topic detection now runs from the live in-process daemon (`background-daemon.ts`) via `daemon-cadence.ts` → `runScheduledJob('emerging', runEmergingTopicCycle)`."
+    },
+    {
+      "id": "feature-ingest-timeout-hour-backoff",
+      "schema": 1,
+      "type": "feature",
+      "status": "done",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ingest",
+        "gharchive"
+      ],
+      "related": [
+        "research-archive-backlog-pace",
+        "migration-036-ingest-hour-backoff",
+        "bugfix-ingest-fetch-timeout"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "research-archive-backlog-pace"
+        },
+        {
+          "type": "references",
+          "id": "migration-036-ingest-hour-backoff"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-ingest-fetch-timeout"
+        }
+      ],
+      "supersedes": null,
+      "title": "Per-hour fetch/timeout backoff so sticky hours stop taxing every cycle",
+      "path": "entries/2026-07-30-feature-ingest-timeout-hour-backoff.md",
+      "summary": "On ingest `failed` (timeout/fetch/parse), record `ingest_hour_backoff` with markJobFailed-shaped exponential delay (base `INGEST_TIMEOUT_BACKOFF_BASE_MS` default 15m → 30m → … cap 8x). `listMissingHourKeys` skips hours still in backoff; `countMissingGhArchiveHours` still counts them so planner priority stays honest. Success via `recordHourIngested` clears the row."
     },
     {
       "id": "feature-running-job-age-homepage",
@@ -350,6 +389,80 @@
       "title": "Production freshness stall — archive ~5–6 days behind, enrich idle, emerging never ran",
       "path": "entries/2026-07-30-incident-freshness-stall.md",
       "summary": "Live homepage review on [production](https://new-production-9120.up.railway.app/) shows classification/story/cluster surfaces healthy, but **freshness** is not."
+    },
+    {
+      "id": "migration-036-ingest-hour-backoff",
+      "schema": 1,
+      "type": "migration",
+      "status": "done",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ingest",
+        "schema"
+      ],
+      "related": [
+        "feature-ingest-timeout-hour-backoff",
+        "research-archive-backlog-pace"
+      ],
+      "relationships": [
+        {
+          "type": "implemented-by",
+          "id": "feature-ingest-timeout-hour-backoff"
+        },
+        {
+          "type": "references",
+          "id": "research-archive-backlog-pace"
+        }
+      ],
+      "supersedes": null,
+      "title": "Schema 36 — ingest_hour_backoff table",
+      "path": "entries/2026-07-30-migration-036-ingest-hour-backoff.md",
+      "summary": "Adds `ingest_hour_backoff` (`hour_key`, `consecutive_failures`, `last_error`, `last_failed_at`, `next_retry_at`) so sticky GH Archive fetch/timeout failures can skip the attempt batch without disappearing from the planner missing count."
+    },
+    {
+      "id": "research-archive-backlog-pace",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "temporary",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ingest",
+        "planner",
+        "gharchive"
+      ],
+      "related": [
+        "incident-freshness-stall",
+        "bugfix-ingest-fetch-timeout",
+        "bugfix-periodic-job-reconcile"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-freshness-stall"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-ingest-fetch-timeout"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-periodic-job-reconcile"
+        }
+      ],
+      "supersedes": null,
+      "title": "Post-fix backlog pace — catching up slowly; planner weight not the bottleneck",
+      "path": "entries/2026-07-30-research-archive-backlog-pace.md",
+      "summary": "- Latest ingested hour: `2026-07-25-20` (~118h lag vs current UTC hour)"
     },
     {
       "id": "status-emerging-scheduled-in-process",

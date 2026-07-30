@@ -13,6 +13,7 @@ export * from './archive';
 export * from './releases';
 export * from './events';
 export * from './ingestion';
+export * from './ingest-hour-backoff';
 export * from './jobs';
 export * from './metrics';
 export * from './fts';

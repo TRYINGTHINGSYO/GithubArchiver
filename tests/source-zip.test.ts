@@ -35,7 +35,8 @@ describe('source-zip', () => {
 		const db = getDb();
 		const version = (db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number }).v;
 		expect(version).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(35);	});
+		expect(CURRENT_SCHEMA_VERSION).toBe(36);
+	});
 
 	it('builds predictable zip paths under ARCHIVE_DIR/zips', () => {
 		expect(sourceZipFilePath('octo', 'hello', 42)).toBe(join(archiveDir, 'zips', 'octo__hello__42.zip'));

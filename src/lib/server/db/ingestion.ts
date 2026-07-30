@@ -5,6 +5,7 @@ import {
 } from '../gharchive-hours.js';
 import { cached } from '../ttl-cache.js';
 import { getDb } from './connection.js';
+import { clearHourFetchBackoff, isHourInFetchBackoff } from './ingest-hour-backoff.js';
 import type { IngestionStateRow } from './types.js';
 
 export function isHourIngested(hourKey: string): boolean {
@@ -56,6 +57,7 @@ export function recordHourIngested(
 		stats.skipped,
 		source
 	);
+	clearHourFetchBackoff(hourKey);
 }
 
 export function recordHourUnavailable(hourKey: string, httpStatus: number): void {
@@ -118,7 +120,10 @@ function unavailableState(row: IngestionStateRow | undefined): HourUnavailableSt
 	return { unavailable_at: row.unavailable_at, http_status: row.http_status };
 }
 
-function collectMissingHourKeys(nowMs: number = Date.now()): string[] {
+function collectMissingHourKeys(
+	nowMs: number = Date.now(),
+	opts: { /** Skip hours in fetch/timeout backoff (attempt batch only). */ forAttempt?: boolean } = {}
+): string[] {
 	const upTo = defaultHourKey(nowMs);
 	const from = ingestRangeStart();
 	const all = listHourKeysBetween(from, upTo);
@@ -133,6 +138,8 @@ function collectMissingHourKeys(nowMs: number = Date.now()): string[] {
 		const row = stateByKey.get(key);
 		if (row && row.unavailable_at == null) return false;
 		if (shouldExcludeHourFromMissingBacklog(key, unavailableState(row), nowMs)) return false;
+		// Planner count still includes sticky hours; only the attempt batch skips them.
+		if (opts.forAttempt && isHourInFetchBackoff(key, nowMs)) return false;
 		return true;
 	});
 }
@@ -146,10 +153,13 @@ export function countMissingGhArchiveHours(nowMs: number = Date.now()): number {
 	);
 }
 
-/** GH Archive hours that should drive ingest priority (excludes unpublished / cooling-down 404s). */
+/**
+ * Next hours to attempt. Excludes unpublished / cooling-down 404s and hours in
+ * fetch/timeout backoff so sticky timeouts don't tax every cycle.
+ */
 export function listMissingHourKeys(limit?: number, nowMs: number = Date.now()): string[] {
 	const maxHours = limit ?? Number(process.env.DAEMON_INGEST_MAX_HOURS ?? 6);
-	return collectMissingHourKeys(nowMs).slice(0, maxHours);
+	return collectMissingHourKeys(nowMs, { forAttempt: true }).slice(0, maxHours);
 }
 
 export function latestIngestedHour(): string | null {

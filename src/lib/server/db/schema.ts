@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 35;
+export const CURRENT_SCHEMA_VERSION = 36;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1267,6 +1267,25 @@ function migration035(database: Database.Database) {
 	`);
 }
 
+/**
+ * Per-hour fetch/timeout backoff so sticky GH Archive hours don't burn a full
+ * timeout slot on every ingest cycle (same shape as scheduled_jobs markJobFailed).
+ */
+function migration036(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS ingest_hour_backoff (
+			hour_key TEXT PRIMARY KEY,
+			consecutive_failures INTEGER NOT NULL DEFAULT 0,
+			last_error TEXT,
+			last_failed_at TEXT NOT NULL,
+			next_retry_at TEXT NOT NULL
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_ingest_hour_backoff_next
+		  ON ingest_hour_backoff(next_retry_at);
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -1302,7 +1321,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	32: migration032,
 	33: migration033,
 	34: migration034,
-	35: migration035
+	35: migration035,
+	36: migration036
 };
 
 export interface MigrationRunResult {

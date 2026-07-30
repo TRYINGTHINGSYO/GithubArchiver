@@ -2,6 +2,7 @@ import { formatIngestLine, ingestHour, ingestSourceForRecord, isIngestSuccess } 
 import {
 	finishJobRun,
 	listMissingHourKeys,
+	recordHourFetchFailure,
 	recordHourIngested,
 	recordHourUnavailable,
 	startJobRun,
@@ -127,6 +128,12 @@ export async function runIngestCycle(opts?: {
 			} else {
 				result.failed++;
 				result.errors.push(`${hourKey}: ${hour.error ?? 'failed'}`);
+				// Sticky timeout/fetch failures: back off this hour so the next cycle
+				// can spend slots on hours that can still succeed (planner count unchanged).
+				const backoff = recordHourFetchFailure(hourKey, hour.error ?? 'failed');
+				console.warn(
+					`[ingest] ${hourKey}: fetch backoff #${backoff.consecutive_failures} until ${backoff.next_retry_at}`
+				);
 			}
 
 			console.log(`[ingest] completed hour ${hourKey} (${hour.outcome})`);
