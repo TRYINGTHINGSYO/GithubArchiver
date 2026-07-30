@@ -5,7 +5,7 @@ area:
   - emerging
   - daemon
 type: feature
-status: done
+status: verified
 confidence: confirmed
 durability: permanent
 schema: 1

@@ -54,31 +54,31 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Known pitfalls
 
+- [The healthcheck delay silently regressed the boot-reconcile guarantee](entries/2026-07-30-incident-boot-reconcile-regression.md) — `bugfix-periodic-job-reconcile` established the invariant that a fresh process
 - [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md) — Production SSH + `/data/worker.log` + `job_runs` probe on 2026-07-30.
 - [Mid-stream GH Archive abort crashed Node and failed Railway deploy](entries/2026-07-30-incident-deploy-abort-stream-crash.md) — Railway deploy of `19867ca` built and started, then the process crashed:
 - [Emerging topics never ran — in-process daemon has no emerging action](entries/2026-07-30-incident-emerging-never-scheduled.md) — **Bucket: genuine scheduling gap.** Absolute gates (≥10 repos / ≥5 owners / ≥3 high-signal) were never the blocker — detection has never been invoked in production.
 - [Production freshness stall — archive ~5–6 days behind, enrich idle, emerging never ran](entries/2026-07-30-incident-freshness-stall.md) — Live homepage review on [production](https://new-production-9120.up.railway.app/) shows classification/story/cluster surfaces healthy, but **freshness** is not.
 - [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) — Dashboard showed ~739k indexed, ~3.3k analyzed (0.4%), ~671k waiting, “this run: 13”, worker last ran ~1 hour ago. At 13/hour the backlog would take years.
-- [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md) — Search starts `search_ingest_stats` rows as `running`. Railway restarts mid-run. Daemon reconciles orphaned `job_runs`, but Search shard rows stay `running`. `isSearchFallbackActive()` treated those stale rows as active while the daemon enriched.
 
 ## Recent changes
 
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `enrichment`, `daemon`, `observability` — [Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
-- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `done` · `deploy`, `daemon` — [Railway healthcheck on / raced daemon ingest — deploy failed, site 502](entries/2026-07-30-bugfix-deploy-healthcheck-race.md)
+- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `observability`, `search-fallback`, `enrichment`, `emerging-topics` — [Three dashboard fields asserted things the data did not support](entries/2026-07-30-bugfix-dashboard-trust-semantics.md)
+  - edges: supersedes:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), validates:`test-readiness-growth-gate`
+- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `deploy`, `daemon` — [Railway healthcheck on / raced daemon ingest — deploy failed, site 502](entries/2026-07-30-bugfix-deploy-healthcheck-race.md)
   - edges: caused-by:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), related:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
-- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `done` · `daemon`, `ingest`, `jobs` — [Periodic job_runs reconcile + boot age-0 so stuck running cannot last forever](entries/2026-07-30-bugfix-periodic-job-reconcile.md)
+- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `memory`, `retrieval` — [One invalid status value made NaN scores randomise the whole ranking](entries/2026-07-30-bugfix-memory-nan-ranking.md)
+  - edges: related:`pr-11-retrieval-scoring`, related:`pr-12-multistage-retrieval`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
+- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `daemon`, `ingest`, `jobs` — [Periodic job_runs reconcile + boot age-0 so stuck running cannot last forever](entries/2026-07-30-bugfix-periodic-job-reconcile.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), caused-by:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md)
-- **2026-07-30** · `feature` · `confirmed` · `permanent` · `done` · `emerging`, `daemon` — [Wire emerging into in-process daemon on own cadence](entries/2026-07-30-feature-emerging-in-process-cadence.md)
+- **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `emerging`, `daemon` — [Wire emerging into in-process daemon on own cadence](entries/2026-07-30-feature-emerging-in-process-cadence.md)
   - edges: caused-by:[`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md)
-- **2026-07-30** · `feature` · `confirmed` · `permanent` · `done` · `ingest`, `gharchive` — [Per-hour fetch/timeout backoff so sticky hours stop taxing every cycle](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md)
+- **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `ingest`, `gharchive` — [Per-hour fetch/timeout backoff so sticky hours stop taxing every cycle](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md)
   - edges: caused-by:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md), references:[`migration-036-ingest-hour-backoff`](entries/2026-07-30-migration-036-ingest-hour-backoff.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
-- **2026-07-30** · `feature` · `confirmed` · `release` · `open` · `observability`, `daemon`, `ux` — [Surface longest running job_runs age on homepage Discovery panel](entries/2026-07-30-feature-running-job-age-homepage.md)
-  - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
-- **2026-07-30** · `feature` · `confirmed` · `permanent` · `done` · `websites`, `discovery`, `daemon` — [Website discovery v1 — CT poll + verify + Websites feed](entries/2026-07-30-feature-website-discovery-v1.md)
-  - edges: references:[`migration-037-website-discovery`](entries/2026-07-30-migration-037-website-discovery.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md)
 
 ## Open technical debt
 
@@ -101,6 +101,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - **2026-07-30** · `research` · `confirmed` · `temporary` · `open` · `ingest`, `planner`, `gharchive` — [Post-fix backlog pace — catching up slowly; planner weight not the bottleneck](entries/2026-07-30-research-archive-backlog-pace.md)
   - edges: caused-by:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-periodic-job-reconcile`](entries/2026-07-30-bugfix-periodic-job-reconcile.md)
+- **2026-07-30** · `research` · `confirmed` · `temporary` · `open` · `enrichment`, `roadmap` — [Enrichment throughput, not ingest, is the constraint on every downstream feature](entries/2026-07-30-research-enrichment-throughput-ceiling.md)
+  - edges: related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md), related:[`bugfix-dashboard-trust-semantics`](entries/2026-07-30-bugfix-dashboard-trust-semantics.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #25 · `76f91e5` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
   - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #24 · `99dab1d` · `open` · `performance`, `observability`, `admin` — [Admin request-path cache hit-rate metrics](entries/2026-07-18-feature-cache-hit-metrics.md)

@@ -6,7 +6,7 @@ area:
   - ingest
   - jobs
 type: bugfix
-status: done
+status: verified
 confidence: confirmed
 durability: permanent
 schema: 1

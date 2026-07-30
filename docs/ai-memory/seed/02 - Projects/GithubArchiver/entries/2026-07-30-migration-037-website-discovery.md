@@ -5,7 +5,7 @@ area:
   - websites
   - schema
 type: migration
-status: done
+status: verified
 confidence: confirmed
 durability: permanent
 schema: 1

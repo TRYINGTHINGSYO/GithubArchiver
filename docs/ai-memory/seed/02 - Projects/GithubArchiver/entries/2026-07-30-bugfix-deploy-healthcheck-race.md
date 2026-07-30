@@ -5,7 +5,7 @@ area:
   - deploy
   - daemon
 type: bugfix
-status: done
+status: verified
 confidence: confirmed
 durability: permanent
 schema: 1

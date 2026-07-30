@@ -11,3 +11,5 @@ generated: true
 
 - **2026-07-30** · `research` · `confirmed` · `temporary` · `open` · `ingest`, `planner`, `gharchive` — [Post-fix backlog pace — catching up slowly; planner weight not the bottleneck](entries/2026-07-30-research-archive-backlog-pace.md)
   - edges: caused-by:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-periodic-job-reconcile`](entries/2026-07-30-bugfix-periodic-job-reconcile.md)
+- **2026-07-30** · `research` · `confirmed` · `temporary` · `open` · `enrichment`, `roadmap` — [Enrichment throughput, not ingest, is the constraint on every downstream feature](entries/2026-07-30-research-enrichment-throughput-ceiling.md)
+  - edges: related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md), related:[`bugfix-dashboard-trust-semantics`](entries/2026-07-30-bugfix-dashboard-trust-semantics.md)

@@ -500,6 +500,9 @@ export function estimateTokens(text: string): number {
 	return Math.max(1, Math.ceil(text.length / 4));
 }
 
+/** Decisive concept score for an exact stable-id lookup; deliberately above the 40 cap. */
+export const CONCEPT_EXACT_ID_SCORE = 70;
+
 export function scoreConceptMatch(entry: MemoryEntry, tokens: string[], queryRaw: string): number {
 	if (tokens.length === 0 && !queryRaw.trim()) return 0;
 	let raw = 0;
@@ -509,7 +512,12 @@ export function scoreConceptMatch(entry: MemoryEntry, tokens: string[], queryRaw
 	const hay = `${entry.summary}\n${entry.body}`.toLowerCase();
 	const q = queryRaw.trim().toLowerCase();
 
-	if (q && (id === q || id.includes(q))) raw += 40;
+	// An exact stable-id query is an identifier lookup, not a fuzzy match. Without a score
+	// above the concept cap it ties with any loosely-related entry that also saturates the
+	// cap, and recency then decides — so newer entries silently shadow the requested id.
+	if (q && id === q) return CONCEPT_EXACT_ID_SCORE;
+
+	if (q && id.includes(q)) raw += 40;
 	if (q && title.includes(q)) raw += 28;
 
 	for (const t of tokens) {
@@ -572,6 +580,11 @@ export function scoreDurabilityMeta(durability: Durability): number {
 	}
 }
 
+/**
+ * Never return undefined: an out-of-vocabulary status used to make the whole
+ * composed total NaN, and NaN comparisons silently randomised the sort order
+ * for every other entry too.
+ */
 export function scoreStatusBoost(status: EntryStatus): number {
 	switch (status) {
 		case 'open':
@@ -583,13 +596,16 @@ export function scoreStatusBoost(status: EntryStatus): number {
 			return 1;
 		case 'superseded':
 			return 0;
+		default:
+			return 0;
 	}
 }
 
 export function composeScore(parts: Omit<ScoreBreakdown, 'total'>): ScoreBreakdown {
 	const total =
 		parts.concept + parts.edge + parts.confidence + parts.recency + parts.durability + parts.status;
-	return { ...parts, total };
+	// A single unscoreable component must not poison ranking for the whole corpus.
+	return { ...parts, total: Number.isFinite(total) ? total : 0 };
 }
 
 function outgoingEdges(entry: MemoryEntry): Relationship[] {
@@ -812,7 +828,9 @@ export function queryMemoryDetailed(
 		const edgeBoost =
 			r.edgeType && r.depth > 0 ? EDGE_EXPAND_WEIGHT[r.edgeType] * 2 : 0;
 		const breakdown = composeScore({
-			concept: Math.min(40, concept),
+			// Already bounded by scoreConceptMatch / the expansion clamp — re-capping at 40
+			// here discarded the exact-stable-id signal.
+			concept,
 			edge: Math.min(25, scoreEdgeDistance(r.depth) + edgeBoost),
 			confidence: scoreConfidence(entry.confidence),
 			recency: scoreRecency(entry, newestMs),

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T21:10:48.143Z",
+  "generatedAt": "2026-07-30T21:42:51.915Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -45,10 +45,51 @@
       "summary": "`countClaimableEnrichmentBacklog` omitted `enrichment_attempts < ENRICH_RETRY_LIMIT` while `claimEnrichmentBatch` enforced it. That produced:"
     },
     {
+      "id": "bugfix-dashboard-trust-semantics",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "observability",
+        "search-fallback",
+        "enrichment",
+        "emerging-topics"
+      ],
+      "related": [
+        "incident-search-fallback-stale",
+        "incident-freshness-stall",
+        "test-readiness-growth-gate"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "incident-search-fallback-stale"
+        },
+        {
+          "type": "related",
+          "id": "incident-freshness-stall"
+        },
+        {
+          "type": "validates",
+          "id": "test-readiness-growth-gate"
+        }
+      ],
+      "supersedes": "incident-search-fallback-stale",
+      "title": "Three dashboard fields asserted things the data did not support",
+      "path": "entries/2026-07-30-bugfix-dashboard-trust-semantics.md",
+      "summary": "Audited the live homepage / readiness API against the production database. Three"
+    },
+    {
       "id": "bugfix-deploy-healthcheck-race",
       "schema": 1,
       "type": "bugfix",
-      "status": "done",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -114,10 +155,49 @@
       "summary": "Prevents recurrence of the 75-minute silent ingest wedge (`incident-daemon-ingest-hang`)."
     },
     {
+      "id": "bugfix-memory-nan-ranking",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "memory",
+        "retrieval"
+      ],
+      "related": [
+        "pr-11-retrieval-scoring",
+        "pr-12-multistage-retrieval",
+        "decision-knowledge-engine-philosophy"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "pr-11-retrieval-scoring"
+        },
+        {
+          "type": "related",
+          "id": "pr-12-multistage-retrieval"
+        },
+        {
+          "type": "references",
+          "id": "decision-knowledge-engine-philosophy"
+        }
+      ],
+      "supersedes": null,
+      "title": "One invalid status value made NaN scores randomise the whole ranking",
+      "path": "entries/2026-07-30-bugfix-memory-nan-ranking.md",
+      "summary": "Nine entries appended earlier today used `status: done`, which is not in"
+    },
+    {
       "id": "bugfix-periodic-job-reconcile",
       "schema": 1,
       "type": "bugfix",
-      "status": "done",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -162,7 +242,7 @@
       "id": "feature-emerging-in-process-cadence",
       "schema": 1,
       "type": "feature",
-      "status": "done",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -191,7 +271,7 @@
       "id": "feature-ingest-timeout-hour-backoff",
       "schema": 1,
       "type": "feature",
-      "status": "done",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -270,7 +350,7 @@
       "id": "feature-website-discovery-v1",
       "schema": 1,
       "type": "feature",
-      "status": "done",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -305,6 +385,45 @@
       "title": "Website discovery v1 — CT poll + verify + Websites feed",
       "path": "entries/2026-07-30-feature-website-discovery-v1.md",
       "summary": "1. CT via **crt.sh poll** (rotating TLD allowlist), not live tail"
+    },
+    {
+      "id": "incident-boot-reconcile-regression",
+      "schema": 1,
+      "type": "incident",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "daemon",
+        "deploy"
+      ],
+      "related": [
+        "bugfix-deploy-healthcheck-race",
+        "bugfix-periodic-job-reconcile",
+        "incident-daemon-ingest-hang"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "bugfix-deploy-healthcheck-race"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-periodic-job-reconcile"
+        },
+        {
+          "type": "related",
+          "id": "incident-daemon-ingest-hang"
+        }
+      ],
+      "supersedes": null,
+      "title": "The healthcheck delay silently regressed the boot-reconcile guarantee",
+      "path": "entries/2026-07-30-incident-boot-reconcile-regression.md",
+      "summary": "`bugfix-periodic-job-reconcile` established the invariant that a fresh process"
     },
     {
       "id": "incident-daemon-ingest-hang",
@@ -351,7 +470,7 @@
       "id": "incident-deploy-abort-stream-crash",
       "schema": 1,
       "type": "incident",
-      "status": "done",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -468,7 +587,7 @@
       "id": "migration-036-ingest-hour-backoff",
       "schema": 1,
       "type": "migration",
-      "status": "done",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -502,7 +621,7 @@
       "id": "migration-037-website-discovery",
       "schema": 1,
       "type": "migration",
-      "status": "done",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -568,10 +687,54 @@
       "summary": "- Latest ingested hour: `2026-07-25-20` (~118h lag vs current UTC hour)"
     },
     {
+      "id": "research-enrichment-throughput-ceiling",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "temporary",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "enrichment",
+        "roadmap"
+      ],
+      "related": [
+        "incident-enrichment-hourly-bottleneck",
+        "research-archive-backlog-pace",
+        "debt-github-token",
+        "bugfix-dashboard-trust-semantics"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "incident-enrichment-hourly-bottleneck"
+        },
+        {
+          "type": "related",
+          "id": "research-archive-backlog-pace"
+        },
+        {
+          "type": "related",
+          "id": "debt-github-token"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-dashboard-trust-semantics"
+        }
+      ],
+      "supersedes": null,
+      "title": "Enrichment throughput, not ingest, is the constraint on every downstream feature",
+      "path": "entries/2026-07-30-research-enrichment-throughput-ceiling.md",
+      "summary": "Live production, daemon healthy and actively enriching:"
+    },
+    {
       "id": "status-emerging-scheduled-in-process",
       "schema": 1,
       "type": "feature",
-      "status": "done",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",

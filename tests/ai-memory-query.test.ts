@@ -111,6 +111,31 @@ describe('ai memory multi-stage retrieval', () => {
 		).toBe(true);
 	});
 
+	it('never lets an unscoreable entry produce NaN or evict a stable-id match', () => {
+		// Planted directly, bypassing frontmatter validation: an out-of-vocabulary status
+		// used to score NaN, and NaN comparisons randomised the sort for every entry.
+		const malformed = {
+			...entries[0],
+			id: 'incident-malformed-status',
+			status: 'done' as unknown as (typeof entries)[number]['status'],
+			title: 'malformed status entry',
+			related: [],
+			relationships: []
+		};
+		const corpus = [...entries, malformed];
+
+		const detailed = queryMemoryDetailed(corpus, 'incident-gharchive-createevent', {
+			depth: 2,
+			candidates: 20,
+			limit: 8
+		});
+		for (const hit of detailed.assembled) {
+			expect(Number.isFinite(hit.score)).toBe(true);
+			expect(Number.isFinite(hit.breakdown.total)).toBe(true);
+		}
+		expect(detailed.assembled[0]?.entry.id).toBe('incident-gharchive-createevent');
+	});
+
 	it('can resolve by stable id with high concept score', () => {
 		const hits = queryMemory(entries, 'incident-gharchive-createevent', { depth: 1 });
 		expect(hits[0]?.entry.id).toBe('incident-gharchive-createevent');
