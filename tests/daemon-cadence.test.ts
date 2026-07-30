@@ -1,13 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	initializeInProcessCadence,
-	maybeRunDueEmergingCycle
+	maybeRunDueEmergingCycle,
+	resetDaemonCadenceForTests
 } from '$lib/server/daemon-cadence';
 import { getScheduledJob, isJobDue } from '$lib/server/db/scheduled-jobs';
 import { setupTestDb, teardownTestDb } from './helpers/db';
 
 describe('in-process daemon cadence (emerging)', () => {
-	beforeEach(() => setupTestDb());
+	beforeEach(() => {
+		setupTestDb();
+		resetDaemonCadenceForTests();
+	});
 	afterEach(() => teardownTestDb());
 
 	it('runs emerging once when due then advances next_run_at', async () => {

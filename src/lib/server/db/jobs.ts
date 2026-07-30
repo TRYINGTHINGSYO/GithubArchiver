@@ -141,34 +141,99 @@ export function parseJobDetail(row: JobRunRow): Record<string, unknown> {
 	}
 }
 
-const DEFAULT_ORPHAN_JOB_AGE_MS = 10 * 60 * 1000;
+/** UI "stale" warning threshold (default 10m) — early signal before the hard kill. */
+const DEFAULT_STALE_RUNNING_JOB_MS = 10 * 60 * 1000;
+/**
+ * Hard ceiling for force-interrupt (default 15m). Slightly above enrich/ingest
+ * burst budgets so a healthy long cycle is not false-positived.
+ */
+const DEFAULT_ORPHAN_JOB_AGE_MS = 15 * 60 * 1000;
 
-/** Same floor as orphan reconcile — running work jobs older than this are likely wedged. */
+/** Homepage stale badge — running work jobs older than this are likely wedged. */
 export function staleRunningJobAgeMs(): number {
-	const n = Number(process.env.STALE_RUNNING_JOB_MS ?? DEFAULT_ORPHAN_JOB_AGE_MS);
+	const n = Number(process.env.STALE_RUNNING_JOB_MS ?? DEFAULT_STALE_RUNNING_JOB_MS);
+	return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_STALE_RUNNING_JOB_MS;
+}
+
+/** Hard running-ceiling for reconcile sweeps (boot + periodic). */
+export function orphanJobAgeMs(): number {
+	const n = Number(process.env.ORPHAN_JOB_AGE_MS ?? DEFAULT_ORPHAN_JOB_AGE_MS);
 	return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_ORPHAN_JOB_AGE_MS;
 }
 
+export interface ReconcileOrphansOpts {
+	/** Skip these ids (e.g. the live in-process daemon row). */
+	excludeIds?: Iterable<number>;
+	/** Stored on job_runs.error/reason. */
+	reason?: string;
+	/**
+	 * When true and any rows are reclaimed, log at error level — the primary
+	 * in-job timeout failed and the safety net had to fire.
+	 */
+	alert?: boolean;
+}
+
+export interface ReconcileOrphansResult {
+	count: number;
+	ids: number[];
+}
+
+/**
+ * Force-interrupt `running` job_runs older than maxAgeMs.
+ * Pass maxAgeMs=0 at process boot to reclaim every leftover row from a dead process
+ * (a 10m floor previously skipped crash orphans that were only minutes old).
+ */
 export function reconcileOrphanedJobRuns(
-	maxAgeMs: number = DEFAULT_ORPHAN_JOB_AGE_MS,
-	nowMs: number = Date.now()
+	maxAgeMs: number = orphanJobAgeMs(),
+	nowMs: number = Date.now(),
+	opts: ReconcileOrphansOpts = {}
 ): number {
+	return reconcileOrphanedJobRunsDetailed(maxAgeMs, nowMs, opts).count;
+}
+
+export function reconcileOrphanedJobRunsDetailed(
+	maxAgeMs: number = orphanJobAgeMs(),
+	nowMs: number = Date.now(),
+	opts: ReconcileOrphansOpts = {}
+): ReconcileOrphansResult {
 	const db = getDb();
 	const cutoff = new Date(nowMs - maxAgeMs).toISOString();
-	const orphans = db
-		.prepare(
-			`SELECT id FROM job_runs
-			 WHERE status = 'running' AND started_at < ?`
-		)
-		.all(cutoff) as { id: number }[];
+	const exclude = new Set(opts.excludeIds ?? []);
+	const reason = opts.reason ?? 'orphaned: process restarted mid-run';
+	const orphans = (
+		db
+			.prepare(
+				`SELECT id, job_type, started_at FROM job_runs
+				 WHERE status = 'running' AND started_at < ?`
+			)
+			.all(cutoff) as { id: number; job_type: string; started_at: string }[]
+	).filter((row) => !exclude.has(row.id));
 
-	const reason = 'orphaned: process restarted mid-run';
+	const ids: number[] = [];
 	for (const row of orphans) {
-		// Deploy/restart abandonments are not processing failures.
-		finishJobRun(row.id, 'interrupted', { orphaned: true }, reason, reason);
+		finishJobRun(
+			row.id,
+			'interrupted',
+			{
+				orphaned: true,
+				job_type: row.job_type,
+				started_at: row.started_at,
+				reconcile_reason: reason
+			},
+			reason,
+			reason
+		);
+		ids.push(row.id);
 	}
 
-	return orphans.length;
+	if (opts.alert && ids.length > 0) {
+		console.error(
+			`[jobs] SAFETY NET: force-interrupted ${ids.length} stuck running job_run(s) ` +
+				`ids=[${ids.join(', ')}] — primary in-job timeout/finish path failed to close them`
+		);
+	}
+
+	return { count: ids.length, ids };
 }
 
 /**

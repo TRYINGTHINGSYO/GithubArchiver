@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { runBackfillBatch } from './backfill-runner';
 import {
 	initializeInProcessCadence,
+	maybeReconcileStaleJobRuns,
 	maybeRunDueEmergingCycle
 } from './daemon-cadence';
 import { queryBacklogSnapshot } from './daemon-backlog';
@@ -123,6 +124,25 @@ interface ActionRunResult {
 	hadFailure: boolean;
 	rateLimitResetAt?: string;
 	detail?: Record<string, unknown>;
+}
+
+/**
+ * Workers that open (and finish) their own job_runs. The daemon must not also
+ * startJobRun for these — that double-booking produced "4 running ingest" after
+ * a crash (wrapper + inner) even though the loop is single-threaded.
+ */
+function daemonActionOwnsWorkerJobRun(action: DaemonAction): boolean {
+	switch (action) {
+		case 'ingest':
+		case 'search_gap':
+		case 'enrich':
+		case 'refresh':
+		case 'archive':
+			return true;
+		case 'backfill':
+		case 'idle':
+			return false;
+	}
 }
 
 async function runDaemonAction(action: DaemonAction): Promise<ActionRunResult> {
@@ -318,7 +338,7 @@ async function runLoop(): Promise<void> {
 		try {
 			appendLog(`[daemon] decision: ${decision.reason}`);
 
-			if (decision.action !== 'idle') {
+			if (decision.action !== 'idle' && !daemonActionOwnsWorkerJobRun(decision.action)) {
 				const jobType = daemonActionJobType(decision.action);
 				if (jobType) {
 					childJobId = startJobRun(
@@ -354,6 +374,14 @@ async function runLoop(): Promise<void> {
 						decision.reason
 					);
 				}
+			}
+
+			// Safety net: reclaim any stuck running rows (does not trust ingest timeouts).
+			if (!stopRequested && daemonJobId !== null) {
+				maybeReconcileStaleJobRuns({
+					excludeIds: [daemonJobId, ...(childJobId != null ? [childJobId] : [])],
+					log: appendLog
+				});
 			}
 
 			// Own cadence (DAEMON_EMERGING_INTERVAL_MS) — not a planner competitor.
@@ -518,10 +546,15 @@ let orphanJobsReconciled = false;
 function reconcileOrphanedJobsOnce(): void {
 	if (orphanJobsReconciled) return;
 	orphanJobsReconciled = true;
-	const count = reconcileOrphanedJobRuns();
+	// maxAgeMs=0: previous process is dead — reclaim every leftover running row,
+	// including crash orphans younger than the periodic 15m ceiling (the gap that
+	// left ingest #364183/#364184 stuck for 8h after the abort-crash deploy).
+	const count = reconcileOrphanedJobRuns(0, Date.now(), {
+		reason: 'orphaned: process restarted mid-run'
+	});
 	if (count > 0) {
-		console.log(`[daemon] reconciled ${count} orphaned job_run(s)`);
-		appendLog(`[daemon] reconciled ${count} orphaned job_run(s)`);
+		console.log(`[daemon] reconciled ${count} orphaned job_run(s) at boot`);
+		appendLog(`[daemon] reconciled ${count} orphaned job_run(s) at boot`);
 	}
 	const searchCount = reconcileOrphanedSearchIngestStats();
 	if (searchCount > 0) {

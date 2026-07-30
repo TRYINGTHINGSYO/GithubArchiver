@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T10:04:51.205Z",
+  "generatedAt": "2026-07-30T18:35:19.641Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -78,6 +78,51 @@
       "title": "GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat",
       "path": "entries/2026-07-30-bugfix-ingest-fetch-timeout.md",
       "summary": "Prevents recurrence of the 75-minute silent ingest wedge (`incident-daemon-ingest-hang`)."
+    },
+    {
+      "id": "bugfix-periodic-job-reconcile",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "done",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "daemon",
+        "ingest",
+        "jobs"
+      ],
+      "related": [
+        "incident-daemon-ingest-hang",
+        "incident-deploy-abort-stream-crash",
+        "bugfix-ingest-fetch-timeout",
+        "feature-running-job-age-homepage"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-daemon-ingest-hang"
+        },
+        {
+          "type": "caused-by",
+          "id": "incident-deploy-abort-stream-crash"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-ingest-fetch-timeout"
+        },
+        {
+          "type": "related",
+          "id": "feature-running-job-age-homepage"
+        }
+      ],
+      "supersedes": null,
+      "title": "Periodic job_runs reconcile + boot age-0 so stuck running cannot last forever",
+      "path": "entries/2026-07-30-bugfix-periodic-job-reconcile.md",
+      "summary": "Deployed build **does** contain fetch timeout + wall-clock (`2f5e817` / Railway `41a32c9c`). Recent `job_runs` show `GH Archive fetch timed out after 30000ms` — primary path works for new cycles."
     },
     {
       "id": "feature-emerging-in-process-cadence",

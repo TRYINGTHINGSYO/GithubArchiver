@@ -100,7 +100,9 @@ export async function runIngestCycle(opts?: {
 				...summarize(result)
 			});
 
-			const hour = await ingestHour(hourKey);
+			// Wall-clock must bind the in-flight hour too — a hung await ingestHour
+			// previously bypassed the between-hours check forever.
+			const hour = await raceIngestHour(hourKey, deadline);
 			console.log(formatIngestLine(hour));
 
 			if (isIngestSuccess(hour)) {
@@ -163,6 +165,49 @@ function summarize(result: IngestCycleResult): Record<string, unknown> {
 		inserted: result.inserted,
 		events: result.events
 	};
+}
+
+/**
+ * Race ingestHour against the cycle deadline so a non-resolving fetch/stream
+ * cannot leave the cycle (and its job_run) stuck in `running`.
+ */
+async function raceIngestHour(
+	hourKey: string,
+	deadlineMs: number
+): Promise<Awaited<ReturnType<typeof ingestHour>>> {
+	const remaining = deadlineMs - Date.now();
+	if (remaining <= 0) {
+		return {
+			hourKey,
+			url: '',
+			outcome: 'failed',
+			parsedEvents: 0,
+			repoCreates: 0,
+			inserted: 0,
+			skipped: 0,
+			source: 'gharchive',
+			error: `wall-clock limit exceeded before hour ${hourKey}`,
+			retries: 0
+		};
+	}
+
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	try {
+		return await Promise.race([
+			ingestHour(hourKey),
+			new Promise<never>((_, reject) => {
+				timer = setTimeout(() => {
+					reject(
+						new Error(
+							`wall-clock limit exceeded while ingesting hour ${hourKey} (${remaining}ms remaining at start)`
+						)
+					);
+				}, remaining);
+			})
+		]);
+	} finally {
+		if (timer !== undefined) clearTimeout(timer);
+	}
 }
 
 /** True only for genuine ingest errors — unavailable hours are expected, not failures. */
