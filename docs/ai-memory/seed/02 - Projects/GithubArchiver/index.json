@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T23:36:29.047Z",
+  "generatedAt": "2026-07-30T23:42:53.860Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -734,6 +734,46 @@
       "title": "Schema 37 — candidate_domains + website verify backoff",
       "path": "entries/2026-07-30-migration-037-website-discovery.md",
       "summary": "Adds `candidate_domains`, `website_verify_backoff`, and `website_pipeline_state` for the website discovery pipeline."
+    },
+    {
+      "id": "migration-038-archive-hour-metrics",
+      "schema": 1,
+      "type": "migration",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ingest",
+        "gharchive",
+        "metrics"
+      ],
+      "related": [
+        "incident-ingest-timeout-covers-db-writes",
+        "bugfix-ingest-hour-transaction",
+        "research-enrichment-selection-bound"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-ingest-timeout-covers-db-writes"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-ingest-hour-transaction"
+        },
+        {
+          "type": "related",
+          "id": "research-enrichment-selection-bound"
+        }
+      ],
+      "supersedes": null,
+      "title": "Schema 38 — permanent archive_hour_metrics spans",
+      "path": "entries/2026-07-30-migration-038-archive-hour-metrics.md",
+      "summary": "Adds `archive_hour_metrics` (one row per successfully downloaded GH Archive hour)"
     },
     {
       "id": "research-archive-backlog-pace",

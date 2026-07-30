@@ -6,6 +6,12 @@ import type { RepoCreateEvent } from '$lib/server/gharchive';
 export interface GhArchiveCreateCommit {
 	inserted: number;
 	skipped: number;
+	/** Inserted rows that landed as enrichment_tier=deferred. */
+	deferred: number;
+	/** Number of write transactions used for this commit. */
+	batches: number;
+	/** Wall ms of commit work (includes yields between batches). */
+	commitMs: number;
 }
 
 /** Rows per write transaction. Small enough that the event loop can tick between
@@ -26,7 +32,7 @@ export function ingestCommitBatchSize(): number {
 export function commitGhArchiveCreateBatch(
 	events: RepoCreateEvent[],
 	firstSeenAt: string
-): GhArchiveCreateCommit {
+): Pick<GhArchiveCreateCommit, 'inserted' | 'skipped' | 'deferred'> {
 	const db = getDb();
 	const insert = db.prepare(
 		`INSERT OR IGNORE INTO repos
@@ -50,6 +56,7 @@ export function commitGhArchiveCreateBatch(
 	const result = db.transaction(() => {
 		let inserted = 0;
 		let skipped = 0;
+		let deferred = 0;
 		for (const event of events) {
 			const scored = scoreEnrichmentPriority({
 				owner: event.owner,
@@ -90,11 +97,12 @@ export function commitGhArchiveCreateBatch(
 				insertFts.run(event.full_name, event.owner, event.name, id);
 				live.push({ repoId: id, event });
 				inserted++;
+				if (scored.tier === 'deferred') deferred++;
 			} else {
 				skipped++;
 			}
 		}
-		return { inserted, skipped };
+		return { inserted, skipped, deferred };
 	})();
 
 	// Publish after commit so a rolled-back chunk never appears on the live bus.
@@ -131,16 +139,23 @@ export async function commitGhArchiveCreates(
 	firstSeenAt: string,
 	batchSize: number = ingestCommitBatchSize()
 ): Promise<GhArchiveCreateCommit> {
+	const started = Date.now();
 	let inserted = 0;
 	let skipped = 0;
+	let deferred = 0;
+	let batches = 0;
 	for (let i = 0; i < events.length; i += batchSize) {
 		const slice = events.slice(i, i + batchSize);
 		const result = commitGhArchiveCreateBatch(slice, firstSeenAt);
 		inserted += result.inserted;
 		skipped += result.skipped;
+		deferred += result.deferred;
+		batches++;
 		if (i + batchSize < events.length) {
 			await new Promise<void>((resolve) => setImmediate(resolve));
 		}
 	}
-	return { inserted, skipped };
+	// Empty hour still counts as zero batches — callers distinguish "no work"
+	// from "one empty transaction" via rows_created/rows_existing.
+	return { inserted, skipped, deferred, batches, commitMs: Date.now() - started };
 }

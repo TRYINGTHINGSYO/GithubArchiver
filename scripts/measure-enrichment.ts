@@ -243,6 +243,77 @@ safe("recent ingest runs", () => {
   }
 });
 
+hr("ARCHIVE HOUR SPANS (fetch / parse / commit)");
+safe("archive_hour_metrics", () => {
+  if (!hasTable("archive_hour_metrics")) {
+    throw new Error("table absent on this schema");
+  }
+  const avg = one<{
+    n: number;
+    fetch: number;
+    parse: number;
+    commit: number;
+    total: number;
+    created: number;
+    existing: number;
+    deferred: number;
+    lag: number;
+  }>(
+    `SELECT COUNT(*) n,
+            ROUND(AVG(archive_fetch_ms),1) fetch,
+            ROUND(AVG(archive_parse_ms),1) parse,
+            ROUND(AVG(archive_commit_ms),1) commit,
+            ROUND(AVG(archive_hour_total_ms),1) total,
+            ROUND(AVG(archive_rows_created),1) created,
+            ROUND(AVG(archive_rows_existing),1) existing,
+            ROUND(AVG(archive_deferred_rows),1) deferred,
+            ROUND(AVG(archive_frontier_lag_hours),1) lag
+     FROM (
+       SELECT * FROM archive_hour_metrics ORDER BY recorded_at DESC LIMIT 24
+     )`,
+  );
+  console.log(`samples (last 24): ${avg?.n ?? 0}`);
+  console.log(
+    `avg fetch/parse/commit/total ms: ${avg?.fetch} / ${avg?.parse} / ${avg?.commit} / ${avg?.total}`,
+  );
+  console.log(
+    `avg created/existing/deferred: ${avg?.created} / ${avg?.existing} / ${avg?.deferred}`,
+  );
+  console.log(`avg frontier lag hours: ${avg?.lag}`);
+  console.log("\nrecent hours:");
+  console.log(
+    "hour_key           fetch  parse commit  total  +new  exist  defer  batches  lag_h",
+  );
+  for (const r of all<{
+    hour_key: string;
+    archive_fetch_ms: number;
+    archive_parse_ms: number;
+    archive_commit_ms: number;
+    archive_hour_total_ms: number;
+    archive_rows_created: number;
+    archive_rows_existing: number;
+    archive_deferred_rows: number;
+    archive_batches: number;
+    archive_frontier_lag_hours: number;
+  }>(
+    `SELECT hour_key, ROUND(archive_fetch_ms,0) archive_fetch_ms,
+            ROUND(archive_parse_ms,0) archive_parse_ms,
+            ROUND(archive_commit_ms,0) archive_commit_ms,
+            ROUND(archive_hour_total_ms,0) archive_hour_total_ms,
+            archive_rows_created, archive_rows_existing, archive_deferred_rows,
+            archive_batches, ROUND(archive_frontier_lag_hours,1) archive_frontier_lag_hours
+     FROM archive_hour_metrics ORDER BY recorded_at DESC LIMIT 12`,
+  )) {
+    console.log(
+      `${r.hour_key.padEnd(16)}${pad(r.archive_fetch_ms, 7)}${pad(r.archive_parse_ms, 7)}` +
+        `${pad(r.archive_commit_ms, 7)}${pad(r.archive_hour_total_ms, 7)}` +
+        `${pad(r.archive_rows_created, 6)}${pad(r.archive_rows_existing, 7)}` +
+        `${pad(r.archive_deferred_rows, 7)}${pad(r.archive_batches, 9)}` +
+        `${pad(r.archive_frontier_lag_hours, 7)}`,
+    );
+  }
+});
+
 // ------------------------------------------------------- throughput + net burn
 hr("THROUGHPUT / NET BACKLOG BURN");
 console.log("window   completed    arrivals    net_burn   compl/hr   arriv/hr");

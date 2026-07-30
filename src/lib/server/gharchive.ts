@@ -35,6 +35,14 @@ export interface HourStreamStats {
 	createEvents: number;
 	/** CreateEvent payload.ref_type histogram. */
 	createRefTypes: Record<string, number>;
+	/**
+	 * Wall ms spent on connection, response headers, and waiting for the next
+	 * body chunk. Deliberately excludes JSON.parse / onCreate so a slow commit
+	 * cannot masquerade as a slow GH Archive transfer again.
+	 */
+	archiveFetchMs: number;
+	/** Wall ms spent JSON.parse + CreateEvent matching (not DB writes). */
+	archiveParseMs: number;
 }
 
 export class GhArchiveUnavailableError extends Error {
@@ -333,6 +341,7 @@ async function* readChunksWithStallTimeout(
 	source: AsyncIterable<Buffer>,
 	url: string,
 	abort: () => void,
+	onFetchWait?: (waitMs: number) => void,
 	stallMs: number = ghArchiveStallTimeoutMs(),
 	maxMs: number = ghArchiveHourMaxMs()
 ): AsyncGenerator<Buffer> {
@@ -342,6 +351,7 @@ async function* readChunksWithStallTimeout(
 	while (true) {
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		let next: IteratorResult<Buffer>;
+		const waitStarted = Date.now();
 		try {
 			next = await Promise.race([
 				iterator.next(),
@@ -354,6 +364,7 @@ async function* readChunksWithStallTimeout(
 			]);
 		} finally {
 			clearTimeout(timer);
+			onFetchWait?.(Date.now() - waitStarted);
 		}
 
 		if (next.done) return;
@@ -407,11 +418,14 @@ export async function streamRepositoryCreates(
 	// body is read so parse and insert work cannot be reported as a fetch timeout.
 	const connectTimer = setTimeout(() => controller.abort(), ghArchiveFetchTimeoutMs());
 	let res: Response;
+	const fetchStarted = Date.now();
+	let archiveFetchMs = 0;
 	try {
 		res = await fetchGhArchiveResponse(url, signal);
 		assertGhArchiveHttpOk(url, res);
 	} finally {
 		clearTimeout(connectTimer);
+		archiveFetchMs += Date.now() - fetchStarted;
 	}
 
 	return (async () => {
@@ -420,7 +434,9 @@ export async function streamRepositoryCreates(
 			parsedEvents: 0,
 			repoCreates: 0,
 			createEvents: 0,
-			createRefTypes: {}
+			createRefTypes: {},
+			archiveFetchMs,
+			archiveParseMs: 0
 		};
 
 		const observe = async (event: GhArchiveEvent) => {
@@ -440,9 +456,15 @@ export async function streamRepositoryCreates(
 
 		let buffer = '';
 		try {
-			for await (const chunk of readChunksWithStallTimeout(combined, url, () =>
-				controller.abort()
+			for await (const chunk of readChunksWithStallTimeout(
+				combined,
+				url,
+				() => controller.abort(),
+				(waitMs) => {
+					stats.archiveFetchMs += waitMs;
+				}
 			)) {
+				const parseStarted = Date.now();
 				buffer += chunk.toString('utf8');
 				const lines = buffer.split('\n');
 				buffer = lines.pop() ?? '';
@@ -455,14 +477,17 @@ export async function streamRepositoryCreates(
 						// skip malformed lines
 					}
 				}
+				stats.archiveParseMs += Date.now() - parseStarted;
 			}
 
 			if (buffer.trim()) {
+				const parseStarted = Date.now();
 				try {
 					await observe(JSON.parse(buffer) as GhArchiveEvent);
 				} catch {
 					// ignore trailing partial line
 				}
+				stats.archiveParseMs += Date.now() - parseStarted;
 			}
 		} catch (err) {
 			rethrowGhArchiveStreamError(url, err);

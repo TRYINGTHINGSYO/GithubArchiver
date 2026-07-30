@@ -24,7 +24,11 @@ describe('commitGhArchiveCreates', () => {
 
 	it('inserts a batch of creates with first_seen events', async () => {
 		const result = await commitGhArchiveCreates(creates(25), '2026-07-30T22:00:00.000Z');
-		expect(result).toEqual({ inserted: 25, skipped: 0 });
+		expect(result.inserted).toBe(25);
+		expect(result.skipped).toBe(0);
+		expect(result.deferred).toBe(25);
+		expect(result.batches).toBe(1);
+		expect(result.commitMs).toBeGreaterThanOrEqual(0);
 
 		const repos = getDb().prepare('SELECT COUNT(*) AS c FROM repos').get() as { c: number };
 		const events = getDb()
@@ -47,7 +51,9 @@ describe('commitGhArchiveCreates', () => {
 	it('skips duplicates without aborting the rest of the batch', async () => {
 		await commitGhArchiveCreates(creates(3), '2026-07-30T22:00:00.000Z');
 		const second = await commitGhArchiveCreates(creates(5), '2026-07-30T22:01:00.000Z');
-		expect(second).toEqual({ inserted: 2, skipped: 3 });
+		expect(second.inserted).toBe(2);
+		expect(second.skipped).toBe(3);
+		expect(second.deferred).toBe(2);
 		const repos = getDb().prepare('SELECT COUNT(*) AS c FROM repos').get() as { c: number };
 		expect(repos.c).toBe(5);
 	});

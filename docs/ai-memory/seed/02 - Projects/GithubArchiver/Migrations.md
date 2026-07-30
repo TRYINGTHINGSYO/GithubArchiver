@@ -23,3 +23,5 @@ generated: true
   - edges: implemented-by:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), references:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md)
 - **2026-07-30** · `migration` · `confirmed` · `permanent` · `verified` · `websites`, `schema` — [Schema 37 — candidate_domains + website verify backoff](entries/2026-07-30-migration-037-website-discovery.md)
   - edges: implemented-by:[`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
+- **2026-07-30** · `migration` · `confirmed` · `permanent` · `verified` · `ingest`, `gharchive`, `metrics` — [Schema 38 — permanent archive_hour_metrics spans](entries/2026-07-30-migration-038-archive-hour-metrics.md)
+  - edges: caused-by:[`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), related:[`bugfix-ingest-hour-transaction`](entries/2026-07-30-bugfix-ingest-hour-transaction.md), related:[`research-enrichment-selection-bound`](entries/2026-07-30-research-enrichment-selection-bound.md)

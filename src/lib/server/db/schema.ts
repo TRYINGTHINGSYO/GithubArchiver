@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 37;
+export const CURRENT_SCHEMA_VERSION = 38;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1286,6 +1286,33 @@ function migration036(database: Database.Database) {
 	`);
 }
 
+/**
+ * Permanent per-hour archive ingest spans. Fetch / parse / commit must stay
+ * separated so a slow database commit cannot be misread as a transfer failure.
+ */
+function migration038(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS archive_hour_metrics (
+			hour_key TEXT PRIMARY KEY,
+			recorded_at TEXT NOT NULL,
+			archive_fetch_ms REAL NOT NULL DEFAULT 0,
+			archive_parse_ms REAL NOT NULL DEFAULT 0,
+			archive_commit_ms REAL NOT NULL DEFAULT 0,
+			archive_hour_total_ms REAL NOT NULL DEFAULT 0,
+			archive_rows_created INTEGER NOT NULL DEFAULT 0,
+			archive_rows_existing INTEGER NOT NULL DEFAULT 0,
+			archive_batches INTEGER NOT NULL DEFAULT 0,
+			archive_deferred_rows INTEGER NOT NULL DEFAULT 0,
+			archive_frontier_lag_hours REAL NOT NULL DEFAULT 0,
+			parsed_events INTEGER NOT NULL DEFAULT 0,
+			repo_creates INTEGER NOT NULL DEFAULT 0
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_archive_hour_metrics_recorded
+		  ON archive_hour_metrics(recorded_at DESC);
+	`);
+}
+
 /** Website discovery: CT + zone intake → shared candidates → liveness verify. */
 function migration037(database: Database.Database) {
 	database.exec(`
@@ -1369,7 +1396,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	34: migration034,
 	35: migration035,
 	36: migration036,
-	37: migration037
+	37: migration037,
+	38: migration038
 };
 
 export interface MigrationRunResult {

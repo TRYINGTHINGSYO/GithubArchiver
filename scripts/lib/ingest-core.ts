@@ -1,4 +1,5 @@
 import '../load-env.js';
+import { recordArchiveHourMetrics } from '../../src/lib/server/db/archive-hour-metrics.js';
 import { commitGhArchiveCreates } from '../../src/lib/server/ingest-commit.js';
 import {
 	ingestReposFromSearch,
@@ -20,6 +21,18 @@ import { GitHubRateLimitError } from '../../src/lib/server/github.js';
 export type IngestOutcome = 'downloaded' | 'unavailable' | 'failed';
 export type IngestSource = 'gharchive' | 'github_search' | 'gharchive+github_search';
 
+export interface ArchiveHourSpans {
+	archive_fetch_ms: number;
+	archive_parse_ms: number;
+	archive_commit_ms: number;
+	archive_hour_total_ms: number;
+	archive_rows_created: number;
+	archive_rows_existing: number;
+	archive_batches: number;
+	archive_deferred_rows: number;
+	archive_frontier_lag_hours: number;
+}
+
 export interface IngestResult {
 	hourKey: string;
 	url: string;
@@ -34,6 +47,8 @@ export interface IngestResult {
 	searchQuery?: string;
 	error?: string;
 	retries: number;
+	/** Present on successful GH Archive downloads. */
+	archive?: ArchiveHourSpans;
 }
 
 const RETRY_MAX = Number(process.env.INGEST_RETRY_MAX ?? 3);
@@ -63,22 +78,53 @@ async function ingestHourOnce(hourKey: string, url: string): Promise<IngestResul
 	// Collect during the stream; commit afterwards. Writing per-event was the
 	// dominant cost of an hour and left partial inserts whenever the cycle
 	// aborted mid-stream.
-	const streamStarted = Date.now();
 	const stats = await streamRepositoryCreates(url, (event) => {
 		creates.push(event);
 	});
 	console.log(
 		`  [ingest] ${hourKey}: streamed ${stats.parsedEvents} events → ` +
-			`${creates.length} creates in ${Date.now() - streamStarted}ms`
+			`${creates.length} creates` +
+			` (fetch ${Math.round(stats.archiveFetchMs)}ms / parse ${Math.round(stats.archiveParseMs)}ms)`
 	);
-	const commitStarted = Date.now();
 	const committed = await commitGhArchiveCreates(creates, firstSeenAt);
 	console.log(
 		`  [ingest] ${hourKey}: committed +${committed.inserted}/` +
-			`${committed.skipped} skip in ${Date.now() - commitStarted}ms`
+			`${committed.skipped} skip` +
+			` (${committed.deferred} deferred, ${committed.batches} batches, ${committed.commitMs}ms)`
 	);
 	const ghInserted = committed.inserted;
 	const ghSkipped = committed.skipped;
+	// Total is GH Archive only — Search fallback must not inflate archive_hour_total_ms.
+	const archiveTotalMs =
+		stats.archiveFetchMs + stats.archiveParseMs + committed.commitMs;
+	const archiveSpans: ArchiveHourSpans = {
+		archive_fetch_ms: stats.archiveFetchMs,
+		archive_parse_ms: stats.archiveParseMs,
+		archive_commit_ms: committed.commitMs,
+		archive_hour_total_ms: archiveTotalMs,
+		archive_rows_created: committed.inserted,
+		archive_rows_existing: committed.skipped,
+		archive_batches: committed.batches,
+		archive_deferred_rows: committed.deferred,
+		archive_frontier_lag_hours: Math.max(
+			0,
+			(parseHourKey(defaultHourKey()).getTime() - parseHourKey(hourKey).getTime()) /
+				3_600_000
+		)
+	};
+	recordArchiveHourMetrics({
+		hourKey,
+		archiveFetchMs: archiveSpans.archive_fetch_ms,
+		archiveParseMs: archiveSpans.archive_parse_ms,
+		archiveCommitMs: archiveSpans.archive_commit_ms,
+		archiveHourTotalMs: archiveSpans.archive_hour_total_ms,
+		archiveRowsCreated: archiveSpans.archive_rows_created,
+		archiveRowsExisting: archiveSpans.archive_rows_existing,
+		archiveBatches: archiveSpans.archive_batches,
+		archiveDeferredRows: archiveSpans.archive_deferred_rows,
+		parsedEvents: stats.parsedEvents,
+		repoCreates: stats.repoCreates
+	});
 
 	let searchFound = 0;
 	let searchInserted = 0;
@@ -130,7 +176,8 @@ async function ingestHourOnce(hourKey: string, url: string): Promise<IngestResul
 		source,
 		searchFound,
 		searchQuery,
-		retries: 0
+		retries: 0,
+		archive: archiveSpans
 	};
 }
 

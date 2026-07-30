@@ -14,6 +14,7 @@ export * from './releases';
 export * from './events';
 export * from './ingestion';
 export * from './ingest-hour-backoff';
+export * from './archive-hour-metrics';
 export * from './websites';
 export * from './jobs';
 export * from './metrics';
