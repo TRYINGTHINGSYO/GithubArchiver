@@ -63,10 +63,20 @@ async function ingestHourOnce(hourKey: string, url: string): Promise<IngestResul
 	// Collect during the stream; commit afterwards. Writing per-event was the
 	// dominant cost of an hour and left partial inserts whenever the cycle
 	// aborted mid-stream.
+	const streamStarted = Date.now();
 	const stats = await streamRepositoryCreates(url, (event) => {
 		creates.push(event);
 	});
-	const committed = commitGhArchiveCreates(creates, firstSeenAt);
+	console.log(
+		`  [ingest] ${hourKey}: streamed ${stats.parsedEvents} events → ` +
+			`${creates.length} creates in ${Date.now() - streamStarted}ms`
+	);
+	const commitStarted = Date.now();
+	const committed = await commitGhArchiveCreates(creates, firstSeenAt);
+	console.log(
+		`  [ingest] ${hourKey}: committed +${committed.inserted}/` +
+			`${committed.skipped} skip in ${Date.now() - commitStarted}ms`
+	);
 	const ghInserted = committed.inserted;
 	const ghSkipped = committed.skipped;
 

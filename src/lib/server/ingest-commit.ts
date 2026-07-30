@@ -8,17 +8,21 @@ export interface GhArchiveCreateCommit {
 	skipped: number;
 }
 
+/** Rows per write transaction. Small enough that the event loop can tick between
+ *  batches (wall-clock abort, healthchecks) and large enough to amortize fsync. */
+export function ingestCommitBatchSize(): number {
+	const n = Number(process.env.INGEST_COMMIT_BATCH_SIZE ?? 200);
+	return Number.isFinite(n) && n > 0 ? Math.floor(n) : 200;
+}
+
 /**
- * Persist one hour of GH Archive repository creates in a single write transaction.
+ * Persist a slice of GH Archive repository creates in one write transaction.
  *
- * The previous path called insertRepo + appendRepoEvent once per event, and each
- * call was its own auto-commit. On a network volume with the SQLite default of
- * synchronous=FULL that is roughly five fsyncs per create — enough to push a
- * single hour past the 10-minute ingest wall-clock. better-sqlite3 transactions
- * are synchronous, so events are collected during the stream and committed here
- * afterwards: a wall-clock abort mid-stream leaves the database untouched.
+ * better-sqlite3 transactions are synchronous and block the Node event loop for
+ * their whole duration. Callers must not pass an entire busy hour here — use
+ * `commitGhArchiveCreates` which chunks and yields between batches.
  */
-export function commitGhArchiveCreates(
+export function commitGhArchiveCreateBatch(
 	events: RepoCreateEvent[],
 	firstSeenAt: string
 ): GhArchiveCreateCommit {
@@ -52,4 +56,35 @@ export function commitGhArchiveCreates(
 		}
 		return { inserted, skipped };
 	})();
+}
+
+/**
+ * Persist one hour of creates in chunked transactions, yielding to the event
+ * loop between batches.
+ *
+ * History: per-event auto-commits (~5 fsyncs each under synchronous=FULL) made
+ * every hour exceed the 10-minute wall-clock. A single transaction for the whole
+ * hour fixed the fsync tax but blocked the event loop for minutes on a busy
+ * hour, so the wall-clock timer and Railway healthchecks could not fire. Chunked
+ * commits keep the fsync amortization and give the event loop a tick every batch.
+ */
+export async function commitGhArchiveCreates(
+	events: RepoCreateEvent[],
+	firstSeenAt: string,
+	batchSize: number = ingestCommitBatchSize()
+): Promise<GhArchiveCreateCommit> {
+	let inserted = 0;
+	let skipped = 0;
+	for (let i = 0; i < events.length; i += batchSize) {
+		const slice = events.slice(i, i + batchSize);
+		const result = commitGhArchiveCreateBatch(slice, firstSeenAt);
+		inserted += result.inserted;
+		skipped += result.skipped;
+		// setImmediate, not setTimeout(0): yield after the current I/O callbacks
+		// so a waiting wall-clock rejection can win the Promise.race.
+		if (i + batchSize < events.length) {
+			await new Promise<void>((resolve) => setImmediate(resolve));
+		}
+	}
+	return { inserted, skipped };
 }

@@ -51,7 +51,7 @@ async function ingestGhArchiveOnly(hourKey: string) {
 	const stats = await streamRepositoryCreates(url, (event) => {
 		creates.push(event);
 	});
-	const committed = commitGhArchiveCreates(creates, firstSeenAt);
+	const committed = await commitGhArchiveCreates(creates, firstSeenAt);
 	return {
 		source: 'gharchive' as const,
 		eventsParsed: stats.parsedEvents,
