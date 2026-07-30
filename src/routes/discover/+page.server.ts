@@ -4,6 +4,7 @@ import {
 	getDiscoverySystemStatus
 } from '$lib/server/discovery-materialized';
 import { countMissingGhArchiveHours, latestIngestedHour } from '$lib/server/db/ingestion';
+import { getLongestRunningWorkJobSnapshot } from '$lib/server/db/jobs';
 import { isSearchFallbackActive } from '$lib/server/db/search-ingest';
 import { getEnrichmentProgress } from '$lib/server/enrichment-progress';
 import { getLatestEmergingDetectionProvenance } from '$lib/server/emerging-topics';
@@ -26,6 +27,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		discoveryAnalysisAgo: formatRelativeTime(discoveryStatus.lastDiscoveryAnalysisAt),
 		latestArchiveHour: latestIngestedHour(),
 		archiveHourBacklog: countMissingGhArchiveHours(),
-		searchFallbackActive: isSearchFallbackActive()
+		searchFallbackActive: isSearchFallbackActive(),
+		runningWorkJob: getLongestRunningWorkJobSnapshot()
 	};
 };

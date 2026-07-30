@@ -10,6 +10,7 @@ import {
 	defaultHourKey,
 	GhArchiveFetchError,
 	GhArchiveParseError,
+	GhArchiveTimeoutError,
 	GhArchiveUnavailableError,
 	parseHourKey,
 	streamRepositoryCreates
@@ -195,6 +196,21 @@ export async function ingestHour(hourKey: string): Promise<IngestResult> {
 					url,
 					outcome: 'failed',
 					httpStatus: err.httpStatus,
+					parsedEvents: 0,
+					repoCreates: 0,
+					inserted: 0,
+					skipped: 0,
+					source: 'gharchive',
+					error: err.message,
+					retries
+				};
+			}
+
+			if (err instanceof GhArchiveTimeoutError) {
+				return {
+					hourKey,
+					url,
+					outcome: 'failed',
 					parsedEvents: 0,
 					repoCreates: 0,
 					inserted: 0,

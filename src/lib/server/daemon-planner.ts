@@ -22,6 +22,10 @@ export interface BacklogSnapshot {
 	missingGhArchiveHours: number;
 	currentHourSearchGap: boolean;
 	backfillPendingHours: number;
+	/**
+	 * Claimable enrich backlog only (same eligibility as claimEnrichmentBatch).
+	 * Not raw unenriched — deferred / attempt-exhausted rows are excluded.
+	 */
 	unenriched: number;
 	staleRefresh: number;
 	unarchivedSource: number;
@@ -84,7 +88,7 @@ export function rankActions(backlog: BacklogSnapshot): RankedAction[] {
 
 export function formatReason(action: DaemonAction, backlog: BacklogSnapshot): string {
 	const parts = [
-		`${backlog.unenriched.toLocaleString()} unenriched`,
+		`${backlog.unenriched.toLocaleString()} claimable`,
 		`${backlog.staleRefresh.toLocaleString()} stale`,
 		`${backlog.unarchivedSource.toLocaleString()} unarchived`
 	];
@@ -170,9 +174,9 @@ export function computeDaemonSleepMs(opts: {
 	archiveBacklogSleepMs?: number;
 	archiveBacklogSleepThreshold?: number;
 	/**
-	 * Near-continuous enrich drain. When claimable enrich backlog is large, sleep this long
-	 * (default ENRICH_BACKLOG_SLEEP_MS=2000) instead of the 30–60s discovery backlog sleep.
-	 */
+		 * Near-continuous enrich drain. When claimable enrich backlog is large, sleep this long
+		 * (default ENRICH_BACKLOG_SLEEP_MS=2000) instead of the 30–60s discovery backlog sleep.
+		 */
 	enrichBacklogSleepMs?: number;
 	enrichBacklogSleepThreshold?: number;
 }): number {
@@ -184,7 +188,7 @@ export function computeDaemonSleepMs(opts: {
 		const enrichSleepRaw = Number(process.env.ENRICH_BACKLOG_SLEEP_MS ?? 2_000);
 		const enrichSleep =
 			opts.enrichBacklogSleepMs ?? (Number.isFinite(enrichSleepRaw) ? enrichSleepRaw : 2_000);
-		// Discovery may run hourly; enrichment must not. Keep the loop hot while unenriched remains.
+		// Keep the loop hot only while claimable work remains (not deferred/exhausted).
 		if (opts.backlog.unenriched >= enrichThreshold) {
 			return Math.min(opts.sleepMinMs, backlogSleep, enrichSleep);
 		}

@@ -160,11 +160,13 @@ function parseScalar(raw: string): string | number | null {
  * - lists of maps (for relationships)
  */
 export function parseFrontmatter(text: string): { fm: Record<string, unknown>; body: string } {
-	if (!text.startsWith('---\n')) throw new Error('missing frontmatter open');
-	const end = text.indexOf('\n---\n', 4);
+	// Normalize CRLF so Windows-checked-in entries parse the same as LF.
+	const normalized = text.replace(/\r\n/g, '\n');
+	if (!normalized.startsWith('---\n')) throw new Error('missing frontmatter open');
+	const end = normalized.indexOf('\n---\n', 4);
 	if (end < 0) throw new Error('missing frontmatter close');
-	const block = text.slice(4, end);
-	const body = text.slice(end + 5).trim();
+	const block = normalized.slice(4, end);
+	const body = normalized.slice(end + 5).trim();
 	const out: Record<string, unknown> = {};
 	let listKey: string | null = null;
 	let currentObj: Record<string, unknown> | null = null;

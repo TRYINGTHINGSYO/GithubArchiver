@@ -1,5 +1,6 @@
 import { getDb } from './connection.js';
 import type { JobRunRow, JobStatus, JobType } from './types.js';
+import { formatDurationCompact } from '$lib/utils';
 
 export function startJobRun(
 	jobType: JobType,
@@ -142,6 +143,12 @@ export function parseJobDetail(row: JobRunRow): Record<string, unknown> {
 
 const DEFAULT_ORPHAN_JOB_AGE_MS = 10 * 60 * 1000;
 
+/** Same floor as orphan reconcile — running work jobs older than this are likely wedged. */
+export function staleRunningJobAgeMs(): number {
+	const n = Number(process.env.STALE_RUNNING_JOB_MS ?? DEFAULT_ORPHAN_JOB_AGE_MS);
+	return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_ORPHAN_JOB_AGE_MS;
+}
+
 export function reconcileOrphanedJobRuns(
 	maxAgeMs: number = DEFAULT_ORPHAN_JOB_AGE_MS,
 	nowMs: number = Date.now()
@@ -162,4 +169,52 @@ export function reconcileOrphanedJobRuns(
 	}
 
 	return orphans.length;
+}
+
+/**
+ * Non-daemon jobs currently `running` (ingest/enrich/…).
+ * The daemon row itself is long-lived and excluded from wedge detection.
+ */
+export function listRunningWorkJobs(): JobRunRow[] {
+	const db = getDb();
+	return db
+		.prepare(
+			`SELECT * FROM job_runs
+			 WHERE status = 'running' AND job_type != 'daemon'
+			 ORDER BY started_at ASC`
+		)
+		.all() as JobRunRow[];
+}
+
+export type RunningWorkJobSnapshot = {
+	id: number;
+	jobType: JobType;
+	startedAt: string;
+	ageMs: number;
+	ageLabel: string;
+	/** True when age exceeds the orphan/stale threshold (likely wedged). */
+	stale: boolean;
+	runningCount: number;
+};
+
+/**
+ * Longest-running non-daemon job for homepage/status surfaces.
+ * Returns null when no work job is in flight.
+ */
+export function getLongestRunningWorkJobSnapshot(
+	nowMs: number = Date.now()
+): RunningWorkJobSnapshot | null {
+	const rows = listRunningWorkJobs();
+	if (rows.length === 0) return null;
+	const oldest = rows[0]!;
+	const ageMs = Math.max(0, nowMs - Date.parse(oldest.started_at));
+	return {
+		id: oldest.id,
+		jobType: oldest.job_type,
+		startedAt: oldest.started_at,
+		ageMs,
+		ageLabel: formatDurationCompact(ageMs),
+		stale: ageMs >= staleRunningJobAgeMs(),
+		runningCount: rows.length
+	};
 }

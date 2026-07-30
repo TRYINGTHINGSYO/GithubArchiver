@@ -5,7 +5,8 @@
 import { getActiveBackfillJob, getBackfillProgress } from '$lib/server/db/backfill';
 import { getDb } from '$lib/server/db/connection';
 import { countMissingGhArchiveHours } from '$lib/server/db/ingestion';
-import { countReposDueForRefresh, countUnenriched } from '$lib/server/db/repos';
+import { countReposDueForRefresh } from '$lib/server/db/repos';
+import { countClaimableEnrichmentBacklog } from '$lib/server/enrichment-queue';
 import {
 	hasCompletedSearchForHour,
 	isHourSearchReconciled
@@ -80,7 +81,9 @@ export function queryBacklogSnapshot(
 		missingGhArchiveHours: countMissingGhArchiveHours(nowMs),
 		currentHourSearchGap: hasCurrentHourSearchGap(),
 		backfillPendingHours: countBackfillPendingHours(),
-		unenriched: countUnenriched(),
+		// Claimable-only: must agree with claimEnrichmentBatch. Raw unenriched
+		// (deferred + attempt-exhausted) caused empty enrich spins.
+		unenriched: countClaimableEnrichmentBacklog(nowMs),
 		staleRefresh: countReposDueForRefresh(),
 		unarchivedSource: countUnarchivedSourceSnapshots(),
 		rateLimitedUntil: opts.rateLimitedUntil ?? null

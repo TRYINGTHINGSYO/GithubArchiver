@@ -1,9 +1,310 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-18T20:47:53.305Z",
+  "generatedAt": "2026-07-30T09:47:50.393Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "bugfix-claimable-retry-hygiene",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "enrichment",
+        "daemon",
+        "observability"
+      ],
+      "related": [
+        "incident-daemon-ingest-hang",
+        "incident-freshness-stall",
+        "bugfix-ingest-fetch-timeout"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-daemon-ingest-hang"
+        },
+        {
+          "type": "related",
+          "id": "incident-freshness-stall"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-ingest-fetch-timeout"
+        }
+      ],
+      "supersedes": null,
+      "title": "Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched",
+      "path": "entries/2026-07-30-bugfix-claimable-retry-hygiene.md",
+      "summary": "`countClaimableEnrichmentBacklog` omitted `enrichment_attempts < ENRICH_RETRY_LIMIT` while `claimEnrichmentBatch` enforced it. That produced:"
+    },
+    {
+      "id": "bugfix-ingest-fetch-timeout",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "discovery",
+        "daemon",
+        "observability"
+      ],
+      "related": [
+        "incident-daemon-ingest-hang",
+        "incident-freshness-stall"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-daemon-ingest-hang"
+        },
+        {
+          "type": "related",
+          "id": "incident-freshness-stall"
+        }
+      ],
+      "supersedes": null,
+      "title": "GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat",
+      "path": "entries/2026-07-30-bugfix-ingest-fetch-timeout.md",
+      "summary": "Prevents recurrence of the 75-minute silent ingest wedge (`incident-daemon-ingest-hang`)."
+    },
+    {
+      "id": "feature-emerging-in-process-cadence",
+      "schema": 1,
+      "type": "feature",
+      "status": "done",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "emerging",
+        "daemon"
+      ],
+      "related": [
+        "incident-emerging-never-scheduled"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-emerging-never-scheduled"
+        }
+      ],
+      "supersedes": null,
+      "title": "Wire emerging into in-process daemon on own cadence",
+      "path": "entries/2026-07-30-feature-emerging-in-process-cadence.md",
+      "summary": "Emerging topic detection now runs from the live in-process daemon (`background-daemon.ts`) via `daemon-cadence.ts` → `runScheduledJob('emerging', runEmergingTopicCycle)`."
+    },
+    {
+      "id": "feature-running-job-age-homepage",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "observability",
+        "daemon",
+        "ux"
+      ],
+      "related": [
+        "incident-daemon-ingest-hang",
+        "bugfix-ingest-fetch-timeout",
+        "bugfix-claimable-retry-hygiene"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-daemon-ingest-hang"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-ingest-fetch-timeout"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-claimable-retry-hygiene"
+        }
+      ],
+      "supersedes": null,
+      "title": "Surface longest running job_runs age on homepage Discovery panel",
+      "path": "entries/2026-07-30-feature-running-job-age-homepage.md",
+      "summary": "After the ingest hang, the wedge was only visible via SSH (`job_runs` + `worker.log`). Homepage now shows **Active job age** in the Discovery status block."
+    },
+    {
+      "id": "incident-daemon-ingest-hang",
+      "schema": 1,
+      "type": "incident",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "daemon",
+        "discovery",
+        "enrichment",
+        "observability"
+      ],
+      "related": [
+        "incident-freshness-stall",
+        "incident-enrichment-hourly-bottleneck",
+        "incident-search-fallback-stale"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-freshness-stall"
+        },
+        {
+          "type": "related",
+          "id": "incident-enrichment-hourly-bottleneck"
+        },
+        {
+          "type": "related",
+          "id": "incident-search-fallback-stale"
+        }
+      ],
+      "supersedes": null,
+      "title": "Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)",
+      "path": "entries/2026-07-30-incident-daemon-ingest-hang.md",
+      "summary": "Production SSH + `/data/worker.log` + `job_runs` probe on 2026-07-30."
+    },
+    {
+      "id": "incident-emerging-never-scheduled",
+      "schema": 1,
+      "type": "incident",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "emerging-topics",
+        "daemon",
+        "discovery"
+      ],
+      "related": [
+        "incident-freshness-stall",
+        "feature-running-job-age-homepage"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "incident-freshness-stall"
+        },
+        {
+          "type": "related",
+          "id": "feature-running-job-age-homepage"
+        }
+      ],
+      "supersedes": null,
+      "title": "Emerging topics never ran — in-process daemon has no emerging action",
+      "path": "entries/2026-07-30-incident-emerging-never-scheduled.md",
+      "summary": "**Bucket: genuine scheduling gap.** Absolute gates (≥10 repos / ≥5 owners / ≥3 high-signal) were never the blocker — detection has never been invoked in production."
+    },
+    {
+      "id": "incident-freshness-stall",
+      "schema": 1,
+      "type": "incident",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "discovery",
+        "enrichment",
+        "daemon",
+        "observability",
+        "emerging-topics"
+      ],
+      "related": [
+        "incident-enrichment-hourly-bottleneck",
+        "incident-search-fallback-stale",
+        "decision-enrich-stage-timings",
+        "debt-github-token"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "incident-enrichment-hourly-bottleneck"
+        },
+        {
+          "type": "related",
+          "id": "incident-search-fallback-stale"
+        },
+        {
+          "type": "related",
+          "id": "decision-enrich-stage-timings"
+        },
+        {
+          "type": "related",
+          "id": "debt-github-token"
+        }
+      ],
+      "supersedes": null,
+      "title": "Production freshness stall — archive ~5–6 days behind, enrich idle, emerging never ran",
+      "path": "entries/2026-07-30-incident-freshness-stall.md",
+      "summary": "Live homepage review on [production](https://new-production-9120.up.railway.app/) shows classification/story/cluster surfaces healthy, but **freshness** is not."
+    },
+    {
+      "id": "status-emerging-scheduled-in-process",
+      "schema": 1,
+      "type": "feature",
+      "status": "done",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "emerging",
+        "daemon"
+      ],
+      "related": [
+        "incident-emerging-never-scheduled",
+        "feature-emerging-in-process-cadence"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "incident-emerging-never-scheduled"
+        },
+        {
+          "type": "implemented-by",
+          "id": "feature-emerging-in-process-cadence"
+        }
+      ],
+      "supersedes": "incident-emerging-never-scheduled",
+      "title": "Emerging scheduling gap closed in production path",
+      "path": "entries/2026-07-30-status-emerging-scheduled-in-process.md",
+      "summary": "Incident `incident-emerging-never-scheduled` is addressed: production BACKGROUND_WORKER now schedules emerging via in-process cadence. Absolute gates unchanged. Remaining check is post-deploy: `last_emerging_analysis_at` and `scheduled_jobs.emerging` populate without starving ingest/enrich."
+    },
     {
       "id": "bugfix-cluster-title-href",
       "schema": 1,

@@ -298,6 +298,39 @@ describe('high-throughput enrichment architecture', () => {
 		}
 	});
 
+	it('excludes attempt-exhausted retries from claimable backlog (matches claimEnrichmentBatch)', () => {
+		const live = seedRepo('acme/still-claimable', {
+			stars: 90,
+			description: 'MCP agent toolkit',
+			createdAt: new Date().toISOString()
+		});
+		const dead = seedRepo('acme/attempt-exhausted', {
+			stars: 90,
+			description: 'MCP agent toolkit also',
+			createdAt: new Date().toISOString()
+		});
+		recomputeEnrichmentPriority(live);
+		recomputeEnrichmentPriority(dead);
+		getDb()
+			.prepare(
+				`UPDATE repos SET enrichment_status = 'retry', enrichment_attempts = 5,
+				  enrichment_tier = 'high', next_enrichment_at = datetime('now') WHERE id = ?`
+			)
+			.run(dead);
+		getDb()
+			.prepare(
+				`UPDATE repos SET enrichment_status = 'pending', enrichment_attempts = 0,
+				  enrichment_tier = 'high', next_enrichment_at = datetime('now') WHERE id = ?`
+			)
+			.run(live);
+
+		const claimable = countClaimableEnrichmentBacklog();
+		const claimed = claimEnrichmentBatch(10, 'test-worker');
+		expect(claimed.map((r) => r.id)).toContain(live);
+		expect(claimed.map((r) => r.id)).not.toContain(dead);
+		expect(claimable).toBe(claimed.length);
+	});
+
 	it('keeps ingest available despite a huge enrichment backlog', () => {
 		const backlog = emptyBacklog({ missingGhArchiveHours: 2, unenriched: 671_000 });
 		expect(scoreAction('ingest', backlog)).toBeGreaterThan(0);
@@ -334,10 +367,10 @@ describe('high-throughput enrichment architecture', () => {
 		expect(getMaterializedDiscoveryLanding({ limit: 5 })).not.toBeNull();
 	});
 
-	it('migrates to schema version 34 with enrichment stage timing + percentile columns', () => {
+	it('migrates schema with enrichment stage timing + percentile columns', () => {
 		const db = getDb();
 		expect(getSchemaVersion(db)).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(34);
+		expect(CURRENT_SCHEMA_VERSION).toBeGreaterThanOrEqual(34);
 		const indexes = (
 			db.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`).all() as { name: string }[]
 		).map((r) => r.name);

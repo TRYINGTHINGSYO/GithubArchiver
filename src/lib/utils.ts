@@ -9,6 +9,20 @@ export function timeAgo(iso: string): string {
 	return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
+/** Compact elapsed duration for live job age (e.g. `45s`, `12m`, `1h 15m`). */
+export function formatDurationCompact(ms: number): string {
+	const totalSec = Math.max(0, Math.floor(ms / 1000));
+	if (totalSec < 60) return `${totalSec}s`;
+	const totalMin = Math.floor(totalSec / 60);
+	if (totalMin < 60) return `${totalMin}m`;
+	const hours = Math.floor(totalMin / 60);
+	const minutes = totalMin % 60;
+	if (hours < 48) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+	const days = Math.floor(hours / 24);
+	const remHours = hours % 24;
+	return remHours > 0 ? `${days}d ${remHours}h` : `${days}d`;
+}
+
 export function formatBytes(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;

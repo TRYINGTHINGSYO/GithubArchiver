@@ -17,8 +17,10 @@ type: architecture
 ## Runtime
 
 - In-process background daemon (`background-daemon.ts`) picks actions via `daemon-planner.ts`
+- Cadenced jobs (emerging) run via `daemon-cadence.ts` + `runScheduledJob` on their own interval — not the planner priority race
 - Jobs tracked in `job_runs`; Search shards in `search_ingest_stats`
 - On process start: reconcile orphaned `job_runs` and orphaned Search stats
+- `scripts/daemon.ts` (`npm run daemon`) is a standalone full scheduler for local/offline use only — production uses BACKGROUND_WORKER / in-process daemon
 
 ## Status hierarchy (shared UI)
 

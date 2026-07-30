@@ -1,3 +1,19 @@
+/**
+ * Standalone full-interval scheduler (`npm run daemon`) — NOT the production worker.
+ *
+ * Production Railway uses the in-process planner:
+ *   start:server → hooks.server.ts → ensureBackgroundWorker() → background-daemon.ts
+ *
+ * Why this file still exists:
+ * - Local / offline experiments that want the full DAEMON_JOB_ORDER cadence without
+ *   the web server (classify, clusters, score, stories, backup, etc.).
+ * - Historical reference for job wiring via `runScheduledJob`.
+ *
+ * Do not build new production features against this script. Cadenced production work
+ * (e.g. emerging topics) belongs in `daemon-cadence.ts` / `background-daemon.ts`.
+ * Do not run this alongside BACKGROUND_WORKER=auto|1 — dual runners diverge and
+ * contend for the same work.
+ */
 import './load-env.js';
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -265,6 +281,10 @@ function shutdown(signal: string) {
 }
 
 async function main() {
+	console.warn(
+		'[daemon] WARNING: scripts/daemon.ts is not the production worker. ' +
+			'Production uses in-process background-daemon (BACKGROUND_WORKER). Do not run both.'
+	);
 	getDb();
 	const lease = acquireWorkerLease('discovery-daemon');
 	if (!lease) {

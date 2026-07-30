@@ -11,7 +11,8 @@
 	const enrich = $derived(data.enrichmentProgress);
 	const enrichOps = $derived(data.enrichmentOps);
 	const enrichPercent = $derived.by(() => {
-		const total = enrich.enrichedTotal + enrich.remaining;
+		const waiting = enrichOps.claimableBacklog ?? enrich.remaining;
+		const total = enrich.enrichedTotal + waiting;
 		if (total <= 0) return 100;
 		return Math.round((enrich.enrichedTotal / total) * 1000) / 10;
 	});
@@ -202,6 +203,14 @@
 				? timeAgo(data.discoveryStatus.lastIngestionAt)
 				: 'pending'}
 			enrichLastRanLabel={enrich.updatedAt ? timeAgo(enrich.updatedAt) : null}
+			runningJobLabel={data.runningWorkJob
+				? `${data.runningWorkJob.jobType} · ${data.runningWorkJob.ageLabel}${
+						data.runningWorkJob.runningCount > 1
+							? ` (${data.runningWorkJob.runningCount} running)`
+							: ''
+					}`
+				: null}
+			runningJobStale={data.runningWorkJob?.stale ?? false}
 			throughputPerMin={enrichOps.throughputPerMin}
 			enrichedLastHour={enrichOps.enrichedLastHour}
 			avgSecondsPerRepo={enrichOps.avgSecondsPerRepo}

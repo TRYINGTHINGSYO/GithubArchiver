@@ -60,6 +60,14 @@
 		workerLastRanLabel={data.discoveryStatus.lastIngestionAt
 			? timeAgo(data.discoveryStatus.lastIngestionAt)
 			: 'pending'}
+		runningJobLabel={data.runningWorkJob
+			? `${data.runningWorkJob.jobType} · ${data.runningWorkJob.ageLabel}${
+					data.runningWorkJob.runningCount > 1
+						? ` (${data.runningWorkJob.runningCount} running)`
+						: ''
+				}`
+			: null}
+		runningJobStale={data.runningWorkJob?.stale ?? false}
 	/>
 	<p class="admin-meta" style="margin-top:0.85rem">
 		Classified {data.discoveryStatus.classified.toLocaleString()} · Clustered

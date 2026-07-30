@@ -20,6 +20,18 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Open work
 
+- **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `enrichment`, `daemon`, `observability` — [Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
+  - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
+- **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
+  - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
+- **2026-07-30** · `feature` · `confirmed` · `release` · `open` · `observability`, `daemon`, `ux` — [Surface longest running job_runs age on homepage Discovery panel](entries/2026-07-30-feature-running-job-age-homepage.md)
+  - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
+- **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `daemon`, `discovery`, `enrichment`, `observability` — [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md)
+  - edges: caused-by:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md)
+- **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `emerging-topics`, `daemon`, `discovery` — [Emerging topics never ran — in-process daemon has no emerging action](entries/2026-07-30-incident-emerging-never-scheduled.md)
+  - edges: related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md)
+- **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `discovery`, `enrichment`, `daemon`, `observability`, `emerging-topics` — [Production freshness stall — archive ~5–6 days behind, enrich idle, emerging never ran](entries/2026-07-30-incident-freshness-stall.md)
+  - edges: related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - **2026-07-18** · `bugfix` · `confirmed` · `release` · PR #25 · `76f91e5` · `open` · `discovery`, `clusters`, `ux` — [Homepage cluster titles must open /?cluster= not fastest-growing](entries/2026-07-18-bugfix-cluster-title-href.md)
   - edges: caused-by:[`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - **2026-07-18** · `feature` · `confirmed` · `release` · PR #24 · `99dab1d` · `open` · `performance`, `observability`, `admin` — [Admin request-path cache hit-rate metrics](entries/2026-07-18-feature-cache-hit-metrics.md)
@@ -44,6 +56,12 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Active incidents
 
+- **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `daemon`, `discovery`, `enrichment`, `observability` — [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md)
+  - edges: caused-by:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md)
+- **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `emerging-topics`, `daemon`, `discovery` — [Emerging topics never ran — in-process daemon has no emerging action](entries/2026-07-30-incident-emerging-never-scheduled.md)
+  - edges: related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md)
+- **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `discovery`, `enrichment`, `daemon`, `observability`, `emerging-topics` — [Production freshness stall — archive ~5–6 days behind, enrich idle, emerging never ran](entries/2026-07-30-incident-freshness-stall.md)
+  - edges: related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · PR #18 · `3792bf9` · `open` · `enrichment`, `daemon`, `throughput` — [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md)
   - edges: related:[`incident-backlog-sleep-tiers`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
 - **2026-07-18** · `incident` · `confirmed` · `permanent` · `eb58221` · migration 32 · `open` · `enrichment`, `priority` — [Defer empty CreateEvent spam — backlog is days-old births not years-old repos](entries/2026-07-18-incident-empty-createevent-defer.md)

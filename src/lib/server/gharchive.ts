@@ -70,6 +70,63 @@ export class GhArchiveParseError extends Error {
 	}
 }
 
+/** Timed out waiting for GH Archive fetch and/or body stream (AbortSignal). */
+export class GhArchiveTimeoutError extends Error {
+	constructor(
+		public readonly url: string,
+		public readonly timeoutMs: number
+	) {
+		super(`GH Archive fetch timed out after ${timeoutMs}ms: ${url}`);
+		this.name = 'GhArchiveTimeoutError';
+	}
+}
+
+/** Per-hour fetch+stream ceiling. Env: GH_ARCHIVE_FETCH_TIMEOUT_MS (default 30s). */
+export function ghArchiveFetchTimeoutMs(): number {
+	const n = Number(process.env.GH_ARCHIVE_FETCH_TIMEOUT_MS ?? 30_000);
+	return Number.isFinite(n) && n > 0 ? Math.floor(n) : 30_000;
+}
+
+function isAbortError(err: unknown): boolean {
+	if (!err || typeof err !== 'object') return false;
+	const name = (err as { name?: string }).name;
+	return name === 'AbortError' || name === 'TimeoutError';
+}
+
+/**
+ * Run `fn` with an AbortSignal that fires after the hour timeout.
+ * Covers connection, headers, and body stream — not just the initial fetch().
+ */
+export async function withGhArchiveTimeout<T>(
+	url: string,
+	fn: (signal: AbortSignal) => Promise<T>,
+	timeoutMs: number = ghArchiveFetchTimeoutMs()
+): Promise<T> {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	try {
+		return await fn(controller.signal);
+	} catch (err) {
+		if (controller.signal.aborted || isAbortError(err)) {
+			throw new GhArchiveTimeoutError(url, timeoutMs);
+		}
+		throw err;
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+async function fetchGhArchiveResponse(url: string, signal: AbortSignal): Promise<Response> {
+	try {
+		return await fetch(url, { signal });
+	} catch (err) {
+		if (signal.aborted || isAbortError(err)) {
+			throw new GhArchiveTimeoutError(url, ghArchiveFetchTimeoutMs());
+		}
+		throw err;
+	}
+}
+
 function parsePayload(payload: GhArchiveEvent['payload']): GhArchivePayload | null {
 	if (payload == null) return null;
 	if (typeof payload === 'string') {
@@ -204,135 +261,147 @@ async function readHourStream(url: string, res: Response): Promise<Readable> {
 	return nodeStream.pipe(gunzip);
 }
 
+function assertGhArchiveHttpOk(url: string, res: Response): void {
+	if (res.status === 404 || res.status === 403) {
+		throw new GhArchiveUnavailableError(url, res.status);
+	}
+	if (res.status >= 500) {
+		throw new GhArchiveFetchError(url, res.status);
+	}
+	if (!res.ok) {
+		throw new GhArchiveFetchError(url, res.status);
+	}
+}
+
+function rethrowGhArchiveStreamError(url: string, err: unknown): never {
+	if (
+		err instanceof GhArchiveUnavailableError ||
+		err instanceof GhArchiveFetchError ||
+		err instanceof GhArchiveParseError ||
+		err instanceof GhArchiveTimeoutError
+	) {
+		throw err;
+	}
+	if (isAbortError(err)) {
+		throw new GhArchiveTimeoutError(url, ghArchiveFetchTimeoutMs());
+	}
+	throw new GhArchiveParseError(url, err);
+}
+
 /**
  * Stream-parse a GH Archive hour file.
- * Throws GhArchiveUnavailableError, GhArchiveFetchError, or GhArchiveParseError on failure.
+ * Throws GhArchiveUnavailableError, GhArchiveFetchError, GhArchiveTimeoutError,
+ * or GhArchiveParseError on failure.
  */
 export async function streamRepositoryCreates(
 	url: string,
 	onCreate?: (event: RepoCreateEvent) => void | Promise<void>
 ): Promise<HourStreamStats> {
-	const res = await fetch(url);
+	return withGhArchiveTimeout(url, async (signal) => {
+		const res = await fetchGhArchiveResponse(url, signal);
+		assertGhArchiveHttpOk(url, res);
 
-	if (res.status === 404 || res.status === 403) {
-		throw new GhArchiveUnavailableError(url, res.status);
-	}
-	if (res.status >= 500) {
-		throw new GhArchiveFetchError(url, res.status);
-	}
-	if (!res.ok) {
-		throw new GhArchiveFetchError(url, res.status);
-	}
+		const combined = await readHourStream(url, res);
+		const stats: HourStreamStats = {
+			parsedEvents: 0,
+			repoCreates: 0,
+			createEvents: 0,
+			createRefTypes: {}
+		};
 
-	const combined = await readHourStream(url, res);
-	const stats: HourStreamStats = {
-		parsedEvents: 0,
-		repoCreates: 0,
-		createEvents: 0,
-		createRefTypes: {}
-	};
+		const observe = async (event: GhArchiveEvent) => {
+			stats.parsedEvents++;
+			if (event.type === 'CreateEvent') {
+				stats.createEvents++;
+				const payload = parsePayload(event.payload);
+				const refType = payload?.ref_type ?? '(missing)';
+				stats.createRefTypes[refType] = (stats.createRefTypes[refType] ?? 0) + 1;
+			}
+			const repo = toRepoCreateEvent(event);
+			if (repo) {
+				stats.repoCreates++;
+				if (onCreate) await onCreate(repo);
+			}
+		};
 
-	const observe = async (event: GhArchiveEvent) => {
-		stats.parsedEvents++;
-		if (event.type === 'CreateEvent') {
-			stats.createEvents++;
-			const payload = parsePayload(event.payload);
-			const refType = payload?.ref_type ?? '(missing)';
-			stats.createRefTypes[refType] = (stats.createRefTypes[refType] ?? 0) + 1;
-		}
-		const repo = toRepoCreateEvent(event);
-		if (repo) {
-			stats.repoCreates++;
-			if (onCreate) await onCreate(repo);
-		}
-	};
+		let buffer = '';
+		try {
+			for await (const chunk of combined) {
+				if (signal.aborted) {
+					throw new GhArchiveTimeoutError(url, ghArchiveFetchTimeoutMs());
+				}
+				buffer += chunk.toString('utf8');
+				const lines = buffer.split('\n');
+				buffer = lines.pop() ?? '';
 
-	let buffer = '';
-	try {
-		for await (const chunk of combined) {
-			buffer += chunk.toString('utf8');
-			const lines = buffer.split('\n');
-			buffer = lines.pop() ?? '';
-
-			for (const line of lines) {
-				if (!line.trim()) continue;
-				try {
-					await observe(JSON.parse(line) as GhArchiveEvent);
-				} catch {
-					// skip malformed lines
+				for (const line of lines) {
+					if (!line.trim()) continue;
+					try {
+						await observe(JSON.parse(line) as GhArchiveEvent);
+					} catch {
+						// skip malformed lines
+					}
 				}
 			}
-		}
 
-		if (buffer.trim()) {
-			try {
-				await observe(JSON.parse(buffer) as GhArchiveEvent);
-			} catch {
-				// ignore trailing partial line
+			if (buffer.trim()) {
+				try {
+					await observe(JSON.parse(buffer) as GhArchiveEvent);
+				} catch {
+					// ignore trailing partial line
+				}
 			}
+		} catch (err) {
+			rethrowGhArchiveStreamError(url, err);
 		}
-	} catch (err) {
-		if (
-			err instanceof GhArchiveUnavailableError ||
-			err instanceof GhArchiveFetchError ||
-			err instanceof GhArchiveParseError
-		) {
-			throw err;
-		}
-		throw new GhArchiveParseError(url, err);
-	}
 
-	return stats;
+		return stats;
+	});
 }
 
 /** Stream all parsed events from a GH Archive hour file (for inspection/debug). */
 export async function* streamHourEvents(url: string): AsyncGenerator<GhArchiveEvent> {
-	const res = await fetch(url);
-
-	if (res.status === 404 || res.status === 403) {
-		throw new GhArchiveUnavailableError(url, res.status);
-	}
-	if (res.status >= 500) {
-		throw new GhArchiveFetchError(url, res.status);
-	}
-	if (!res.ok) {
-		throw new GhArchiveFetchError(url, res.status);
-	}
-
-	const combined = await readHourStream(url, res);
-	let buffer = '';
-
+	// Generators can't wrap the whole body in withGhArchiveTimeout easily; abort covers fetch+stream.
+	const timeoutMs = ghArchiveFetchTimeoutMs();
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
 	try {
-		for await (const chunk of combined) {
-			buffer += chunk.toString('utf8');
-			const lines = buffer.split('\n');
-			buffer = lines.pop() ?? '';
+		const res = await fetchGhArchiveResponse(url, controller.signal);
+		assertGhArchiveHttpOk(url, res);
 
-			for (const line of lines) {
-				if (!line.trim()) continue;
-				try {
-					yield JSON.parse(line) as GhArchiveEvent;
-				} catch {
-					// skip malformed lines
+		const combined = await readHourStream(url, res);
+		let buffer = '';
+
+		try {
+			for await (const chunk of combined) {
+				if (controller.signal.aborted) {
+					throw new GhArchiveTimeoutError(url, timeoutMs);
+				}
+				buffer += chunk.toString('utf8');
+				const lines = buffer.split('\n');
+				buffer = lines.pop() ?? '';
+
+				for (const line of lines) {
+					if (!line.trim()) continue;
+					try {
+						yield JSON.parse(line) as GhArchiveEvent;
+					} catch {
+						// skip malformed lines
+					}
 				}
 			}
-		}
 
-		if (buffer.trim()) {
-			try {
-				yield JSON.parse(buffer) as GhArchiveEvent;
-			} catch {
-				// ignore trailing partial line
+			if (buffer.trim()) {
+				try {
+					yield JSON.parse(buffer) as GhArchiveEvent;
+				} catch {
+					// ignore trailing partial line
+				}
 			}
+		} catch (err) {
+			rethrowGhArchiveStreamError(url, err);
 		}
-	} catch (err) {
-		if (
-			err instanceof GhArchiveUnavailableError ||
-			err instanceof GhArchiveFetchError ||
-			err instanceof GhArchiveParseError
-		) {
-			throw err;
-		}
-		throw new GhArchiveParseError(url, err);
+	} finally {
+		clearTimeout(timer);
 	}
 }

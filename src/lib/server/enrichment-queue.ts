@@ -23,7 +23,12 @@ export interface EnrichmentQueueRepo extends RepoRow {
 }
 
 const CLAIM_TTL_MS = Number(process.env.ENRICH_CLAIM_TTL_MS ?? 5 * 60_000);
-const RETRY_LIMIT = Number(process.env.ENRICH_RETRY_LIMIT ?? 5);
+
+/** Shared with claim + count — attempt-exhausted rows are not claimable. */
+export function enrichRetryLimit(): number {
+	const n = Number(process.env.ENRICH_RETRY_LIMIT ?? 5);
+	return Number.isFinite(n) && n > 0 ? Math.floor(n) : 5;
+}
 
 function nowIso(ms = Date.now()): string {
 	return new Date(ms).toISOString();
@@ -103,7 +108,7 @@ export function claimEnrichmentBatch(
 							   created_at DESC
 							 LIMIT ?`
 						)
-						.all(...tiers, nowStr, nowStr, RETRY_LIMIT, limit)
+						.all(...tiers, nowStr, nowStr, enrichRetryLimit(), limit)
 		) as { id: number }[];
 
 		if (ids.length === 0) return [] as number[];
@@ -232,10 +237,14 @@ export function seedEnrichmentPriorityForInsert(repoId: number): void {
 	recomputeEnrichmentPriority(repoId);
 }
 
-/** Repos the worker will actually claim next (excludes deferred long-tail + terminal states). */
-export function countClaimableEnrichmentBacklog(): number {
+/**
+ * Repos the worker will actually claim next.
+ * Must stay in lockstep with `claimEnrichmentBatch` eligibility
+ * (same status/tier/due/claim-expiry/attempts filters — no deferred, no attempt-exhausted).
+ */
+export function countClaimableEnrichmentBacklog(nowMs: number = Date.now()): number {
 	const db = getDb();
-	const now = new Date().toISOString();
+	const now = nowIso(nowMs);
 	return (
 		db
 			.prepare(
@@ -245,15 +254,16 @@ export function countClaimableEnrichmentBacklog(): number {
 				   AND enrichment_status IN ('pending', 'retry')
 				   AND enrichment_tier IN ('urgent', 'high', 'normal', 'low')
 				   AND (next_enrichment_at IS NULL OR next_enrichment_at <= ?)
-				   AND (enrichment_claim_expires_at IS NULL OR enrichment_claim_expires_at < ?)`
+				   AND (enrichment_claim_expires_at IS NULL OR enrichment_claim_expires_at < ?)
+				   AND enrichment_attempts < ?`
 			)
-			.get(now, now) as { c: number }
+			.get(now, now, enrichRetryLimit()) as { c: number }
 	).c;
 }
 
-export function oldestClaimableEnrichmentAt(): string | null {
+export function oldestClaimableEnrichmentAt(nowMs: number = Date.now()): string | null {
 	const db = getDb();
-	const now = new Date().toISOString();
+	const now = nowIso(nowMs);
 	const row = db
 		.prepare(
 			`SELECT MIN(created_at) AS oldest FROM repos
@@ -261,9 +271,10 @@ export function oldestClaimableEnrichmentAt(): string | null {
 			   AND deleted_at IS NULL
 			   AND enrichment_status IN ('pending', 'retry')
 			   AND enrichment_tier IN ('urgent', 'high', 'normal', 'low')
-			   AND (next_enrichment_at IS NULL OR next_enrichment_at <= ?)`
+			   AND (next_enrichment_at IS NULL OR next_enrichment_at <= ?)
+			   AND enrichment_attempts < ?`
 		)
-		.get(now) as { oldest: string | null };
+		.get(now, enrichRetryLimit()) as { oldest: string | null };
 	return row.oldest ?? null;
 }
 

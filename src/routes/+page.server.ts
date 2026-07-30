@@ -1,6 +1,7 @@
 import { getArchivePulse } from '$lib/server/db';
 import { getDb } from '$lib/server/db/connection';
 import { countMissingGhArchiveHours, latestIngestedHour } from '$lib/server/db/ingestion';
+import { getLongestRunningWorkJobSnapshot } from '$lib/server/db/jobs';
 import { REPO_SORTS } from '$lib/server/db/repo-query';
 import { isSearchFallbackActive } from '$lib/server/db/search-ingest';
 import { getDataReadiness } from '$lib/server/data-readiness';
@@ -179,6 +180,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		latestArchiveHour: latestIngestedHour(),
 		archiveHourBacklog: countMissingGhArchiveHours(),
 		searchFallbackActive: isSearchFallbackActive(),
+		runningWorkJob: getLongestRunningWorkJobSnapshot(),
 		readiness,
 		archivePulse,
 		provenance,

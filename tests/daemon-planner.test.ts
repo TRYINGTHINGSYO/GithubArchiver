@@ -26,11 +26,19 @@ const SLEEP_MIN = 5_000;
 const SLEEP_MAX = 900_000;
 
 describe('daemon-planner', () => {
-	it('picks enrich when unenriched dominates and archive backlog is empty', () => {
+	it('picks enrich when claimable backlog dominates and archive backlog is empty', () => {
 		const backlog = emptyBacklog({ unenriched: 6231, staleRefresh: 12 });
 		const decision = pickAction(backlog);
 		expect(decision.action).toBe('enrich');
+		expect(decision.reason).toContain('claimable');
 		expect(decision.reason).toContain('enrich');
+	});
+
+	it('does not pick enrich when claimable is zero even if raw deferred pile would be huge', () => {
+		// Snapshot.unenriched is claimable-only after the retry-hygiene fix.
+		const backlog = emptyBacklog({ unenriched: 0, missingGhArchiveHours: 2 });
+		expect(scoreAction('enrich', backlog)).toBe(0);
+		expect(pickAction(backlog).action).toBe('ingest');
 	});
 
 	it('keeps ingest score positive with a huge enrichment backlog', () => {

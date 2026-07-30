@@ -1,6 +1,10 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { runBackfillBatch } from './backfill-runner';
+import {
+	initializeInProcessCadence,
+	maybeRunDueEmergingCycle
+} from './daemon-cadence';
 import { queryBacklogSnapshot } from './daemon-backlog';
 import {
 	computeDaemonSleepMs,
@@ -285,6 +289,7 @@ async function runLoop(): Promise<void> {
 		autonomous: true
 	});
 
+	initializeInProcessCadence();
 	appendLog(`daemon started in-process (pid ${process.pid})`);
 	console.log(`[daemon] started in-process (pid ${process.pid})`);
 
@@ -349,6 +354,16 @@ async function runLoop(): Promise<void> {
 						decision.reason
 					);
 				}
+			}
+
+			// Own cadence (DAEMON_EMERGING_INTERVAL_MS) — not a planner competitor.
+			// Runs after the backlog action so a never-run row cannot starve ingest/enrich.
+			if (!stopRequested) {
+				const cadence = await maybeRunDueEmergingCycle({
+					shouldSkip: () => stopRequested,
+					log: appendLog
+				});
+				if (cadence.hadFailure) hadFailure = true;
 			}
 
 			if (rateLimitResetAt) {

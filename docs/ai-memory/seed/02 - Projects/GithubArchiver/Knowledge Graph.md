@@ -11,6 +11,22 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md) (`bugfix`, `confirmed`, `release`) — Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched
+  - `caused-by` → [`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), `related` → [`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), `related` → [`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
+- [`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md) (`bugfix`, `confirmed`, `release`) — GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat
+  - `caused-by` → [`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), `related` → [`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
+- [`feature-emerging-in-process-cadence`](entries/2026-07-30-feature-emerging-in-process-cadence.md) (`feature`, `confirmed`, `permanent`) — Wire emerging into in-process daemon on own cadence
+  - `caused-by` → [`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md)
+- [`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md) (`feature`, `confirmed`, `release`) — Surface longest running job_runs age on homepage Discovery panel
+  - `caused-by` → [`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), `related` → [`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), `related` → [`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
+- [`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md) (`incident`, `confirmed`, `permanent`) — Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)
+  - `caused-by` → [`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), `related` → [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), `related` → [`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md)
+- [`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md) (`incident`, `confirmed`, `permanent`) — Emerging topics never ran — in-process daemon has no emerging action
+  - `related` → [`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), `related` → [`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md)
+- [`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md) (`incident`, `confirmed`, `permanent`) — Production freshness stall — archive ~5–6 days behind, enrich idle, emerging never ran
+  - `related` → [`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), `related` → [`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), `related` → [`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md), `related` → [`debt-github-token`](entries/2026-07-18-debt-github-token.md)
+- [`status-emerging-scheduled-in-process`](entries/2026-07-30-status-emerging-scheduled-in-process.md) (`feature`, `confirmed`, `permanent`) — Emerging scheduling gap closed in production path
+  - `supersedes` → [`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md), `implemented-by` → [`feature-emerging-in-process-cadence`](entries/2026-07-30-feature-emerging-in-process-cadence.md)
 - [`bugfix-cluster-title-href`](entries/2026-07-18-bugfix-cluster-title-href.md) (`bugfix`, `confirmed`, `release`) — Homepage cluster titles must open /?cluster= not fastest-growing
   - `caused-by` → [`bugfix-nav-perf-clusters`](entries/2026-07-18-bugfix-nav-perf-clusters.md)
 - [`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md) (`feature`, `confirmed`, `release`) — Admin request-path cache hit-rate metrics

@@ -15,6 +15,8 @@
 		searchFallbackActive = null,
 		workerLastRanLabel = null,
 		enrichLastRanLabel = null,
+		runningJobLabel = null,
+		runningJobStale = false,
 		throughputPerMin = null,
 		enrichedLastHour = null,
 		avgSecondsPerRepo = null,
@@ -37,6 +39,9 @@
 		searchFallbackActive?: boolean | null;
 		workerLastRanLabel?: string | null;
 		enrichLastRanLabel?: string | null;
+		/** e.g. `ingest · 1h 15m` — longest non-daemon running job */
+		runningJobLabel?: string | null;
+		runningJobStale?: boolean;
 		throughputPerMin?: number | null;
 		enrichedLastHour?: number | null;
 		avgSecondsPerRepo?: number | null;
@@ -212,7 +217,7 @@ ${stageLine('Total:', stageTimings.totalMs, pct?.total)}${footnote}`;
 		</section>
 	{/if}
 
-	{#if latestArchiveHour != null || archiveBacklog != null || searchFallbackActive != null || workerLastRanLabel}
+	{#if latestArchiveHour != null || archiveBacklog != null || searchFallbackActive != null || workerLastRanLabel || runningJobLabel}
 		<section class="status-block" aria-label="Discovery">
 			<h3>Discovery</h3>
 			<dl class="status-metrics">
@@ -226,6 +231,14 @@ ${stageLine('Total:', stageTimings.totalMs, pct?.total)}${footnote}`;
 					<div>
 						<dt>Archive backlog</dt>
 						<dd>{archiveBacklog.toLocaleString()} hours</dd>
+					</div>
+				{/if}
+				{#if runningJobLabel}
+					<div>
+						<dt>Active job age</dt>
+						<dd class:stale={runningJobStale} title={runningJobStale ? 'Running longer than the orphan threshold — likely wedged' : undefined}>
+							{runningJobLabel}{runningJobStale ? ' · stale' : ''}
+						</dd>
 					</div>
 				{/if}
 				{#if workerLastRanLabel}
@@ -299,6 +312,10 @@ ${stageLine('Total:', stageTimings.totalMs, pct?.total)}${footnote}`;
 		font-size: 1.05rem;
 		font-weight: 650;
 		font-variant-numeric: tabular-nums;
+	}
+
+	.status-metrics dd.stale {
+		color: var(--danger, #b45309);
 	}
 
 	.mono {
