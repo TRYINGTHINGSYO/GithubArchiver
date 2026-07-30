@@ -21,3 +21,5 @@ generated: true
   - edges: related:[`migration-029`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md), related:[`daemon`](entries/2026-07-17-pr-1-discovery-pipeline.md), related:[`enrichment`](entries/2026-07-17-pr-2-backlog-sleep-tiers.md)
 - **2026-07-30** · `migration` · `confirmed` · `permanent` · `done` · `ingest`, `schema` — [Schema 36 — ingest_hour_backoff table](entries/2026-07-30-migration-036-ingest-hour-backoff.md)
   - edges: implemented-by:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), references:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md)
+- **2026-07-30** · `migration` · `confirmed` · `permanent` · `done` · `websites`, `schema` — [Schema 37 — candidate_domains + website verify backoff](entries/2026-07-30-migration-037-website-discovery.md)
+  - edges: implemented-by:[`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)

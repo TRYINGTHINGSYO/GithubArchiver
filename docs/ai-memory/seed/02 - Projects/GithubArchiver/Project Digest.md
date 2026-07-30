@@ -77,8 +77,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md), references:[`migration-036-ingest-hour-backoff`](entries/2026-07-30-migration-036-ingest-hour-backoff.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 - **2026-07-30** · `feature` · `confirmed` · `release` · `open` · `observability`, `daemon`, `ux` — [Surface longest running job_runs age on homepage Discovery panel](entries/2026-07-30-feature-running-job-age-homepage.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
-- **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `daemon`, `discovery`, `enrichment`, `observability` — [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md)
-  - edges: caused-by:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md)
+- **2026-07-30** · `feature` · `confirmed` · `permanent` · `done` · `websites`, `discovery`, `daemon` — [Website discovery v1 — CT poll + verify + Websites feed](entries/2026-07-30-feature-website-discovery-v1.md)
+  - edges: references:[`migration-037-website-discovery`](entries/2026-07-30-migration-037-website-discovery.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md)
 
 ## Open technical debt
 

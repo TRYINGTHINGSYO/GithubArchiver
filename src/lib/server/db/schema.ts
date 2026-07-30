@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 36;
+export const CURRENT_SCHEMA_VERSION = 37;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1286,6 +1286,52 @@ function migration036(database: Database.Database) {
 	`);
 }
 
+/** Website discovery: CT + zone intake → shared candidates → liveness verify. */
+function migration037(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS candidate_domains (
+			registrable_domain TEXT PRIMARY KEY,
+			source_ct INTEGER NOT NULL DEFAULT 0,
+			source_zone INTEGER NOT NULL DEFAULT 0,
+			first_seen_ct_at TEXT,
+			first_seen_zone_at TEXT,
+			first_seen_at TEXT NOT NULL,
+			last_seen_at TEXT NOT NULL,
+			sample_hostname TEXT,
+			verify_status TEXT NOT NULL DEFAULT 'pending',
+			http_status INTEGER,
+			final_url TEXT,
+			page_title TEXT,
+			verified_at TEXT,
+			last_error TEXT,
+			verify_attempts INTEGER NOT NULL DEFAULT 0
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_candidate_domains_live
+		  ON candidate_domains(verify_status, verified_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_candidate_domains_pending
+		  ON candidate_domains(verify_status, first_seen_at ASC);
+
+		CREATE TABLE IF NOT EXISTS website_verify_backoff (
+			registrable_domain TEXT PRIMARY KEY,
+			consecutive_failures INTEGER NOT NULL DEFAULT 0,
+			last_error TEXT,
+			last_failed_at TEXT NOT NULL,
+			next_retry_at TEXT NOT NULL
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_website_verify_backoff_next
+		  ON website_verify_backoff(next_retry_at);
+
+		CREATE TABLE IF NOT EXISTS website_pipeline_state (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			updated_at TEXT NOT NULL
+		);
+	`);
+}
+
 const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	1: migration001,
 	2: migration002,
@@ -1322,7 +1368,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	33: migration033,
 	34: migration034,
 	35: migration035,
-	36: migration036
+	36: migration036,
+	37: migration037
 };
 
 export interface MigrationRunResult {

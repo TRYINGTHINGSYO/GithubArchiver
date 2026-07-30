@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T20:33:16.320Z",
+  "generatedAt": "2026-07-30T21:10:48.143Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -267,6 +267,46 @@
       "summary": "After the ingest hang, the wedge was only visible via SSH (`job_runs` + `worker.log`). Homepage now shows **Active job age** in the Discovery status block."
     },
     {
+      "id": "feature-website-discovery-v1",
+      "schema": 1,
+      "type": "feature",
+      "status": "done",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "websites",
+        "discovery",
+        "daemon"
+      ],
+      "related": [
+        "migration-037-website-discovery",
+        "bugfix-ingest-fetch-timeout",
+        "feature-ingest-timeout-hour-backoff"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "migration-037-website-discovery"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-ingest-fetch-timeout"
+        },
+        {
+          "type": "related",
+          "id": "feature-ingest-timeout-hour-backoff"
+        }
+      ],
+      "supersedes": null,
+      "title": "Website discovery v1 — CT poll + verify + Websites feed",
+      "path": "entries/2026-07-30-feature-website-discovery-v1.md",
+      "summary": "1. CT via **crt.sh poll** (rotating TLD allowlist), not live tail"
+    },
+    {
       "id": "incident-daemon-ingest-hang",
       "schema": 1,
       "type": "incident",
@@ -457,6 +497,35 @@
       "title": "Schema 36 — ingest_hour_backoff table",
       "path": "entries/2026-07-30-migration-036-ingest-hour-backoff.md",
       "summary": "Adds `ingest_hour_backoff` (`hour_key`, `consecutive_failures`, `last_error`, `last_failed_at`, `next_retry_at`) so sticky GH Archive fetch/timeout failures can skip the attempt batch without disappearing from the planner missing count."
+    },
+    {
+      "id": "migration-037-website-discovery",
+      "schema": 1,
+      "type": "migration",
+      "status": "done",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "websites",
+        "schema"
+      ],
+      "related": [
+        "feature-website-discovery-v1"
+      ],
+      "relationships": [
+        {
+          "type": "implemented-by",
+          "id": "feature-website-discovery-v1"
+        }
+      ],
+      "supersedes": null,
+      "title": "Schema 37 — candidate_domains + website verify backoff",
+      "path": "entries/2026-07-30-migration-037-website-discovery.md",
+      "summary": "Adds `candidate_domains`, `website_verify_backoff`, and `website_pipeline_state` for the website discovery pipeline."
     },
     {
       "id": "research-archive-backlog-pace",

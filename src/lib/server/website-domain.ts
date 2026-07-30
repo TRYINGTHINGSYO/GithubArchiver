@@ -1,0 +1,41 @@
+import { parse as parseDomain } from 'tldts';
+
+/** Default TLD allowlist — intake filter so CT firehose cannot drown SQLite. */
+export function websiteCtTlds(): string[] {
+	const raw = process.env.WEBSITE_CT_TLDS ?? 'com,io,dev,app,ai,co,net,org';
+	return raw
+		.split(',')
+		.map((t) => t.trim().toLowerCase().replace(/^\./, ''))
+		.filter(Boolean);
+}
+
+export function isAllowedWebsiteTld(registrableDomain: string, tlds: string[] = websiteCtTlds()): boolean {
+	const host = registrableDomain.toLowerCase();
+	return tlds.some((tld) => host === tld || host.endsWith(`.${tld}`));
+}
+
+/**
+ * Collapse hostname → registrable domain (eTLD+1).
+ * Returns null for IP literals, empty, or unparseable names.
+ */
+export function toRegistrableDomain(hostname: string): string | null {
+	const cleaned = hostname
+		.trim()
+		.toLowerCase()
+		.replace(/^\*\./, '')
+		.replace(/\.$/, '');
+	if (!cleaned || cleaned.includes(' ') || /^\d{1,3}(\.\d{1,3}){3}$/.test(cleaned)) {
+		return null;
+	}
+	const parsed = parseDomain(cleaned);
+	if (!parsed.domain || parsed.isIp || parsed.isPrivate) return null;
+	return parsed.domain.toLowerCase();
+}
+
+/** Extract hostnames from a CT name_value / SAN blob (newline or comma separated). */
+export function hostnamesFromCtNameValue(raw: string): string[] {
+	return raw
+		.split(/[\n,]/)
+		.map((s) => s.trim())
+		.filter(Boolean);
+}

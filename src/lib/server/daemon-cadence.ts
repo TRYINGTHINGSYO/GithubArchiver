@@ -6,13 +6,20 @@ import {
 import { ensureScheduledJobs, isJobDue, type ScheduledJobName } from './db/scheduled-jobs.js';
 import { runScheduledJob } from './daemon-scheduler.js';
 import { runEmergingTopicCycle, type EmergingCycleResult } from './workers/emerging.js';
+import { runWebsiteCtDiscoverCycle } from './workers/website-ct.js';
+import { runWebsiteVerifyCycle } from './workers/website-verify.js';
+import { runWebsiteZoneDiscoverCycle } from './workers/website-zone.js';
 
 /**
  * Cadenced jobs for the in-process daemon. These use `scheduled_jobs` intervals
- * (e.g. DAEMON_EMERGING_INTERVAL_MS, default 3h) and must NOT compete in the
- * planner priority race with ingest/enrich.
+ * and must NOT compete in the planner priority race with ingest/enrich.
  */
-export const IN_PROCESS_CADENCE_JOBS: ScheduledJobName[] = ['emerging'];
+export const IN_PROCESS_CADENCE_JOBS: ScheduledJobName[] = [
+	'emerging',
+	'website_ct',
+	'website_zone',
+	'website_verify'
+];
 
 /** How often the orphan safety-net may run (default 2 min). */
 export function reconcileCadenceIntervalMs(): number {
@@ -67,6 +74,87 @@ export async function maybeRunDueEmergingCycle(
 		opts.log?.(`[daemon] emerging failed: ${message}`);
 		return { ran: true, hadFailure: true, detail: { error: message } };
 	}
+}
+
+export interface WebsiteCadenceResult {
+	ran: boolean;
+	hadFailure: boolean;
+	jobs: string[];
+}
+
+/**
+ * Run due website discovery/verify jobs (own intervals). Failures do not throw —
+ * each job finishes its own job_runs row; scheduled_jobs backoff still advances.
+ */
+export async function maybeRunDueWebsiteCycles(
+	opts: {
+		now?: number;
+		shouldSkip?: () => boolean;
+		log?: (line: string) => void;
+	} = {}
+): Promise<WebsiteCadenceResult> {
+	if (opts.shouldSkip?.()) return { ran: false, hadFailure: false, jobs: [] };
+	const now = opts.now ?? Date.now();
+	const jobs: string[] = [];
+	let hadFailure = false;
+
+	if (isJobDue('website_ct', now)) {
+		jobs.push('website_ct');
+		opts.log?.('[daemon] cadence: website_ct due');
+		try {
+			const r = await runScheduledJob('website_ct', () => runWebsiteCtDiscoverCycle());
+			opts.log?.(
+				`[daemon] website_ct: +${r.inserted} new / ${r.updated} updated (tld=${r.tldsPolled.join(',')})`
+			);
+			if (r.errors.length) hadFailure = true;
+		} catch (err) {
+			hadFailure = true;
+			opts.log?.(
+				`[daemon] website_ct failed: ${err instanceof Error ? err.message : String(err)}`
+			);
+		}
+	}
+
+	if (opts.shouldSkip?.()) return { ran: jobs.length > 0, hadFailure, jobs };
+
+	if (isJobDue('website_zone', now)) {
+		jobs.push('website_zone');
+		opts.log?.('[daemon] cadence: website_zone due');
+		try {
+			const r = await runScheduledJob('website_zone', () => runWebsiteZoneDiscoverCycle());
+			opts.log?.(
+				r.enabled
+					? `[daemon] website_zone: +${r.inserted} new / ${r.updated} updated`
+					: '[daemon] website_zone: skipped (WEBSITE_ZONE_FEED_URL unset)'
+			);
+			if (r.errors.length) hadFailure = true;
+		} catch (err) {
+			hadFailure = true;
+			opts.log?.(
+				`[daemon] website_zone failed: ${err instanceof Error ? err.message : String(err)}`
+			);
+		}
+	}
+
+	if (opts.shouldSkip?.()) return { ran: jobs.length > 0, hadFailure, jobs };
+
+	if (isJobDue('website_verify', now)) {
+		jobs.push('website_verify');
+		opts.log?.('[daemon] cadence: website_verify due');
+		try {
+			const r = await runScheduledJob('website_verify', () => runWebsiteVerifyCycle());
+			opts.log?.(
+				`[daemon] website_verify: ${r.live} live / ${r.parked} parked / ${r.dead} dead / ${r.error} error (${r.planned} planned)`
+			);
+		} catch (err) {
+			hadFailure = true;
+			opts.log?.(
+				`[daemon] website_verify failed: ${err instanceof Error ? err.message : String(err)}`
+			);
+		}
+	}
+
+	return { ran: jobs.length > 0, hadFailure, jobs };
 }
 
 export interface ReconcileCadenceResult {

@@ -12,7 +12,10 @@ export type ScheduledJobName =
 	| 'discovery'
 	| 'archive'
 	| 'deletionCheck'
-	| 'backup';
+	| 'backup'
+	| 'website_ct'
+	| 'website_zone'
+	| 'website_verify';
 
 export interface ScheduledJobRow {
 	job_name: string;

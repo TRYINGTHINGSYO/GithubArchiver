@@ -23,7 +23,10 @@ export const DAEMON_JOB_INTERVALS: Record<ScheduledJobName, number> = {
 	discovery: Number(process.env.DAEMON_DISCOVERY_INTERVAL_MS ?? 1 * HOUR),
 	archive: Number(process.env.DAEMON_ARCHIVE_INTERVAL_MS ?? 15 * MINUTE),
 	deletionCheck: Number(process.env.DAEMON_DELETION_CHECK_INTERVAL_MS ?? 24 * HOUR),
-	backup: Number(process.env.DAEMON_BACKUP_INTERVAL_MS ?? 24 * HOUR)
+	backup: Number(process.env.DAEMON_BACKUP_INTERVAL_MS ?? 24 * HOUR),
+	website_ct: Number(process.env.DAEMON_WEBSITE_CT_INTERVAL_MS ?? 10 * MINUTE),
+	website_zone: Number(process.env.DAEMON_WEBSITE_ZONE_INTERVAL_MS ?? 1 * HOUR),
+	website_verify: Number(process.env.DAEMON_WEBSITE_VERIFY_INTERVAL_MS ?? 2 * MINUTE)
 };
 
 export const DAEMON_JOB_ORDER: ScheduledJobName[] = [
@@ -36,6 +39,9 @@ export const DAEMON_JOB_ORDER: ScheduledJobName[] = [
 	'discovery',
 	'refresh',
 	'emerging',
+	'website_ct',
+	'website_zone',
+	'website_verify',
 	'archive',
 	'deletionCheck',
 	'backup'

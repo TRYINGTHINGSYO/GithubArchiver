@@ -56,6 +56,10 @@ export function formatJobTypeLabel(job: {
 		return `ingest batch${parentSuffix}`;
 	}
 
+	if (job.job_type === 'website_discover_ct') return 'websites · CT poll';
+	if (job.job_type === 'website_discover_zone') return 'websites · zone feed';
+	if (job.job_type === 'website_verify') return 'websites · verify';
+
 	if (job.job_type === 'pipeline') {
 		const phase = typeof detail.phase === 'string' ? detail.phase : null;
 		return phase ? `pipeline · ${phase}` : 'pipeline';

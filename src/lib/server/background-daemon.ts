@@ -4,7 +4,8 @@ import { runBackfillBatch } from './backfill-runner';
 import {
 	initializeInProcessCadence,
 	maybeReconcileStaleJobRuns,
-	maybeRunDueEmergingCycle
+	maybeRunDueEmergingCycle,
+	maybeRunDueWebsiteCycles
 } from './daemon-cadence';
 import { queryBacklogSnapshot } from './daemon-backlog';
 import {
@@ -384,14 +385,20 @@ async function runLoop(): Promise<void> {
 				});
 			}
 
-			// Own cadence (DAEMON_EMERGING_INTERVAL_MS) — not a planner competitor.
-			// Runs after the backlog action so a never-run row cannot starve ingest/enrich.
+			// Own cadence — not a planner competitor.
 			if (!stopRequested) {
 				const cadence = await maybeRunDueEmergingCycle({
 					shouldSkip: () => stopRequested,
 					log: appendLog
 				});
 				if (cadence.hadFailure) hadFailure = true;
+			}
+			if (!stopRequested) {
+				const websites = await maybeRunDueWebsiteCycles({
+					shouldSkip: () => stopRequested,
+					log: appendLog
+				});
+				if (websites.hadFailure) hadFailure = true;
 			}
 
 			if (rateLimitResetAt) {

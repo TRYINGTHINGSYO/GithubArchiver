@@ -213,7 +213,10 @@ export type JobType =
 	| 'backup'
 	| 'backfill'
 	| 'maintenance'
-	| 'export';
+	| 'export'
+	| 'website_discover_ct'
+	| 'website_discover_zone'
+	| 'website_verify';
 export type JobStatus = 'running' | 'success' | 'failed' | 'cancelled' | 'interrupted';
 
 export interface JobRunRow {
