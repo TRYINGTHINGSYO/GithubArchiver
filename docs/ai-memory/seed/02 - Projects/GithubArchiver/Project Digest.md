@@ -71,14 +71,14 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), related:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
+- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `open` · `ingest`, `gharchive` — [One transaction per GH Archive hour, not one fsync per create](entries/2026-07-30-bugfix-ingest-hour-transaction.md)
+  - edges: caused-by:[`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), related:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `memory`, `retrieval` — [One invalid status value made NaN scores randomise the whole ranking](entries/2026-07-30-bugfix-memory-nan-ranking.md)
   - edges: related:`pr-11-retrieval-scoring`, related:`pr-12-multistage-retrieval`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `daemon`, `ingest`, `jobs` — [Periodic job_runs reconcile + boot age-0 so stuck running cannot last forever](entries/2026-07-30-bugfix-periodic-job-reconcile.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), caused-by:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md)
 - **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `emerging`, `daemon` — [Wire emerging into in-process daemon on own cadence](entries/2026-07-30-feature-emerging-in-process-cadence.md)
   - edges: caused-by:[`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md)
-- **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `ingest`, `gharchive` — [Per-hour fetch/timeout backoff so sticky hours stop taxing every cycle](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md)
-  - edges: caused-by:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md), references:[`migration-036-ingest-hour-backoff`](entries/2026-07-30-migration-036-ingest-hour-backoff.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 
 ## Open technical debt
 
@@ -91,6 +91,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
+- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `open` · `ingest`, `gharchive` — [One transaction per GH Archive hour, not one fsync per create](entries/2026-07-30-bugfix-ingest-hour-transaction.md)
+  - edges: caused-by:[`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), related:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md)
 - **2026-07-30** · `feature` · `confirmed` · `release` · `open` · `observability`, `daemon`, `ux` — [Surface longest running job_runs age on homepage Discovery panel](entries/2026-07-30-feature-running-job-age-homepage.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
 - **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `daemon`, `discovery`, `enrichment`, `observability` — [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md)

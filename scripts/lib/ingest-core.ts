@@ -1,6 +1,5 @@
-import { appendRepoEvent } from '../../src/lib/server/events.js';
 import '../load-env.js';
-import { insertRepo } from '../../src/lib/server/db/index.js';
+import { commitGhArchiveCreates } from '../../src/lib/server/ingest-commit.js';
 import {
 	ingestReposFromSearch,
 	shouldRunSearchFallback
@@ -13,7 +12,8 @@ import {
 	GhArchiveTimeoutError,
 	GhArchiveUnavailableError,
 	parseHourKey,
-	streamRepositoryCreates
+	streamRepositoryCreates,
+	type RepoCreateEvent
 } from '../../src/lib/server/gharchive.js';
 import { GitHubRateLimitError } from '../../src/lib/server/github.js';
 
@@ -58,33 +58,17 @@ function resolveSource(ghInserted: number, searchInserted: number): IngestSource
 
 async function ingestHourOnce(hourKey: string, url: string): Promise<IngestResult> {
 	const firstSeenAt = new Date().toISOString();
-	let ghInserted = 0;
-	let ghSkipped = 0;
+	const creates: RepoCreateEvent[] = [];
 
-	const stats = await streamRepositoryCreates(url, async (event) => {
-		const result = insertRepo({
-			...event,
-			first_seen_at: firstSeenAt,
-			discovery_source: 'gharchive'
-		});
-		if (result.status === 'inserted' && result.id) {
-			ghInserted++;
-			appendRepoEvent(
-				result.id,
-				'first_seen',
-				{
-					full_name: event.full_name,
-					github_url: event.github_url,
-					event_id: event.event_id,
-					created_at: event.created_at,
-					discovery_source: 'gharchive'
-				},
-				firstSeenAt
-			);
-		} else {
-			ghSkipped++;
-		}
+	// Collect during the stream; commit afterwards. Writing per-event was the
+	// dominant cost of an hour and left partial inserts whenever the cycle
+	// aborted mid-stream.
+	const stats = await streamRepositoryCreates(url, (event) => {
+		creates.push(event);
 	});
+	const committed = commitGhArchiveCreates(creates, firstSeenAt);
+	const ghInserted = committed.inserted;
+	const ghSkipped = committed.skipped;
 
 	let searchFound = 0;
 	let searchInserted = 0;

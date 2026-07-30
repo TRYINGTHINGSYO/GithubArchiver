@@ -14,15 +14,15 @@ import { recordHourIngested } from './db/ingestion.js';
 import { ingestReposFromSearch } from './repo-discovery.js';
 import {
 	archiveUrlForKey,
-	streamRepositoryCreates
+	streamRepositoryCreates,
+	type RepoCreateEvent
 } from './gharchive.js';
 import {
 	ingestHour,
 	ingestSourceForRecord,
 	isIngestSuccess
 } from '$ingest-core';
-import { insertRepo } from './db/repos.js';
-import { appendRepoEvent } from './events.js';
+import { commitGhArchiveCreates } from './ingest-commit.js';
 
 export interface BackfillRunResult {
 	jobId: number;
@@ -47,28 +47,16 @@ async function ingestSearchOnly(hourKey: string) {
 async function ingestGhArchiveOnly(hourKey: string) {
 	const url = archiveUrlForKey(hourKey);
 	const firstSeenAt = new Date().toISOString();
-	let inserted = 0;
-	let skipped = 0;
-	const stats = await streamRepositoryCreates(url, async (event) => {
-		const result = insertRepo({ ...event, first_seen_at: firstSeenAt, discovery_source: 'gharchive' });
-		if (result.status === 'inserted' && result.id) {
-			inserted++;
-			appendRepoEvent(result.id, 'first_seen', {
-				full_name: event.full_name,
-				github_url: event.github_url,
-				event_id: event.event_id,
-				created_at: event.created_at,
-				discovery_source: 'gharchive'
-			}, firstSeenAt);
-		} else {
-			skipped++;
-		}
+	const creates: RepoCreateEvent[] = [];
+	const stats = await streamRepositoryCreates(url, (event) => {
+		creates.push(event);
 	});
+	const committed = commitGhArchiveCreates(creates, firstSeenAt);
 	return {
 		source: 'gharchive' as const,
 		eventsParsed: stats.parsedEvents,
-		reposInserted: inserted,
-		skipped,
+		reposInserted: committed.inserted,
+		skipped: committed.skipped,
 		repoCreates: stats.repoCreates
 	};
 }

@@ -27,6 +27,11 @@ export function getDb(): Database.Database {
 		db = new Database(path);
 		dbPathOpened = path;
 		db.pragma('journal_mode = WAL');
+		// FULL fsyncs every commit. With WAL, NORMAL is crash-safe for the DB file
+		// and is the difference between ~5 fsyncs/create and one fsync/hour when
+		// ingest commits a batch. The volume is network-attached, so the default
+		// was the dominant cost of each repository create.
+		db.pragma('synchronous = NORMAL');
 		db.pragma('foreign_keys = ON');
 		db.pragma('busy_timeout = 5000');
 		runMigrations(db);

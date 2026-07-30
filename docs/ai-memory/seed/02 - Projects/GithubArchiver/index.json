@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T22:44:07.322Z",
+  "generatedAt": "2026-07-30T23:07:44.058Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -153,6 +153,40 @@
       "title": "GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat",
       "path": "entries/2026-07-30-bugfix-ingest-fetch-timeout.md",
       "summary": "Prevents recurrence of the 75-minute silent ingest wedge (`incident-daemon-ingest-hang`)."
+    },
+    {
+      "id": "bugfix-ingest-hour-transaction",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ingest",
+        "gharchive"
+      ],
+      "related": [
+        "incident-ingest-timeout-covers-db-writes",
+        "research-archive-backlog-pace"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-ingest-timeout-covers-db-writes"
+        },
+        {
+          "type": "related",
+          "id": "research-archive-backlog-pace"
+        }
+      ],
+      "supersedes": null,
+      "title": "One transaction per GH Archive hour, not one fsync per create",
+      "path": "entries/2026-07-30-bugfix-ingest-hour-transaction.md",
+      "summary": "After the timeout-scoping fix (`1aa761c`), ingest failed with a new error that"
     },
     {
       "id": "bugfix-memory-nan-ranking",

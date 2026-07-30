@@ -19,6 +19,8 @@ Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, 
   - `caused-by` → [`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), `related` → [`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
 - [`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md) (`bugfix`, `confirmed`, `release`) — GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat
   - `caused-by` → [`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), `related` → [`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
+- [`bugfix-ingest-hour-transaction`](entries/2026-07-30-bugfix-ingest-hour-transaction.md) (`bugfix`, `confirmed`, `permanent`) — One transaction per GH Archive hour, not one fsync per create
+  - `caused-by` → [`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), `related` → [`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md)
 - [`bugfix-memory-nan-ranking`](entries/2026-07-30-bugfix-memory-nan-ranking.md) (`bugfix`, `confirmed`, `permanent`) — One invalid status value made NaN scores randomise the whole ranking
   - `related` → `pr-11-retrieval-scoring`, `related` → `pr-12-multistage-retrieval`, `references` → [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - [`bugfix-periodic-job-reconcile`](entries/2026-07-30-bugfix-periodic-job-reconcile.md) (`bugfix`, `confirmed`, `permanent`) — Periodic job_runs reconcile + boot age-0 so stuck running cannot last forever
