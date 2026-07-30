@@ -55,11 +55,11 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 ## Known pitfalls
 
 - [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md) — Production SSH + `/data/worker.log` + `job_runs` probe on 2026-07-30.
+- [Mid-stream GH Archive abort crashed Node and failed Railway deploy](entries/2026-07-30-incident-deploy-abort-stream-crash.md) — Railway deploy of `19867ca` built and started, then the process crashed:
 - [Emerging topics never ran — in-process daemon has no emerging action](entries/2026-07-30-incident-emerging-never-scheduled.md) — **Bucket: genuine scheduling gap.** Absolute gates (≥10 repos / ≥5 owners / ≥3 high-signal) were never the blocker — detection has never been invoked in production.
 - [Production freshness stall — archive ~5–6 days behind, enrich idle, emerging never ran](entries/2026-07-30-incident-freshness-stall.md) — Live homepage review on [production](https://new-production-9120.up.railway.app/) shows classification/story/cluster surfaces healthy, but **freshness** is not.
 - [Enrichment must be continuous concurrent queue not hourly trickle](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md) — Dashboard showed ~739k indexed, ~3.3k analyzed (0.4%), ~671k waiting, “this run: 13”, worker last ran ~1 hour ago. At 13/hour the backlog would take years.
 - [Search fallback active must reflect live execution only](entries/2026-07-18-pr-6-search-fallback-active.md) — Search starts `search_ingest_stats` rows as `running`. Railway restarts mid-run. Daemon reconciles orphaned `job_runs`, but Search shard rows stay `running`. `isSearchFallbackActive()` treated those stale rows as active while the daemon enriched.
-- [Defer empty CreateEvent spam — backlog is days-old births not years-old repos](entries/2026-07-18-incident-empty-createevent-defer.md) — Throughput healthy (~43/min, concurrency 8, 1 req/repo) but **Deferred stayed 0** and claimable stayed ~795k. ETA still ~13 days.
 
 ## Recent changes
 
@@ -73,12 +73,12 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
 - **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `daemon`, `discovery`, `enrichment`, `observability` — [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md)
   - edges: caused-by:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md)
+- **2026-07-30** · `incident` · `confirmed` · `permanent` · `done` · `ingest`, `gharchive`, `deploy` — [Mid-stream GH Archive abort crashed Node and failed Railway deploy](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
+  - edges: caused-by:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md)
 - **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `emerging-topics`, `daemon`, `discovery` — [Emerging topics never ran — in-process daemon has no emerging action](entries/2026-07-30-incident-emerging-never-scheduled.md)
   - edges: related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md)
 - **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `discovery`, `enrichment`, `daemon`, `observability`, `emerging-topics` — [Production freshness stall — archive ~5–6 days behind, enrich idle, emerging never ran](entries/2026-07-30-incident-freshness-stall.md)
   - edges: related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md)
-- **2026-07-30** · `feature` · `confirmed` · `permanent` · `done` · `emerging`, `daemon` — [Emerging scheduling gap closed in production path](entries/2026-07-30-status-emerging-scheduled-in-process.md)
-  - edges: supersedes:[`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md), implemented-by:[`feature-emerging-in-process-cadence`](entries/2026-07-30-feature-emerging-in-process-cadence.md)
 
 ## Open technical debt
 

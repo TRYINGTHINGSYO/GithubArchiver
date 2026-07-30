@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T09:47:50.393Z",
+  "generatedAt": "2026-07-30T10:04:51.205Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -188,6 +188,41 @@
       "title": "Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)",
       "path": "entries/2026-07-30-incident-daemon-ingest-hang.md",
       "summary": "Production SSH + `/data/worker.log` + `job_runs` probe on 2026-07-30."
+    },
+    {
+      "id": "incident-deploy-abort-stream-crash",
+      "schema": 1,
+      "type": "incident",
+      "status": "done",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ingest",
+        "gharchive",
+        "deploy"
+      ],
+      "related": [
+        "bugfix-ingest-fetch-timeout",
+        "incident-daemon-ingest-hang"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "bugfix-ingest-fetch-timeout"
+        },
+        {
+          "type": "related",
+          "id": "incident-daemon-ingest-hang"
+        }
+      ],
+      "supersedes": null,
+      "title": "Mid-stream GH Archive abort crashed Node and failed Railway deploy",
+      "path": "entries/2026-07-30-incident-deploy-abort-stream-crash.md",
+      "summary": "Railway deploy of `19867ca` built and started, then the process crashed:"
     },
     {
       "id": "incident-emerging-never-scheduled",

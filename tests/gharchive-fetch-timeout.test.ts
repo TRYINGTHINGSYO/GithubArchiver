@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { gzipSync } from 'node:zlib';
 import {
 	GhArchiveTimeoutError,
 	ghArchiveFetchTimeoutMs,
@@ -58,5 +59,58 @@ describe('GH Archive fetch timeout', () => {
 			name: 'GhArchiveTimeoutError',
 			timeoutMs: 30
 		});
+	});
+
+	it('mid-stream abort becomes GhArchiveTimeoutError without crashing the process', async () => {
+		process.env.GH_ARCHIVE_FETCH_TIMEOUT_MS = '40';
+		const ndjson = Array.from({ length: 200 }, (_, i) =>
+			JSON.stringify({
+				id: i,
+				type: 'WatchEvent',
+				repo: { name: 'o/r' },
+				created_at: '2026-07-24T00:00:00Z'
+			})
+		).join('\n');
+		const gz = gzipSync(Buffer.from(ndjson));
+
+		vi.stubGlobal(
+			'fetch',
+			vi.fn((_url: string, init?: { signal?: AbortSignal }) => {
+				const stream = new ReadableStream<Uint8Array>({
+					async start(controller) {
+						for (let offset = 0; offset < gz.length; offset += 8) {
+							if (init?.signal?.aborted) {
+								const err = new Error('The operation was aborted');
+								err.name = 'AbortError';
+								controller.error(err);
+								return;
+							}
+							controller.enqueue(gz.subarray(offset, Math.min(offset + 8, gz.length)));
+							await new Promise((r) => setTimeout(r, 8));
+						}
+						controller.close();
+					}
+				});
+				return Promise.resolve(new Response(stream, { status: 200 }));
+			})
+		);
+
+		const crashes: unknown[] = [];
+		const onCrash = (err: unknown) => {
+			crashes.push(err);
+		};
+		process.on('uncaughtException', onCrash);
+		process.on('unhandledRejection', onCrash);
+
+		try {
+			await expect(
+				streamRepositoryCreates('https://data.gharchive.org/2026-07-25-02.json.gz')
+			).rejects.toBeInstanceOf(GhArchiveTimeoutError);
+			await new Promise((r) => setTimeout(r, 80));
+			expect(crashes).toEqual([]);
+		} finally {
+			process.off('uncaughtException', onCrash);
+			process.off('unhandledRejection', onCrash);
+		}
 	});
 });

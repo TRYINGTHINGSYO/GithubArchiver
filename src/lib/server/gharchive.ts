@@ -250,7 +250,16 @@ function toRepoCreateEvent(event: GhArchiveEvent): RepoCreateEvent | null {
 	};
 }
 
-async function readHourStream(url: string, res: Response): Promise<Readable> {
+/**
+ * Web-fetch body → gunzip. Abort/cancel must not emit an unhandled Readable
+ * 'error' (that crashes Node and fails the Railway deploy). Always attach
+ * listeners before pipe, and destroy both ends when the hour signal aborts.
+ */
+async function readHourStream(
+	url: string,
+	res: Response,
+	signal: AbortSignal
+): Promise<Readable> {
 	const body = res.body;
 	if (!body) {
 		throw new GhArchiveFetchError(url, res.status, `GH Archive empty response body: ${url}`);
@@ -258,7 +267,32 @@ async function readHourStream(url: string, res: Response): Promise<Readable> {
 
 	const nodeStream = Readable.fromWeb(body as import('node:stream/web').ReadableStream);
 	const gunzip = createGunzip();
-	return nodeStream.pipe(gunzip);
+
+	const abortErr = () => {
+		const err = new Error('The operation was aborted');
+		err.name = 'AbortError';
+		return err;
+	};
+
+	// Keep a listener on both streams for the whole lifetime so AbortError from
+	// fetch cancellation cannot become an unhandled 'error' event.
+	nodeStream.on('error', (err) => {
+		if (!gunzip.destroyed) gunzip.destroy(err);
+	});
+	gunzip.on('error', () => {
+		/* for-await / destroy still surface the error to the consumer */
+	});
+
+	const destroyBoth = () => {
+		const err = abortErr();
+		if (!nodeStream.destroyed) nodeStream.destroy(err);
+		if (!gunzip.destroyed) gunzip.destroy(err);
+	};
+	if (signal.aborted) destroyBoth();
+	else signal.addEventListener('abort', destroyBoth, { once: true });
+
+	nodeStream.pipe(gunzip);
+	return gunzip;
 }
 
 function assertGhArchiveHttpOk(url: string, res: Response): void {
@@ -301,7 +335,7 @@ export async function streamRepositoryCreates(
 		const res = await fetchGhArchiveResponse(url, signal);
 		assertGhArchiveHttpOk(url, res);
 
-		const combined = await readHourStream(url, res);
+		const combined = await readHourStream(url, res, signal);
 		const stats: HourStreamStats = {
 			parsedEvents: 0,
 			repoCreates: 0,
@@ -344,6 +378,10 @@ export async function streamRepositoryCreates(
 				}
 			}
 
+			if (signal.aborted) {
+				throw new GhArchiveTimeoutError(url, ghArchiveFetchTimeoutMs());
+			}
+
 			if (buffer.trim()) {
 				try {
 					await observe(JSON.parse(buffer) as GhArchiveEvent);
@@ -369,7 +407,7 @@ export async function* streamHourEvents(url: string): AsyncGenerator<GhArchiveEv
 		const res = await fetchGhArchiveResponse(url, controller.signal);
 		assertGhArchiveHttpOk(url, res);
 
-		const combined = await readHourStream(url, res);
+		const combined = await readHourStream(url, res, controller.signal);
 		let buffer = '';
 
 		try {
@@ -389,6 +427,10 @@ export async function* streamHourEvents(url: string): AsyncGenerator<GhArchiveEv
 						// skip malformed lines
 					}
 				}
+			}
+
+			if (controller.signal.aborted) {
+				throw new GhArchiveTimeoutError(url, timeoutMs);
 			}
 
 			if (buffer.trim()) {
