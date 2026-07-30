@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T23:07:44.058Z",
+  "generatedAt": "2026-07-30T23:36:29.047Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -158,7 +158,7 @@
       "id": "bugfix-ingest-hour-transaction",
       "schema": 1,
       "type": "bugfix",
-      "status": "open",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -621,7 +621,7 @@
       "id": "incident-ingest-timeout-covers-db-writes",
       "schema": 1,
       "type": "incident",
-      "status": "open",
+      "status": "verified",
       "confidence": "confirmed",
       "durability": "permanent",
       "date": "2026-07-30",
@@ -637,6 +637,7 @@
         "feature-ingest-timeout-hour-backoff",
         "bugfix-ingest-fetch-timeout",
         "bugfix-dashboard-trust-semantics",
+        "bugfix-ingest-hour-transaction",
         "migration-036-ingest-hour-backoff",
         "research-enrichment-selection-bound"
       ],
@@ -652,6 +653,10 @@
         {
           "type": "related",
           "id": "bugfix-dashboard-trust-semantics"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-ingest-hour-transaction"
         },
         {
           "type": "references",

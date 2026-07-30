@@ -6,7 +6,7 @@ area:
   - gharchive
   - emerging
 type: incident
-status: open
+status: verified
 confidence: confirmed
 durability: permanent
 schema: 1
@@ -17,6 +17,8 @@ relationships:
     id: bugfix-ingest-fetch-timeout
   - type: related
     id: bugfix-dashboard-trust-semantics
+  - type: related
+    id: bugfix-ingest-hour-transaction
   - type: references
     id: migration-036-ingest-hour-backoff
   - type: related

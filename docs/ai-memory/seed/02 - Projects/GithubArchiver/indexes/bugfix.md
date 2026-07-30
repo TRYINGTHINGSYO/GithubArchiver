@@ -17,7 +17,7 @@ generated: true
   - edges: caused-by:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), related:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
-- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `open` · `ingest`, `gharchive` — [One transaction per GH Archive hour, not one fsync per create](entries/2026-07-30-bugfix-ingest-hour-transaction.md)
+- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `ingest`, `gharchive` — [One transaction per GH Archive hour, not one fsync per create](entries/2026-07-30-bugfix-ingest-hour-transaction.md)
   - edges: caused-by:[`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), related:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `memory`, `retrieval` — [One invalid status value made NaN scores randomise the whole ranking](entries/2026-07-30-bugfix-memory-nan-ranking.md)
   - edges: related:`pr-11-retrieval-scoring`, related:`pr-12-multistage-retrieval`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)

@@ -5,7 +5,7 @@ area:
   - ingest
   - gharchive
 type: bugfix
-status: open
+status: verified
 confidence: confirmed
 durability: permanent
 schema: 1
@@ -52,9 +52,16 @@ wall-clock abort mid-stream leaves the database untouched, ending the
 `tests/ingest-commit.test.ts` — batch insert, duplicate skip, and a mid-batch
 `RAISE(ABORT)` trigger proving every insert from the hour rolls back together.
 
-## Remaining verification
+## Verified on production
 
-`latest_hour` advances past `2026-07-25-21`, recent ingest `job_runs` show
-`hours > 0` and `downloaded > 0`, `ingest_hour_backoff` drains, and pace returns
-toward the ~2.4 archive-hours/wall-hour baseline. Then mark this and
-`incident-ingest-timeout-covers-db-writes` verified.
+After three follow-up commits (timeout scope → chunked transactions → bulk
+INSERT without per-row FTS/priority recompute):
+
+```
+2026-07-26-22: streamed 169278 → 2566 creates in 4614ms; committed +1550 in 2723ms
+2026-07-26-23: streamed 170072 → 2643 creates in 2622ms; committed +2451 in 3502ms
+2026-07-27-00: streamed 174872 → 3140 creates in 2627ms; committed +2970 in 6031ms
+```
+
+`latest_hour` advanced `2026-07-25-21` → `2026-07-27-03`. `last_ingest_at`
+`19:02Z` → `23:33Z`. Backoff cooling `44` → `24`. Per-hour wall time ~7–10s.
