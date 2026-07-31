@@ -1,9 +1,82 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-31T07:34:23.404Z",
+  "generatedAt": "2026-07-31T09:59:26.235Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "decision-mcp-first-dev-workflow",
+      "schema": 1,
+      "type": "decision",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-31",
+      "pr": null,
+      "commit": "6fbaa7a",
+      "migration": null,
+      "area": [
+        "mcp",
+        "project-memory",
+        "adoption"
+      ],
+      "related": [
+        "feature-mcp-resources-prompts-review",
+        "decision-knowledge-engine-philosophy"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "feature-mcp-resources-prompts-review"
+        },
+        {
+          "type": "related",
+          "id": "decision-knowledge-engine-philosophy"
+        },
+        {
+          "type": "validates",
+          "id": "feature-mcp-resources-prompts-review"
+        }
+      ],
+      "supersedes": null,
+      "title": "MCP is the primary knowledge and review layer",
+      "path": "entries/2026-07-31-decision-mcp-first-dev-workflow.md",
+      "summary": "End-to-end Cursor validation succeeded: green `githubarchive` MCP connection, `get_project_state` JSON-RPC round-trip, discovery of tools/prompts/resources."
+    },
+    {
+      "id": "feature-mcp-resources-prompts-review",
+      "schema": 1,
+      "type": "feature",
+      "status": "closed",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-31",
+      "pr": null,
+      "commit": "6fbaa7a",
+      "migration": null,
+      "area": [
+        "mcp",
+        "project-memory"
+      ],
+      "related": [
+        "feat-mcp-intelligence-server",
+        "decision-knowledge-engine-philosophy"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "feat-mcp-intelligence-server"
+        },
+        {
+          "type": "references",
+          "id": "decision-knowledge-engine-philosophy"
+        }
+      ],
+      "supersedes": null,
+      "title": "MCP project resources, prompts, and workspace review",
+      "path": "entries/2026-07-31-feature-mcp-resources-prompts-review.md",
+      "summary": "Expanded the GithubArchive+ MCP server beyond tools-only: portable Cursor `.cursor/mcp.json` (direct `node` + `tsx`, not `npm run`), stderr-clean launcher, richer persistent resources, reusable review prompts, and `review_workspace`."
+    },
     {
       "id": "bugfix-claimable-retry-hygiene",
       "schema": 1,

@@ -9,7 +9,19 @@ globs:
 
 # GithubArchive+ Context
 
-If context is tight, read **only**:
+## MCP-first (primary knowledge layer)
+
+For every substantial development session, start with the `githubarchive` MCP — not conversation history or ad-hoc inspection:
+
+1. `review_workspace` → summarize Facts / Inferences / Recommendations
+2. `get_project_state`
+3. `validate_proposed_change` **before** suggesting any implementation
+
+Per-feature loop: review → project state → validate → implement → tests → Feature Registry → Decision Journal (if behavior/architecture changed) → `review_workspace` again before commit.
+
+## Vault / retrieval fallback
+
+If MCP is unavailable or context is tight, read **only**:
 
 `02 - Projects/GithubArchiver/Project Digest.md`
 

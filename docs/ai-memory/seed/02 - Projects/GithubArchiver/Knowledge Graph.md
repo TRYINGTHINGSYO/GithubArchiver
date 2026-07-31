@@ -11,6 +11,10 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md) (`decision`, `confirmed`, `permanent`) — MCP is the primary knowledge and review layer
+  - `references` → [`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), `related` → [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), `validates` → [`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
+- [`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md) (`feature`, `confirmed`, `permanent`) — MCP project resources, prompts, and workspace review
+  - `related` → `feat-mcp-intelligence-server`, `references` → [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - [`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md) (`bugfix`, `confirmed`, `release`) — Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched
   - `caused-by` → [`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), `related` → [`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), `related` → [`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 - [`bugfix-dashboard-trust-semantics`](entries/2026-07-30-bugfix-dashboard-trust-semantics.md) (`bugfix`, `confirmed`, `permanent`) — Three dashboard fields asserted things the data did not support

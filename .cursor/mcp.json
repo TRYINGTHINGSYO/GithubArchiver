@@ -4,12 +4,8 @@
       "type": "stdio",
       "command": "node",
       "args": [
-        "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
-        "${workspaceFolder}/packages/githubarchive-mcp/src/index.ts"
-      ],
-      "env": {
-        "NODE_ENV": "development"
-      }
+        "${workspaceFolder}\\scripts\\run-mcp-githubarchive.mjs"
+      ]
     }
   }
 }

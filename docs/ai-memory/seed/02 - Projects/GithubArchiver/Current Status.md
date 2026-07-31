@@ -81,6 +81,8 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Recent merges / verified
 
+- **2026-07-31** · `decision` · `confirmed` · `permanent` · `6fbaa7a` · `verified` · `mcp`, `project-memory`, `adoption` — [MCP is the primary knowledge and review layer](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
+  - edges: references:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), related:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), validates:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `observability`, `search-fallback`, `enrichment`, `emerging-topics` — [Three dashboard fields asserted things the data did not support](entries/2026-07-30-bugfix-dashboard-trust-semantics.md)
   - edges: supersedes:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), validates:`test-readiness-growth-gate`
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `deploy`, `daemon` — [Railway healthcheck on / raced daemon ingest — deploy failed, site 502](entries/2026-07-30-bugfix-deploy-healthcheck-race.md)
@@ -95,8 +97,6 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
   - edges: caused-by:[`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), implemented-by:[`bugfix-ingest-hour-transaction`](entries/2026-07-30-bugfix-ingest-hour-transaction.md), references:[`migration-038-archive-hour-metrics`](entries/2026-07-30-migration-038-archive-hour-metrics.md)
 - **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `emerging`, `daemon` — [Wire emerging into in-process daemon on own cadence](entries/2026-07-30-feature-emerging-in-process-cadence.md)
   - edges: caused-by:[`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md)
-- **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `ingest`, `gharchive` — [Per-hour fetch/timeout backoff so sticky hours stop taxing every cycle](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md)
-  - edges: caused-by:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md), references:[`migration-036-ingest-hour-backoff`](entries/2026-07-30-migration-036-ingest-hour-backoff.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 
 ## Next priorities
 
