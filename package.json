@@ -40,6 +40,7 @@
     "doctor": "tsx scripts/doctor.ts",
     "storage:analyze": "tsx scripts/storage-analyze.ts",
     "pipeline:once": "tsx scripts/run-pipeline.ts",
+    "discovery:materialize": "tsx scripts/materialize-discovery.ts",
     "backfill:day": "tsx scripts/backfill-day.ts",
     "backfill:range": "tsx scripts/backfill-range.ts",
     "backfill:resume": "tsx scripts/backfill-resume.ts",

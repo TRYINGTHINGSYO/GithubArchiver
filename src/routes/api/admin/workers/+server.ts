@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import {
 	runArchiveJob,
+	runDiscoveryMaterializeJob,
 	runEnrichJob,
 	runIngestHourJob,
 	runIngestMissingJob,
@@ -25,6 +26,10 @@ export const POST: RequestHandler = async ({ request }) => {
 	switch (action) {
 		case 'pipeline': {
 			const result = runPipelineJob();
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'discovery-materialize': {
+			const result = runDiscoveryMaterializeJob();
 			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
 		}
 		case 'ingest': {

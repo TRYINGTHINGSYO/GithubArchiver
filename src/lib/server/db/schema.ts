@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 38;
+export const CURRENT_SCHEMA_VERSION = 39;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1313,6 +1313,35 @@ function migration038(database: Database.Database) {
 	`);
 }
 
+/**
+ * Durable discovery materialization runs: cross-process lease, per-section
+ * row counts, source commit / algorithm version, and publish fingerprint.
+ * Existing discovery_* payload tables remain the published read path.
+ */
+function migration039(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS discovery_materialization_runs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			status TEXT NOT NULL,
+			started_at TEXT NOT NULL,
+			finished_at TEXT,
+			source_commit TEXT,
+			algorithm_version INTEGER NOT NULL,
+			lease_owner TEXT,
+			lease_expires_at TEXT,
+			error TEXT,
+			row_counts_json TEXT,
+			published INTEGER NOT NULL DEFAULT 0
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_discovery_materialization_runs_status
+		  ON discovery_materialization_runs(status, started_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_discovery_materialization_runs_published
+		  ON discovery_materialization_runs(published, finished_at DESC);
+	`);
+}
+
 /** Website discovery: CT + zone intake → shared candidates → liveness verify. */
 function migration037(database: Database.Database) {
 	database.exec(`
@@ -1397,7 +1426,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	35: migration035,
 	36: migration036,
 	37: migration037,
-	38: migration038
+	38: migration038,
+	39: migration039
 };
 
 export interface MigrationRunResult {
@@ -1486,6 +1516,24 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 		if (!repairs.includes('015:repos.cluster_columns')) {
 			repairs.push('015:cluster_tables');
 		}
+	}
+
+	// Local/prod drift: schema_version >= 26 recorded while migration026 objects
+	// are absent (observed 2026-07-31: v26 applied_at 2026-07-24, no discovery_* /
+	// scheduled_jobs). Same class as 014/015 — re-apply idempotent DDL, do not
+	// invent alternate tables ad hoc.
+	const version = getSchemaVersion(database);
+	const discoveryTablesPresent =
+		tables.has('discovery_system_status') &&
+		tables.has('discovery_projects_to_watch') &&
+		tables.has('discovery_emerging_topics') &&
+		tables.has('discovery_fastest_clusters') &&
+		tables.has('discovery_deleted_preserved') &&
+		tables.has('discovery_unusual_finds') &&
+		tables.has('scheduled_jobs');
+	if (version >= 26 && !discoveryTablesPresent) {
+		migration026(database);
+		repairs.push('026:discovery_materialization_tables');
 	}
 
 	return repairs;

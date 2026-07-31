@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-31T09:59:26.235Z",
+  "generatedAt": "2026-07-31T10:10:22.667Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -44,6 +44,46 @@
       "summary": "End-to-end Cursor validation succeeded: green `githubarchive` MCP connection, `get_project_state` JSON-RPC round-trip, discovery of tools/prompts/resources."
     },
     {
+      "id": "feature-durable-discovery-materialization",
+      "schema": 1,
+      "type": "feature",
+      "status": "closed",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-31",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "homepage",
+        "discovery",
+        "mcp"
+      ],
+      "related": [
+        "incident-schema26-discovery-tables-missing",
+        "research-homepage-readiness-cache",
+        "decision-mcp-first-dev-workflow"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-schema26-discovery-tables-missing"
+        },
+        {
+          "type": "related",
+          "id": "research-homepage-readiness-cache"
+        },
+        {
+          "type": "references",
+          "id": "decision-mcp-first-dev-workflow"
+        }
+      ],
+      "supersedes": null,
+      "title": "Harden homepage discovery materialization durability",
+      "path": "entries/2026-07-31-feature-durable-discovery-materialization.md",
+      "summary": "Hardened the existing homepage discovery materialization pipeline (no rewrite of"
+    },
+    {
       "id": "feature-mcp-resources-prompts-review",
       "schema": 1,
       "type": "feature",
@@ -76,6 +116,41 @@
       "title": "MCP project resources, prompts, and workspace review",
       "path": "entries/2026-07-31-feature-mcp-resources-prompts-review.md",
       "summary": "Expanded the GithubArchive+ MCP server beyond tools-only: portable Cursor `.cursor/mcp.json` (direct `node` + `tsx`, not `npm run`), stderr-clean launcher, richer persistent resources, reusable review prompts, and `review_workspace`."
+    },
+    {
+      "id": "incident-schema26-discovery-tables-missing",
+      "schema": 1,
+      "type": "incident",
+      "status": "closed",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-31",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "db",
+        "homepage",
+        "discovery"
+      ],
+      "related": [
+        "research-homepage-readiness-cache",
+        "feature-mcp-resources-prompts-review"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "research-homepage-readiness-cache"
+        },
+        {
+          "type": "related",
+          "id": "feature-mcp-resources-prompts-review"
+        }
+      ],
+      "supersedes": null,
+      "title": "schema_version 26 recorded without discovery materialization tables",
+      "path": "entries/2026-07-31-incident-schema26-discovery-tables-missing.md",
+      "summary": "Local `data/githubarchive.db` reported `MAX(schema_version) = 26` with"
     },
     {
       "id": "bugfix-claimable-retry-hygiene",

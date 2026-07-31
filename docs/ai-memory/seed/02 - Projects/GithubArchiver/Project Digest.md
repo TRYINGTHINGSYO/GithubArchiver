@@ -54,19 +54,23 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Known pitfalls
 
+- [schema_version 26 recorded without discovery materialization tables](entries/2026-07-31-incident-schema26-discovery-tables-missing.md) — Local `data/githubarchive.db` reported `MAX(schema_version) = 26` with
 - [The healthcheck delay silently regressed the boot-reconcile guarantee](entries/2026-07-30-incident-boot-reconcile-regression.md) — `bugfix-periodic-job-reconcile` established the invariant that a fresh process
 - [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md) — Production SSH + `/data/worker.log` + `job_runs` probe on 2026-07-30.
 - [Mid-stream GH Archive abort crashed Node and failed Railway deploy](entries/2026-07-30-incident-deploy-abort-stream-crash.md) — Railway deploy of `19867ca` built and started, then the process crashed:
 - [Emerging topics never ran — in-process daemon has no emerging action](entries/2026-07-30-incident-emerging-never-scheduled.md) — **Bucket: genuine scheduling gap.** Absolute gates (≥10 repos / ≥5 owners / ≥3 high-signal) were never the blocker — detection has never been invoked in production.
 - [Production freshness stall — archive ~5–6 days behind, enrich idle, emerging never ran](entries/2026-07-30-incident-freshness-stall.md) — Live homepage review on [production](https://new-production-9120.up.railway.app/) shows classification/story/cluster surfaces healthy, but **freshness** is not.
-- [The 30s GH Archive ceiling covers DB writes, so every hour fails and the frontier is frozen](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md) — Ingest has failed 100% of hours since ~19:02Z. Every cycle records
 
 ## Recent changes
 
 - **2026-07-31** · `decision` · `confirmed` · `permanent` · `6fbaa7a` · `verified` · `mcp`, `project-memory`, `adoption` — [MCP is the primary knowledge and review layer](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
   - edges: references:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), related:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), validates:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
+- **2026-07-31** · `feature` · `confirmed` · `permanent` · `closed` · `homepage`, `discovery`, `mcp` — [Harden homepage discovery materialization durability](entries/2026-07-31-feature-durable-discovery-materialization.md)
+  - edges: caused-by:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), references:[`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
 - **2026-07-31** · `feature` · `confirmed` · `permanent` · `6fbaa7a` · `closed` · `mcp`, `project-memory` — [MCP project resources, prompts, and workspace review](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
   - edges: related:`feat-mcp-intelligence-server`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
+- **2026-07-31** · `incident` · `confirmed` · `permanent` · `closed` · `db`, `homepage`, `discovery` — [schema_version 26 recorded without discovery materialization tables](entries/2026-07-31-incident-schema26-discovery-tables-missing.md)
+  - edges: related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), related:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `enrichment`, `daemon`, `observability` — [Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `observability`, `search-fallback`, `enrichment`, `emerging-topics` — [Three dashboard fields asserted things the data did not support](entries/2026-07-30-bugfix-dashboard-trust-semantics.md)
@@ -75,10 +79,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), related:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
-- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `ingest`, `gharchive` — [One transaction per GH Archive hour, not one fsync per create](entries/2026-07-30-bugfix-ingest-hour-transaction.md)
-  - edges: caused-by:[`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), related:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md)
-- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `memory`, `retrieval` — [One invalid status value made NaN scores randomise the whole ranking](entries/2026-07-30-bugfix-memory-nan-ranking.md)
-  - edges: related:`pr-11-retrieval-scoring`, related:`pr-12-multistage-retrieval`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 
 ## Open technical debt
 

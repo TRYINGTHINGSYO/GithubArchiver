@@ -168,6 +168,9 @@
 		<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Refresh', () => postJson('/api/admin/workers', { action: 'refresh' }))}>
 			{actionLoading === 'Refresh' ? 'Starting…' : 'Refresh Metadata'}
 		</button>
+		<button type="button" class="filter-btn" disabled={actionLoading !== null} onclick={() => runAction('Discovery materialize', () => postJson('/api/admin/workers', { action: 'discovery-materialize' }))}>
+			{actionLoading === 'Discovery materialize' ? 'Starting…' : 'Materialize Homepage'}
+		</button>
 	</div>
 	{#if actionMsg}
 		<p class="admin-meta" class:admin-error={actionError} class:admin-success={!actionError}>{actionMsg}</p>

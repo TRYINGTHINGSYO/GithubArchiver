@@ -290,18 +290,117 @@ export class AppDatabaseService {
   getMaterializationSummary(): Record<string, unknown> {
     return this.withDb((db) => {
       if (!tableExists(db, 'discovery_system_status')) {
-        return { available: false, reason: 'discovery_system_status table is not present.' };
+        return {
+          available: false,
+          stale: true,
+          reason: 'discovery_system_status table is not present.'
+        };
       }
-      return (
-        (db
-          .prepare(
-            `SELECT repositories_discovered, enriched, classified, clustered,
-                    last_ingestion_at, last_discovery_analysis_at, last_emerging_analysis_at,
-                    worker_status, updated_at
-             FROM discovery_system_status WHERE id = 1`
-          )
-          .get() as Record<string, unknown> | undefined) ?? { available: false, reason: 'No discovery_system_status row exists.' }
-      );
+      const status = db
+        .prepare(
+          `SELECT repositories_discovered, enriched, classified, clustered,
+                  last_ingestion_at, last_discovery_analysis_at, last_emerging_analysis_at,
+                  worker_status, updated_at
+           FROM discovery_system_status WHERE id = 1`
+        )
+        .get() as
+        | {
+            repositories_discovered: number;
+            enriched: number;
+            classified: number;
+            clustered: number;
+            last_ingestion_at: string | null;
+            last_discovery_analysis_at: string | null;
+            last_emerging_analysis_at: string | null;
+            worker_status: string;
+            updated_at: string;
+          }
+        | undefined;
+      if (!status) {
+        return { available: false, stale: true, reason: 'No discovery_system_status row exists.' };
+      }
+
+      const staleMs = Number(process.env.DISCOVERY_MATERIALIZATION_STALE_MS ?? 2 * 60 * 60 * 1000);
+      const freshnessWindowMs =
+        Number.isFinite(staleMs) && staleMs > 0 ? Math.floor(staleMs) : 2 * 60 * 60 * 1000;
+      const now = Date.now();
+      const lastSuccessAt = status.last_discovery_analysis_at;
+      const ageMs =
+        lastSuccessAt && Number.isFinite(Date.parse(lastSuccessAt))
+          ? Math.max(0, now - Date.parse(lastSuccessAt))
+          : null;
+      const stale = ageMs == null || ageMs > freshnessWindowMs;
+
+      let latestRun: Record<string, unknown> | null = null;
+      if (tableExists(db, 'discovery_materialization_runs')) {
+        latestRun =
+          (db
+            .prepare(
+              `SELECT id, status, started_at, finished_at, source_commit, algorithm_version,
+                      error, row_counts_json, published
+               FROM discovery_materialization_runs
+               ORDER BY id DESC LIMIT 1`
+            )
+            .get() as Record<string, unknown> | undefined) ?? null;
+        if (latestRun?.row_counts_json && typeof latestRun.row_counts_json === 'string') {
+          try {
+            latestRun = {
+              ...latestRun,
+              row_counts: JSON.parse(latestRun.row_counts_json),
+              row_counts_json: undefined
+            };
+          } catch {
+            // keep raw json
+          }
+        }
+      }
+
+      let latestPublishedRun: Record<string, unknown> | null = null;
+      if (tableExists(db, 'discovery_materialization_runs')) {
+        latestPublishedRun =
+          (db
+            .prepare(
+              `SELECT id, status, started_at, finished_at, source_commit, algorithm_version,
+                      row_counts_json, published
+               FROM discovery_materialization_runs
+               WHERE published = 1 AND status = 'success'
+               ORDER BY finished_at DESC, id DESC LIMIT 1`
+            )
+            .get() as Record<string, unknown> | undefined) ?? null;
+        if (
+          latestPublishedRun?.row_counts_json &&
+          typeof latestPublishedRun.row_counts_json === 'string'
+        ) {
+          try {
+            latestPublishedRun = {
+              ...latestPublishedRun,
+              row_counts: JSON.parse(latestPublishedRun.row_counts_json),
+              row_counts_json: undefined
+            };
+          } catch {
+            // keep raw json
+          }
+        }
+      }
+
+      return {
+        available: Boolean(lastSuccessAt),
+        stale,
+        freshness_window_ms: freshnessWindowMs,
+        age_ms: ageMs,
+        last_success_at: lastSuccessAt,
+        repositories_discovered: status.repositories_discovered,
+        enriched: status.enriched,
+        classified: status.classified,
+        clustered: status.clustered,
+        last_ingestion_at: status.last_ingestion_at,
+        last_discovery_analysis_at: status.last_discovery_analysis_at,
+        last_emerging_analysis_at: status.last_emerging_analysis_at,
+        worker_status: status.worker_status,
+        updated_at: status.updated_at,
+        latest_run: latestRun,
+        latest_published_run: latestPublishedRun
+      };
     });
   }
 

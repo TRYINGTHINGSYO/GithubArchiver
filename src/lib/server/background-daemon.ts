@@ -4,6 +4,7 @@ import { runBackfillBatch } from './backfill-runner';
 import {
 	initializeInProcessCadence,
 	maybeReconcileStaleJobRuns,
+	maybeRunDueDiscoveryCycle,
 	maybeRunDueEmergingCycle,
 	maybeRunDueWebsiteCycles
 } from './daemon-cadence';
@@ -392,6 +393,13 @@ async function runLoop(): Promise<void> {
 					log: appendLog
 				});
 				if (cadence.hadFailure) hadFailure = true;
+			}
+			if (!stopRequested) {
+				const discovery = await maybeRunDueDiscoveryCycle({
+					shouldSkip: () => stopRequested,
+					log: appendLog
+				});
+				if (discovery.hadFailure) hadFailure = true;
 			}
 			if (!stopRequested) {
 				const websites = await maybeRunDueWebsiteCycles({

@@ -9,6 +9,7 @@ import { finishJobRun, getRunningJobByType, startJobRun, updateJobRun } from './
 import { defaultHourKey } from './gharchive';
 import { ingestReposFromSearch } from './repo-discovery';
 import { runArchiveCycle } from './workers/archive';
+import { runDiscoveryMaterializationCycle } from './workers/discovery';
 import { runEnrichCycle } from './workers/enrich';
 import { runIngestCycle } from './workers/ingest';
 import { runRefreshCycle } from './workers/refresh';
@@ -171,6 +172,17 @@ export function runRefreshJob(): EnqueueResult {
 export function runArchiveJob(): EnqueueResult {
 	return enqueue('archive', async () => {
 		await runArchiveCycle();
+	});
+}
+
+export function runDiscoveryMaterializeJob(): EnqueueResult {
+	return enqueue('discovery-materialize', async () => {
+		const result = await runDiscoveryMaterializationCycle({
+			owner: `admin-${process.pid}`
+		});
+		if (result.status === 'failed') {
+			throw new Error(result.error ?? 'discovery materialization failed');
+		}
 	});
 }
 
