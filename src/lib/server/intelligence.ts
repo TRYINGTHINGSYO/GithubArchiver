@@ -1,4 +1,5 @@
 import { getDb, parseTopics, type RepoRow } from '$lib/server/db';
+import { filterVerifiedTopics, type TopicQualityEvaluation } from '$lib/server/topic-quality';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 const TEN_MINUTES = 10 * 60 * 1000;
@@ -64,6 +65,8 @@ export interface TrendSnapshot {
 		recent_events: number;
 	}[];
 	trendingTopics: { topic: string; count: number }[];
+	rawTopicCandidates: { topic: string; count: number }[];
+	verifiedTrendingTopics: TopicQualityEvaluation[];
 	generatedAt: string;
 }
 
@@ -124,16 +127,23 @@ export function getTrendSnapshot(): TrendSnapshot {
 				topicCounts.set(topic, (topicCounts.get(topic) ?? 0) + 1);
 			}
 		}
-		const trendingTopics = [...topicCounts.entries()]
+		const rawTopicCandidates = [...topicCounts.entries()]
 			.map(([topic, count]) => ({ topic, count }))
 			.sort((a, b) => b.count - a.count || a.topic.localeCompare(b.topic))
 			.slice(0, 16);
+		const verifiedTrendingTopics = filterVerifiedTopics(rawTopicCandidates, 16);
+		const trendingTopics = verifiedTrendingTopics.map((topic) => ({
+			topic: topic.label,
+			count: topic.count
+		}));
 
 		return {
 			fastestGrowingStars,
 			newLanguagesToday,
 			burstRepos,
 			trendingTopics,
+			rawTopicCandidates,
+			verifiedTrendingTopics,
 			generatedAt: new Date().toISOString()
 		};
 	});
