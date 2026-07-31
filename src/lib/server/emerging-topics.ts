@@ -185,6 +185,17 @@ export interface EmergingTopicDetail {
 	repositories: EmergingTopicRepositoryRow[];
 }
 
+export interface StaleEmergingTopicSummary {
+	key: string;
+	label: string;
+	status: EmergingTopicStatus;
+	detectionVersion: number;
+	currentVersion: number;
+	generatedAt: string;
+	periodStart: string;
+	periodEnd: string;
+}
+
 const MIN_CURRENT_COUNT = 10;
 const MIN_HIGH_SIGNAL_COUNT = 3;
 const MIN_DISTINCT_OWNERS = 5;
@@ -1476,6 +1487,45 @@ export function getEmergingTopicDetail(
 		evidence: JSON.parse(topic.evidence_json) as EmergingCandidateEvidence,
 		history: topic.history_json ? (JSON.parse(topic.history_json) as EmergingCandidateHistory) : null,
 		repositories
+	};
+}
+
+export function getStaleEmergingTopicSummary(
+	key: string,
+	opts: { version?: number } = {}
+): StaleEmergingTopicSummary | null {
+	const db = getDb();
+	const version = opts.version ?? CURRENT_EMERGING_DETECTION_VERSION;
+	const row = db
+		.prepare(
+			`SELECT key, label, status, detection_version, generated_at, period_start, period_end
+			 FROM emerging_topics
+			 WHERE key = ? AND detection_version < ?
+			 ORDER BY detection_version DESC, period_start DESC
+			 LIMIT 1`
+		)
+		.get(key, version) as
+		| {
+				key: string;
+				label: string;
+				status: EmergingTopicStatus;
+				detection_version: number;
+				generated_at: string;
+				period_start: string;
+				period_end: string;
+		  }
+		| undefined;
+	if (!row) return null;
+
+	return {
+		key: row.key,
+		label: row.label,
+		status: row.status,
+		detectionVersion: row.detection_version,
+		currentVersion: version,
+		generatedAt: row.generated_at,
+		periodStart: row.period_start,
+		periodEnd: row.period_end
 	};
 }
 

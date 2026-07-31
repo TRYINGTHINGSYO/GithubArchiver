@@ -10,6 +10,7 @@ import {
 	excludeEmergingTopic,
 	buildDuplicateEvidenceGroups,
 	getEmergingTopicDetail,
+	getStaleEmergingTopicSummary,
 	mergeEmergingTopic,
 	normalizeEvidenceDescription,
 	normalizeKey,
@@ -220,6 +221,50 @@ describe('emerging topic detection', () => {
 		expect(detail?.topic.detection_version).toBe(CURRENT_EMERGING_DETECTION_VERSION);
 		expect(detail?.topic.label).toBe('Versioned Topic Harness');
 		expect(detail?.topic.current_count).toBe(11);
+	});
+
+	it('returns stale topic metadata when only older detection rows exist', () => {
+		getDb()
+			.prepare(
+				`INSERT INTO emerging_topics (
+				   key, label, candidate_type, status, period_start, period_end,
+				   current_count, previous_count, distinct_owner_count, average_interesting_score,
+				   novelty_score, momentum_score, quality_score, emerging_score,
+				   evidence_json, history_json, detection_version, generated_at
+				 ) VALUES (?, ?, ?, 'detected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			)
+			.run(
+				'stale-only-topic',
+				'Stale Only Topic',
+				'topic',
+				'2026-07-22T00:00:00.000Z',
+				'2026-07-29T00:00:00.000Z',
+				36,
+				1,
+				20,
+				12,
+				100,
+				100,
+				80,
+				81,
+				JSON.stringify({ currentRepoIds: [], previousRepoIds: [], exampleRepos: [] }),
+				null,
+				1,
+				'2026-07-29T00:00:00.000Z'
+			);
+
+		expect(getEmergingTopicDetail('stale-only-topic')).toBeNull();
+		const stale = getStaleEmergingTopicSummary('stale-only-topic');
+		expect(stale).toEqual({
+			key: 'stale-only-topic',
+			label: 'Stale Only Topic',
+			status: 'detected',
+			detectionVersion: 1,
+			currentVersion: CURRENT_EMERGING_DETECTION_VERSION,
+			generatedAt: '2026-07-29T00:00:00.000Z',
+			periodStart: '2026-07-22T00:00:00.000Z',
+			periodEnd: '2026-07-29T00:00:00.000Z'
+		});
 	});
 
 	it('records review reason codes alongside status changes', () => {

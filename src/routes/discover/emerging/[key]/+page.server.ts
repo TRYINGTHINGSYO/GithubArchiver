@@ -1,15 +1,27 @@
 import { error } from '@sveltejs/kit';
 import {
 	getEmergingTopicDetail,
-	getLatestEmergingDetectionProvenance
+	getLatestEmergingDetectionProvenance,
+	getStaleEmergingTopicSummary
 } from '$lib/server/emerging-topics';
 import { parseTopics } from '$lib/server/db/repos';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const detail = getEmergingTopicDetail(params.key);
-	if (!detail) error(404, 'Emerging topic not found');
+	const provenance = getLatestEmergingDetectionProvenance();
+	if (!detail) {
+		const staleTopic = getStaleEmergingTopicSummary(params.key);
+		if (!staleTopic) error(404, 'Emerging topic not found');
+		return {
+			state: 'stale' as const,
+			staleTopic,
+			detail: null,
+			provenance
+		};
+	}
 	return {
+		state: 'current' as const,
 		detail: {
 			...detail,
 			repositories: detail.repositories.map((repo) => ({
@@ -21,6 +33,7 @@ export const load: PageServerLoad = async ({ params }) => {
 				has_any_archive: repo.has_any_archive === 1
 			}))
 		},
-		provenance: getLatestEmergingDetectionProvenance()
+		staleTopic: null,
+		provenance
 	};
 };
