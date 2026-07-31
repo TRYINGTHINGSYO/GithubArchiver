@@ -26,6 +26,9 @@ import {
 } from '$lib/server/record-repo-history';
 import { applyRepoClusters } from '$lib/server/apply-repo-clusters';
 import { applyRepoIntelligence } from '$lib/server/apply-repo-intelligence';
+import type { MetadataPhaseSpans } from '$lib/server/enrichment-stage-timings';
+
+export type { MetadataPhaseSpans };
 
 /** Enrichment tiers — Level 1 is the default for backlog throughput. */
 export type EnrichmentLevel = 1 | 2 | 3;
@@ -45,10 +48,15 @@ export interface EnrichRepoOptions {
 	syncReleases?: boolean;
 	/** Skip commit-history probe (used for fast path). */
 	skipHistory?: boolean;
+	/** Time spent waiting for a mapPool worker slot before enrichRepo starts. */
+	queueWaitMs?: number;
+	/** Time spent sleeping for primary/secondary rate-limit pacing before the HTTP call. */
+	rateLimitWaitMs?: number;
 }
 
 /** Wall-clock milliseconds spent in each enrichRepo stage (for ops profiling). */
 export interface EnrichStageTimings {
+	/** Wall clock of fetchRepoMetadata only (legacy aggregate). */
 	metadataMs: number;
 	classificationMs: number;
 	readmeMs: number;
@@ -58,6 +66,7 @@ export interface EnrichStageTimings {
 	/** Clustering + pipeline enqueue (local CPU/DB). */
 	clusterMs: number;
 	totalMs: number;
+	metadataSpans: MetadataPhaseSpans;
 }
 
 export interface EnrichRepoResult {
@@ -71,6 +80,43 @@ export interface EnrichRepoResult {
 	timings: EnrichStageTimings;
 }
 
+function emptyMetadataSpans(): MetadataPhaseSpans {
+	return {
+		queueWaitMs: 0,
+		rateLimitWaitMs: 0,
+		httpConnectTtfbMs: 0,
+		bodyReadMs: 0,
+		parseMs: 0,
+		dbWriteMs: 0,
+		postprocessMs: 0,
+		operationTotalMs: 0,
+		endToEndTotalMs: 0
+	};
+}
+
+function finalizeMetadataSpans(partial: {
+	queueWaitMs: number;
+	rateLimitWaitMs: number;
+	httpConnectTtfbMs: number;
+	bodyReadMs: number;
+	parseMs: number;
+	dbWriteMs: number;
+	postprocessMs: number;
+}): MetadataPhaseSpans {
+	const operationTotalMs =
+		partial.rateLimitWaitMs +
+		partial.httpConnectTtfbMs +
+		partial.bodyReadMs +
+		partial.parseMs +
+		partial.postprocessMs +
+		partial.dbWriteMs;
+	return {
+		...partial,
+		operationTotalMs,
+		endToEndTotalMs: partial.queueWaitMs + operationTotalMs
+	};
+}
+
 function emptyTimings(): EnrichStageTimings {
 	return {
 		metadataMs: 0,
@@ -79,7 +125,8 @@ function emptyTimings(): EnrichStageTimings {
 		dbWriteMs: 0,
 		historyMs: 0,
 		clusterMs: 0,
-		totalMs: 0
+		totalMs: 0,
+		metadataSpans: emptyMetadataSpans()
 	};
 }
 
@@ -303,12 +350,26 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 	const timings = emptyTimings();
 	const totalStarted = performance.now();
 
+	const queueWaitMs = Math.max(0, Math.round(opts.queueWaitMs ?? 0));
+	const rateLimitWaitMs = Math.max(0, Math.round(opts.rateLimitWaitMs ?? 0));
+
 	const metadataStarted = performance.now();
 	const data = await fetchRepoMetadata(repo.owner, repo.name, { etag: opts.etag });
 	timings.metadataMs = elapsedMs(metadataStarted);
 	requests += 1;
 
+	const http = data.spans;
+
 	if (data.notModified && repo.enriched_at) {
+		timings.metadataSpans = finalizeMetadataSpans({
+			queueWaitMs,
+			rateLimitWaitMs,
+			httpConnectTtfbMs: http.httpConnectTtfbMs,
+			bodyReadMs: http.bodyReadMs,
+			parseMs: http.parseMs,
+			dbWriteMs: 0,
+			postprocessMs: 0
+		});
 		timings.totalMs = elapsedMs(totalStarted);
 		return {
 			level: Math.max(1, level),
@@ -322,11 +383,13 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 		};
 	}
 
+	const postStarted = performance.now();
 	repo = await applyRenameAndArchive(repo, data);
-
 	const enrichment = toEnrichmentData(data);
 	const wasEnriched = repo.enriched_at !== null;
 	const observedAt = new Date().toISOString();
+	const metadataDelta = metadataChangesForEvent(repo, enrichment);
+	const postprocessMs = elapsedMs(postStarted);
 
 	if (!skipHistory) {
 		const historyStarted = performance.now();
@@ -335,12 +398,21 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 		requests += 1;
 	}
 
-	const metadataDelta = metadataChangesForEvent(repo, enrichment);
-
 	const dbStarted = performance.now();
 	saveEnrichment(repo.id, enrichment);
 	setEnrichmentLevel(repo.id, Math.max(depth === 'deep' ? 2 : 1, level));
-	timings.dbWriteMs = elapsedMs(dbStarted);
+	const metadataDbWriteMs = elapsedMs(dbStarted);
+	timings.dbWriteMs = metadataDbWriteMs;
+
+	timings.metadataSpans = finalizeMetadataSpans({
+		queueWaitMs,
+		rateLimitWaitMs,
+		httpConnectTtfbMs: http.httpConnectTtfbMs,
+		bodyReadMs: http.bodyReadMs,
+		parseMs: http.parseMs,
+		dbWriteMs: metadataDbWriteMs,
+		postprocessMs
+	});
 
 	const classifyStarted = performance.now();
 	applyRepoIntelligence(repo, enrichment);

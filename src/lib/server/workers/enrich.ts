@@ -68,15 +68,17 @@ function jitter(ms: number): number {
 async function mapPool<T, R>(
 	items: T[],
 	concurrency: number,
-	fn: (item: T) => Promise<R>
+	fn: (item: T, ctx: { queueWaitMs: number }) => Promise<R>
 ): Promise<R[]> {
+	const batchEnqueuedAt = performance.now();
 	const results: R[] = new Array(items.length);
 	let next = 0;
 	async function worker() {
 		for (;;) {
 			const idx = next++;
 			if (idx >= items.length) return;
-			results[idx] = await fn(items[idx]);
+			const queueWaitMs = Math.max(0, Math.round(performance.now() - batchEnqueuedAt));
+			results[idx] = await fn(items[idx], { queueWaitMs });
 		}
 	}
 	const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
@@ -333,7 +335,7 @@ export async function runEnrichCycle(opts: EnrichCycleOptions = {}): Promise<Enr
 
 	let stop = false;
 
-	await mapPool(claimed, concurrency, async (repo: EnrichmentQueueRepo) => {
+	await mapPool(claimed, concurrency, async (repo: EnrichmentQueueRepo, { queueWaitMs }) => {
 		if (stop || opts.shouldStop?.()) {
 			stop = true;
 			return;
@@ -388,14 +390,24 @@ export async function runEnrichCycle(opts: EnrichCycleOptions = {}): Promise<Enr
 				depth,
 				etag: repo.enrichment_etag,
 				syncReleases: false,
-				skipHistory: depth === 'fast'
+				skipHistory: depth === 'fast',
+				queueWaitMs
+				// rateLimitWaitMs stays 0 until an inline pacing sleep is added;
+				// today rate-limit pressure yields the cycle instead of sleeping.
 			});
 			result.enriched++;
 			result.requests += enrichResult.requests;
 			if (depth === 'deep') result.enrichedDeep++;
 			else result.enrichedFast++;
 			recordStageTimings(stageAcc, enrichResult.timings);
-			pushEnrichStageSample(enrichResult.timings);
+			pushEnrichStageSample({
+				metadataMs: enrichResult.timings.metadataMs,
+				classificationMs: enrichResult.timings.classificationMs,
+				readmeMs: enrichResult.timings.readmeMs,
+				dbWriteMs: enrichResult.timings.dbWriteMs,
+				totalMs: enrichResult.timings.totalMs,
+				metadataSpans: enrichResult.timings.metadataSpans
+			});
 			markEnrichmentSuccess(repo.id, depth, {
 				etag: enrichResult.etag,
 				httpStatus: enrichResult.httpStatus

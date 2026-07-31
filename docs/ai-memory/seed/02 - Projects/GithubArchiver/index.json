@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T23:42:53.860Z",
+  "generatedAt": "2026-07-30T23:59:58.775Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -273,6 +273,45 @@
       "summary": "Deployed build **does** contain fetch timeout + wall-clock (`2f5e817` / Railway `41a32c9c`). Recent `job_runs` show `GH Archive fetch timed out after 30000ms` — primary path works for new cycles."
     },
     {
+      "id": "decision-high-volume-bulk-ingest-path",
+      "schema": 1,
+      "type": "decision",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "ingest",
+        "architecture"
+      ],
+      "related": [
+        "incident-ingest-timeout-covers-db-writes",
+        "bugfix-ingest-hour-transaction",
+        "migration-038-archive-hour-metrics"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "incident-ingest-timeout-covers-db-writes"
+        },
+        {
+          "type": "implemented-by",
+          "id": "bugfix-ingest-hour-transaction"
+        },
+        {
+          "type": "references",
+          "id": "migration-038-archive-hour-metrics"
+        }
+      ],
+      "supersedes": null,
+      "title": "High-volume ingestion needs a narrow bulk write path",
+      "path": "entries/2026-07-30-decision-high-volume-bulk-ingest-path.md",
+      "summary": "Archive hours went from never completing to ~7–10s after three layered fixes. The dominant gain was not network: the system spent almost all time in per-repository DB/index work on a feature-rich write path."
+    },
+    {
       "id": "feature-emerging-in-process-cadence",
       "schema": 1,
       "type": "feature",
@@ -339,6 +378,45 @@
       "title": "Per-hour fetch/timeout backoff so sticky hours stop taxing every cycle",
       "path": "entries/2026-07-30-feature-ingest-timeout-hour-backoff.md",
       "summary": "On ingest `failed` (timeout/fetch/parse), record `ingest_hour_backoff` with markJobFailed-shaped exponential delay (base `INGEST_TIMEOUT_BACKOFF_BASE_MS` default 15m → 30m → … cap 8x). `listMissingHourKeys` skips hours still in backoff; `countMissingGhArchiveHours` still counts them so planner priority stays honest. Success via `recordHourIngested` clears the row."
+    },
+    {
+      "id": "feature-metadata-phase-spans",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "enrichment",
+        "observability"
+      ],
+      "related": [
+        "research-enrichment-throughput-ceiling",
+        "decision-enrich-stage-timings",
+        "migration-038-archive-hour-metrics"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "research-enrichment-throughput-ceiling"
+        },
+        {
+          "type": "references",
+          "id": "decision-enrich-stage-timings"
+        },
+        {
+          "type": "related",
+          "id": "migration-038-archive-hour-metrics"
+        }
+      ],
+      "supersedes": null,
+      "title": "Instrument metadata into queue/HTTP/DB spans before concurrency changes",
+      "path": "entries/2026-07-30-feature-metadata-phase-spans.md",
+      "summary": "Enrichment metadata stage showed ~11s p50 while a plain GitHub fetch from the same environment was 254–372 ms. Do not raise concurrency until the aggregate is split."
     },
     {
       "id": "feature-running-job-age-homepage",

@@ -441,12 +441,31 @@ describe('high-throughput enrichment architecture', () => {
 		expect(percentileNearestRank([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 95)).toBe(10);
 
 		for (let i = 0; i < 20; i++) {
+			const queueWaitMs = i * 10;
+			const httpConnectTtfbMs = 200 + i;
+			const bodyReadMs = 20;
+			const parseMs = 1;
+			const dbWriteMs = 25;
+			const postprocessMs = 5;
+			const operationTotalMs =
+				httpConnectTtfbMs + bodyReadMs + parseMs + postprocessMs + dbWriteMs;
 			pushEnrichStageSample({
 				metadataMs: 100 + i,
 				classificationMs: 40,
 				readmeMs: i < 18 ? 0 : 2000 + i,
 				dbWriteMs: 25,
-				totalMs: 200 + i
+				totalMs: 200 + i,
+				metadataSpans: {
+					queueWaitMs,
+					rateLimitWaitMs: 0,
+					httpConnectTtfbMs,
+					bodyReadMs,
+					parseMs,
+					dbWriteMs,
+					postprocessMs,
+					operationTotalMs,
+					endToEndTotalMs: queueWaitMs + operationTotalMs
+				}
 			});
 		}
 		pushStoryTimingSamples([100, 200, 300, 400, 5000]);
@@ -454,9 +473,23 @@ describe('high-throughput enrichment architecture', () => {
 		expect(pct).not.toBeNull();
 		expect(pct!.sampleCount).toBe(20);
 		expect(pct!.readmeSampleCount).toBe(2);
+		expect(pct!.readme.n).toBe(2);
 		expect(pct!.readme.p50).toBeGreaterThan(2000);
+		expect(pct!.story.n).toBe(5);
 		expect(pct!.story.p95).toBe(5000);
 		expect(pct!.metadata.p50).toBeGreaterThan(0);
+		expect(pct!.metadata.n).toBe(20);
+		expect(pct!.metadataDetail).toBeDefined();
+		expect(pct!.metadataDetail!.sampleCount).toBe(20);
+		expect(pct!.metadataDetail!.httpConnectTtfb.p50).toBeGreaterThan(0);
+		expect(pct!.metadataDetail!.httpConnectTtfb.n).toBe(20);
+		expect(pct!.metadataDetail!.rateLimitWait.p50).toBe(0);
+		expect(pct!.metadataDetail!.operationTotal.p50).toBeLessThan(
+			pct!.metadataDetail!.endToEndTotal.p50
+		);
+		expect(pct!.metadataDetail!.queueWait.p95).toBeGreaterThan(
+			pct!.metadataDetail!.queueWait.p50
+		);
 	});
 });
 

@@ -77,8 +77,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: related:`pr-11-retrieval-scoring`, related:`pr-12-multistage-retrieval`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `daemon`, `ingest`, `jobs` — [Periodic job_runs reconcile + boot age-0 so stuck running cannot last forever](entries/2026-07-30-bugfix-periodic-job-reconcile.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), caused-by:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md)
-- **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `emerging`, `daemon` — [Wire emerging into in-process daemon on own cadence](entries/2026-07-30-feature-emerging-in-process-cadence.md)
-  - edges: caused-by:[`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md)
+- **2026-07-30** · `decision` · `confirmed` · `permanent` · `verified` · `ingest`, `architecture` — [High-volume ingestion needs a narrow bulk write path](entries/2026-07-30-decision-high-volume-bulk-ingest-path.md)
+  - edges: caused-by:[`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), implemented-by:[`bugfix-ingest-hour-transaction`](entries/2026-07-30-bugfix-ingest-hour-transaction.md), references:[`migration-038-archive-hour-metrics`](entries/2026-07-30-migration-038-archive-hour-metrics.md)
 
 ## Open technical debt
 
@@ -91,6 +91,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
+- **2026-07-30** · `feature` · `confirmed` · `permanent` · `open` · `enrichment`, `observability` — [Instrument metadata into queue/HTTP/DB spans before concurrency changes](entries/2026-07-30-feature-metadata-phase-spans.md)
+  - edges: caused-by:[`research-enrichment-throughput-ceiling`](entries/2026-07-30-research-enrichment-throughput-ceiling.md), references:[`decision-enrich-stage-timings`](entries/2026-07-18-decision-enrich-stage-timings.md), related:[`migration-038-archive-hour-metrics`](entries/2026-07-30-migration-038-archive-hour-metrics.md)
 - **2026-07-30** · `feature` · `confirmed` · `release` · `open` · `observability`, `daemon`, `ux` — [Surface longest running job_runs age on homepage Discovery panel](entries/2026-07-30-feature-running-job-age-homepage.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`bugfix-claimable-retry-hygiene`](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
 - **2026-07-30** · `incident` · `confirmed` · `permanent` · `open` · `daemon`, `discovery`, `enrichment`, `observability` — [Daemon alive but wedged — empty enrich spin then hung ingest (no fetch timeout)](entries/2026-07-30-incident-daemon-ingest-hang.md)

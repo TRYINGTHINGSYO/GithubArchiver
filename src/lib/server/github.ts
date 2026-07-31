@@ -164,39 +164,69 @@ export class DownloadTimeoutError extends Error {
 	}
 }
 
+/** HTTP-only spans for one GitHub API call (no queue / DB / classification). */
+export interface GhHttpSpans {
+	/** Time until response headers (connect + TLS + TTFB). */
+	httpConnectTtfbMs: number;
+	/** Time to read the response body bytes. */
+	bodyReadMs: number;
+	/** Time to JSON.parse the body (0 when not parsed). */
+	parseMs: number;
+	totalMs: number;
+}
+
 export interface GhFetchResult<T> {
 	data: T;
 	etag: string | null;
 	notModified: boolean;
 	status: number;
+	spans: GhHttpSpans;
 }
 
-async function ghFetchRaw(
-	path: string,
-	opts: { etag?: string | null } = {}
-): Promise<Response> {
-	const started = Date.now();
-	const res = await fetch(`${GITHUB_API}${path}`, {
-		headers: headers(opts.etag ? { 'If-None-Match': opts.etag } : undefined)
-	});
-	observeGitHubResponse(res, Date.now() - started);
-	return res;
+function emptyHttpSpans(): GhHttpSpans {
+	return { httpConnectTtfbMs: 0, bodyReadMs: 0, parseMs: 0, totalMs: 0 };
+}
+
+async function readResponseBody(
+	res: Response
+): Promise<{ text: string; bodyReadMs: number }> {
+	const started = performance.now();
+	const text = await res.text();
+	return { text, bodyReadMs: Math.max(0, Math.round(performance.now() - started)) };
 }
 
 async function ghFetch<T>(path: string, opts: { etag?: string | null } = {}): Promise<GhFetchResult<T>> {
-	const res = await ghFetchRaw(path, opts);
+	const spans = emptyHttpSpans();
+	const ttfbStarted = performance.now();
+	const res = await fetch(`${GITHUB_API}${path}`, {
+		headers: headers(opts.etag ? { 'If-None-Match': opts.etag } : undefined)
+	});
+	spans.httpConnectTtfbMs = Math.max(0, Math.round(performance.now() - ttfbStarted));
 
 	if (res.status === 304) {
-		return { data: null as T, etag: opts.etag ?? res.headers.get('etag'), notModified: true, status: 304 };
+		spans.totalMs = spans.httpConnectTtfbMs;
+		observeGitHubResponse(res, spans.totalMs);
+		return {
+			data: null as T,
+			etag: opts.etag ?? res.headers.get('etag'),
+			notModified: true,
+			status: 304,
+			spans
+		};
 	}
 
 	if (res.status === 404) {
+		spans.totalMs = spans.httpConnectTtfbMs;
+		observeGitHubResponse(res, spans.totalMs);
 		const parts = path.replace('/repos/', '').split('/');
 		throw new GitHubNotFoundError(parts[0], parts[1]);
 	}
 
 	if (res.status === 403 || res.status === 429) {
-		const body = await res.text().catch(() => '');
+		const { text: body, bodyReadMs } = await readResponseBody(res);
+		spans.bodyReadMs = bodyReadMs;
+		spans.totalMs = spans.httpConnectTtfbMs + spans.bodyReadMs;
+		observeGitHubResponse(res, spans.totalMs);
 		const remaining = res.headers.get('x-ratelimit-remaining');
 		if (remaining === '0' || res.status === 429 || /rate limit/i.test(body)) {
 			rateLimitErrorFromResponse(res);
@@ -206,20 +236,35 @@ async function ghFetch<T>(path: string, opts: { etag?: string | null } = {}): Pr
 	}
 
 	if (res.status === 422) {
-		const body = await res.text();
+		const { text: body, bodyReadMs } = await readResponseBody(res);
+		spans.bodyReadMs = bodyReadMs;
+		spans.totalMs = spans.httpConnectTtfbMs + spans.bodyReadMs;
+		observeGitHubResponse(res, spans.totalMs);
 		throw new GitHubHttpError(422, `GitHub API 422: ${sanitizeGitHubErrorBody(body)}`);
 	}
 
 	if (!res.ok) {
-		const body = await res.text();
+		const { text: body, bodyReadMs } = await readResponseBody(res);
+		spans.bodyReadMs = bodyReadMs;
+		spans.totalMs = spans.httpConnectTtfbMs + spans.bodyReadMs;
+		observeGitHubResponse(res, spans.totalMs);
 		throw new GitHubHttpError(res.status, `GitHub API ${res.status}: ${sanitizeGitHubErrorBody(body)}`);
 	}
 
+	const { text, bodyReadMs } = await readResponseBody(res);
+	spans.bodyReadMs = bodyReadMs;
+	const parseStarted = performance.now();
+	const data = JSON.parse(text) as T;
+	spans.parseMs = Math.max(0, Math.round(performance.now() - parseStarted));
+	spans.totalMs = spans.httpConnectTtfbMs + spans.bodyReadMs + spans.parseMs;
+	observeGitHubResponse(res, spans.totalMs);
+
 	return {
-		data: (await res.json()) as T,
+		data,
 		etag: res.headers.get('etag'),
 		notModified: false,
-		status: res.status
+		status: res.status,
+		spans
 	};
 }
 
@@ -248,6 +293,8 @@ export type FetchedRepoMetadata = {
 	etag: string | null;
 	status: number;
 	notModified: boolean;
+	/** HTTP spans for this metadata request only. */
+	spans: GhHttpSpans;
 };
 
 export async function fetchRepoMetadata(
@@ -281,7 +328,8 @@ export async function fetchRepoMetadata(
 			archived: false,
 			etag: result.etag,
 			status: 304,
-			notModified: true
+			notModified: true,
+			spans: result.spans
 		};
 	}
 	const gh = result.data;
@@ -309,7 +357,8 @@ export async function fetchRepoMetadata(
 		archived: gh.archived,
 		etag: result.etag,
 		status: result.status,
-		notModified: false
+		notModified: false,
+		spans: result.spans
 	};
 }
 

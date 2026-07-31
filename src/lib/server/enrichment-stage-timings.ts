@@ -3,17 +3,59 @@
  * Process-local window survives across enrich cycles until the daemon restarts.
  */
 
+/**
+ * Breakdown of the metadata phase.
+ *
+ * Totals are labeled to avoid double-counting queue wait:
+ * - `operationTotalMs` = work inside/around enrichRepo metadata path
+ *   (rateLimitWait + HTTP ttfb/body/parse + postprocess + dbWrite)
+ * - `endToEndTotalMs` = `queueWaitMs` + `operationTotalMs`
+ *
+ * `queueWaitMs` is mapPool slot wait *before* enrichRepo starts and is never
+ * folded into `operationTotalMs`.
+ */
+export interface MetadataPhaseSpans {
+	queueWaitMs: number;
+	rateLimitWaitMs: number;
+	httpConnectTtfbMs: number;
+	bodyReadMs: number;
+	parseMs: number;
+	dbWriteMs: number;
+	postprocessMs: number;
+	/** rateLimit + HTTP + parse + postprocess + dbWrite (excludes queueWait). */
+	operationTotalMs: number;
+	/** queueWait + operationTotal. */
+	endToEndTotalMs: number;
+}
+
 export interface StageTimingSample {
 	metadataMs: number;
 	classificationMs: number;
 	readmeMs: number;
 	dbWriteMs: number;
 	totalMs: number;
+	metadataSpans?: MetadataPhaseSpans;
 }
 
 export interface StagePercentiles {
 	p50: number;
 	p95: number;
+	/** Sample count used for this percentile pair. */
+	n: number;
+}
+
+export interface MetadataSpanPercentiles {
+	/** Samples that included metadataSpans. */
+	sampleCount: number;
+	queueWait: StagePercentiles;
+	rateLimitWait: StagePercentiles;
+	httpConnectTtfb: StagePercentiles;
+	bodyRead: StagePercentiles;
+	parse: StagePercentiles;
+	dbWrite: StagePercentiles;
+	postprocess: StagePercentiles;
+	operationTotal: StagePercentiles;
+	endToEndTotal: StagePercentiles;
 }
 
 export interface StageTimingPercentiles {
@@ -26,6 +68,8 @@ export interface StageTimingPercentiles {
 	story: StagePercentiles;
 	dbWrite: StagePercentiles;
 	total: StagePercentiles;
+	/** Present when samples include metadataSpans (post metadata-instrumentation deploys). */
+	metadataDetail?: MetadataSpanPercentiles;
 }
 
 const DEFAULT_WINDOW = 2_000;
@@ -73,7 +117,28 @@ export function percentileNearestRank(values: number[], percentile: number): num
 function pair(values: number[]): StagePercentiles {
 	return {
 		p50: Math.round(percentileNearestRank(values, 50) * 10) / 10,
-		p95: Math.round(percentileNearestRank(values, 95) * 10) / 10
+		p95: Math.round(percentileNearestRank(values, 95) * 10) / 10,
+		n: values.length
+	};
+}
+
+function metadataDetailPercentiles(
+	samples: StageTimingSample[]
+): MetadataSpanPercentiles | undefined {
+	const withSpans = samples.filter((s) => s.metadataSpans != null);
+	if (withSpans.length === 0) return undefined;
+	const spans = withSpans.map((s) => s.metadataSpans!);
+	return {
+		sampleCount: spans.length,
+		queueWait: pair(spans.map((s) => s.queueWaitMs)),
+		rateLimitWait: pair(spans.map((s) => s.rateLimitWaitMs)),
+		httpConnectTtfb: pair(spans.map((s) => s.httpConnectTtfbMs)),
+		bodyRead: pair(spans.map((s) => s.bodyReadMs)),
+		parse: pair(spans.map((s) => s.parseMs)),
+		dbWrite: pair(spans.map((s) => s.dbWriteMs)),
+		postprocess: pair(spans.map((s) => s.postprocessMs)),
+		operationTotal: pair(spans.map((s) => s.operationTotalMs)),
+		endToEndTotal: pair(spans.map((s) => s.endToEndTotalMs))
 	};
 }
 
@@ -81,6 +146,7 @@ export function computeStageTimingPercentiles(): StageTimingPercentiles | null {
 	if (stageSamples.length === 0 && storySamples.length === 0) return null;
 
 	const readmeOnly = stageSamples.map((s) => s.readmeMs).filter((ms) => ms > 0);
+	const metadataDetail = metadataDetailPercentiles(stageSamples);
 
 	return {
 		sampleCount: stageSamples.length,
@@ -91,7 +157,8 @@ export function computeStageTimingPercentiles(): StageTimingPercentiles | null {
 		readme: pair(readmeOnly),
 		story: pair(storySamples),
 		dbWrite: pair(stageSamples.map((s) => s.dbWriteMs)),
-		total: pair(stageSamples.map((s) => s.totalMs))
+		total: pair(stageSamples.map((s) => s.totalMs)),
+		...(metadataDetail ? { metadataDetail } : {})
 	};
 }
 

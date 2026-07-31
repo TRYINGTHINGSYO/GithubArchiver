@@ -481,9 +481,72 @@ safe("enrichment_metrics", () => {
       "\n  rolling percentiles (process-local sample, resets on restart):",
     );
     try {
-      console.log(
-        "  " + JSON.stringify(JSON.parse(String(m.stage_percentiles_json))),
-      );
+      const pct = JSON.parse(String(m.stage_percentiles_json)) as {
+        sampleCount?: number;
+        metadata?: { p50: number; p95: number; n?: number };
+        metadataDetail?: {
+          sampleCount?: number;
+          queueWait?: { p50: number; p95: number; n?: number };
+          rateLimitWait?: { p50: number; p95: number; n?: number };
+          httpConnectTtfb?: { p50: number; p95: number; n?: number };
+          bodyRead?: { p50: number; p95: number; n?: number };
+          parse?: { p50: number; p95: number; n?: number };
+          postprocess?: { p50: number; p95: number; n?: number };
+          dbWrite?: { p50: number; p95: number; n?: number };
+          operationTotal?: { p50: number; p95: number; n?: number };
+          endToEndTotal?: { p50: number; p95: number; n?: number };
+        };
+      };
+      console.log("  " + JSON.stringify(pct));
+      if (pct.metadataDetail) {
+        const detailN = pct.metadataDetail.sampleCount ?? "?";
+        console.log(
+          `\n  metadata phase spans (p50 / p95 ms, n=${detailN}):`,
+        );
+        console.log(
+          "    operationTotal = rateLimit + HTTP + parse + postprocess + dbWrite (excludes queueWait)",
+        );
+        console.log("    endToEndTotal  = queueWait + operationTotal");
+        const spanKeys = [
+          "queueWait",
+          "rateLimitWait",
+          "httpConnectTtfb",
+          "bodyRead",
+          "parse",
+          "postprocess",
+          "dbWrite",
+          "operationTotal",
+          "endToEndTotal",
+        ] as const;
+        for (const name of spanKeys) {
+          const pair = pct.metadataDetail[name];
+          if (!pair) continue;
+          const n = pair.n ?? detailN;
+          console.log(
+            `    ${name.padEnd(18)}${String(pair.p50).padStart(8)} / ${String(pair.p95).padStart(8)}   n=${n}`,
+          );
+        }
+        if (pct.metadata && pct.metadataDetail.operationTotal) {
+          const legacy = pct.metadata.p50;
+          const op = pct.metadataDetail.operationTotal.p50;
+          const httpOnly =
+            (pct.metadataDetail.httpConnectTtfb?.p50 ?? 0) +
+            (pct.metadataDetail.bodyRead?.p50 ?? 0) +
+            (pct.metadataDetail.parse?.p50 ?? 0);
+          console.log(
+            `\n  reconcile vs legacy metadata p50=${legacy} (n=${pct.metadata.n ?? pct.sampleCount ?? "?"}):`,
+          );
+          console.log(`    http spans p50 sum ≈ ${httpOnly}`);
+          console.log(`    operationTotal p50   = ${op}`);
+          console.log(
+            `    residual (legacy − http sum) ≈ ${Math.round((legacy - httpOnly) * 10) / 10}`,
+          );
+        }
+      } else {
+        console.log(
+          "\n  metadata phase spans: not yet present (deploy metadata instrumentation + let enrich cycle)",
+        );
+      }
     } catch {
       console.log("  (unparseable)");
     }
