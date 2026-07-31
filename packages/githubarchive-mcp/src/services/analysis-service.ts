@@ -251,6 +251,128 @@ export class AnalysisService {
       followUpWork: feature.follow_up_work
     };
   }
+
+  /**
+   * Architectural workspace review: git changes vs registry/decisions/tests/routes.
+   */
+  reviewWorkspace(): Record<string, unknown> {
+    const status = this.git.statusPorcelain(300);
+    const changedFiles = status.map((row) => row.path);
+    const features = this.features.list();
+    const decisions = this.decisions.list();
+    const routes = this.routes.listRoutes();
+    const registryValidation = null;
+
+    const modifiedFeatures = features.filter((feature) =>
+      [...feature.source, ...feature.tests, ...feature.routes].some((ref) =>
+        changedFiles.some((file) => file.includes(ref.replace(/^\//, '')) || ref.includes(file))
+      ) ||
+      changedFiles.some((file) =>
+        feature.source.some((sourcePath) => file === sourcePath || file.endsWith(sourcePath))
+      )
+    );
+
+    const touchedFeatureBySource = features.filter((feature) =>
+      feature.source.some((sourcePath) => changedFiles.includes(sourcePath))
+    );
+
+    const missingRegistryUpdates = touchedFeatureBySource.filter((feature) => {
+      const registryTouched = changedFiles.some(
+        (file) => file.includes('docs/product/features.json') || file.includes('docs/product/decisions/')
+      );
+      // If source changed but registry/decision docs were not updated in this workspace, flag it.
+      return !registryTouched && feature.source.some((sourcePath) => changedFiles.includes(sourcePath));
+    });
+
+    const missingTests = touchedFeatureBySource.filter((feature) => {
+      const sourceChanged = feature.source.some((sourcePath) => changedFiles.includes(sourcePath));
+      if (!sourceChanged) return false;
+      if (feature.tests.length === 0) return true;
+      return !feature.tests.some((testPath) => changedFiles.includes(testPath));
+    });
+
+    const decisionNeeded =
+      changedFiles.some((file) => file.startsWith('src/lib/server/') || file.startsWith('src/routes/')) &&
+      !changedFiles.some((file) => file.startsWith('docs/product/decisions/'));
+
+    const routesWithoutTests = routes.filter((route) => !route.hasTests && route.kind === 'public').slice(0, 20);
+    const potentialRegressions: string[] = [];
+    if (this.git.isDirty()) {
+      potentialRegressions.push('Working tree is dirty; review uncommitted changes before treating deploy state as settled.');
+    }
+    if (changedFiles.some((file) => file.includes('emerging-topics'))) {
+      potentialRegressions.push('Emerging-topic detection files changed — verify detection version 2 behavior and stale filtering.');
+    }
+    if (changedFiles.some((file) => file.includes('packages/githubarchive-mcp'))) {
+      potentialRegressions.push('MCP package changed — re-run npm run test:mcp and validate:product-registry.');
+    }
+
+    const recommendedFollowUp: string[] = [];
+    if (missingRegistryUpdates.length > 0) {
+      recommendedFollowUp.push(
+        `Update feature registry metadata for: ${missingRegistryUpdates.map((f) => f.id).join(', ')}`
+      );
+    }
+    if (missingTests.length > 0) {
+      recommendedFollowUp.push(`Add or update tests for: ${missingTests.map((f) => f.id).join(', ')}`);
+    }
+    if (decisionNeeded) {
+      recommendedFollowUp.push('Consider a decision-journal entry if this change establishes a durable product rule.');
+    }
+    if (routesWithoutTests.length > 0) {
+      recommendedFollowUp.push(`Add smoke coverage for untested public routes (showing ${routesWithoutTests.length}).`);
+    }
+    if (recommendedFollowUp.length === 0) {
+      recommendedFollowUp.push('No immediate registry/test/decision gaps detected from the current workspace diff.');
+    }
+
+    const facts = [
+      `Source commit ${this.git.currentCommit() ?? 'unknown'}; dirty=${this.git.isDirty()}.`,
+      `${status.length} changed path(s) in the working tree.`,
+      `${modifiedFeatures.length} feature(s) appear related to changed files.`,
+      `${decisions.length} decision-journal entries are present.`,
+      `${routes.length} routes discovered.`
+    ];
+    const inferences = [
+      missingRegistryUpdates.length === 0
+        ? 'No clear registry-update omissions were inferred from the current diff.'
+        : 'Some source changes look like they may need registry metadata updates.',
+      missingTests.length === 0
+        ? 'No clear missing-test gaps were inferred for touched features.'
+        : 'Touched features may be missing companion test updates in this workspace.'
+    ];
+
+    return {
+      title: 'Workspace Review',
+      source: {
+        commit: this.git.currentCommit(),
+        dirty: this.git.isDirty()
+      },
+      modifiedFeatures: modifiedFeatures.map((feature) => ({
+        id: feature.id,
+        name: feature.name,
+        status: feature.status,
+        detection_version: feature.detection_version ?? null
+      })),
+      changedFiles: status.slice(0, 100),
+      missingRegistryUpdates: missingRegistryUpdates.map((feature) => feature.id),
+      missingTests: missingTests.map((feature) => ({
+        id: feature.id,
+        expectedTests: feature.tests
+      })),
+      missingDecisionEntries: decisionNeeded
+        ? ['Possible durable product/architecture change without a new docs/product/decisions entry.']
+        : [],
+      architectureConcerns: [],
+      potentialRegressions,
+      untestedPublicRoutes: routesWithoutTests.map((route) => route.path),
+      facts,
+      inferences,
+      recommendations: recommendedFollowUp,
+      recommendedFollowUp,
+      registryValidation
+    };
+  }
 }
 
 const ANALYSIS_BUDGET = {

@@ -37,6 +37,30 @@ From the repository root:
 npm run mcp:githubarchive
 ```
 
+### Cursor project MCP config
+
+Commit `.cursor/mcp.json` so the repo is self-contained. Prefer a direct `node`+`tsx` launch so npm lifecycle banners do not pollute MCP stdio:
+
+```json
+{
+  "mcpServers": {
+    "githubarchive": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
+        "${workspaceFolder}/packages/githubarchive-mcp/src/index.ts"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}
+```
+
+`npm --prefix ${workspaceFolder} run mcp:githubarchive` works for humans, but Cursor should use the direct command above.
+
 Validate the product registry before trusting it in an AI workflow:
 
 ```bash
@@ -133,10 +157,11 @@ Analysis:
 - `validate_product_registry`
 - `prioritize_backlog`
 - `generate_change_brief`
+- `review_workspace`
 
-## Most Important Tool
+## Most Important Tools
 
-Use `get_project_state` first, then `validate_proposed_change` before planning product work.
+Use `get_project_state` first, then `validate_proposed_change` before planning product work. Use `review_workspace` when reviewing a branch or asking what changed.
 
 Example:
 
@@ -155,11 +180,29 @@ Expected behavior:
 - reports remaining gaps such as persistent duplicate-family overrides
 - does not recommend rebuilding the completed feature
 
+## Prompts
+
+Reusable Cursor workflows:
+
+- `review_feature_before_implementation`
+- `review_pr`
+- `find_duplicate_functionality`
+- `analyze_navigation`
+- `find_performance_bottlenecks`
+- `audit_data_quality`
+- `review_emerging_topic_detection`
+- `plan_architecture_changes`
+- `review_workspace`
+
 ## Resources
 
 - `githubarchive://architecture/philosophy`
 - `githubarchive://product/features`
+- `githubarchive://product/decisions`
 - `githubarchive://schema/source`
+- `githubarchive://project/state`
+- `githubarchive://detection/versions`
+- `githubarchive://routes/manifest`
 - `githubarchive://product/decisions/{id}`
 
 ## Example Prompts
@@ -172,6 +215,7 @@ Expected behavior:
 - "Compare the deployed product with the current source branch."
 - "Find routes that have no meaningful tests."
 - "Identify data-quality problems affecting public intelligence."
+- "Review the entire GithubArchive+ workspace."
 
 ## Current Limitations
 
@@ -180,3 +224,4 @@ Expected behavior:
 - Performance p50/p95 reports need persisted route timing samples.
 - Duplicate families are currently read from emerging-topic `evidence_json`; persistent manual family records are future work.
 - Intelligence algorithm versions are not yet persisted as first-class `IntelligenceResult` rows.
+- Interactive MCP Apps UI is not implemented yet.

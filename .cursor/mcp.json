@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "githubarchive": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
+        "${workspaceFolder}/packages/githubarchive-mcp/src/index.ts"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}

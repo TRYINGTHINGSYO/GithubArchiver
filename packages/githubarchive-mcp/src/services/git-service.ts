@@ -22,6 +22,24 @@ export class GitService {
     return this.git(['status', '--porcelain']).trim().length > 0;
   }
 
+  /** Porcelain status lines: `{ status, path }`. */
+  statusPorcelain(limit = 200): Array<{ status: string; path: string }> {
+    const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 500);
+    return this.git(['status', '--porcelain'])
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .slice(0, safeLimit)
+      .map((line) => {
+        const status = line.slice(0, 2).trim() || line.slice(0, 2);
+        const path = line.slice(3).trim();
+        return { status, path };
+      });
+  }
+
+  changedFiles(limit = 200): string[] {
+    return this.statusPorcelain(limit).map((row) => row.path);
+  }
+
   recentCommits(limit = 10): CommitSummary[] {
     const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 50);
     const output = this.git(['log', `-${safeLimit}`, '--date=iso-strict', '--pretty=format:%h%x09%ad%x09%s']);

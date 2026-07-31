@@ -171,6 +171,9 @@ export class GithubArchiveMcpTools {
       case 'generate_change_brief':
         data = { recentCommits: this.git.recentCommits(Number(args.limit ?? 10)), featureMatches: args.feature ? this.features.search(String(args.feature)) : [] };
         break;
+      case 'review_workspace':
+        data = this.analysis.reviewWorkspace();
+        break;
       default:
         throw new Error(`Unknown GithubArchive+ MCP tool: ${name}`);
     }
@@ -391,17 +394,19 @@ const TOOL_NAMES = [
   'validate_proposed_change',
   'validate_product_registry',
   'prioritize_backlog',
-  'generate_change_brief'
+  'generate_change_brief',
+  'review_workspace'
 ] as const;
 
 const TOOL_DESCRIPTIONS: Record<string, string> = {
-  get_project_state: 'Return a compact canonical snapshot of source, deployment hints, database coverage, algorithms, latest runs, and materializations.',
+  get_project_state: 'Return a compact canonical snapshot of source, deployment hints, database coverage, algorithms, latest runs, and materializations. Call this first when starting product work.',
   validate_product_registry: 'Validate product-registry references, statuses, commits, routes, tests, and active detection versions.',
   verify_read_only_enforcement: 'Attempt forbidden SQLite statements and report whether read-only MCP database protections block them.',
-  validate_proposed_change: 'Search product evidence before deciding whether a proposed feature already exists.',
+  validate_proposed_change: 'Before implementing a new product feature, search registry/decisions/source/tests to determine whether the capability already exists. Use automatically whenever the user proposes building something new.',
   get_product_overview: 'Summarize GithubArchive+ purpose, architecture, features, versions, deployment, and data coverage.',
   explain_topic_detection: 'Explain current or stale emerging-topic detection state without serving old versions as current intelligence.',
-  search_existing_capabilities: 'Search registry, decisions, code, tests, and docs for an existing capability.'
+  search_existing_capabilities: 'Search registry, decisions, code, tests, and docs for an existing capability before recommending new implementation.',
+  review_workspace: 'Review the entire workspace for modified features, registry drift, missing tests/docs/decisions, architecture concerns, and potential regressions. Use when asked what changed, what to review, or whether the branch is product-complete.'
 };
 
 function inferSourceKind(name: string): 'source' | 'database' | 'git' | 'runtime' | 'mixed' {

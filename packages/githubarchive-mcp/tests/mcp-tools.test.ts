@@ -149,12 +149,14 @@ describe('GithubArchive+ MCP tools', () => {
     expect(data.materializations.homepage.worker_status).toBe('healthy');
   });
 
-  it('supports MCP initialize, list, call, and resources', async () => {
+  it('supports MCP initialize, list, call, resources, and prompts', async () => {
     const server = new GithubArchiveMcpServer(getConfig({ repoRoot, databasePath: dbPath }));
     const init = await server.handle({ jsonrpc: '2.0', id: 1, method: 'initialize' });
     expect(JSON.stringify(init)).toContain('githubarchive-plus-mcp');
+    expect(JSON.stringify(init)).toContain('"prompts"');
     const listed = await server.handle({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
     expect(JSON.stringify(listed)).toContain('validate_proposed_change');
+    expect(JSON.stringify(listed)).toContain('review_workspace');
     const called = await server.handle({
       jsonrpc: '2.0',
       id: 3,
@@ -163,7 +165,43 @@ describe('GithubArchive+ MCP tools', () => {
     });
     expect(JSON.stringify(called)).toContain('emerging-topic-evidence-dedupe');
     const resources = await server.handle({ jsonrpc: '2.0', id: 4, method: 'resources/list' });
-    expect(JSON.stringify(resources)).toContain('githubarchive://product/features');
+    const resourcePayload = JSON.stringify(resources);
+    expect(resourcePayload).toContain('githubarchive://product/features');
+    expect(resourcePayload).toContain('githubarchive://project/state');
+    expect(resourcePayload).toContain('githubarchive://detection/versions');
+    expect(resourcePayload).toContain('githubarchive://routes/manifest');
+    expect(resourcePayload).toContain('githubarchive://product/decisions');
+    const prompts = await server.handle({ jsonrpc: '2.0', id: 5, method: 'prompts/list' });
+    expect(JSON.stringify(prompts)).toContain('review_feature_before_implementation');
+    expect(JSON.stringify(prompts)).toContain('review_workspace');
+    const prompt = await server.handle({
+      jsonrpc: '2.0',
+      id: 6,
+      method: 'prompts/get',
+      params: {
+        name: 'review_feature_before_implementation',
+        arguments: { proposal: 'Add independent repository evidence grouping' }
+      }
+    });
+    expect(JSON.stringify(prompt)).toContain('validate_proposed_change');
+  });
+
+  it('reviews the workspace against registry and tests', async () => {
+    const result = await tools.call('review_workspace', {});
+    const data = result.data as {
+      title: string;
+      facts: string[];
+      inferences: string[];
+      recommendations: string[];
+      modifiedFeatures: unknown[];
+      potentialRegressions: string[];
+    };
+    expect(data.title).toBe('Workspace Review');
+    expect(data.facts.length).toBeGreaterThan(0);
+    expect(data.inferences.length).toBeGreaterThan(0);
+    expect(data.recommendations.length).toBeGreaterThan(0);
+    expect(Array.isArray(data.modifiedFeatures)).toBe(true);
+    expect(Array.isArray(data.potentialRegressions)).toBe(true);
   });
 });
 
