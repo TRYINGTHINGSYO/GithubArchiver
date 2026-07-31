@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-30T23:59:58.775Z",
+  "generatedAt": "2026-07-31T00:22:46.107Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -1004,6 +1004,40 @@
       "title": "The homepage is fast when warm; a 30s readiness TTL costs 6.4s per expiry",
       "path": "entries/2026-07-30-research-homepage-readiness-cache.md",
       "summary": "Measured against production by timing sequential requests:"
+    },
+    {
+      "id": "research-metadata-phase-span-baseline",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "temporary",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": "3bf38c4",
+      "migration": null,
+      "area": [
+        "enrichment",
+        "observability"
+      ],
+      "related": [
+        "feature-metadata-phase-spans",
+        "research-enrichment-throughput-ceiling"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "feature-metadata-phase-spans"
+        },
+        {
+          "type": "references",
+          "id": "research-enrichment-throughput-ceiling"
+        }
+      ],
+      "supersedes": null,
+      "title": "Metadata span baseline — HTTP TTFB dominates legacy 14s p50",
+      "path": "entries/2026-07-30-research-metadata-phase-span-baseline.md",
+      "summary": "Captured 2026-07-31T00:22Z on production after deploy of metadata phase spans. No concurrency/pacing/selection changes. Rolling window **n=337**."
     },
     {
       "id": "status-emerging-scheduled-in-process",

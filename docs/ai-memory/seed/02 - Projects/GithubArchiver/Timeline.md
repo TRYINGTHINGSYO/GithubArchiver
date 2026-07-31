@@ -65,6 +65,8 @@ Chronological event log (newest first). Source of truth is `entries/`.
   - edges: related:[`incident-enrichment-hourly-bottleneck`](entries/2026-07-18-incident-enrichment-hourly-bottleneck.md), related:[`research-archive-backlog-pace`](entries/2026-07-30-research-archive-backlog-pace.md), related:[`debt-github-token`](entries/2026-07-18-debt-github-token.md), related:[`bugfix-dashboard-trust-semantics`](entries/2026-07-30-bugfix-dashboard-trust-semantics.md)
 - **2026-07-30** · `research` · `confirmed` · `permanent` · `verified` · `ui`, `metrics` — [The homepage is fast when warm; a 30s readiness TTL costs 6.4s per expiry](entries/2026-07-30-research-homepage-readiness-cache.md)
   - edges: related:[`bugfix-dashboard-trust-semantics`](entries/2026-07-30-bugfix-dashboard-trust-semantics.md)
+- **2026-07-30** · `research` · `confirmed` · `temporary` · `3bf38c4` · `open` · `enrichment`, `observability` — [Metadata span baseline — HTTP TTFB dominates legacy 14s p50](entries/2026-07-30-research-metadata-phase-span-baseline.md)
+  - edges: caused-by:[`feature-metadata-phase-spans`](entries/2026-07-30-feature-metadata-phase-spans.md), references:[`research-enrichment-throughput-ceiling`](entries/2026-07-30-research-enrichment-throughput-ceiling.md)
 - **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `emerging`, `daemon` — [Emerging scheduling gap closed in production path](entries/2026-07-30-status-emerging-scheduled-in-process.md)
   - edges: supersedes:[`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md), implemented-by:[`feature-emerging-in-process-cadence`](entries/2026-07-30-feature-emerging-in-process-cadence.md)
 ## 2026-07-18
