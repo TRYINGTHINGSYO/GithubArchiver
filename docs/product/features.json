@@ -248,17 +248,42 @@
     {
       "id": "homepage-discovery-signals",
       "name": "Homepage discovery signals",
-      "description": "Homepage emphasizes Archive Pulse, discovery sections, and repository intelligence before raw tables.",
+      "description": "Homepage emphasizes Archive Pulse, discovery sections, and repository intelligence before raw tables. Discovery sections are served from durable materialized payloads with live-query fallback when materialization is missing or stale.",
       "status": "production",
-      "routes": ["/"],
-      "source": ["src/routes/+page.svelte", "src/routes/+page.server.ts", "src/lib/server/discovery-materialized.ts"],
-      "tests": ["tests/discovery-pipeline.test.ts"],
-      "tables": ["discovery_projects_to_watch", "discovery_emerging_topics", "discovery_fastest_clusters", "discovery_system_status"],
-      "introduced_commit": null,
-      "last_changed_commit": null,
-      "dependencies": ["repository-discovery", "emerging-topics"],
-      "known_limitations": ["Materialized discovery payloads can lag behind source/detection code."],
-      "follow_up_work": ["Expose materialization age and stale payload warnings in the UI."]
+      "routes": ["/", "/admin/status"],
+      "source": [
+        "src/routes/+page.svelte",
+        "src/routes/+page.server.ts",
+        "src/lib/server/discovery-materialized.ts",
+        "src/lib/server/discovery-materialization.ts",
+        "src/lib/server/workers/discovery.ts",
+        "src/lib/server/daemon-cadence.ts",
+        "scripts/materialize-discovery.ts"
+      ],
+      "tests": [
+        "tests/discovery-pipeline.test.ts",
+        "tests/discovery-materialization-durable.test.ts"
+      ],
+      "tables": [
+        "discovery_projects_to_watch",
+        "discovery_emerging_topics",
+        "discovery_fastest_clusters",
+        "discovery_deleted_preserved",
+        "discovery_unusual_finds",
+        "discovery_system_status",
+        "discovery_materialization_runs"
+      ],
+      "introduced_commit": "2330421",
+      "last_changed_commit": "6b826fa",
+      "dependencies": ["repository-discovery", "emerging-topics", "githubarchive-mcp"],
+      "known_limitations": [
+        "Materialized discovery payloads can lag behind source/detection code within the explicit freshness window.",
+        "Readiness aggregates and high-signal repo cards remain live (not part of this materialization slice)."
+      ],
+      "follow_up_work": [
+        "Expose materialization age and stale payload warnings in the homepage UI.",
+        "Consider serving readiness counts from discovery_system_status instead of rescanning repos."
+      ]
     },
     {
       "id": "system-health-display",
