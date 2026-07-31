@@ -3,6 +3,7 @@ import { getDb } from '$lib/server/db/connection';
 import { insertRepo, saveEnrichment } from '$lib/server/db/repos';
 import { CURRENT_SCHEMA_VERSION } from '$lib/server/db/schema';
 import {
+	CURRENT_EMERGING_DETECTION_VERSION,
 	addEmergingTermAlias,
 	addEmergingTermExclusion,
 	detectEmergingTopics,
@@ -174,6 +175,51 @@ describe('emerging topic detection', () => {
 		expect(updateEmergingTopicStatus('browser-agent-harness', 'reviewing')).toBe(true);
 		const updated = getEmergingTopicDetail('browser-agent-harness');
 		expect(updated?.topic.status).toBe('reviewing');
+	});
+
+	it('does not serve stale v1 topic detail rows after detection version bumps', () => {
+		seedRepos('versioned-topic-harness', {
+			current: 11,
+			previous: 1,
+			owners: 7,
+			topic: 'versioned-topic-harness',
+			description: 'Versioned topic harness for detail routing'
+		});
+		runEmergingTopicDetection({ periodEnd: new Date('2026-07-15T00:00:00.000Z'), windowDays: 7 });
+
+		getDb()
+			.prepare(
+				`INSERT INTO emerging_topics (
+				   key, label, candidate_type, status, period_start, period_end,
+				   current_count, previous_count, distinct_owner_count, average_interesting_score,
+				   novelty_score, momentum_score, quality_score, emerging_score,
+				   evidence_json, history_json, detection_version, generated_at
+				 ) VALUES (?, ?, ?, 'detected', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			)
+			.run(
+				'versioned-topic-harness',
+				'Stale V1 Versioned Topic Harness',
+				'topic',
+				'2026-07-22T00:00:00.000Z',
+				'2026-07-29T00:00:00.000Z',
+				36,
+				1,
+				20,
+				12,
+				100,
+				100,
+				80,
+				81,
+				JSON.stringify({ currentRepoIds: [], previousRepoIds: [], exampleRepos: [] }),
+				null,
+				1,
+				'2026-07-29T00:00:00.000Z'
+			);
+
+		const detail = getEmergingTopicDetail('versioned-topic-harness');
+		expect(detail?.topic.detection_version).toBe(CURRENT_EMERGING_DETECTION_VERSION);
+		expect(detail?.topic.label).toBe('Versioned Topic Harness');
+		expect(detail?.topic.current_count).toBe(11);
 	});
 
 	it('records review reason codes alongside status changes', () => {

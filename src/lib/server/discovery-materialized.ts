@@ -20,7 +20,7 @@ import {
 	parseDiscoveryQuery
 } from './discovery.js';
 import { DISCOVERY_PRESETS } from './discovery-presets.js';
-import { listEmergingTopics } from './emerging-topics.js';
+import { CURRENT_EMERGING_DETECTION_VERSION, listEmergingTopics } from './emerging-topics.js';
 
 export type DiscoveryTier = 'qualified' | 'preliminary';
 
@@ -188,6 +188,9 @@ export function getMaterializedDiscoveryLanding(
 	if (!status?.last_discovery_analysis_at) return null;
 
 	const limit = opts.limit ?? 50;
+	const emergingTopics = readMaterializedPayloads<{ detection_version?: number }>(
+		'discovery_emerging_topics'
+	).filter((topic) => topic.detection_version === CURRENT_EMERGING_DETECTION_VERSION);
 	return {
 		presets: DISCOVERY_PRESETS,
 		fastestGrowing: readMaterializedPayloads<DiscoveryClusterCard>('discovery_fastest_clusters').slice(
@@ -205,7 +208,7 @@ export function getMaterializedDiscoveryLanding(
 			0,
 			limit
 		),
-		emergingTopics: readMaterializedPayloads('discovery_emerging_topics').slice(0, limit),
+		emergingTopics: emergingTopics.slice(0, limit),
 		// Use maintained repo_count — avoid N+1 analytics on every page load.
 		clusters: listActiveClusterSummaries(24)
 	};

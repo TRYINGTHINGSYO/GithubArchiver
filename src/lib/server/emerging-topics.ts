@@ -1440,16 +1440,20 @@ export function getLatestEmergingDetectionProvenance(): {
 	}
 }
 
-export function getEmergingTopicDetail(key: string): EmergingTopicDetail | null {
+export function getEmergingTopicDetail(
+	key: string,
+	opts: { version?: number } = {}
+): EmergingTopicDetail | null {
 	const db = getDb();
+	const version = opts.version ?? CURRENT_EMERGING_DETECTION_VERSION;
 	const topic = db
 		.prepare(
 			`SELECT * FROM emerging_topics
-			 WHERE key = ?
-			 ORDER BY period_start DESC, detection_version DESC
+			 WHERE key = ? AND detection_version = ?
+			 ORDER BY period_start DESC
 			 LIMIT 1`
 		)
-		.get(key) as EmergingTopicRow | undefined;
+		.get(key, version) as EmergingTopicRow | undefined;
 	if (!topic) return null;
 
 	const repositories = db
