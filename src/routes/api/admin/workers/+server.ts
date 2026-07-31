@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import {
 	runArchiveJob,
 	runDiscoveryMaterializeJob,
+	runHomepageReadinessMaterializeJob,
 	runEnrichJob,
 	runIngestHourJob,
 	runIngestMissingJob,
@@ -30,6 +31,10 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 		case 'discovery-materialize': {
 			const result = runDiscoveryMaterializeJob();
+			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
+		}
+		case 'homepage-readiness-materialize': {
+			const result = runHomepageReadinessMaterializeJob();
 			return json({ ok: result.queued, ...result }, { status: result.queued ? 200 : 409 });
 		}
 		case 'ingest': {

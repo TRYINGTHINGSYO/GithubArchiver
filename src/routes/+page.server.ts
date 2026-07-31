@@ -6,12 +6,12 @@ import { getLongestRunningWorkJobSnapshot } from '$lib/server/db/jobs';
 import { REPO_SORTS } from '$lib/server/db/repo-query';
 import { isSearchFallbackActive } from '$lib/server/db/search-ingest';
 import { getDataReadiness } from '$lib/server/data-readiness';
-import {
-	getActiveQualityClusters,
-	getDiscoveryLanding,
-	getNewHighSignalRepos
-} from '$lib/server/discovery';
+import { getActiveQualityClusters, getDiscoveryLanding } from '$lib/server/discovery';
 import { getDiscoverySystemStatus } from '$lib/server/discovery-materialized';
+import {
+	getHomepageHighSignalCount,
+	getHomepageHighSignalRepos
+} from '$lib/server/homepage-readiness-materialized';
 import { getEnrichmentProgress } from '$lib/server/enrichment-progress';
 import { getEnrichmentOpsSnapshot } from '$lib/server/workers/enrich';
 import {
@@ -25,19 +25,6 @@ import {
 	repoQueryFiltersForUi
 } from '$lib/server/repo-search';
 import type { PageServerLoad } from './$types';
-
-function countHighSignalRepos(): number {
-	return (
-		getDb()
-			.prepare(
-				`SELECT COUNT(*) AS c FROM repos
-				 WHERE COALESCE(signal_tier, 'normal') IN ('normal', 'high')
-				   AND deleted_at IS NULL
-				   AND interesting_score IS NOT NULL`
-			)
-			.get() as { c: number }
-	).c;
-}
 
 function countClassifiedRepos(): number {
 	return (
@@ -109,7 +96,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const enrichmentProgress = getEnrichmentProgress();
 	const enrichmentOps = getEnrichmentOpsSnapshot();
 	const provenance = getLatestEmergingDetectionProvenance();
-	const highSignalRepos = getNewHighSignalRepos({ limit: 8, minScore: 55 });
+	const highSignalRepos = getHomepageHighSignalRepos({ limit: 8, minScore: 55 });
 	const featuredRepo =
 		discovery.projectsToWatch[0] ??
 		highSignalRepos[0] ??
@@ -208,7 +195,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			enriched: readiness.enrichedRepos,
 			classified: discoveryStatus.classified || countClassifiedRepos(),
 			clustered: readiness.clusteredRepos,
-			highSignal: countHighSignalRepos(),
+			highSignal: getHomepageHighSignalCount(),
 			emergingActive: discovery.emergingTopics.length,
 			stories: readiness.storyRepos,
 			activeClusters: activeClusterCount,

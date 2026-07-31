@@ -9,6 +9,7 @@ import {
 	runDiscoveryMaterializationCycle,
 	type DiscoveryMaterializationResult
 } from './workers/discovery.js';
+import { runHomepageReadinessMaterializationCycle } from './workers/homepage-readiness.js';
 import { runEmergingTopicCycle, type EmergingCycleResult } from './workers/emerging.js';
 import { runWebsiteCtDiscoverCycle } from './workers/website-ct.js';
 import { runWebsiteVerifyCycle } from './workers/website-verify.js';
@@ -21,6 +22,7 @@ import { runWebsiteZoneDiscoverCycle } from './workers/website-zone.js';
 export const IN_PROCESS_CADENCE_JOBS: ScheduledJobName[] = [
 	'emerging',
 	'discovery',
+	'homepage_readiness',
 	'website_ct',
 	'website_zone',
 	'website_verify'
@@ -46,7 +48,11 @@ export function initializeInProcessCadence(): void {
 export interface CadenceRunResult {
 	ran: boolean;
 	hadFailure: boolean;
-	detail?: EmergingCycleResult | DiscoveryMaterializationResult | { error: string };
+	detail?:
+		| EmergingCycleResult
+		| DiscoveryMaterializationResult
+		| Awaited<ReturnType<typeof runHomepageReadinessMaterializationCycle>>
+		| { error: string };
 }
 
 /**
@@ -111,6 +117,40 @@ export async function maybeRunDueDiscoveryCycle(
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 		opts.log?.(`[daemon] discovery failed: ${message}`);
+		return { ran: true, hadFailure: true, detail: { error: message } };
+	}
+}
+
+export async function maybeRunDueHomepageReadinessCycle(
+	opts: {
+		now?: number;
+		shouldSkip?: () => boolean;
+		log?: (line: string) => void;
+	} = {}
+): Promise<CadenceRunResult> {
+	if (opts.shouldSkip?.()) return { ran: false, hadFailure: false };
+	if (!isJobDue('homepage_readiness', opts.now ?? Date.now())) {
+		return { ran: false, hadFailure: false };
+	}
+
+	opts.log?.('[daemon] cadence: homepage readiness materialization due');
+	try {
+		const result = await runScheduledJob('homepage_readiness', () =>
+			runHomepageReadinessMaterializationCycle({ owner: `cadence-${process.pid}` })
+		);
+		opts.log?.(
+			`[daemon] homepage_readiness: ${result.status}` +
+				(result.runId != null ? ` run=${result.runId}` : '') +
+				` high_signal=${result.highSignalRows}/${result.highSignalCount}`
+		);
+		return {
+			ran: true,
+			hadFailure: result.status === 'failed',
+			detail: result
+		};
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		opts.log?.(`[daemon] homepage_readiness failed: ${message}`);
 		return { ran: true, hadFailure: true, detail: { error: message } };
 	}
 }

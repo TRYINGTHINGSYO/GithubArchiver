@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 39;
+export const CURRENT_SCHEMA_VERSION = 40;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1342,6 +1342,47 @@ function migration039(database: Database.Database) {
 	`);
 }
 
+/**
+ * Independent homepage readiness + high-signal snapshot (not coupled to discovery).
+ * Singleton published row survives failed refreshes; runs table holds leases/history.
+ */
+function migration040(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS homepage_readiness_runs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			status TEXT NOT NULL,
+			started_at TEXT NOT NULL,
+			finished_at TEXT,
+			source_commit TEXT,
+			algorithm_version INTEGER NOT NULL,
+			schema_version INTEGER NOT NULL,
+			lease_owner TEXT,
+			lease_expires_at TEXT,
+			error TEXT,
+			published INTEGER NOT NULL DEFAULT 0,
+			snapshot_id INTEGER
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_homepage_readiness_runs_status
+		  ON homepage_readiness_runs(status, started_at DESC);
+
+		CREATE TABLE IF NOT EXISTS homepage_readiness_snapshot (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			run_id INTEGER NOT NULL,
+			published_at TEXT NOT NULL,
+			algorithm_version INTEGER NOT NULL,
+			schema_version INTEGER NOT NULL,
+			window_days INTEGER NOT NULL,
+			readiness_json TEXT NOT NULL,
+			high_signal_json TEXT NOT NULL,
+			high_signal_count INTEGER NOT NULL,
+			watermark_enriched_at TEXT,
+			watermark_classified_at TEXT,
+			watermark_repo_count INTEGER NOT NULL
+		);
+	`);
+}
+
 /** Website discovery: CT + zone intake → shared candidates → liveness verify. */
 function migration037(database: Database.Database) {
 	database.exec(`
@@ -1427,7 +1468,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	36: migration036,
 	37: migration037,
 	38: migration038,
-	39: migration039
+	39: migration039,
+	40: migration040
 };
 
 export interface MigrationRunResult {

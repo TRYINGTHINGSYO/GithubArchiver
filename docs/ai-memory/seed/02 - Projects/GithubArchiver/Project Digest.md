@@ -67,6 +67,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: references:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), related:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), validates:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 - **2026-07-31** · `feature` · `confirmed` · `permanent` · `closed` · `homepage`, `discovery`, `mcp` — [Harden homepage discovery materialization durability](entries/2026-07-31-feature-durable-discovery-materialization.md)
   - edges: caused-by:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), references:[`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
+- **2026-07-31** · `feature` · `confirmed` · `permanent` · `closed` · `homepage`, `readiness`, `mcp` — [Materialize homepage readiness and high-signal snapshot](entries/2026-07-31-feature-homepage-readiness-materialization.md)
+  - edges: related:[`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), references:[`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
 - **2026-07-31** · `feature` · `confirmed` · `permanent` · `6fbaa7a` · `closed` · `mcp`, `project-memory` — [MCP project resources, prompts, and workspace review](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
   - edges: related:`feat-mcp-intelligence-server`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-31** · `incident` · `confirmed` · `permanent` · `closed` · `db`, `homepage`, `discovery` — [schema_version 26 recorded without discovery materialization tables](entries/2026-07-31-incident-schema26-discovery-tables-missing.md)
@@ -77,8 +79,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: supersedes:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), validates:`test-readiness-growth-gate`
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `deploy`, `daemon` — [Railway healthcheck on / raced daemon ingest — deploy failed, site 502](entries/2026-07-30-bugfix-deploy-healthcheck-race.md)
   - edges: caused-by:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), related:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
-- **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
-  - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md)
 
 ## Open technical debt
 

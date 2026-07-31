@@ -11,6 +11,8 @@ generated: true
 
 - **2026-07-31** · `feature` · `confirmed` · `permanent` · `closed` · `homepage`, `discovery`, `mcp` — [Harden homepage discovery materialization durability](entries/2026-07-31-feature-durable-discovery-materialization.md)
   - edges: caused-by:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), references:[`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
+- **2026-07-31** · `feature` · `confirmed` · `permanent` · `closed` · `homepage`, `readiness`, `mcp` — [Materialize homepage readiness and high-signal snapshot](entries/2026-07-31-feature-homepage-readiness-materialization.md)
+  - edges: related:[`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), references:[`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
 - **2026-07-31** · `feature` · `confirmed` · `permanent` · `6fbaa7a` · `closed` · `mcp`, `project-memory` — [MCP project resources, prompts, and workspace review](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
   - edges: related:`feat-mcp-intelligence-server`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `emerging`, `daemon` — [Wire emerging into in-process daemon on own cadence](entries/2026-07-30-feature-emerging-in-process-cadence.md)

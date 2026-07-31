@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-31T10:10:22.667Z",
+  "generatedAt": "2026-07-31T10:17:23.333Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -82,6 +82,46 @@
       "title": "Harden homepage discovery materialization durability",
       "path": "entries/2026-07-31-feature-durable-discovery-materialization.md",
       "summary": "Hardened the existing homepage discovery materialization pipeline (no rewrite of"
+    },
+    {
+      "id": "feature-homepage-readiness-materialization",
+      "schema": 1,
+      "type": "feature",
+      "status": "closed",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-07-31",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "homepage",
+        "readiness",
+        "mcp"
+      ],
+      "related": [
+        "feature-durable-discovery-materialization",
+        "research-homepage-readiness-cache",
+        "decision-mcp-first-dev-workflow"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "feature-durable-discovery-materialization"
+        },
+        {
+          "type": "related",
+          "id": "research-homepage-readiness-cache"
+        },
+        {
+          "type": "references",
+          "id": "decision-mcp-first-dev-workflow"
+        }
+      ],
+      "supersedes": null,
+      "title": "Materialize homepage readiness and high-signal snapshot",
+      "path": "entries/2026-07-31-feature-homepage-readiness-materialization.md",
+      "summary": "Independent homepage readiness + high-signal materialization (not coupled to"
     },
     {
       "id": "feature-mcp-resources-prompts-review",

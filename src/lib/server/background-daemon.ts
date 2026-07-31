@@ -6,6 +6,7 @@ import {
 	maybeReconcileStaleJobRuns,
 	maybeRunDueDiscoveryCycle,
 	maybeRunDueEmergingCycle,
+	maybeRunDueHomepageReadinessCycle,
 	maybeRunDueWebsiteCycles
 } from './daemon-cadence';
 import { queryBacklogSnapshot } from './daemon-backlog';
@@ -400,6 +401,13 @@ async function runLoop(): Promise<void> {
 					log: appendLog
 				});
 				if (discovery.hadFailure) hadFailure = true;
+			}
+			if (!stopRequested) {
+				const readiness = await maybeRunDueHomepageReadinessCycle({
+					shouldSkip: () => stopRequested,
+					log: appendLog
+				});
+				if (readiness.hadFailure) hadFailure = true;
 			}
 			if (!stopRequested) {
 				const websites = await maybeRunDueWebsiteCycles({

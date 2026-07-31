@@ -4,6 +4,11 @@ import { countReposByEnrichmentLevel } from '$lib/server/db/pipeline';
 import { MIN_COMPARABLE_HOUR_COVERAGE, getWindowHourCoverage } from '$lib/server/emerging-topics';
 import { hasGitHubToken } from '$lib/server/github';
 import { cached } from '$lib/server/ttl-cache';
+import {
+	getPublishedHomepageReadinessSnapshot,
+	isHomepageReadinessSnapshotFresh,
+	readHomepageSourceWatermarks
+} from './homepage-readiness-materialization.js';
 
 export const EMERGING_READY_MIN_ENRICHED = 250;
 export const EMERGING_READY_MIN_OWNERS = 50;
@@ -43,11 +48,25 @@ export function getDataReadiness(opts: {
 	periodEnd?: Date;
 	minEnriched?: number;
 	minOwners?: number;
+	/** Force live compute (materializer / tests). */
+	forceLive?: boolean;
 } = {}): DataReadiness {
 	const windowDays = opts.windowDays ?? 7;
 	const periodEnd = opts.periodEnd ?? new Date();
 	const minEnriched = opts.minEnriched ?? EMERGING_READY_MIN_ENRICHED;
 	const minOwners = opts.minOwners ?? EMERGING_READY_MIN_OWNERS;
+
+	if (!opts.forceLive) {
+		const snapshot = getPublishedHomepageReadinessSnapshot();
+		if (
+			snapshot &&
+			snapshot.windowDays === windowDays &&
+			isHomepageReadinessSnapshotFresh(snapshot)
+		) {
+			return snapshot.readiness;
+		}
+	}
+
 	// Bucket periodEnd to the minute so short TTLs actually hit across navigations.
 	const periodKey = Math.floor(periodEnd.getTime() / 60_000);
 	return cached(
@@ -57,7 +76,11 @@ export function getDataReadiness(opts: {
 	);
 }
 
-function computeDataReadiness(opts: {
+/**
+ * Live readiness compute. Batches compatible aggregate counts and reuses
+ * discovery_system_status corpus counters when their semantics match exactly.
+ */
+export function computeDataReadiness(opts: {
 	windowDays: number;
 	periodEnd: Date;
 	minEnriched: number;
@@ -72,95 +95,73 @@ function computeDataReadiness(opts: {
 	const previousWindowStart = previousStart.toISOString();
 	const previousWindowEnd = periodStart.toISOString();
 
-	const totalRepos = countRepos();
-	const enrichmentBacklog = countUnenriched();
-	const enrichedRepos = totalRepos - enrichmentBacklog;
+	const corpus = readCorpusCounts();
+	const totalRepos = corpus.totalRepos;
+	const enrichmentBacklog = corpus.enrichmentBacklog;
+	const enrichedRepos = corpus.enrichedRepos;
 	const enrichmentLevels = countReposByEnrichmentLevel();
 
-	const scoredRepos = (
-		db.prepare('SELECT COUNT(*) AS c FROM repos WHERE interesting_score IS NOT NULL').get() as {
-			c: number;
-		}
-	).c;
-	const clusteredRepos = (
-		db.prepare('SELECT COUNT(*) AS c FROM repos WHERE clustered_at IS NOT NULL').get() as {
-			c: number;
-		}
-	).c;
-	const storyRepos = (
-		db.prepare('SELECT COUNT(*) AS c FROM repos WHERE story_generated_at IS NOT NULL').get() as {
-			c: number;
-		}
-	).c;
+	const pipelineCounts = db
+		.prepare(
+			`SELECT
+			   SUM(CASE WHEN interesting_score IS NOT NULL THEN 1 ELSE 0 END) AS scored,
+			   SUM(CASE WHEN clustered_at IS NOT NULL THEN 1 ELSE 0 END) AS clustered,
+			   SUM(CASE WHEN story_generated_at IS NOT NULL THEN 1 ELSE 0 END) AS story
+			 FROM repos`
+		)
+		.get() as { scored: number | null; clustered: number | null; story: number | null };
+	const scoredRepos = pipelineCounts.scored ?? 0;
+	const clusteredRepos = pipelineCounts.clustered ?? 0;
+	const storyRepos = pipelineCounts.story ?? 0;
 
 	const recentCutoff = new Date(Date.now() - 30 * 86_400_000).toISOString();
-	const recentRepos = (
-		db
-			.prepare('SELECT COUNT(*) AS c FROM repos WHERE created_at >= ?')
-			.get(recentCutoff) as { c: number }
-	).c;
-	const recentEnrichedRepos = (
-		db
-			.prepare(
-				`SELECT COUNT(*) AS c FROM repos
-				 WHERE created_at >= ? AND enriched_at IS NOT NULL`
-			)
-			.get(recentCutoff) as { c: number }
-	).c;
+	const recent = db
+		.prepare(
+			`SELECT
+			   COUNT(*) AS repos,
+			   SUM(CASE WHEN enriched_at IS NOT NULL THEN 1 ELSE 0 END) AS enriched
+			 FROM repos
+			 WHERE created_at >= ?`
+		)
+		.get(recentCutoff) as { repos: number; enriched: number | null };
+	const recentRepos = recent.repos;
+	const recentEnrichedRepos = recent.enriched ?? 0;
 
-	const currentWindowRepos = (
-		db
-			.prepare(
-				`SELECT COUNT(*) AS c FROM repos
-				 WHERE created_at >= ? AND created_at < ?`
-			)
-			.get(windowStart, windowEnd) as { c: number }
-	).c;
-	const currentWindowEnrichedRepos = (
-		db
-			.prepare(
-				`SELECT COUNT(*) AS c FROM repos
-				 WHERE created_at >= ? AND created_at < ?
-				   AND enriched_at IS NOT NULL`
-			)
-			.get(windowStart, windowEnd) as { c: number }
-	).c;
-	const distinctOwnersInWindow = (
-		db
-			.prepare(
-				`SELECT COUNT(DISTINCT owner) AS c FROM repos
-				 WHERE created_at >= ? AND created_at < ?
-				   AND enriched_at IS NOT NULL`
-			)
-			.get(windowStart, windowEnd) as { c: number }
-	).c;
+	const currentWindow = db
+		.prepare(
+			`SELECT
+			   COUNT(*) AS repos,
+			   SUM(CASE WHEN enriched_at IS NOT NULL THEN 1 ELSE 0 END) AS enriched,
+			   COUNT(DISTINCT CASE WHEN enriched_at IS NOT NULL THEN owner END) AS owners
+			 FROM repos
+			 WHERE created_at >= ? AND created_at < ?`
+		)
+		.get(windowStart, windowEnd) as {
+		repos: number;
+		enriched: number | null;
+		owners: number | null;
+	};
+	const currentWindowRepos = currentWindow.repos;
+	const currentWindowEnrichedRepos = currentWindow.enriched ?? 0;
+	const distinctOwnersInWindow = currentWindow.owners ?? 0;
 
-	const previousWindowRepos = (
-		db
-			.prepare(
-				`SELECT COUNT(*) AS c FROM repos
-				 WHERE created_at >= ? AND created_at < ?`
-			)
-			.get(previousWindowStart, previousWindowEnd) as { c: number }
-	).c;
-	const previousWindowEnrichedRepos = (
-		db
-			.prepare(
-				`SELECT COUNT(*) AS c FROM repos
-				 WHERE created_at >= ? AND created_at < ?
-				   AND enriched_at IS NOT NULL`
-			)
-			.get(previousWindowStart, previousWindowEnd) as { c: number }
-	).c;
-	const previousWindowDistinctOwners = (
-		db
-			.prepare(
-				`SELECT COUNT(DISTINCT owner) AS c FROM repos
-				 WHERE created_at >= ? AND created_at < ?
-				   AND enriched_at IS NOT NULL`
-			)
-			.get(previousWindowStart, previousWindowEnd) as { c: number }
-	).c;
+	const previousWindow = db
+		.prepare(
+			`SELECT
+			   COUNT(*) AS repos,
+			   SUM(CASE WHEN enriched_at IS NOT NULL THEN 1 ELSE 0 END) AS enriched,
+			   COUNT(DISTINCT CASE WHEN enriched_at IS NOT NULL THEN owner END) AS owners
+			 FROM repos
+			 WHERE created_at >= ? AND created_at < ?`
+		)
+		.get(previousWindowStart, previousWindowEnd) as {
+		repos: number;
+		enriched: number | null;
+		owners: number | null;
+	};
+	const previousWindowRepos = previousWindow.repos;
+	const previousWindowEnrichedRepos = previousWindow.enriched ?? 0;
+	const previousWindowDistinctOwners = previousWindow.owners ?? 0;
 
 	const readinessReasons: string[] = [];
 	if (currentWindowEnrichedRepos < minEnriched) {
@@ -240,13 +241,61 @@ function computeDataReadiness(opts: {
 	};
 }
 
+/**
+ * Prefer discovery_system_status corpus counters when present — they match
+ * total / enriched / clustered semantics used by readiness. Fall back to scans.
+ */
+function readCorpusCounts(): {
+	totalRepos: number;
+	enrichedRepos: number;
+	enrichmentBacklog: number;
+} {
+	const db = getDb();
+	const hasStatus = Boolean(
+		db
+			.prepare(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = ?`)
+			.get('discovery_system_status')
+	);
+	if (hasStatus) {
+		const status = db
+			.prepare(
+				`SELECT repositories_discovered, enriched, clustered, updated_at
+				 FROM discovery_system_status WHERE id = 1`
+			)
+			.get() as
+			| {
+					repositories_discovered: number;
+					enriched: number;
+					clustered: number;
+					updated_at: string;
+			  }
+			| undefined;
+		if (status && status.repositories_discovered > 0) {
+			const totalRepos = status.repositories_discovered;
+			const enrichedRepos = Math.min(status.enriched, totalRepos);
+			return {
+				totalRepos,
+				enrichedRepos,
+				enrichmentBacklog: Math.max(0, totalRepos - enrichedRepos)
+			};
+		}
+	}
+
+	const totalRepos = countRepos();
+	const enrichmentBacklog = countUnenriched();
+	return {
+		totalRepos,
+		enrichedRepos: totalRepos - enrichmentBacklog,
+		enrichmentBacklog
+	};
+}
+
 export function estimateEnrichmentWorkload(readiness?: DataReadiness): {
 	level1Requests: number;
 	level2Candidates: number;
 } {
 	const stats = readiness ?? getDataReadiness();
 	const level1Requests = stats.enrichmentBacklog;
-	// Rough candidate pool: recently enriched high-signal repos still below Level 2.
 	const db = getDb();
 	const level2Candidates = (
 		db
@@ -265,4 +314,9 @@ export function estimateEnrichmentWorkload(readiness?: DataReadiness): {
 			.get() as { c: number }
 	).c;
 	return { level1Requests, level2Candidates };
+}
+
+/** Expose watermarks for tests / MCP without importing the materialization module everywhere. */
+export function getHomepageReadinessSourceWatermarks() {
+	return readHomepageSourceWatermarks();
 }

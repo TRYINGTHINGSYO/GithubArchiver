@@ -215,7 +215,10 @@ export class GithubArchiveMcpTools {
   private getProjectState(): Record<string, unknown> {
     const archiveSummary = this.safeDb(() => this.db.getArchiveSummary()) as Record<string, unknown>;
     const latestDetectionRun = this.safeDb(() => this.db.listDetectionRuns(1)[0] ?? null);
-    const materializations = this.safeDb(() => this.db.getMaterializationSummary());
+    const materializations = (this.safeDb(() => this.db.getMaterializationSummary()) ?? {
+      homepage_discovery: { available: false, reason: 'database unavailable' },
+      homepage_readiness: { available: false, reason: 'database unavailable' }
+    }) as Record<string, unknown>;
     return {
       source: {
         commit: this.git.currentCommitFull(),
@@ -241,7 +244,8 @@ export class GithubArchiveMcpTools {
         latestEmergingDetection: latestDetectionRun
       },
       materializations: {
-        homepage: materializations
+        homepage_discovery: materializations.homepage_discovery ?? null,
+        homepage_readiness: materializations.homepage_readiness ?? null
       }
     };
   }

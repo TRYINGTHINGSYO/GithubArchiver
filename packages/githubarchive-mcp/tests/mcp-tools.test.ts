@@ -138,7 +138,10 @@ describe('GithubArchive+ MCP tools', () => {
       database: { repositories: number | null; enriched: number | null };
       algorithms: { emergingDetectionVersion: number | null };
       runs: { latestEmergingDetection: { detection_version: number } | null };
-      materializations: { homepage: { worker_status?: string } };
+      materializations: {
+        homepage_discovery: { worker_status?: string; available?: boolean };
+        homepage_readiness: { available?: boolean; reason?: string };
+      };
     };
     expect(data.source.shortCommit).toBeTruthy();
     expect(typeof data.source.dirty).toBe('boolean');
@@ -146,7 +149,9 @@ describe('GithubArchive+ MCP tools', () => {
     expect(data.database.enriched).toBe(131);
     expect(data.algorithms.emergingDetectionVersion).toBe(2);
     expect(data.runs.latestEmergingDetection?.detection_version).toBe(2);
-    expect(data.materializations.homepage.worker_status).toBe('healthy');
+    expect(data.materializations.homepage_discovery.worker_status).toBe('healthy');
+    expect(data.materializations.homepage_discovery.available).toBe(true);
+    expect(data.materializations.homepage_readiness.available).toBe(false);
   });
 
   it('supports MCP initialize, list, call, resources, and prompts', async () => {

@@ -10,6 +10,7 @@ export type ScheduledJobName =
 	| 'stories'
 	| 'emerging'
 	| 'discovery'
+	| 'homepage_readiness'
 	| 'archive'
 	| 'deletionCheck'
 	| 'backup'

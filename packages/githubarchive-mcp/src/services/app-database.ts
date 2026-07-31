@@ -288,120 +288,195 @@ export class AppDatabaseService {
   }
 
   getMaterializationSummary(): Record<string, unknown> {
-    return this.withDb((db) => {
-      if (!tableExists(db, 'discovery_system_status')) {
-        return {
-          available: false,
-          stale: true,
-          reason: 'discovery_system_status table is not present.'
-        };
-      }
-      const status = db
-        .prepare(
-          `SELECT repositories_discovered, enriched, classified, clustered,
-                  last_ingestion_at, last_discovery_analysis_at, last_emerging_analysis_at,
-                  worker_status, updated_at
-           FROM discovery_system_status WHERE id = 1`
-        )
-        .get() as
-        | {
-            repositories_discovered: number;
-            enriched: number;
-            classified: number;
-            clustered: number;
-            last_ingestion_at: string | null;
-            last_discovery_analysis_at: string | null;
-            last_emerging_analysis_at: string | null;
-            worker_status: string;
-            updated_at: string;
-          }
-        | undefined;
-      if (!status) {
-        return { available: false, stale: true, reason: 'No discovery_system_status row exists.' };
-      }
+    return this.withDb((db) => ({
+      homepage_discovery: this.getHomepageDiscoveryMaterialization(db),
+      homepage_readiness: this.getHomepageReadinessMaterialization(db)
+    }));
+  }
 
-      const staleMs = Number(process.env.DISCOVERY_MATERIALIZATION_STALE_MS ?? 2 * 60 * 60 * 1000);
-      const freshnessWindowMs =
-        Number.isFinite(staleMs) && staleMs > 0 ? Math.floor(staleMs) : 2 * 60 * 60 * 1000;
-      const now = Date.now();
-      const lastSuccessAt = status.last_discovery_analysis_at;
-      const ageMs =
-        lastSuccessAt && Number.isFinite(Date.parse(lastSuccessAt))
-          ? Math.max(0, now - Date.parse(lastSuccessAt))
-          : null;
-      const stale = ageMs == null || ageMs > freshnessWindowMs;
-
-      let latestRun: Record<string, unknown> | null = null;
-      if (tableExists(db, 'discovery_materialization_runs')) {
-        latestRun =
-          (db
-            .prepare(
-              `SELECT id, status, started_at, finished_at, source_commit, algorithm_version,
-                      error, row_counts_json, published
-               FROM discovery_materialization_runs
-               ORDER BY id DESC LIMIT 1`
-            )
-            .get() as Record<string, unknown> | undefined) ?? null;
-        if (latestRun?.row_counts_json && typeof latestRun.row_counts_json === 'string') {
-          try {
-            latestRun = {
-              ...latestRun,
-              row_counts: JSON.parse(latestRun.row_counts_json),
-              row_counts_json: undefined
-            };
-          } catch {
-            // keep raw json
-          }
-        }
-      }
-
-      let latestPublishedRun: Record<string, unknown> | null = null;
-      if (tableExists(db, 'discovery_materialization_runs')) {
-        latestPublishedRun =
-          (db
-            .prepare(
-              `SELECT id, status, started_at, finished_at, source_commit, algorithm_version,
-                      row_counts_json, published
-               FROM discovery_materialization_runs
-               WHERE published = 1 AND status = 'success'
-               ORDER BY finished_at DESC, id DESC LIMIT 1`
-            )
-            .get() as Record<string, unknown> | undefined) ?? null;
-        if (
-          latestPublishedRun?.row_counts_json &&
-          typeof latestPublishedRun.row_counts_json === 'string'
-        ) {
-          try {
-            latestPublishedRun = {
-              ...latestPublishedRun,
-              row_counts: JSON.parse(latestPublishedRun.row_counts_json),
-              row_counts_json: undefined
-            };
-          } catch {
-            // keep raw json
-          }
-        }
-      }
-
+  private getHomepageDiscoveryMaterialization(db: Database.Database): Record<string, unknown> {
+    if (!tableExists(db, 'discovery_system_status')) {
       return {
-        available: Boolean(lastSuccessAt),
-        stale,
-        freshness_window_ms: freshnessWindowMs,
-        age_ms: ageMs,
-        last_success_at: lastSuccessAt,
-        repositories_discovered: status.repositories_discovered,
-        enriched: status.enriched,
-        classified: status.classified,
-        clustered: status.clustered,
-        last_ingestion_at: status.last_ingestion_at,
-        last_discovery_analysis_at: status.last_discovery_analysis_at,
-        last_emerging_analysis_at: status.last_emerging_analysis_at,
-        worker_status: status.worker_status,
-        updated_at: status.updated_at,
-        latest_run: latestRun,
-        latest_published_run: latestPublishedRun
+        available: false,
+        stale: true,
+        reason: 'discovery_system_status table is not present.'
       };
-    });
+    }
+    const status = db
+      .prepare(
+        `SELECT repositories_discovered, enriched, classified, clustered,
+                last_ingestion_at, last_discovery_analysis_at, last_emerging_analysis_at,
+                worker_status, updated_at
+         FROM discovery_system_status WHERE id = 1`
+      )
+      .get() as
+      | {
+          repositories_discovered: number;
+          enriched: number;
+          classified: number;
+          clustered: number;
+          last_ingestion_at: string | null;
+          last_discovery_analysis_at: string | null;
+          last_emerging_analysis_at: string | null;
+          worker_status: string;
+          updated_at: string;
+        }
+      | undefined;
+    if (!status) {
+      return { available: false, stale: true, reason: 'No discovery_system_status row exists.' };
+    }
+
+    const staleMs = Number(process.env.DISCOVERY_MATERIALIZATION_STALE_MS ?? 2 * 60 * 60 * 1000);
+    const freshnessWindowMs =
+      Number.isFinite(staleMs) && staleMs > 0 ? Math.floor(staleMs) : 2 * 60 * 60 * 1000;
+    const now = Date.now();
+    const lastSuccessAt = status.last_discovery_analysis_at;
+    const ageMs =
+      lastSuccessAt && Number.isFinite(Date.parse(lastSuccessAt))
+        ? Math.max(0, now - Date.parse(lastSuccessAt))
+        : null;
+    const stale = ageMs == null || ageMs > freshnessWindowMs;
+
+    return {
+      available: Boolean(lastSuccessAt),
+      stale,
+      freshness_window_ms: freshnessWindowMs,
+      age_ms: ageMs,
+      last_success_at: lastSuccessAt,
+      repositories_discovered: status.repositories_discovered,
+      enriched: status.enriched,
+      classified: status.classified,
+      clustered: status.clustered,
+      last_ingestion_at: status.last_ingestion_at,
+      last_discovery_analysis_at: status.last_discovery_analysis_at,
+      last_emerging_analysis_at: status.last_emerging_analysis_at,
+      worker_status: status.worker_status,
+      updated_at: status.updated_at,
+      latest_run: parseRunRow(
+        tableExists(db, 'discovery_materialization_runs')
+          ? (db
+              .prepare(
+                `SELECT id, status, started_at, finished_at, source_commit, algorithm_version,
+                        error, row_counts_json, published
+                 FROM discovery_materialization_runs
+                 ORDER BY id DESC LIMIT 1`
+              )
+              .get() as Record<string, unknown> | undefined)
+          : undefined
+      ),
+      latest_published_run: parseRunRow(
+        tableExists(db, 'discovery_materialization_runs')
+          ? (db
+              .prepare(
+                `SELECT id, status, started_at, finished_at, source_commit, algorithm_version,
+                        row_counts_json, published
+                 FROM discovery_materialization_runs
+                 WHERE published = 1 AND status = 'success'
+                 ORDER BY finished_at DESC, id DESC LIMIT 1`
+              )
+              .get() as Record<string, unknown> | undefined)
+          : undefined
+      )
+    };
+  }
+
+  private getHomepageReadinessMaterialization(db: Database.Database): Record<string, unknown> {
+    if (!tableExists(db, 'homepage_readiness_snapshot')) {
+      return {
+        available: false,
+        stale: true,
+        reason: 'homepage_readiness_snapshot table is not present.'
+      };
+    }
+    const snapshot = db
+      .prepare(
+        `SELECT run_id, published_at, algorithm_version, schema_version, window_days,
+                high_signal_count, watermark_enriched_at, watermark_classified_at,
+                watermark_repo_count
+         FROM homepage_readiness_snapshot WHERE id = 1`
+      )
+      .get() as
+      | {
+          run_id: number;
+          published_at: string;
+          algorithm_version: number;
+          schema_version: number;
+          window_days: number;
+          high_signal_count: number;
+          watermark_enriched_at: string | null;
+          watermark_classified_at: string | null;
+          watermark_repo_count: number;
+        }
+      | undefined;
+    if (!snapshot) {
+      return { available: false, stale: true, reason: 'No homepage readiness snapshot published.' };
+    }
+
+    const staleMs = Number(process.env.HOMEPAGE_READINESS_STALE_MS ?? 15 * 60 * 1000);
+    const freshnessWindowMs =
+      Number.isFinite(staleMs) && staleMs > 0 ? Math.floor(staleMs) : 15 * 60 * 1000;
+    const now = Date.now();
+    const ageMs = Number.isFinite(Date.parse(snapshot.published_at))
+      ? Math.max(0, now - Date.parse(snapshot.published_at))
+      : null;
+    const ageStale = ageMs == null || ageMs > freshnessWindowMs;
+
+    let watermarkMismatch = false;
+    if (tableExists(db, 'repos')) {
+      const live = db
+        .prepare(
+          `SELECT MAX(enriched_at) AS enriched_at, MAX(classified_at) AS classified_at, COUNT(*) AS repo_count
+           FROM repos`
+        )
+        .get() as {
+        enriched_at: string | null;
+        classified_at: string | null;
+        repo_count: number;
+      };
+      watermarkMismatch =
+        live.repo_count !== snapshot.watermark_repo_count ||
+        (live.enriched_at ?? null) !== (snapshot.watermark_enriched_at ?? null) ||
+        (live.classified_at ?? null) !== (snapshot.watermark_classified_at ?? null);
+    }
+
+    const stale = ageStale || watermarkMismatch;
+    const latestRun = tableExists(db, 'homepage_readiness_runs')
+      ? (db
+          .prepare(
+            `SELECT id, status, started_at, finished_at, source_commit, algorithm_version,
+                    schema_version, error, published, snapshot_id
+             FROM homepage_readiness_runs
+             ORDER BY id DESC LIMIT 1`
+          )
+          .get() as Record<string, unknown> | undefined)
+      : undefined;
+
+    return {
+      available: true,
+      stale,
+      age_stale: ageStale,
+      watermark_mismatch: watermarkMismatch,
+      freshness_window_ms: freshnessWindowMs,
+      age_ms: ageMs,
+      last_success_at: snapshot.published_at,
+      published_run_id: snapshot.run_id,
+      algorithm_version: snapshot.algorithm_version,
+      schema_version: snapshot.schema_version,
+      window_days: snapshot.window_days,
+      high_signal_count: snapshot.high_signal_count,
+      watermarks: {
+        enriched_at: snapshot.watermark_enriched_at,
+        classified_at: snapshot.watermark_classified_at,
+        repo_count: snapshot.watermark_repo_count
+      },
+      latest_run: latestRun ?? null,
+      latest_published_run: {
+        id: snapshot.run_id,
+        status: 'success',
+        published_at: snapshot.published_at,
+        high_signal_count: snapshot.high_signal_count
+      }
+    };
   }
 
   verifyReadOnlyEnforcement(): Record<string, unknown> {
@@ -469,6 +544,19 @@ export class AppDatabaseService {
       }
     });
   }
+}
+
+function parseRunRow(row: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  if (!row) return null;
+  if (typeof row.row_counts_json === 'string') {
+    try {
+      const { row_counts_json: _raw, ...rest } = row;
+      return { ...rest, row_counts: JSON.parse(row.row_counts_json) };
+    } catch {
+      return row;
+    }
+  }
+  return row;
 }
 
 function tableExists(db: Database.Database, table: string): boolean {

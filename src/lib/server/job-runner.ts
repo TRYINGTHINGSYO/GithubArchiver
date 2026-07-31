@@ -10,6 +10,7 @@ import { defaultHourKey } from './gharchive';
 import { ingestReposFromSearch } from './repo-discovery';
 import { runArchiveCycle } from './workers/archive';
 import { runDiscoveryMaterializationCycle } from './workers/discovery';
+import { runHomepageReadinessMaterializationCycle } from './workers/homepage-readiness';
 import { runEnrichCycle } from './workers/enrich';
 import { runIngestCycle } from './workers/ingest';
 import { runRefreshCycle } from './workers/refresh';
@@ -182,6 +183,17 @@ export function runDiscoveryMaterializeJob(): EnqueueResult {
 		});
 		if (result.status === 'failed') {
 			throw new Error(result.error ?? 'discovery materialization failed');
+		}
+	});
+}
+
+export function runHomepageReadinessMaterializeJob(): EnqueueResult {
+	return enqueue('homepage-readiness-materialize', async () => {
+		const result = await runHomepageReadinessMaterializationCycle({
+			owner: `admin-${process.pid}`
+		});
+		if (result.status === 'failed') {
+			throw new Error(result.error ?? 'homepage readiness materialization failed');
 		}
 	});
 }
