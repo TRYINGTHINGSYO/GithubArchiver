@@ -278,11 +278,39 @@
       "dependencies": ["repository-discovery", "emerging-topics", "githubarchive-mcp"],
       "known_limitations": [
         "Materialized discovery payloads can lag behind source/detection code within the explicit freshness window.",
-        "Readiness aggregates and high-signal repo cards remain live (not part of this materialization slice)."
+        "Archive Pulse remains a separate in-process cache (not part of readiness materialization)."
       ],
       "follow_up_work": [
-        "Expose materialization age and stale payload warnings in the homepage UI.",
-        "Consider serving readiness counts from discovery_system_status instead of rescanning repos."
+        "Expose materialization age and stale payload warnings in the homepage UI."
+      ]
+    },
+    {
+      "id": "homepage-readiness-materialization",
+      "name": "Homepage readiness and high-signal materialization",
+      "description": "Independently materializes homepage readiness aggregates and high-signal repository cards into a durable snapshot with live fallback, explicit staleness, source watermarks, and failure isolation from discovery materialization.",
+      "status": "production",
+      "routes": ["/", "/admin/status"],
+      "source": [
+        "src/lib/server/data-readiness.ts",
+        "src/lib/server/homepage-readiness-materialization.ts",
+        "src/lib/server/homepage-readiness-materialized.ts",
+        "src/lib/server/workers/homepage-readiness.ts",
+        "src/lib/server/daemon-cadence.ts",
+        "scripts/materialize-homepage-readiness.ts",
+        "src/routes/+page.server.ts"
+      ],
+      "tests": ["tests/homepage-readiness-materialization.test.ts", "tests/data-readiness.test.ts"],
+      "tables": ["homepage_readiness_runs", "homepage_readiness_snapshot"],
+      "introduced_commit": "28ecfa3",
+      "last_changed_commit": "28ecfa3",
+      "dependencies": ["homepage-discovery-signals", "classification", "repository-enrichment"],
+      "known_limitations": [
+        "Snapshot invalidates on age or corpus watermarks (enriched/classified/repo count); rapid enrich bursts force live fallback until the next cadence.",
+        "Archive Pulse is not included in this snapshot."
+      ],
+      "follow_up_work": [
+        "Expose readiness snapshot age and watermark mismatch in the homepage UI.",
+        "Optionally surface homepage_readiness in admin status panels."
       ]
     },
     {
