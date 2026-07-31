@@ -148,11 +148,6 @@
 		line-height: 1.55;
 	}
 
-	code {
-		font-family: var(--font-mono);
-		color: var(--text);
-	}
-
 	.topic-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

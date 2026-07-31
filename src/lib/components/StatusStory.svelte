@@ -71,16 +71,17 @@
 		compact?: boolean;
 	} = $props();
 
-	const showThroughput =
+	const showThroughput = $derived(
 		throughputPerMin != null ||
-		enrichedLastHour != null ||
-		avgSecondsPerRepo != null ||
-		concurrency != null ||
-		claimableWaiting != null ||
-		deferredWaiting != null ||
-		etaClaimableLabel != null ||
-		enrichLastRanLabel != null ||
-		stageTimings != null;
+			enrichedLastHour != null ||
+			avgSecondsPerRepo != null ||
+			concurrency != null ||
+			claimableWaiting != null ||
+			deferredWaiting != null ||
+			etaClaimableLabel != null ||
+			enrichLastRanLabel != null ||
+			stageTimings != null
+	);
 
 	function fmtMs(ms: number): string {
 		return `${Math.round(ms).toLocaleString()} ms`;

@@ -345,27 +345,4 @@
 		color: var(--text-muted);
 	}
 
-	.status-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-		gap: 1rem;
-	}
-
-	.status-grid dt {
-		margin: 0;
-		color: var(--text-muted);
-		font-size: 0.78rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-	}
-
-	.status-grid dd {
-		margin: 0.25rem 0 0;
-		font-size: 1.1rem;
-		font-weight: 700;
-	}
-
-	.status-grid dd.running {
-		color: var(--accent);
-	}
 </style>
