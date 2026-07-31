@@ -273,7 +273,38 @@
       "last_changed_commit": null,
       "dependencies": ["repository-discovery", "repository-enrichment"],
       "known_limitations": ["Admin telemetry is not yet exposed through a stable external API."],
-      "follow_up_work": ["Use the MCP operational tools as the stable read-only API."]
+      "follow_up_work": ["Prefer githubarchive-mcp operational tools as the stable read-only API for agent workflows."]
+    },
+    {
+      "id": "githubarchive-mcp",
+      "name": "GithubArchive+ MCP intelligence server",
+      "description": "Read-only MCP server that exposes project state, feature registry, decisions, archive data, workspace review, and change-validation tools for AI coding agents.",
+      "status": "production",
+      "routes": [],
+      "source": [
+        "packages/githubarchive-mcp/src/index.ts",
+        "packages/githubarchive-mcp/src/server.ts",
+        "packages/githubarchive-mcp/src/tools/registry.ts",
+        "packages/githubarchive-mcp/src/resources/registry.ts",
+        "packages/githubarchive-mcp/src/prompts/registry.ts",
+        "packages/githubarchive-mcp/src/services/analysis-service.ts",
+        "scripts/run-mcp-githubarchive.mjs",
+        ".cursor/mcp.json"
+      ],
+      "tests": ["packages/githubarchive-mcp/tests/mcp-tools.test.ts"],
+      "tables": [],
+      "introduced_commit": "80c2b11",
+      "last_changed_commit": "6fbaa7a",
+      "dependencies": ["system-health-display", "emerging-topics", "homepage-discovery-signals"],
+      "known_limitations": [
+        "Stdio transport requires a stderr-clean launcher; npm lifecycle banners break JSON-RPC.",
+        "MCP Apps UI is out of scope.",
+        "Homepage materialization tools depend on discovery_system_status presence."
+      ],
+      "follow_up_work": [
+        "Keep Feature Registry and Decision Journal synchronized when MCP-facing behavior changes.",
+        "Add smoke coverage for untested public routes surfaced by review_workspace."
+      ]
     }
   ]
 }
