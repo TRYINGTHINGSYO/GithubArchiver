@@ -39,33 +39,64 @@
 		{ href: '/?sort=interesting_score', label: 'Categories & scores', why: 'Open scored repository search' },
 		{ href: '/discover/emerging', label: 'Emerging topics', why: 'Matched-hour trend candidates' },
 		{ href: '/discover/projects-to-watch', label: 'Projects to watch', why: 'Quality plus cluster momentum' },
-		{ href: '/discover#unusual', label: 'Unusual finds', why: 'High score, incomplete signals' },
+		{ href: '/discover#unusual', label: 'Classification review queue', why: 'High score with missing evidence' },
 		{ href: '/discover/deleted-gems', label: 'Deleted projects', why: 'Preservation and recoverability' },
 		{ href: '/#repository-search', label: 'Full repository search', why: 'Query the indexed corpus' }
 	];
 
-	const snapshotMetrics = $derived([
-		{ label: 'Indexed', value: data.snapshot.indexed, detail: 'Repositories in the archive index' },
+	const featuredRepo = $derived(data.featuredRepo);
+	const archiveDelayLabel = $derived.by(() => {
+		if (data.archiveHourBacklog <= 0) return 'Up to date';
+		if (data.archiveHourBacklog === 1) return '1 hour';
+		if (data.archiveHourBacklog < 24) return `${data.archiveHourBacklog} hours`;
+		return `${Math.round(data.archiveHourBacklog / 24)} days`;
+	});
+	const systemHealthLabel = $derived.by(() => {
+		if (data.searchFallbackActive || data.archiveHourBacklog >= 24) return 'Catching up';
+		if ((enrichOps.claimableBacklog ?? enrich.remaining) > 0) return 'Analyzing';
+		return 'Up to date';
+	});
+	const latestOpportunity = $derived(
+		featuredRepo
+			? `${featuredRepo.full_name} (${Math.round(featuredRepo.interesting_score ?? 0)})`
+			: 'Pending'
+	);
+
+	const publicSnapshotMetrics = $derived([
 		{
-			label: 'Analyzed coverage',
-			value: `${data.snapshot.enriched.toLocaleString()} / ${data.snapshot.indexed.toLocaleString()}`,
-			detail: `${data.snapshot.analyzedCoveragePercent}% enriched — not all indexed repos are fully analyzed`
+			label: 'Repositories analyzed',
+			value: data.snapshot.enriched,
+			detail: `${data.snapshot.analyzedCoveragePercent}% understanding coverage`
 		},
-		{ label: 'Classified', value: data.snapshot.classified, detail: 'Category assignment applied' },
-		{ label: 'Clustered', value: data.snapshot.clustered, detail: 'Assigned to thematic clusters' },
 		{
-			label: 'Archive Stories',
-			value: data.snapshot.stories,
-			detail: 'Evidence-backed narratives generated'
+			label: 'New repositories discovered',
+			value: data.discoveryStatus.repositoriesDiscovered,
+			detail: data.discoveryStatus.lastIngestionAt
+				? `Last discovery ${timeAgo(data.discoveryStatus.lastIngestionAt)}`
+				: 'Discovery worker pending'
 		},
 		{
-			label: 'Active clusters',
-			value: data.snapshot.activeClusters,
-			detail: 'Curated clusters with at least one repository'
+			label: 'Emerging topics detected',
+			value: data.snapshot.emergingActive,
+			detail: 'Evidence-gated candidates'
+		},
+		{
+			label: 'Growing categories',
+			value: data.clusters.items.length,
+			detail: 'Quality-weighted growth lanes'
+		},
+		{
+			label: 'Highest-confidence opportunity',
+			value: latestOpportunity,
+			detail: featuredRepo ? 'Top surfaced repository right now' : 'No repository has cleared the threshold yet'
+		},
+		{
+			label: 'Archive freshness',
+			value: systemHealthLabel,
+			detail: `Archive delay: ${archiveDelayLabel}`
 		}
 	]);
 
-	const featuredRepo = $derived(data.featuredRepo);
 	const scoredSignalCount = $derived(data.snapshot.highSignal);
 	const emergingActiveCount = $derived(data.snapshot.emergingActive);
 
@@ -80,6 +111,26 @@
 	const emergingIsValidatedZero = $derived(
 		data.discovery.emergingTopics.length === 0 && data.provenance != null
 	);
+
+	function emergingConfidence(topic: {
+		current_count: number;
+		previous_count: number;
+		distinct_owner_count: number;
+		emerging_score: number;
+	}): 'High' | 'Medium' | 'Experimental' {
+		if (
+			topic.distinct_owner_count >= 10 &&
+			topic.current_count >= 25 &&
+			topic.previous_count > 0 &&
+			topic.emerging_score >= 75
+		) {
+			return 'High';
+		}
+		if (topic.distinct_owner_count >= 5 && topic.current_count >= 10 && topic.emerging_score >= 55) {
+			return 'Medium';
+		}
+		return 'Experimental';
+	}
 </script>
 
 <svelte:head>
@@ -150,16 +201,16 @@
 <section class="section-block snapshot" aria-labelledby="snapshot-heading">
 	<div class="section-head">
 		<div>
-			<p class="eyebrow">Intelligence snapshot</p>
-			<h2 id="snapshot-heading">What the system already knows</h2>
+			<p class="eyebrow">Discovery signals</p>
+			<h2 id="snapshot-heading">What matters right now</h2>
 			<p class="section-why">
-				These counts measure understanding coverage—not GitHub’s star charts or zero-value
-				artifact counters when storage is disabled.
+				Public signals summarize discovery value. Detailed pipeline counters stay in operations
+				where they belong.
 			</p>
 		</div>
 	</div>
 	<div class="metric-grid">
-		{#each snapshotMetrics as metric}
+		{#each publicSnapshotMetrics as metric}
 			<article class="metric-tile">
 				<span class="metric-value">
 					{typeof metric.value === 'number' ? metric.value.toLocaleString() : metric.value}
@@ -180,15 +231,31 @@
 <section class="section-block enrich-progress" aria-labelledby="enrich-heading">
 	<div class="section-head">
 		<div>
-			<p class="eyebrow">Live enrichment</p>
-			<h2 id="enrich-heading">Voting repositories into the archive</h2>
+			<p class="eyebrow">System health</p>
+			<h2 id="enrich-heading">{systemHealthLabel}</h2>
 			<p class="section-why">
-				Enrichment runs as a continuous concurrent queue (not an hourly trickle). High-value tiers go
-				first; deferred long-tail stays metadata-only until promoted. Discovery keeps ingesting in parallel.
+				The public homepage shows readiness first. Throughput, queue, and timing details are still
+				available below for operators.
 			</p>
 		</div>
 	</div>
 	<div class="enrich-panel">
+		<div class="health-grid" aria-label="Public system health">
+			<article class="health-tile">
+				<span class="metric-value">{systemHealthLabel}</span>
+				<span class="metric-label">Status</span>
+			</article>
+			<article class="health-tile">
+				<span class="metric-value">{archiveDelayLabel}</span>
+				<span class="metric-label">Archive delay</span>
+			</article>
+			<article class="health-tile">
+				<span class="metric-value">{enrichPercent}%</span>
+				<span class="metric-label">Understanding coverage</span>
+			</article>
+		</div>
+		<details class="ops-details">
+			<summary>Operations details</summary>
 		<StatusStory
 			currentActivity={enrichCurrentActivity}
 			currentActivityHref={enrich.currentRepo ? `/repo/${enrich.currentRepo}` : null}
@@ -221,6 +288,7 @@
 			stageTimings={enrichOps.stageTimings}
 			stagePercentiles={enrichOps.stagePercentiles}
 		/>
+		</details>
 		<div class="enrich-bar" role="progressbar" aria-valuenow={enrichPercent} aria-valuemin="0" aria-valuemax="100">
 			<span style={`width: ${Math.min(100, enrichPercent)}%`}></span>
 		</div>
@@ -299,6 +367,9 @@
 						<span><strong>{Math.round(topic.emerging_score)}</strong> score</span>
 						<span>{topic.candidate_type}</span>
 						<span>{topic.status}</span>
+						<span class={`confidence-chip ${emergingConfidence(topic).toLowerCase()}`}>
+							{emergingConfidence(topic)}
+						</span>
 					</div>
 					<p class="evidence">
 						Evidence: Interesting avg {topic.average_interesting_score ?? '—'}; previous period
@@ -351,7 +422,8 @@
 			</h2>
 			<p class="section-why">
 				{#if data.clusters.mode === 'growth'}
-					Ranked by week-over-week growth with Interesting Score and volume guardrails
+					Ranked by quality-weighted growth with previous/current counts, absolute lift, Interesting
+					Score, and volume guardrails
 					(<code>/api/discovery/fastest-growing</code>).
 				{:else}
 					Momentum guardrails were not met, so this section shows recent activity and quality
@@ -374,6 +446,11 @@
 						{#if data.clusters.mode === 'growth'}this week{:else}repos{/if}
 					</span>
 					{#if cluster.growthPercent != null}
+						<span><strong>{cluster.secondaryCount.toLocaleString()}</strong> previous</span>
+						<span>
+							<strong>{Math.max(0, cluster.repoCount - cluster.secondaryCount).toLocaleString()}</strong>
+							lift
+						</span>
 						<span><strong>{Math.round(cluster.growthPercent)}%</strong> growth</span>
 					{:else}
 						<span><strong>{cluster.secondaryCount.toLocaleString()}</strong> new 7d</span>
@@ -424,8 +501,8 @@
 			<p class="eyebrow">Projects to watch</p>
 			<h2 id="watch-heading">High-signal repos in growing clusters</h2>
 			<p class="section-why">
-				Uses <code>/api/discovery/projects-to-watch</code>. Cards include score, tier, clusters,
-				Archive Story preview, and ranking evidence.
+				Opportunity Signal combines quality, novelty, momentum, and evidence. Cards include score,
+				tier, clusters, Archive Story preview, and the reason surfaced.
 			</p>
 		</div>
 		<a href="/discover/projects-to-watch">View all</a>
@@ -504,11 +581,11 @@
 <section class="section-block" aria-labelledby="unusual-heading" id="unusual">
 	<div class="section-head">
 		<div>
-			<p class="eyebrow">Unusual finds</p>
+			<p class="eyebrow">Classification review</p>
 			<h2 id="unusual-heading">High score, incomplete signals</h2>
 			<p class="section-why">
-				Repositories with strong Interesting Scores that still lack clear category, language, or
-				topic trails.
+				Review candidates with strong Interesting Scores but missing, weak, or conflicting evidence.
+				These are classification gaps, not public unusual discoveries.
 			</p>
 		</div>
 	</div>
@@ -516,7 +593,7 @@
 		{#each data.discovery.unusualFinds as repo}
 			<DiscoveryRepoCard {repo} />
 		{:else}
-			<p class="empty">No unusual finds right now.</p>
+			<p class="empty">No classification review candidates right now.</p>
 		{/each}
 	</div>
 </section>
@@ -837,6 +914,36 @@
 		gap: 1rem;
 	}
 
+	.health-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		gap: 0.85rem;
+	}
+
+	.health-tile {
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		background: var(--bg);
+		padding: 1rem;
+	}
+
+	.ops-details {
+		border: 1px solid var(--border);
+		border-radius: 14px;
+		background: var(--bg);
+		padding: 0.9rem 1rem;
+	}
+
+	.ops-details summary {
+		cursor: pointer;
+		color: var(--accent);
+		font-weight: 700;
+	}
+
+	.ops-details > :global(:not(summary)) {
+		margin-top: 0.85rem;
+	}
+
 	.enrich-bar {
 		height: 0.55rem;
 		border-radius: 999px;
@@ -850,14 +957,23 @@
 		background: var(--accent);
 	}
 
-	.enrich-current {
-		margin: 0;
-		color: var(--text-muted);
+	.confidence-chip {
+		font-weight: 700;
 	}
 
-	.enrich-current a {
-		color: var(--text);
-		font-weight: 700;
+	.confidence-chip.high {
+		border-color: color-mix(in srgb, var(--green) 50%, var(--border));
+		color: var(--green);
+	}
+
+	.confidence-chip.medium {
+		border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+		color: var(--accent);
+	}
+
+	.confidence-chip.experimental {
+		border-color: color-mix(in srgb, var(--orange) 50%, var(--border));
+		color: var(--orange);
 	}
 
 	.search-form {

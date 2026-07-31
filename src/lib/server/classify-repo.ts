@@ -113,6 +113,21 @@ const DATABASE_PLATFORM_TOPIC = new Set([
 const DATABASE_IDENTITY_RE =
 	/\b(open source firebase alternative|backend.?as.?a.?service|postgres(ql)? (database|platform|backend)|database platform|self[- ]hosted backend|backend platform|auth(,| and) storage)\b/i;
 
+const DEVELOPER_PRODUCT_TOPIC = new Set([
+	'api-client',
+	'api-platform',
+	'api-testing',
+	'developer-tools',
+	'devtools',
+	'graphql',
+	'http-client',
+	'postman',
+	'rest-api'
+]);
+
+const DEVELOPER_PRODUCT_TEXT_RE =
+	/\b(api (development|client|platform|testing|tool|tools)|developer tools?|devtools|graphql client|http client|postman alternative|request builder|rest client)\b/i;
+
 const AI_APPLICATION_MENTION_RE =
 	/\b(build (ai|llm|gpt)|ai (apps?|applications?|features?)|vector (embeddings?|search)|llm (apps?|applications?)|powered by ai|with ai)\b/i;
 
@@ -140,6 +155,14 @@ function isDatabaseOrBackendPlatform(ctx: MatchContext): boolean {
 }
 
 /** AI wording about what users can build — weak unless the repo itself is an AI system. */
+function isDeveloperProduct(ctx: MatchContext): number {
+	const text = `${ctx.name} ${ctx.fullName} ${ctx.desc} ${ctx.readme}`;
+	if (ctx.topics.some((topic) => DEVELOPER_PRODUCT_TOPIC.has(topic))) return 0.84;
+	if (ctx.topics.includes('api') && DEVELOPER_PRODUCT_TEXT_RE.test(text)) return 0.82;
+	if (DEVELOPER_PRODUCT_TEXT_RE.test(text)) return 0.8;
+	return 0;
+}
+
 function hasIncidentalAiWording(ctx: MatchContext): boolean {
 	return AI_APPLICATION_MENTION_RE.test(`${ctx.desc} ${ctx.readme}`);
 }
@@ -366,6 +389,8 @@ const CATEGORY_MATCHERS: Record<RepoCategory, Matcher[]> = {
 		(ctx) => {
 			if (isAwesomeList(ctx) > 0) return 0;
 			if (isDatabaseOrBackendPlatform(ctx)) return 0.86;
+			const developerProductScore = isDeveloperProduct(ctx);
+			if (developerProductScore > 0) return developerProductScore;
 			return 0;
 		},
 		(ctx) =>

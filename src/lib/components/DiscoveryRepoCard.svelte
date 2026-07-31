@@ -72,11 +72,12 @@
 		<div class="story">
 			<p class="story-label">Archive Story</p>
 			<p>{storyLine}</p>
+			<p class="story-label signal-label">Opportunity Signal</p>
 			<p class="rank-reason">{repo.rankingReason}</p>
 		</div>
 	{:else}
 		<div class="story">
-			<p class="story-label">Why surfaced</p>
+			<p class="story-label">Opportunity Signal</p>
 			<p class="rank-reason">{repo.rankingReason}</p>
 		</div>
 	{/if}
@@ -185,6 +186,10 @@
 
 	.story .rank-reason {
 		margin-top: 0.35rem;
+	}
+
+	.signal-label {
+		margin-top: 0.75rem;
 	}
 
 	@media (max-width: 640px) {

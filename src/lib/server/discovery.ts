@@ -170,6 +170,21 @@ function cachedClusterAnalytics(): ClusterAnalyticsRow[] {
 	return cached('cluster-analytics', 30_000, () => listClusterAnalytics());
 }
 
+function clusterAbsoluteGrowth(cluster: ClusterAnalyticsRow): number {
+	return Math.max(0, cluster.new_7d - cluster.new_prev_7d);
+}
+
+function qualityWeightedGrowthScore(cluster: ClusterAnalyticsRow): number {
+	const growthPercent =
+		computeGrowthPercent(cluster.new_7d, cluster.new_prev_7d, MIN_CLUSTER_PREVIOUS_COUNT) ?? 0;
+	const volumeScore = Math.min(100, Math.log10(clusterAbsoluteGrowth(cluster) + 1) * 33);
+	return (
+		growthPercent * 0.35 +
+		(cluster.avg_interesting_score ?? 0) * 0.4 +
+		volumeScore * 0.25
+	);
+}
+
 export function getFastestGrowingClusters(opts: Partial<DiscoveryQuery> = {}): DiscoveryClusterCard[] {
 	const query = normalizeQuery(opts);
 	const clusters = cachedClusterAnalytics()
@@ -186,6 +201,10 @@ export function getFastestGrowingClusters(opts: Partial<DiscoveryQuery> = {}): D
 		.filter((cluster) => cluster.new_prev_7d >= MIN_CLUSTER_PREVIOUS_COUNT)
 		.filter((cluster) => (cluster.avg_interesting_score ?? 0) >= Math.max(0, query.minScore - 20))
 		.sort((a, b) => {
+			const weightedDelta = qualityWeightedGrowthScore(b) - qualityWeightedGrowthScore(a);
+			if (weightedDelta !== 0) return weightedDelta;
+			const absoluteDelta = clusterAbsoluteGrowth(b) - clusterAbsoluteGrowth(a);
+			if (absoluteDelta !== 0) return absoluteDelta;
 			const growthDelta = (b.growth_pct ?? 0) - (a.growth_pct ?? 0);
 			if (growthDelta !== 0) return growthDelta;
 			const scoreDelta = (b.avg_interesting_score ?? 0) - (a.avg_interesting_score ?? 0);
@@ -207,7 +226,7 @@ export function getFastestGrowingClusters(opts: Partial<DiscoveryQuery> = {}): D
 			avgInterestingScore: cluster.avg_interesting_score,
 			topLanguages: cluster.top_languages,
 			topRepos: listTopReposForCluster(cluster.slug, query),
-			rankingReason: `${cluster.name} grew ${Math.round(growthPercent)}% over the previous week, with ${cluster.new_7d.toLocaleString()} repositories in the current period.`
+			rankingReason: `${cluster.name}: previous week ${cluster.new_prev_7d.toLocaleString()}, current week ${cluster.new_7d.toLocaleString()} (+${clusterAbsoluteGrowth(cluster).toLocaleString()}). Ranked by quality-weighted growth using absolute lift, ${Math.round(growthPercent)}% growth, and average Interesting Score ${cluster.avg_interesting_score ?? '-'}.`
 		};
 	});
 }
@@ -226,6 +245,7 @@ export function getProjectsToWatch(opts: Partial<DiscoveryQuery> = {}): Projects
 			const minClusterConfidence = getClusterDefinition(cluster.slug)?.minimumScore ?? 0.45;
 			if (row.cluster_confidence < minClusterConfidence) return null;
 			const normalizedGrowth = Math.min(100, Math.max(0, cluster.growthPercent));
+			const absoluteGrowth = Math.max(0, cluster.currentWeekCount - cluster.previousWeekCount);
 			const discoveryScore =
 				(row.interesting_score ?? 0) * 0.6 +
 				normalizedGrowth * 0.25 +
@@ -241,7 +261,7 @@ export function getProjectsToWatch(opts: Partial<DiscoveryQuery> = {}): Projects
 					currentWeekCount: cluster.currentWeekCount,
 					confidence: row.cluster_confidence
 				},
-				rankingReason: `Ranked here because ${cluster.name} grew ${Math.round(cluster.growthPercent)}% this week, it has an Interesting Score of ${Math.round(row.interesting_score ?? 0)}, and it matched the cluster with ${Math.round(row.cluster_confidence * 100)}% confidence.`
+				rankingReason: `Opportunity Signal: quality ${Math.round(row.interesting_score ?? 0)}, novelty from a recent high-signal repository, momentum +${absoluteGrowth.toLocaleString()} repos in ${cluster.name}, and evidence ${Math.round(row.cluster_confidence * 100)}% cluster confidence.`
 			};
 		})
 		.filter((item): item is ProjectsToWatchItem => item != null)
@@ -304,7 +324,7 @@ export function getPreliminaryProjectsToWatch(opts: Partial<DiscoveryQuery> = {}
 			const card = toDiscoveryRepoCard(
 				row,
 				discoveryScore,
-				`Preliminary watch candidate: Interesting Score ${Math.round(interesting)}, ${Math.round(confidence * 100)}% cluster confidence — still gathering momentum evidence.`
+				`Opportunity Signal (experimental): quality ${Math.round(interesting)} and evidence ${Math.round(confidence * 100)}% cluster confidence; still gathering momentum history.`
 			);
 			return {
 				...card,
@@ -497,14 +517,14 @@ export function formatIncompleteSignalExplanation(
 ): string {
 	const score = Math.round(interestingScore ?? 0);
 	if (signals.length === 0) {
-		return `Surfaced because it has an Interesting Score of ${score} with incomplete intelligence signals.`;
+		return `Classification Review: Interesting Score ${score} with incomplete intelligence signals.`;
 	}
 	const listed = signals.map((signal) => INCOMPLETE_SIGNAL_LABELS[signal]);
 	const detail =
 		listed.length === 1
 			? listed[0]
 			: `${listed.slice(0, -1).join(', ')}, and ${listed[listed.length - 1]}`;
-	return `Surfaced because it has an Interesting Score of ${score} but still has incomplete signals: ${detail}.`;
+	return `Classification Review: Interesting Score ${score}; incomplete signals: ${detail}.`;
 }
 
 export function getUnusualFinds(opts: Partial<DiscoveryQuery> = {}): DiscoveryRepoCard[] {
@@ -590,6 +610,7 @@ type GrowingCluster = {
 	name: string;
 	growthPercent: number;
 	currentWeekCount: number;
+	previousWeekCount: number;
 };
 
 function getGrowingClusterMap(query: DiscoveryQuery): Map<string, GrowingCluster> {
@@ -603,7 +624,8 @@ function getGrowingClusterMap(query: DiscoveryQuery): Map<string, GrowingCluster
 				slug: cluster.slug,
 				name: cluster.name,
 				growthPercent: cluster.growthPercent,
-				currentWeekCount: cluster.currentWeekCount
+				currentWeekCount: cluster.currentWeekCount,
+				previousWeekCount: cluster.previousWeekCount
 			}
 		])
 	);

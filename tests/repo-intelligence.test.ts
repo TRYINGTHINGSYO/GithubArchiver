@@ -88,6 +88,25 @@ describe('classify-repo', () => {
 		expect(result.category).toBe('library');
 	});
 
+	it('classifies API development tools as products instead of personal websites', () => {
+		const result = classifyRepo({
+			owner: 'hoppscotch',
+			name: 'hoppscotch',
+			full_name: 'hoppscotch/hoppscotch',
+			description: 'Open source API development ecosystem.',
+			language: 'TypeScript',
+			topics: ['api', 'graphql', 'rest-api', 'developer-tools'],
+			stars: 70000,
+			forks: 5000,
+			homepage: 'https://hoppscotch.io',
+			owner_type: 'Organization',
+			readmeExcerpt: 'Hoppscotch is an open source API development ecosystem and request builder.',
+			filePaths: ['packages/hoppscotch-app/src/main.ts']
+		});
+		expect(result.category).toBe('product');
+		expect(result.confidence).toBeGreaterThan(0.8);
+	});
+
 	it('maps legacy categories', () => {
 		expect(normalizeCategory('web-app')).toBe('product');
 		expect(normalizeCategory('data-ml')).toBe('data-science');
