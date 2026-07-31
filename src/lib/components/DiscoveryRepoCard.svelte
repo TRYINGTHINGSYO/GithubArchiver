@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatCategoryLabel, formatSignalTierLabel } from '$lib/category-labels';
+	import CollectionControls from '$lib/components/CollectionControls.svelte';
 	import { repoDetailPath } from '$lib/repo-nav';
 	import { formatStarDisplay } from '$lib/utils';
 
@@ -61,6 +62,10 @@
 		{#if repo.deleted_at}<span class="danger">Deleted</span>{/if}
 		{#if repo.github_archived}<span>Archived upstream</span>{/if}
 		<span>{repo.preservationState}</span>
+	</div>
+
+	<div class="save-controls">
+		<CollectionControls repoId={repo.id} />
 	</div>
 
 	{#if repo.clusters.length > 0}
@@ -179,6 +184,10 @@
 		flex-wrap: wrap;
 		gap: 0.5rem;
 		margin-top: 0.75rem;
+	}
+
+	.save-controls {
+		margin-top: 0.65rem;
 	}
 
 	.facts span,

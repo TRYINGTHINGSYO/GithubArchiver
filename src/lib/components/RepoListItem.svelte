@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import CollectionControls from '$lib/components/CollectionControls.svelte';
 	import { repoDetailPath } from '$lib/repo-nav';
 	import { formatDateShort, formatStarCount, timeAgo } from '$lib/utils';
 
 	export interface RepoListItemData {
+		id: number;
 		owner: string;
 		name: string;
 		full_name: string;
@@ -33,8 +35,8 @@
 	}
 
 	let { repo, isAdmin = false }: { repo: RepoListItemData; isAdmin?: boolean } = $props();
-	let favoritePending = $state(false);
-	let favorited = $state(false);
+	let protectionPending = $state(false);
+	let archiveProtected = $state(false);
 	const topicChips = $derived((repo.topics ?? []).slice(0, 4));
 
 	const detailHref = $derived(repoDetailPath(repo.owner, repo.name));
@@ -54,28 +56,28 @@
 	);
 
 	$effect(() => {
-		favorited = Boolean(repo.is_favorite);
+		archiveProtected = Boolean(repo.is_favorite);
 	});
 
 	function evidenceHref(group: 'readme' | 'source' | 'timeline'): string {
 		return `${detailHref}#evidence-${group}`;
 	}
 
-	async function toggleFavorite() {
-		favoritePending = true;
+	async function toggleArchiveProtection() {
+		protectionPending = true;
 		try {
 			const response = await fetch(`/api/repo/${repo.owner}/${repo.name}/actions`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ action: favorited ? 'unfavorite' : 'favorite' })
+				body: JSON.stringify({ action: archiveProtected ? 'unfavorite' : 'favorite' })
 			});
 			const body = (await response.json()) as { ok?: boolean; is_favorite?: boolean };
 			if (response.ok && body.ok) {
-				favorited = Boolean(body.is_favorite);
+				archiveProtected = Boolean(body.is_favorite);
 				await invalidateAll();
 			}
 		} finally {
-			favoritePending = false;
+			protectionPending = false;
 		}
 	}
 </script>
@@ -91,19 +93,18 @@
 		<div class="repo-card-head">
 			<span class="repo-name">{repo.full_name}</span>
 			<div class="repo-card-tools">
+				<CollectionControls repoId={repo.id} />
 				{#if isAdmin}
 					<button
 						type="button"
-						class:favorited
-						onclick={toggleFavorite}
-						disabled={favoritePending}
-						aria-pressed={favorited}
-						title={favorited ? 'Protected during storage cleanup' : 'Protect this repo during storage cleanup'}
+						class:protected={archiveProtected}
+						onclick={toggleArchiveProtection}
+						disabled={protectionPending}
+						aria-pressed={archiveProtected}
+						title={archiveProtected ? 'Protected during storage cleanup' : 'Protect this repo during storage cleanup'}
 					>
-						{favorited ? 'Favorited' : 'Favorite'}
+						{archiveProtected ? 'Archive protected' : 'Protect archive'}
 					</button>
-				{:else if favorited}
-					<span class="favorite-marker">Favorited</span>
 				{/if}
 				<span class="repo-time" title={repo.first_seen_at}>Seen {timeAgo(repo.first_seen_at)}</span>
 			</div>
@@ -139,10 +140,12 @@
 			</div>
 		{/if}
 
-		<div class="repo-intel" aria-label="Archive intelligence summary">
-			<span>{archiveSummary}</span>
-			<span>{storySummary}</span>
-		</div>
+		{#if repo.archive_badges}
+			<div class="repo-intel" aria-label="Archive intelligence summary">
+				<span>{archiveSummary}</span>
+				<span>{storySummary}</span>
+			</div>
+		{/if}
 
 		<div class="repo-meta" aria-label="Repository metadata">
 			{#if repo.language}<span>{repo.language}</span>{/if}
@@ -196,7 +199,7 @@
 	}
 
 	.repo-card-tools button,
-	.favorite-marker {
+	.repo-card-tools .protected {
 		border: 1px solid var(--border);
 		border-radius: 999px;
 		background: var(--bg-elevated);
@@ -221,8 +224,7 @@
 		cursor: not-allowed;
 	}
 
-	.repo-card-tools .favorited,
-	.favorite-marker {
+	.repo-card-tools .protected {
 		border-color: color-mix(in srgb, var(--green) 58%, var(--border));
 		color: var(--green);
 	}

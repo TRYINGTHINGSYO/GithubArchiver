@@ -48,6 +48,8 @@
 			<a href="/birth-feed" class="admin-link">Birth Feed</a>
 			<a href="/websites" class="admin-link">Websites</a>
 			<a href="/search" class="admin-link" data-sveltekit-preload-code="eager">Search</a>
+			<a href="/favorites" class="admin-link">Favorites</a>
+			<a href="/watch-later" class="admin-link">Watch Later</a>
 			{#if data.isAdmin}
 				<a href="/admin" class="admin-link">Admin</a>
 				<a href="/logout" class="admin-link">Logout</a>
@@ -70,6 +72,7 @@
 	<a href="/">Home</a>
 	<a href="/discover">Discover</a>
 	<a href="/search">Search</a>
+	<a href="/favorites">Saved</a>
 	{#if data.isAdmin}
 		<a href="/admin">Admin</a>
 	{:else}

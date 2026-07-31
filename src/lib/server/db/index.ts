@@ -31,6 +31,7 @@ export * from './clusters';
 export * from './archive-story';
 export * from './archive-pulse';
 export * from './favorites';
+export * from './collections';
 export * from './pipeline';
 export * from './dataset-runs';
 export * from './scheduled-jobs';

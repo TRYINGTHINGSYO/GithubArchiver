@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CollectionControls from '$lib/components/CollectionControls.svelte';
 	import { onMount } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { timeAgo, formatDateShort } from '$lib/utils';
@@ -210,6 +211,7 @@
 						<span class="repo-time muted" title={repo.created_at}>GitHub created: {timeAgo(repo.created_at)} ({formatDateShort(repo.created_at)})</span>
 					</div>
 					<a class="repo-name" href={repoDetailPath(repo.owner, repo.name)}>{repo.full_name}</a>
+					<CollectionControls repoId={repo.id} />
 					{#if repo.download_zip_url}
 						<a
 							class="download-zip"

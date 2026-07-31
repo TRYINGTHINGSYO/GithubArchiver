@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { formatCategoryLabel } from '$lib/category-labels';
+	import CollectionControls from '$lib/components/CollectionControls.svelte';
 	import FileBrowser from '$lib/components/FileBrowser.svelte';
 	import { formatBytes, formatDateShort, shortSha, timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
@@ -186,6 +187,7 @@
 </svelte:head>
 
 <div class="action-bar">
+	<CollectionControls repoId={data.repo.id} full />
 	{#if data.isAdmin}
 		{#if data.metadataOnly}
 			<button type="button" disabled title="Archive storage is disabled in metadata-only mode">
@@ -204,15 +206,16 @@
 		</button>
 		<button
 			type="button"
-			class:favorited={data.repo.is_favorite}
+			class:protected={data.repo.is_favorite}
 			onclick={() => runRepoAction(data.repo.is_favorite ? 'unfavorite' : 'favorite')}
 			disabled={Boolean(actionRunning)}
+			title={data.repo.is_favorite ? 'Protected during storage cleanup' : 'Protect this repo during storage cleanup'}
 		>
 			{actionRunning === 'favorite' || actionRunning === 'unfavorite'
-				? 'Saving favorite'
+				? 'Saving protection'
 				: data.repo.is_favorite
-					? 'Favorited'
-					: 'Favorite'}
+					? 'Archive protected'
+					: 'Protect archive'}
 		</button>
 	{/if}
 	<a href={data.repo.github_url} target="_blank" rel="noopener noreferrer">View GitHub</a>
@@ -649,7 +652,7 @@
 		font-weight: 600;
 	}
 
-	.action-bar .favorited {
+	.action-bar .protected {
 		border-color: color-mix(in srgb, var(--green) 60%, var(--border));
 		color: var(--green);
 	}

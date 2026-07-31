@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 40;
+export const CURRENT_SCHEMA_VERSION = 41;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1383,6 +1383,39 @@ function migration040(database: Database.Database) {
 	`);
 }
 
+/** Owner-scoped user collections. Admin repo_favorites remains independent. */
+function migration041(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS collections (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			owner_type TEXT NOT NULL,
+			owner_key TEXT NOT NULL,
+			kind TEXT NOT NULL,
+			name TEXT NOT NULL,
+			slug TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL
+		);
+
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_owner_slug
+		  ON collections(owner_type, owner_key, slug);
+
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_collections_system_kind
+		  ON collections(owner_type, owner_key, kind)
+		  WHERE kind IN ('favorites', 'watch_later');
+
+		CREATE TABLE IF NOT EXISTS collection_repositories (
+			collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+			repo_id INTEGER NOT NULL REFERENCES repos(id) ON DELETE CASCADE,
+			created_at TEXT NOT NULL,
+			PRIMARY KEY (collection_id, repo_id)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_collection_repositories_repo
+		  ON collection_repositories(repo_id, collection_id);
+	`);
+}
+
 /** Website discovery: CT + zone intake → shared candidates → liveness verify. */
 function migration037(database: Database.Database) {
 	database.exec(`
@@ -1469,7 +1502,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	37: migration037,
 	38: migration038,
 	39: migration039,
-	40: migration040
+	40: migration040,
+	41: migration041
 };
 
 export interface MigrationRunResult {
@@ -1576,6 +1610,26 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 	if (version >= 26 && !discoveryTablesPresent) {
 		migration026(database);
 		repairs.push('026:discovery_materialization_tables');
+	}
+
+	// Same production drift class: schema 41 may be recorded even if its tables
+	// or indexes were not created. Re-applying the idempotent migration repairs it.
+	const collectionTablesPresent =
+		tables.has('collections') && tables.has('collection_repositories');
+	const collectionIndexes = new Set(
+		(
+			database
+				.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`)
+				.all() as { name: string }[]
+		).map((row) => row.name)
+	);
+	const collectionIndexesPresent =
+		collectionIndexes.has('idx_collections_owner_slug') &&
+		collectionIndexes.has('idx_collections_system_kind') &&
+		collectionIndexes.has('idx_collection_repositories_repo');
+	if (version >= 41 && (!collectionTablesPresent || !collectionIndexesPresent)) {
+		migration041(database);
+		repairs.push('041:owner_collections');
 	}
 
 	return repairs;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CollectionControls from '$lib/components/CollectionControls.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { formatCategoryLabel, formatSignalTierLabel } from '$lib/category-labels';
 	import { repoDetailPath } from '$lib/repo-nav';
@@ -247,6 +248,7 @@
 		{#each primaryRepositories as repo}
 			<article class="repo-row">
 				<a class="repo-name" href={repoDetailPath(repo.owner, repo.name)}>{repo.full_name}</a>
+				<CollectionControls repoId={repo.id} />
 				<p>{repo.description ?? repo.summary ?? 'No description captured.'}</p>
 				<div class="metrics">
 					{#if repo.language}<span>{repo.language}</span>{/if}

@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { buildInterestHints } from '$lib/interest-hints';
+	import CollectionControls from '$lib/components/CollectionControls.svelte';
 	import { formatCategoryLabel } from '$lib/category-labels';
 	import { repoDetailPath } from '$lib/repo-nav';
 	import { formatDateShort, formatStarDisplay, starTier, timeAgo } from '$lib/utils';
 
 	export interface RepoCardData {
+		id: number;
 		owner: string;
 		name: string;
 		full_name: string;
@@ -139,6 +141,7 @@
 	</a>
 
 	<div class="repo-card-actions">
+		<CollectionControls repoId={repo.id} />
 		{#if repo.download_zip_url}
 			<a
 				class="download-zip"
@@ -330,6 +333,10 @@
 	}
 
 	.repo-card-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		align-items: center;
 		margin-bottom: 0.45rem;
 	}
 

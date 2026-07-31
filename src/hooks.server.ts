@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 import { ensureBackgroundWorker } from '$lib/server/background-daemon';
 import { ADMIN_COOKIE, verifyAdminSessionValue } from '$lib/server/auth';
+import { resolveAnonymousCollectionOwner } from '$lib/server/collection-owner';
 import { ensureDatabaseReady } from '$lib/server/db/connection';
 
 /** Common bot/scanner paths — return quiet 404 without SSR. */
@@ -28,6 +29,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 			headers: { 'Cache-Control': 'public, max-age=86400' }
 		});
 	}
+
+	event.locals.collectionOwner = resolveAnonymousCollectionOwner(event.cookies);
 
 	if (!event.locals.isAdmin && (path === '/admin' || path.startsWith('/admin/') || path.startsWith('/api/admin/'))) {
 		if (path.startsWith('/api/')) {
