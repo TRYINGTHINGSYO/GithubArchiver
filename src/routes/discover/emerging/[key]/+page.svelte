@@ -12,6 +12,14 @@
 	const topic = $derived(data.detail.topic);
 	const evidence = $derived(data.detail.evidence);
 	const history = $derived(data.detail.history);
+	const duplicateAnalysis = $derived(evidence.duplicateAnalysis);
+	const primaryRepositoryIds = $derived(new Set(evidence.currentRepoIds ?? []));
+	const primaryRepositories = $derived(
+		primaryRepositoryIds.size > 0
+			? data.detail.repositories.filter((repo) => primaryRepositoryIds.has(repo.id))
+			: data.detail.repositories
+	);
+	const hiddenCopyCount = $derived(duplicateAnalysis?.hiddenRelatedCopyCount ?? 0);
 
 	const REVIEW_REASONS = [
 		'valid-trend',
@@ -90,6 +98,13 @@
 		{/if}. Average Interesting Score:
 		{topic.average_interesting_score ?? '—'}.
 	</p>
+	{#if duplicateAnalysis?.warning}
+		<p class="duplicate-warning">
+			<strong>{duplicateAnalysis.classification}</strong>: {duplicateAnalysis.warning}
+			Raw matches: {duplicateAnalysis.rawCurrentCount.toLocaleString()}; independent evidence groups:
+			{duplicateAnalysis.independentCurrentCount.toLocaleString()}.
+		</p>
+	{/if}
 	{#if data.provenance?.comparisonMode === 'matched-hours'}
 		<p class="comparison-note">
 			<strong>{data.provenance.comparisonLabel}</strong> — based on the same UTC hour offsets
@@ -159,6 +174,14 @@
 		{(evidence.ratios.singleOwnerShare * 100).toFixed(0)}%, duplicate-name ratio
 		{(evidence.ratios.duplicateName * 100).toFixed(0)}%.
 	</p>
+	{#if duplicateAnalysis}
+		<p>
+			Duplicate analysis: {duplicateAnalysis.independentCurrentCount.toLocaleString()} independent
+			groups from {duplicateAnalysis.rawCurrentCount.toLocaleString()} raw matches; largest family
+			{duplicateAnalysis.largestDuplicateFamilySize.toLocaleString()} repositories; score penalty
+			{duplicateAnalysis.scorePenalty}.
+		</p>
+	{/if}
 	{#if evidence.sources && Object.keys(evidence.sources).length > 0}
 		<p>
 			Sources: {Object.entries(evidence.sources)
@@ -172,8 +195,14 @@
 
 <section class="panel">
 	<h2>Example repositories</h2>
+	{#if hiddenCopyCount > 0}
+		<p class="hint">
+			Showing one canonical repository per copied family. {hiddenCopyCount.toLocaleString()} related
+			copies are hidden from examples so they do not inflate the trend.
+		</p>
+	{/if}
 	<div class="repo-list">
-		{#each data.detail.repositories as repo}
+		{#each primaryRepositories as repo}
 			<article class="repo-row">
 				<a class="repo-name" href={repoDetailPath(repo.owner, repo.name)}>{repo.full_name}</a>
 				<p>{repo.description ?? repo.summary ?? 'No description captured.'}</p>

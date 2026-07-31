@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 import { getDb } from '$lib/server/db/connection';
 import { parseTopics } from '$lib/server/db/repos';
@@ -9,7 +10,7 @@ import {
 } from '$lib/server/dataset-runs';
 import type { BackfillDatasetRun } from '$lib/server/dataset-runs';
 
-export const CURRENT_EMERGING_DETECTION_VERSION = 1;
+export const CURRENT_EMERGING_DETECTION_VERSION = 2;
 
 export type EmergingCandidateType = 'topic' | 'name-token' | 'phrase' | 'dependency' | 'technology';
 export type EmergingTopicStatus = 'detected' | 'reviewing' | 'promoted' | 'dismissed' | 'expired';
@@ -142,6 +143,7 @@ export interface EmergingCandidateEvidence {
 	};
 	sources: Partial<Record<EmergingCandidateType, number>>;
 	aliasHits: Record<string, number>;
+	duplicateAnalysis?: EmergingDuplicateAnalysis;
 }
 
 export interface EmergingTopicRow {
@@ -253,12 +255,243 @@ const CURATED_TERMS = new Set(
 	]).map(normalizeKey)
 );
 
+const DUPLICATE_ANALYSIS_VERSION = 1;
+
+function hashText(value: string): string {
+	return createHash('sha256').update(value).digest('hex');
+}
+
+export function normalizeEvidenceDescription(raw: string | null | undefined): string {
+	return (raw ?? '')
+		.normalize('NFKC')
+		.toLowerCase()
+		.replace(/https?:\/\/\S+|www\.\S+/g, ' url ')
+		.replace(/\bv?\d+(?:\.\d+)+\b/g, ' version ')
+		.replace(/\b20\d{2}\b/g, ' year ')
+		.replace(/[\p{P}\p{S}_]+/gu, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+function parseHomepageDomain(raw: string | null): string | null {
+	if (!raw) return null;
+	try {
+		const url = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+		return url.hostname.toLowerCase().replace(/^www\./, '');
+	} catch {
+		return null;
+	}
+}
+
+function nameTokensForEvidence(name: string): string[] {
+	return normalizeKey(name)
+		.split('-')
+		.filter((token) => token.length >= 3 && !/^\d+$/.test(token) && !STOPWORDS.has(token));
+}
+
+function roundRatio(value: number): number {
+	return Math.round(value * 1000) / 1000;
+}
+
+function dominantValue(values: Array<string | null>): {
+	value: string | null;
+	count: number;
+	share: number;
+} {
+	const counts = new Map<string, number>();
+	for (const value of values) {
+		const key = value || '(none)';
+		counts.set(key, (counts.get(key) ?? 0) + 1);
+	}
+	let best = '(none)';
+	let count = 0;
+	for (const [key, value] of counts) {
+		if (value > count || (value === count && key < best)) {
+			best = key;
+			count = value;
+		}
+	}
+	return {
+		value: best === '(none)' ? null : best,
+		count,
+		share: values.length > 0 ? count / values.length : 0
+	};
+}
+
+function canonicalFingerprint(
+	fingerprints: RepositoryEvidenceFingerprint[]
+): RepositoryEvidenceFingerprint {
+	return [...fingerprints].sort((a, b) => {
+		const stars = b.stars - a.stars;
+		if (stars !== 0) return stars;
+		const score = (b.interestingScore ?? 0) - (a.interestingScore ?? 0);
+		if (score !== 0) return score;
+		const forks = b.forks - a.forks;
+		if (forks !== 0) return forks;
+		const created = a.createdAt.localeCompare(b.createdAt);
+		if (created !== 0) return created;
+		return a.fullName.localeCompare(b.fullName);
+	})[0];
+}
+
+function groupSimilarityEvidence(fingerprints: RepositoryEvidenceFingerprint[]): DuplicateEvidenceGroup['similarityEvidence'] {
+	const dominantLanguage = dominantValue(fingerprints.map((fingerprint) => fingerprint.language));
+	const dominantTopic = dominantValue(fingerprints.map((fingerprint) => fingerprint.topicSignature));
+	const firstTokens = fingerprints.map((fingerprint) => fingerprint.nameTokens[0] ?? null);
+	const dominantNameToken = dominantValue(firstTokens);
+	const zeroOrOneStarShare =
+		fingerprints.length > 0
+			? fingerprints.filter((fingerprint) => fingerprint.stars <= 1).length / fingerprints.length
+			: 0;
+	const averageStars =
+		fingerprints.length > 0
+			? fingerprints.reduce((sum, fingerprint) => sum + fingerprint.stars, 0) / fingerprints.length
+			: 0;
+
+	return {
+		descriptionHash: fingerprints[0]?.descriptionHash ?? null,
+		dominantLanguage: dominantLanguage.value,
+		dominantLanguageShare: roundRatio(dominantLanguage.share),
+		dominantTopicSignature: dominantTopic.value,
+		dominantTopicShare: roundRatio(dominantTopic.share),
+		dominantNameToken: dominantNameToken.value,
+		dominantNameTokenShare: roundRatio(dominantNameToken.share),
+		zeroOrOneStarShare: roundRatio(zeroOrOneStarShare),
+		averageStars: Math.round(averageStars * 10) / 10
+	};
+}
+
+export function repositoryEvidenceFingerprint(row: RepoRow): RepositoryEvidenceFingerprint {
+	const normalizedDescription = normalizeEvidenceDescription(row.description);
+	const topics = parseTopics(row.topics).map(normalizeKey).sort();
+	const nameTokens = nameTokensForEvidence(row.name);
+
+	return {
+		repoId: row.id,
+		fullName: row.full_name,
+		owner: row.owner,
+		name: row.name,
+		language: row.language,
+		normalizedDescription,
+		descriptionHash:
+			normalizedDescription.length >= 40 && normalizedDescription.split(/\s+/).length >= 5
+				? hashText(normalizedDescription)
+				: null,
+		nameTokens,
+		nameSignature: nameTokens.join('-'),
+		topicSignature: topics.join('|'),
+		homepageDomain: parseHomepageDomain(row.homepage),
+		stars: row.stars ?? 0,
+		forks: row.forks ?? 0,
+		interestingScore: row.interesting_score,
+		createdAt: row.created_at
+	};
+}
+
+function isLikelyDuplicateDescriptionFamily(
+	fingerprints: RepositoryEvidenceFingerprint[],
+	evidence: DuplicateEvidenceGroup['similarityEvidence']
+): boolean {
+	if (fingerprints.length < 3) return false;
+	if (!fingerprints[0]?.descriptionHash) return false;
+
+	const lowEngagement = evidence.zeroOrOneStarShare >= 0.6 || evidence.averageStars <= 1.5;
+	const sameTechnology =
+		evidence.dominantLanguageShare >= 0.75 ||
+		(Boolean(evidence.dominantTopicSignature) && evidence.dominantTopicShare >= 0.75);
+	const similarNames = evidence.dominantNameTokenShare >= 0.6;
+	const largeCopyBurst = fingerprints.length >= 8 && evidence.zeroOrOneStarShare >= 0.5;
+
+	return lowEngagement && sameTechnology && (similarNames || largeCopyBurst);
+}
+
+function buildDuplicateGroup(
+	fingerprints: RepositoryEvidenceFingerprint[],
+	reason: DuplicateReason,
+	confidence: DuplicateEvidenceConfidence
+): DuplicateEvidenceGroup {
+	const canonical = canonicalFingerprint(fingerprints);
+	const repositoryIds = fingerprints.map((fingerprint) => fingerprint.repoId).sort((a, b) => a - b);
+	const evidence = groupSimilarityEvidence(fingerprints);
+	const suffix = fingerprints[0]?.descriptionHash?.slice(0, 16) ?? canonical.repoId.toString();
+	return {
+		evidenceGroupId: reason === 'independent' ? `repo:${canonical.repoId}` : `desc:${suffix}`,
+		canonicalRepositoryId: canonical.repoId,
+		repositoryIds,
+		groupSize: repositoryIds.length,
+		uniqueOwnerCount: new Set(fingerprints.map((fingerprint) => fingerprint.owner)).size,
+		duplicateReason: reason,
+		confidence,
+		similarityEvidence: evidence
+	};
+}
+
+export function buildDuplicateEvidenceGroups(rows: RepoRow[]): {
+	groups: DuplicateEvidenceGroup[];
+	byRepoId: Map<number, DuplicateEvidenceGroup>;
+	telemetry: EmergingDuplicateAnalysis['telemetry'];
+} {
+	const fingerprints = rows.map(repositoryEvidenceFingerprint);
+	const byDescription = new Map<string, RepositoryEvidenceFingerprint[]>();
+	const groupedRepoIds = new Set<number>();
+	const groups: DuplicateEvidenceGroup[] = [];
+
+	for (const fingerprint of fingerprints) {
+		if (!fingerprint.descriptionHash) continue;
+		const group = byDescription.get(fingerprint.descriptionHash) ?? [];
+		group.push(fingerprint);
+		byDescription.set(fingerprint.descriptionHash, group);
+	}
+
+	for (const descriptionGroup of byDescription.values()) {
+		const evidence = groupSimilarityEvidence(descriptionGroup);
+		if (!isLikelyDuplicateDescriptionFamily(descriptionGroup, evidence)) continue;
+		const confidence: DuplicateEvidenceConfidence =
+			evidence.zeroOrOneStarShare >= 0.8 &&
+			evidence.dominantLanguageShare >= 0.9 &&
+			evidence.dominantNameTokenShare >= 0.6
+				? 'high'
+				: 'medium';
+		const group = buildDuplicateGroup(descriptionGroup, 'exact-description-copy', confidence);
+		groups.push(group);
+		for (const repoId of group.repositoryIds) groupedRepoIds.add(repoId);
+	}
+
+	for (const fingerprint of fingerprints) {
+		if (groupedRepoIds.has(fingerprint.repoId)) continue;
+		groups.push(buildDuplicateGroup([fingerprint], 'independent', 'direct'));
+	}
+
+	const sortedGroups = groups.sort((a, b) => {
+		const size = b.groupSize - a.groupSize;
+		if (size !== 0) return size;
+		return a.canonicalRepositoryId - b.canonicalRepositoryId;
+	});
+	const byRepoId = new Map<number, DuplicateEvidenceGroup>();
+	for (const group of sortedGroups) {
+		for (const repoId of group.repositoryIds) byRepoId.set(repoId, group);
+	}
+
+	return {
+		groups: sortedGroups,
+		byRepoId,
+		telemetry: {
+			fingerprintsBuilt: fingerprints.length,
+			duplicateGroupsBuilt: sortedGroups.length,
+			duplicateGroupsSuppressed: sortedGroups.filter((group) => group.groupSize > 1).length,
+			dedupedBeforeScoring: true
+		}
+	};
+}
+
 type CandidateBucket = {
 	key: string;
 	label: string;
 	candidateType: EmergingCandidateType;
 	currentRepoIds: Set<number>;
 	previousRepoIds: Set<number>;
+	currentRepos: Map<number, RepoRow>;
+	previousRepos: Map<number, RepoRow>;
 	owners: Map<string, number>;
 	categories: Map<string, number>;
 	languages: Map<string, number>;
@@ -272,6 +505,85 @@ type CandidateBucket = {
 	earliestCurrentCreatedAt: string | null;
 	exampleRepos: EmergingCandidateEvidence['exampleRepos'];
 };
+
+export type DuplicateReason =
+	| 'independent'
+	| 'exact-description-copy'
+	| 'near-identical-template'
+	| 'probable-mirror';
+
+export type DuplicateEvidenceConfidence = 'direct' | 'high' | 'medium' | 'low';
+
+export type EmergingDuplicateClassification =
+	| 'verified-emerging-topic'
+	| 'emerging-project-family'
+	| 'duplicate-template-propagation'
+	| 'probable-copy-flood';
+
+export interface RepositoryEvidenceFingerprint {
+	repoId: number;
+	fullName: string;
+	owner: string;
+	name: string;
+	language: string | null;
+	normalizedDescription: string;
+	descriptionHash: string | null;
+	nameTokens: string[];
+	nameSignature: string;
+	topicSignature: string;
+	homepageDomain: string | null;
+	stars: number;
+	forks: number;
+	interestingScore: number | null;
+	createdAt: string;
+}
+
+export interface DuplicateEvidenceGroup {
+	evidenceGroupId: string;
+	canonicalRepositoryId: number;
+	repositoryIds: number[];
+	groupSize: number;
+	uniqueOwnerCount: number;
+	duplicateReason: DuplicateReason;
+	confidence: DuplicateEvidenceConfidence;
+	similarityEvidence: {
+		descriptionHash: string | null;
+		dominantLanguage: string | null;
+		dominantLanguageShare: number;
+		dominantTopicSignature: string | null;
+		dominantTopicShare: number;
+		dominantNameToken: string | null;
+		dominantNameTokenShare: number;
+		zeroOrOneStarShare: number;
+		averageStars: number;
+	};
+}
+
+export interface EmergingDuplicateAnalysis {
+	version: number;
+	classification: EmergingDuplicateClassification;
+	rawCurrentCount: number;
+	independentCurrentCount: number;
+	rawPreviousCount: number;
+	independentPreviousCount: number;
+	rawOwnerCount: number;
+	independentOwnerCount: number;
+	duplicateRepositoryCount: number;
+	duplicateRatio: number;
+	largestDuplicateFamilySize: number;
+	largestDuplicateFamilyShare: number;
+	hiddenRelatedCopyCount: number;
+	scorePenalty: number;
+	scoreCap: number | null;
+	warning: string | null;
+	groups: DuplicateEvidenceGroup[];
+	telemetry: {
+		fingerprintsBuilt: number;
+		duplicateGroupsBuilt: number;
+		duplicateGroupsSuppressed: number;
+		dedupedBeforeScoring: boolean;
+	};
+}
 
 type ExtractedCandidate = {
 	key: string;
@@ -673,6 +985,7 @@ function collectEmergingBuckets(opts: {
 		for (const candidate of extractCandidates(row, rules)) {
 			const bucket = getBucket(buckets, candidate);
 			bucket.previousRepoIds.add(row.id);
+			bucket.previousRepos.set(row.id, row);
 			if (!bucket.earliestCurrentCreatedAt || row.created_at < bucket.earliestCurrentCreatedAt) {
 				bucket.earliestCurrentCreatedAt = row.created_at;
 			}
@@ -684,6 +997,7 @@ function collectEmergingBuckets(opts: {
 			const bucket = getBucket(buckets, candidate);
 			const firstHit = !bucket.currentRepoIds.has(row.id);
 			bucket.currentRepoIds.add(row.id);
+			bucket.currentRepos.set(row.id, row);
 			bucket.sources.set(candidate.candidateType, (bucket.sources.get(candidate.candidateType) ?? 0) + 1);
 			if (candidate.aliasedFrom) {
 				bucket.aliasHits.set(candidate.aliasedFrom, (bucket.aliasHits.get(candidate.aliasedFrom) ?? 0) + 1);
@@ -1281,24 +1595,187 @@ export function excludeEmergingTopic(key: string, reason: EmergingReviewReason):
 	return updateEmergingTopicStatus(key, 'dismissed', reason);
 }
 
+type IndependentBucketStats = {
+	currentGroups: DuplicateEvidenceGroup[];
+	previousGroups: DuplicateEvidenceGroup[];
+	currentCanonicalRows: RepoRow[];
+	currentRepoIds: number[];
+	previousRepoIds: number[];
+	owners: Map<string, number>;
+	categories: Map<string, number>;
+	languages: Map<string, number>;
+	nameCounts: Map<string, number>;
+	scoreSum: number;
+	scoredCount: number;
+	highSignalCount: number;
+	lowSignalCount: number;
+	exampleRepos: EmergingCandidateEvidence['exampleRepos'];
+	duplicateAnalysis: EmergingDuplicateAnalysis;
+};
+
+function summarizeIndependentBucket(bucket: CandidateBucket): IndependentBucketStats {
+	const currentRows = [...bucket.currentRepos.values()];
+	const previousRows = [...bucket.previousRepos.values()];
+	const currentDuplicateGroups = buildDuplicateEvidenceGroups(currentRows);
+	const previousDuplicateGroups = buildDuplicateEvidenceGroups(previousRows);
+	const currentCanonicalRows = currentDuplicateGroups.groups
+		.map((group) => bucket.currentRepos.get(group.canonicalRepositoryId))
+		.filter((row): row is RepoRow => row != null);
+
+	const owners = new Map<string, number>();
+	const categories = new Map<string, number>();
+	const languages = new Map<string, number>();
+	const nameCounts = new Map<string, number>();
+	let scoreSum = 0;
+	let scoredCount = 0;
+	let highSignalCount = 0;
+	let lowSignalCount = 0;
+
+	for (const row of currentCanonicalRows) {
+		owners.set(row.owner, (owners.get(row.owner) ?? 0) + 1);
+		const category = row.category ?? 'unknown';
+		categories.set(category, (categories.get(category) ?? 0) + 1);
+		if (row.language) languages.set(row.language, (languages.get(row.language) ?? 0) + 1);
+		if (row.interesting_score != null) {
+			scoreSum += row.interesting_score;
+			scoredCount += 1;
+		}
+		if (row.signal_tier === 'low') lowSignalCount += 1;
+		else highSignalCount += 1;
+		nameCounts.set(row.name.toLowerCase(), (nameCounts.get(row.name.toLowerCase()) ?? 0) + 1);
+	}
+
+	const rawCurrentCount = bucket.currentRepoIds.size;
+	const rawPreviousCount = bucket.previousRepoIds.size;
+	const independentCurrentCount = currentDuplicateGroups.groups.length;
+	const independentPreviousCount = previousDuplicateGroups.groups.length;
+	const rawOwnerCount = bucket.owners.size;
+	const independentOwnerCount = owners.size;
+	const duplicateRepositoryCount = Math.max(0, rawCurrentCount - independentCurrentCount);
+	const duplicateRatio = rawCurrentCount > 0 ? duplicateRepositoryCount / rawCurrentCount : 0;
+	const largestDuplicateFamilySize = Math.max(
+		0,
+		...currentDuplicateGroups.groups.map((group) => group.groupSize)
+	);
+	const largestDuplicateFamilyShare =
+		rawCurrentCount > 0 ? largestDuplicateFamilySize / rawCurrentCount : 0;
+	const duplicateFamilies = currentDuplicateGroups.groups.filter((group) => group.groupSize > 1);
+	const duplicateSuppressed =
+		duplicateFamilies.length > 0 &&
+		(independentCurrentCount < MIN_CURRENT_COUNT ||
+			independentOwnerCount < MIN_DISTINCT_OWNERS ||
+			duplicateRatio >= 0.5 ||
+			largestDuplicateFamilyShare >= 0.5);
+	const classification: EmergingDuplicateClassification = duplicateSuppressed
+		? independentCurrentCount < 3 || largestDuplicateFamilyShare >= 0.75
+			? 'duplicate-template-propagation'
+			: 'probable-copy-flood'
+		: duplicateFamilies.length > 0
+			? 'emerging-project-family'
+			: 'verified-emerging-topic';
+	const scorePenalty =
+		classification === 'duplicate-template-propagation'
+			? 70
+			: classification === 'probable-copy-flood'
+				? 35
+				: duplicateRatio >= 0.25
+					? 15
+					: 0;
+	const scoreCap =
+		classification === 'duplicate-template-propagation'
+			? 25
+			: classification === 'probable-copy-flood'
+				? 50
+				: null;
+
+	const duplicateAnalysis: EmergingDuplicateAnalysis = {
+		version: DUPLICATE_ANALYSIS_VERSION,
+		classification,
+		rawCurrentCount,
+		independentCurrentCount,
+		rawPreviousCount,
+		independentPreviousCount,
+		rawOwnerCount,
+		independentOwnerCount,
+		duplicateRepositoryCount,
+		duplicateRatio: roundRatio(duplicateRatio),
+		largestDuplicateFamilySize,
+		largestDuplicateFamilyShare: roundRatio(largestDuplicateFamilyShare),
+		hiddenRelatedCopyCount: duplicateRepositoryCount,
+		scorePenalty,
+		scoreCap,
+		warning:
+			classification === 'duplicate-template-propagation'
+				? `${duplicateRepositoryCount.toLocaleString()} copied or templated repositories were collapsed before scoring.`
+				: classification === 'probable-copy-flood'
+					? `${duplicateRepositoryCount.toLocaleString()} likely related copies reduced the score.`
+					: null,
+		groups: duplicateFamilies.slice(0, 25),
+		telemetry: {
+			fingerprintsBuilt:
+				currentDuplicateGroups.telemetry.fingerprintsBuilt +
+				previousDuplicateGroups.telemetry.fingerprintsBuilt,
+			duplicateGroupsBuilt:
+				currentDuplicateGroups.telemetry.duplicateGroupsBuilt +
+				previousDuplicateGroups.telemetry.duplicateGroupsBuilt,
+			duplicateGroupsSuppressed:
+				currentDuplicateGroups.telemetry.duplicateGroupsSuppressed +
+				previousDuplicateGroups.telemetry.duplicateGroupsSuppressed,
+			dedupedBeforeScoring: true
+		}
+	};
+
+	return {
+		currentGroups: currentDuplicateGroups.groups,
+		previousGroups: previousDuplicateGroups.groups,
+		currentCanonicalRows,
+		currentRepoIds: currentDuplicateGroups.groups.map((group) => group.canonicalRepositoryId),
+		previousRepoIds: previousDuplicateGroups.groups.map((group) => group.canonicalRepositoryId),
+		owners,
+		categories,
+		languages,
+		nameCounts,
+		scoreSum,
+		scoredCount,
+		highSignalCount,
+		lowSignalCount,
+		exampleRepos: currentCanonicalRows.slice(0, 8).map((row) => ({
+			id: row.id,
+			fullName: row.full_name,
+			owner: row.owner,
+			interestingScore: row.interesting_score,
+			signalTier: row.signal_tier
+		})),
+		duplicateAnalysis
+	};
+}
+
 function scoreBucket(
 	bucket: CandidateBucket,
 	historyEntry: HistoryEntry | null,
 	comparability: DetectionComparability
 ): EmergingCandidate | null {
-	const currentCount = bucket.currentRepoIds.size;
-	const previousCount = bucket.previousRepoIds.size;
-	const distinctOwnerCount = bucket.owners.size;
-	if (currentCount < MIN_CURRENT_COUNT) return null;
-	if (bucket.highSignalCount < MIN_HIGH_SIGNAL_COUNT) return null;
-	if (distinctOwnerCount < MIN_DISTINCT_OWNERS) return null;
+	const independent = summarizeIndependentBucket(bucket);
+	const currentCount = independent.currentGroups.length;
+	const previousCount = independent.previousGroups.length;
+	const distinctOwnerCount = independent.owners.size;
+	const duplicateLimited =
+		independent.duplicateAnalysis.classification === 'duplicate-template-propagation' ||
+		independent.duplicateAnalysis.classification === 'probable-copy-flood';
+	const reportDuplicateSuppression =
+		duplicateLimited &&
+		independent.duplicateAnalysis.rawCurrentCount >= MIN_CURRENT_COUNT &&
+		independent.duplicateAnalysis.largestDuplicateFamilySize >= 5;
+	if (currentCount < MIN_CURRENT_COUNT && !reportDuplicateSuppression) return null;
+	if (independent.highSignalCount < MIN_HIGH_SIGNAL_COUNT && !reportDuplicateSuppression) return null;
+	if (distinctOwnerCount < MIN_DISTINCT_OWNERS && !reportDuplicateSuppression) return null;
 
 	const suppressGrowth = !comparability.comparable;
 	const historicalCount = historyEntry?.total ?? 0;
 	const history = buildCandidateHistory(bucket, historyEntry, currentCount, previousCount);
 
 	const averageInterestingScore =
-		bucket.scoredCount > 0 ? Math.round((bucket.scoreSum / bucket.scoredCount) * 10) / 10 : 0;
+		independent.scoredCount > 0 ? Math.round((independent.scoreSum / independent.scoredCount) * 10) / 10 : 0;
 	const currentPrevalence =
 		comparability.current.enrichedRepos > 0
 			? currentCount / comparability.current.enrichedRepos
@@ -1318,13 +1795,20 @@ function scoreBucket(
 			? Math.round(((currentCount - previousCount) / previousCount) * 1000) / 10
 			: null;
 
-	const lowSignalRatio = bucket.lowSignalCount / currentCount;
-	const singleOwnerShare = Math.max(...bucket.owners.values()) / currentCount;
-	const schoolAssignmentShare = (bucket.categories.get('school-assignment') ?? 0) / currentCount;
-	const duplicateName = Math.max(...bucket.nameCounts.values()) / currentCount;
-	if (lowSignalRatio > 0.6) return null;
-	if (schoolAssignmentShare > 0.7) return null;
-	if (singleOwnerShare > 0.7) return null;
+	const lowSignalRatio = currentCount > 0 ? independent.lowSignalCount / currentCount : 0;
+	const singleOwnerShare =
+		currentCount > 0 && independent.owners.size > 0
+			? Math.max(...independent.owners.values()) / currentCount
+			: 0;
+	const schoolAssignmentShare =
+		currentCount > 0 ? (independent.categories.get('school-assignment') ?? 0) / currentCount : 0;
+	const duplicateName =
+		currentCount > 0 && independent.nameCounts.size > 0
+			? Math.max(...independent.nameCounts.values()) / currentCount
+			: 0;
+	if (lowSignalRatio > 0.6 && !reportDuplicateSuppression) return null;
+	if (schoolAssignmentShare > 0.7 && !reportDuplicateSuppression) return null;
+	if (singleOwnerShare > 0.7 && !reportDuplicateSuppression) return null;
 
 	const {
 		momentumScore,
@@ -1341,8 +1825,8 @@ function scoreBucket(
 		previousPrevalence,
 		usePrevalenceMomentum: comparability.current.comparisonMode === 'matched-hours',
 		distinctOwnerCount,
-		highSignalCount: bucket.highSignalCount,
-		categoryCount: bucket.categories.size,
+		highSignalCount: independent.highSignalCount,
+		categoryCount: independent.categories.size,
 		averageInterestingScore,
 		historicalCount,
 		duplicateName,
@@ -1352,21 +1836,27 @@ function scoreBucket(
 		suppressGrowth
 	});
 
-	if (emergingScore < 35) return null;
+	const duplicateAdjustedScore = Math.max(0, emergingScore - independent.duplicateAnalysis.scorePenalty);
+	const finalEmergingScore =
+		independent.duplicateAnalysis.scoreCap == null
+			? duplicateAdjustedScore
+			: Math.min(duplicateAdjustedScore, independent.duplicateAnalysis.scoreCap);
+
+	if (finalEmergingScore < 35 && !reportDuplicateSuppression) return null;
 
 	const evidence: EmergingCandidateEvidence = {
-		currentRepoIds: [...bucket.currentRepoIds],
-		previousRepoIds: [...bucket.previousRepoIds],
-		exampleRepos: bucket.exampleRepos,
-		categories: Object.fromEntries(bucket.categories),
-		languages: Object.fromEntries(bucket.languages),
+		currentRepoIds: independent.currentRepoIds,
+		previousRepoIds: independent.previousRepoIds,
+		exampleRepos: independent.exampleRepos,
+		categories: Object.fromEntries(independent.categories),
+		languages: Object.fromEntries(independent.languages),
 		scoreBreakdown: {
 			momentum: momentumScore === null ? null : Math.round(momentumScore),
 			novelty: Math.round(noveltyScore),
 			quality: Math.round(qualityScore),
 			ownerDiversity: Math.round(ownerDiversityScore),
 			categoryDiversity: Math.round(categoryDiversityScore),
-			penalties: penalty
+			penalties: penalty + independent.duplicateAnalysis.scorePenalty
 		},
 		growthSuppressedReason: comparability.growthSuppressedReason,
 		prevalence: {
@@ -1381,7 +1871,8 @@ function scoreBucket(
 			duplicateName: Math.round(duplicateName * 1000) / 1000
 		},
 		sources: Object.fromEntries(bucket.sources),
-		aliasHits: Object.fromEntries(bucket.aliasHits)
+		aliasHits: Object.fromEntries(bucket.aliasHits),
+		duplicateAnalysis: independent.duplicateAnalysis
 	};
 
 	return {
@@ -1395,18 +1886,18 @@ function scoreBucket(
 		previousPrevalence: Math.round(previousPrevalence * 100_000) / 100_000,
 		prevalenceLiftPercent,
 		repoIds: [...bucket.currentRepoIds],
-		categories: Object.fromEntries(bucket.categories),
-		languages: Object.fromEntries(bucket.languages),
+		categories: Object.fromEntries(independent.categories),
+		languages: Object.fromEntries(independent.languages),
 		averageInterestingScore,
-		highSignalCount: bucket.highSignalCount,
-		lowSignalCount: bucket.lowSignalCount,
+		highSignalCount: independent.highSignalCount,
+		lowSignalCount: independent.lowSignalCount,
 		distinctOwnerCount,
 		noveltyScore: Math.round(noveltyScore),
 		momentumScore: momentumScore === null ? null : Math.round(momentumScore),
 		qualityScore: Math.round(qualityScore),
 		ownerDiversityScore: Math.round(ownerDiversityScore),
 		categoryDiversityScore: Math.round(categoryDiversityScore),
-		emergingScore,
+		emergingScore: finalEmergingScore,
 		growthSuppressedReason: comparability.growthSuppressedReason,
 		history,
 		evidence
@@ -1453,6 +1944,8 @@ function getBucket(buckets: Map<string, CandidateBucket>, candidate: ExtractedCa
 		candidateType: candidate.candidateType,
 		currentRepoIds: new Set(),
 		previousRepoIds: new Set(),
+		currentRepos: new Map(),
+		previousRepos: new Map(),
 		owners: new Map(),
 		categories: new Map(),
 		languages: new Map(),
@@ -1599,74 +2092,56 @@ function collectHistoricalCandidateEntries(
 	const beforeMs = Date.parse(before);
 	const rows = db
 		.prepare(
-			`SELECT name, description, topics, created_at FROM repos
+			`SELECT * FROM repos
 			 WHERE created_at < ? AND enriched_at IS NOT NULL
 			 ORDER BY created_at DESC
 			 LIMIT 50000`
 		)
-		.all(before) as Pick<RepoRow, 'name' | 'description' | 'topics' | 'created_at'>[];
-	const entries = new Map<string, HistoryEntry>();
+		.all(before) as RepoRow[];
+	const candidateRows = new Map<
+		string,
+		{
+			rows: RepoRow[];
+			firstSeenAt: string | null;
+			windowRows: RepoRow[][];
+		}
+	>();
+
 	for (const row of rows) {
 		const ageMs = beforeMs - Date.parse(row.created_at);
 		const windowIndex = Math.floor(ageMs / (windowDays * 86_400_000));
-		const fake = {
-			...row,
-			id: 0,
-			owner: '',
-			full_name: '',
-			github_url: '',
-			event_id: '',
-			created_at: row.created_at,
-			first_seen_at: '',
-			default_branch: null,
-			language: null,
-			stars: null,
-			forks: null,
-			watchers: null,
-			license: null,
-			pushed_at: null,
-			updated_at: null,
-			enriched_at: '',
-			deleted_at: null,
-			github_archived: 0,
-			last_checked_at: null,
-			open_issues: null,
-			size: null,
-			discovery_source: 'gharchive',
-			homepage: null,
-			visibility: null,
-			owner_avatar_url: null,
-			owner_type: null,
-			summary: null,
-			summary_generated_at: null,
-			category: null,
-			category_confidence: null,
-			classified_at: null,
-			interesting_score: null,
-			signal_tier: null,
-			scored_at: null,
-			cluster_version: null,
-			clustered_at: null,
-			story_facts_json: null,
-			story_text: null,
-			story_version: null,
-			story_generated_at: null,
-			enrichment_level: 1
-		} satisfies RepoRow;
-		for (const candidate of extractCandidates(fake, rules)) {
-			let entry = entries.get(candidate.key);
+		for (const candidate of extractCandidates(row, rules)) {
+			let entry = candidateRows.get(candidate.key);
 			if (!entry) {
-				entry = { total: 0, firstSeenAt: null, windowCounts: [0, 0, 0, 0] };
-				entries.set(candidate.key, entry);
+				entry = {
+					rows: [],
+					firstSeenAt: null,
+					windowRows: Array.from({ length: HISTORY_WINDOWS }, () => [])
+				};
+				candidateRows.set(candidate.key, entry);
 			}
-			entry.total += 1;
+			entry.rows.push(row);
 			if (!entry.firstSeenAt || row.created_at < entry.firstSeenAt) {
 				entry.firstSeenAt = row.created_at;
 			}
 			if (windowIndex >= 0 && windowIndex < HISTORY_WINDOWS) {
-				entry.windowCounts[windowIndex] += 1;
+				entry.windowRows[windowIndex].push(row);
 			}
 		}
+	}
+
+	const entries = new Map<string, HistoryEntry>();
+	for (const [key, raw] of candidateRows) {
+		entries.set(key, {
+			total: buildDuplicateEvidenceGroups(raw.rows).groups.length,
+			firstSeenAt: raw.firstSeenAt,
+			windowCounts: raw.windowRows.map((windowRows) => buildDuplicateEvidenceGroups(windowRows).groups.length) as [
+				number,
+				number,
+				number,
+				number
+			]
+		});
 	}
 	return entries;
 }

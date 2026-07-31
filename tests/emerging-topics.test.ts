@@ -7,8 +7,10 @@ import {
 	addEmergingTermExclusion,
 	detectEmergingTopics,
 	excludeEmergingTopic,
+	buildDuplicateEvidenceGroups,
 	getEmergingTopicDetail,
 	mergeEmergingTopic,
+	normalizeEvidenceDescription,
 	normalizeKey,
 	runEmergingTopicDetection,
 	updateEmergingTopicStatus
@@ -70,6 +72,68 @@ describe('emerging topic detection', () => {
 		expect(candidate?.currentCount).toBe(12);
 		expect(candidate?.distinctOwnerCount).toBeGreaterThanOrEqual(5);
 		expect(candidate?.emergingScore).toBeGreaterThan(35);
+	});
+
+	it('dedupes Zapret-like copied floods before scoring emerging topics', () => {
+		const copiedDescription =
+			'Zapret Discord Youtube Telegram VPN unblocker for Windows with identical copied setup notes';
+		for (let i = 0; i < 36; i++) {
+			insertSeedRepo({
+				owner: `zapret-copy-owner-${i}`,
+				name: `zapret-telegram-vpn-${i}`,
+				topic: 'telegram-vpn',
+				description: copiedDescription,
+				createdAt: '2026-07-10T12:00:00.000Z',
+				score: 18,
+				language: 'Batchfile',
+				stars: 0,
+				forks: 0,
+				signalTier: 'low'
+			});
+		}
+
+		const candidates = detectEmergingTopics({
+			periodEnd: new Date('2026-07-15T00:00:00.000Z'),
+			windowDays: 7
+		});
+		const candidate = candidates.find((row) => row.key === 'telegram-vpn');
+		expect(candidate).toBeDefined();
+		expect(candidate?.currentCount).toBe(1);
+		expect(candidate?.distinctOwnerCount).toBe(1);
+		expect(candidate?.emergingScore).toBeLessThan(35);
+		expect(candidate?.evidence.exampleRepos).toHaveLength(1);
+		expect(candidate?.evidence.duplicateAnalysis?.classification).toBe(
+			'duplicate-template-propagation'
+		);
+		expect(candidate?.evidence.duplicateAnalysis?.rawCurrentCount).toBe(36);
+		expect(candidate?.evidence.duplicateAnalysis?.hiddenRelatedCopyCount).toBe(35);
+		expect(candidate?.evidence.duplicateAnalysis?.groups[0]?.duplicateReason).toBe(
+			'exact-description-copy'
+		);
+	});
+
+	it('does not collapse independently useful repositories that share boilerplate wording', () => {
+		const sharedDescription = 'Claude Code plugin for editor automation across developer tools';
+		const rows = Array.from({ length: 12 }, (_, i) => {
+			insertSeedRepo({
+				owner: `independent-owner-${i}`,
+				name: `claude-code-plugin-${i}`,
+				topic: 'claude-code-plugin',
+				description: sharedDescription,
+				createdAt: '2026-07-10T12:00:00.000Z',
+				score: 68,
+				stars: 10,
+				forks: 2
+			});
+			return getDb()
+				.prepare('SELECT * FROM repos WHERE full_name = ?')
+				.get(`independent-owner-${i}/claude-code-plugin-${i}`);
+		});
+
+		const groups = buildDuplicateEvidenceGroups(rows as Parameters<typeof buildDuplicateEvidenceGroups>[0]);
+		expect(groups.groups).toHaveLength(12);
+		expect(groups.groups.every((group) => group.duplicateReason === 'independent')).toBe(true);
+		expect(normalizeEvidenceDescription(`${sharedDescription} v1.2`)).toContain('version');
 	});
 
 	it('filters single-owner floods', () => {
@@ -440,6 +504,11 @@ function insertSeedRepo(opts: {
 	description: string;
 	createdAt: string;
 	score: number;
+	language?: string;
+	stars?: number;
+	forks?: number;
+	signalTier?: string;
+	category?: string;
 }): void {
 	const inserted = insertRepo({
 		owner: opts.owner,
@@ -454,10 +523,10 @@ function insertSeedRepo(opts: {
 	saveEnrichment(inserted.id, {
 		default_branch: 'main',
 		description: opts.description,
-		language: 'TypeScript',
-		stars: 10,
-		forks: 2,
-		watchers: 10,
+		language: opts.language ?? 'TypeScript',
+		stars: opts.stars ?? 10,
+		forks: opts.forks ?? 2,
+		watchers: opts.stars ?? 10,
 		license: 'MIT',
 		topics: [opts.topic],
 		pushed_at: opts.createdAt,
@@ -466,10 +535,10 @@ function insertSeedRepo(opts: {
 	getDb()
 		.prepare(
 			`UPDATE repos SET
-			   category = 'ai-project',
+			   category = ?,
 			   interesting_score = ?,
-			   signal_tier = 'normal'
+			   signal_tier = ?
 			 WHERE id = ?`
 		)
-		.run(opts.score, inserted.id);
+		.run(opts.category ?? 'ai-project', opts.score, opts.signalTier ?? 'normal', inserted.id);
 }

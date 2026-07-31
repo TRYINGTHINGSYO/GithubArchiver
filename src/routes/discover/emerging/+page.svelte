@@ -19,8 +19,8 @@
 	<h1>Emerging topics</h1>
 	<p>
 		Deterministic trend mining across GitHub topics, repository-name tokens, and description
-		phrases. Candidates require at least 10 repositories, 3 normal/high-signal repositories, and
-		5 distinct owners.
+		phrases. Counts are deduped into independent evidence groups before owner diversity, growth,
+		novelty, examples, and Emerging Score are calculated.
 	</p>
 	{#if data.readiness.emergingDetectionReady}
 		<p class="hint">Results refresh automatically as the discovery worker completes analysis runs.</p>
@@ -70,13 +70,18 @@
 			</div>
 			<div class="metrics">
 				<span><strong>{topic.current_count.toLocaleString()}</strong> this period</span>
+				{#if topic.hidden_related_copy_count > 0}
+					<span><strong>{topic.hidden_related_copy_count.toLocaleString()}</strong> copies hidden</span>
+				{/if}
 				<span><strong>{topic.previous_count.toLocaleString()}</strong> previous</span>
 				<span><strong>{topic.distinct_owner_count.toLocaleString()}</strong> owners</span>
 				<span><strong>{topic.average_interesting_score ?? '—'}</strong> avg score</span>
 				<span><strong>{Math.round(topic.emerging_score)}</strong> emerging score</span>
 			</div>
 			<p>
-				{#if data.provenance?.comparisonMode === 'matched-hours' && topic.prevalence_lift_percent != null}
+				{#if topic.duplicate_warning}
+					{topic.duplicate_warning}
+				{:else if data.provenance?.comparisonMode === 'matched-hours' && topic.prevalence_lift_percent != null}
 					{topic.prevalence_lift_percent}% prevalence lift
 				{:else}
 					{growthLabel(topic.current_count, topic.previous_count, topic.growth_suppressed_reason)}
