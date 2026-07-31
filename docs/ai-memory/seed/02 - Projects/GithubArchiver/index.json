@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-31T00:22:46.107Z",
+  "generatedAt": "2026-07-31T01:05:43.054Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -975,6 +975,41 @@
       "title": "Enrichment throughput, not ingest, is the constraint on every downstream feature",
       "path": "entries/2026-07-30-research-enrichment-throughput-ceiling.md",
       "summary": "Live production, daemon healthy and actively enriching:"
+    },
+    {
+      "id": "research-github-concurrency-curve",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "temporary",
+      "date": "2026-07-30",
+      "pr": null,
+      "commit": "0505b90",
+      "migration": null,
+      "area": [
+        "enrichment",
+        "observability",
+        "networking"
+      ],
+      "related": [
+        "research-metadata-phase-span-baseline",
+        "feature-metadata-phase-spans"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "research-metadata-phase-span-baseline"
+        },
+        {
+          "type": "references",
+          "id": "feature-metadata-phase-spans"
+        }
+      ],
+      "supersedes": null,
+      "title": "Isolated GitHub fetch stays ~300ms through concurrency 12",
+      "path": "entries/2026-07-30-research-github-concurrency-curve.md",
+      "summary": "Measurement-only probe on the production Railway container (`npm run measure:github-concurrency`). Daemon enrich concurrency was **not** changed."
     },
     {
       "id": "research-homepage-readiness-cache",
