@@ -1,6 +1,5 @@
 <script lang="ts">
 	import DiscoveryRepoCard from '$lib/components/DiscoveryRepoCard.svelte';
-	import RepoListItem from '$lib/components/RepoListItem.svelte';
 	import StatusStory from '$lib/components/StatusStory.svelte';
 	import { clusterGrowthAnalysisHref, homepageClusterTitleHref } from '$lib/cluster-links';
 	import { timeAgo } from '$lib/utils';
@@ -36,12 +35,12 @@
 	const browseLinks = [
 		{ href: '/discover', label: 'All discoveries', why: 'Landing for every intelligence lane' },
 		{ href: '/discover#clusters', label: 'All clusters', why: 'Browse thematic repository groups' },
-		{ href: '/?sort=interesting_score', label: 'Categories & scores', why: 'Open scored repository search' },
+		{ href: '/search?sort=interesting_score', label: 'Categories & scores', why: 'Open scored repository search' },
 		{ href: '/discover/emerging', label: 'Emerging topics', why: 'Matched-hour trend candidates' },
 		{ href: '/discover/projects-to-watch', label: 'Projects to watch', why: 'Quality plus cluster momentum' },
 		{ href: '/discover#unusual', label: 'Classification review queue', why: 'High score with missing evidence' },
 		{ href: '/discover/deleted-gems', label: 'Deleted projects', why: 'Preservation and recoverability' },
-		{ href: '/#repository-search', label: 'Full repository search', why: 'Query the indexed corpus' }
+		{ href: '/search', label: 'Full repository search', why: 'Query the indexed corpus' }
 	];
 
 	const featuredRepo = $derived(data.featuredRepo);
@@ -153,7 +152,7 @@
 		<div class="hero-actions">
 			<a class="btn primary" href="/discover">Explore discoveries</a>
 			<a class="btn" href="/discover/emerging">Browse emerging topics</a>
-			<a class="btn" href="/#repository-search">Search repositories</a>
+			<a class="btn" href="/search">Search repositories</a>
 		</div>
 	</div>
 	{#if featuredRepo}
@@ -166,37 +165,6 @@
 		</aside>
 	{/if}
 </section>
-
-{#if data.searching}
-	<section class="section-block" aria-labelledby="results-heading" id="repository-feed">
-		<div class="section-head">
-			<div>
-				<p class="eyebrow">Search results</p>
-				<h2 id="results-heading">{data.total.toLocaleString()} repositories</h2>
-				<p class="section-why">
-					Secondary corpus search. Intelligence lanes stay below for context.
-				</p>
-			</div>
-			<a href="/">Back to intelligence home</a>
-		</div>
-		{#if data.repos.length > 0}
-			<ul class="search-results">
-				{#each data.repos as repo}
-					<li><RepoListItem {repo} isAdmin={data.isAdmin} /></li>
-				{/each}
-			</ul>
-			{#if data.totalPages > 1}
-				<p class="evidence">
-					Page {data.page} of {data.totalPages}. Refine with
-					<a href="/#repository-search">search</a> or open the
-					<a href="/birth-feed">Birth Feed</a>.
-				</p>
-			{/if}
-		{:else}
-			<p class="empty">No repositories matched this query.</p>
-		{/if}
-	</section>
-{/if}
 
 <section class="section-block snapshot" aria-labelledby="snapshot-heading">
 	<div class="section-head">
@@ -625,7 +593,7 @@
 		</div>
 		<a href="/birth-feed">Birth Feed</a>
 	</div>
-	<form class="search-form" method="get" action="/">
+	<form class="search-form" method="get" action="/search">
 		<label class="sr-only" for="home-q">Search repositories</label>
 		<input id="home-q" name="q" type="search" placeholder="owner, name, topic, or phrase" />
 		<button type="submit" class="btn primary">Search</button>

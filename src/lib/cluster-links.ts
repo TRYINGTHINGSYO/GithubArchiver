@@ -1,7 +1,7 @@
 /** Stable href helpers for cluster navigation (keep request-path and SSR in sync). */
 
 export function clusterReposHref(slug: string): string {
-	return `/?cluster=${encodeURIComponent(slug)}`;
+	return clusterGrowthAnalysisHref(slug);
 }
 
 export function clusterGrowthAnalysisHref(slug: string): string {

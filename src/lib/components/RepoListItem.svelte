@@ -82,8 +82,14 @@
 
 <li>
 	<article class="repo-item">
+		<a
+			class="repo-item-main-link"
+			href={detailHref}
+			aria-label="Open intelligence for {repo.full_name}"
+			data-sveltekit-preload-code="eager"
+		></a>
 		<div class="repo-card-head">
-			<a class="repo-name" href={detailHref}>{repo.full_name}</a>
+			<span class="repo-name">{repo.full_name}</span>
 			<div class="repo-card-tools">
 				{#if isAdmin}
 					<button
@@ -151,6 +157,27 @@
 </li>
 
 <style>
+	.repo-item {
+		position: relative;
+		cursor: pointer;
+		transition:
+			background 0.15s ease,
+			border-color 0.15s ease,
+			transform 0.15s ease;
+	}
+
+	.repo-item-main-link {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		border-radius: inherit;
+	}
+
+	.repo-item-main-link:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 3px;
+	}
+
 	.repo-card-head {
 		display: flex;
 		justify-content: space-between;
@@ -159,6 +186,8 @@
 	}
 
 	.repo-card-tools {
+		position: relative;
+		z-index: 2;
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: flex-end;
@@ -237,6 +266,8 @@
 	}
 
 	.archive-badge {
+		position: relative;
+		z-index: 2;
 		display: inline-flex;
 		border: 1px solid var(--border);
 		border-radius: 999px;
@@ -281,6 +312,13 @@
 		.repo-card-head {
 			display: grid;
 			gap: 0.25rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.repo-item,
+		.repo-item:hover {
+			transform: none;
 		}
 	}
 </style>

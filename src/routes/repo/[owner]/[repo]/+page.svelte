@@ -41,6 +41,22 @@
 	]);
 
 	const categoryLabel = $derived(formatCategoryLabel(data.repo.category));
+	const refreshStatusLabel = $derived.by(() => {
+		const refresh = data.liveMetadataRefresh;
+		if (!refresh?.shouldRefresh) return null;
+		if (refresh.queued) {
+			return refresh.mode === 'enrich'
+				? 'Showing stored discovery data now; metadata enrichment was queued in the background.'
+				: 'Showing stored repository data now; a background refresh was queued.';
+		}
+		if (refresh.reason === 'deduped') {
+			return 'Showing stored repository data now; a recent background refresh request is already queued.';
+		}
+		if (refresh.reason === 'runner_busy') {
+			return 'Showing stored repository data now; background refresh will wait for the current worker.';
+		}
+		return 'Showing stored repository data now; live refresh is unavailable.';
+	});
 
 	$effect(() => {
 		if (!sourceAnalysis && data.sourceAnalysis) sourceAnalysis = data.sourceAnalysis;
@@ -214,6 +230,10 @@
 
 {#if liveNotice}
 	<p class="live-notice">{liveNotice}</p>
+{/if}
+
+{#if refreshStatusLabel}
+	<p class="live-notice metadata-refresh">{refreshStatusLabel}</p>
 {/if}
 
 <article class="repo-story">
@@ -647,6 +667,11 @@
 		background: color-mix(in srgb, var(--green) 12%, var(--bg-elevated));
 		color: var(--text);
 		font-size: 0.9rem;
+	}
+
+	.live-notice.metadata-refresh {
+		border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+		background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
 	}
 
 	.action-ok {

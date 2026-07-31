@@ -1,3 +1,4 @@
+import { redirect } from '@sveltejs/kit';
 import { getArchivePulse } from '$lib/server/db';
 import { getDb } from '$lib/server/db/connection';
 import { countMissingGhArchiveHours, latestIngestedHour } from '$lib/server/db/ingestion';
@@ -18,8 +19,11 @@ import {
 	listEmergingNearMisses,
 	type EmergingNearMiss
 } from '$lib/server/emerging-topics';
-import { getAvailableLanguages, listRepos } from '$lib/server/repos';
-import { parseRepoQueryParams, repoQueryFiltersForUi } from '$lib/server/repo-search';
+import {
+	parseRepoPageSize,
+	parseRepoQueryParams,
+	repoQueryFiltersForUi
+} from '$lib/server/repo-search';
 import type { PageServerLoad } from './$types';
 
 function countHighSignalRepos(): number {
@@ -85,10 +89,18 @@ function isRepoSearchRequest(url: URL): boolean {
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const searching = isRepoSearchRequest(url);
+	if (searching) {
+		throw redirect(307, `/search?${url.searchParams.toString()}`);
+	}
 	const opts = parseRepoQueryParams(url);
-	const searchResult = searching
-		? listRepos(opts)
-		: { repos: [], total: 0, page: 1, perPage: 50, totalPages: 0, search_mode: 'list' as const };
+	const searchResult = {
+		repos: [],
+		total: 0,
+		page: 1,
+		perPage: parseRepoPageSize(null),
+		totalPages: 0,
+		search_mode: 'list' as const
+	};
 
 	const discovery = getDiscoveryLanding({ limit: 6, minScore: 55 });
 	const readiness = getDataReadiness({ windowDays: 7 });
@@ -170,7 +182,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	return {
 		searching,
 		...searchResult,
-		languages: searching ? getAvailableLanguages() : [],
+		languages: [],
 		sorts: REPO_SORTS,
 		filters: repoQueryFiltersForUi(opts),
 		discovery,

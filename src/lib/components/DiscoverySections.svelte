@@ -7,7 +7,7 @@
 		{ label: 'Unusual finds', href: '/discover#unusual' },
 		{ label: 'All discoveries', href: '/discover' },
 		{ label: 'Birth Feed', href: '/birth-feed' },
-		{ label: 'Repository search', href: '/#repository-search' }
+		{ label: 'Repository search', href: '/search' }
 	];
 </script>
 

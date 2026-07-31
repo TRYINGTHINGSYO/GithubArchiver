@@ -36,9 +36,15 @@
 </script>
 
 <article class="discovery-repo-card">
+	<a
+		class="card-main-link"
+		href={href}
+		aria-label="Open intelligence for {repo.full_name}"
+		data-sveltekit-preload-code="eager"
+	></a>
 	<div class="card-head">
 		<div>
-			<a class="repo-name" href={href}>{repo.full_name}</a>
+			<span class="repo-name">{repo.full_name}</span>
 			{#if blurb}<p class="description">{blurb}</p>{/if}
 		</div>
 		<div class="score-box">
@@ -60,7 +66,7 @@
 	{#if repo.clusters.length > 0}
 		<div class="clusters" aria-label="Cluster matches">
 			{#each repo.clusters as cluster}
-				<a href="/?cluster={cluster.slug}" class="cluster-badge">
+				<a href="/discover/fastest-growing?cluster={cluster.slug}" class="cluster-badge">
 					{cluster.name}
 					<span>{Math.round(cluster.confidence * 100)}%</span>
 				</a>
@@ -85,10 +91,38 @@
 
 <style>
 	.discovery-repo-card {
+		position: relative;
 		border: 1px solid var(--border);
 		background: var(--bg-elevated);
 		border-radius: 14px;
 		padding: 1rem;
+		cursor: pointer;
+		transition:
+			background 0.15s ease,
+			border-color 0.15s ease,
+			transform 0.15s ease;
+	}
+
+	.discovery-repo-card:hover {
+		background: var(--bg-hover);
+		border-color: var(--border-strong);
+		transform: translateY(-1px);
+	}
+
+	.discovery-repo-card:active {
+		transform: translateY(0);
+	}
+
+	.card-main-link {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		border-radius: inherit;
+	}
+
+	.card-main-link:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 3px;
 	}
 
 	.card-head {
@@ -158,6 +192,8 @@
 	}
 
 	.cluster-badge {
+		position: relative;
+		z-index: 2;
 		color: var(--accent);
 		background: color-mix(in srgb, var(--accent) 8%, transparent);
 	}
@@ -199,6 +235,14 @@
 
 		.score-box {
 			width: fit-content;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.discovery-repo-card,
+		.discovery-repo-card:hover,
+		.discovery-repo-card:active {
+			transform: none;
 		}
 	}
 </style>

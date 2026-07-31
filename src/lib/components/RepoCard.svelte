@@ -56,7 +56,12 @@
 </script>
 
 <li class="repo-card">
-	<a class="repo-card-main" href={repoHref} aria-label="View {repo.full_name}">
+	<a
+		class="repo-card-main"
+		href={repoHref}
+		aria-label="View {repo.full_name}"
+		data-sveltekit-preload-code="eager"
+	>
 	<div class="repo-card-head">
 		<span class="repo-name">{repo.full_name}</span>
 		{#if repo.stars != null}

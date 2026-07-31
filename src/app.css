@@ -78,6 +78,38 @@ code,
 	z-index: 40;
 }
 
+.navigation-progress {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 100;
+	width: 100%;
+	height: 3px;
+	overflow: hidden;
+	background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.navigation-progress::before {
+	content: '';
+	display: block;
+	width: 42%;
+	height: 100%;
+	border-radius: 999px;
+	background: var(--accent);
+	box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent);
+	animation: navigation-progress-slide 0.95s ease-in-out infinite;
+}
+
+@keyframes navigation-progress-slide {
+	from {
+		transform: translateX(-105%);
+	}
+
+	to {
+		transform: translateX(245%);
+	}
+}
+
 .site-header .container,
 .header-bar {
 	display: flex;
@@ -616,6 +648,20 @@ a.repo-item:hover {
 	.filters {
 		display: grid;
 		grid-template-columns: 1fr;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.navigation-progress::before {
+		animation: none;
+		width: 100%;
+	}
+
+	.button:hover,
+	.button-secondary:hover,
+	.button-ghost:hover,
+	.repo-item:hover {
+		transform: none;
 	}
 }
 
