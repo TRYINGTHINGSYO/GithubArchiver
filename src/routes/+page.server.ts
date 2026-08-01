@@ -6,7 +6,11 @@ import { getLongestRunningWorkJobSnapshot } from '$lib/server/db/jobs';
 import { REPO_SORTS } from '$lib/server/db/repo-query';
 import { isSearchFallbackActive } from '$lib/server/db/search-ingest';
 import { getDataReadiness } from '$lib/server/data-readiness';
-import { getActiveQualityClusters, getDiscoveryLanding } from '$lib/server/discovery';
+import {
+	getActiveQualityClusters,
+	getClusterSurfaceState,
+	getDiscoveryLanding
+} from '$lib/server/discovery';
 import { getDiscoverySystemStatus } from '$lib/server/discovery-materialized';
 import {
 	getHomepageHighSignalCount,
@@ -109,6 +113,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			: 0;
 
 	const growthClusters = discovery.fastestGrowing;
+	const activityClusters =
+		growthClusters.length > 0 ? [] : getActiveQualityClusters({ limit: 6, minScore: 55 });
 	const clusterMode = growthClusters.length > 0 ? ('growth' as const) : ('activity' as const);
 	const clusterCards =
 		clusterMode === 'growth'
@@ -127,7 +133,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					// Only true for cards sourced from the verified growth endpoint.
 					isVerifiedGrowth: true
 				}))
-			: getActiveQualityClusters({ limit: 6, minScore: 55 }).map((cluster) => ({
+			: activityClusters.map((cluster) => ({
 					slug: cluster.slug,
 					name: cluster.name,
 					description: cluster.description,
@@ -141,6 +147,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					metricLabel: 'recent activity' as const,
 					isVerifiedGrowth: false
 				}));
+	const clusterSurface = getClusterSurfaceState(clusterCards.length > 0);
 
 	let nearMisses: EmergingNearMiss[] = [];
 	if (
@@ -190,6 +197,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			mode: clusterMode,
 			items: clusterCards
 		},
+		clusterSurface,
 		snapshot: {
 			indexed: readiness.totalRepos,
 			enriched: readiness.enrichedRepos,

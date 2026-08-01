@@ -1,4 +1,8 @@
-import { getDiscoveryLanding, parseDiscoveryQuery } from '$lib/server/discovery';
+import {
+	getClusterSurfaceState,
+	getDiscoveryLanding,
+	parseDiscoveryQuery
+} from '$lib/server/discovery';
 import {
 	formatRelativeTime,
 	getDiscoverySystemStatus
@@ -12,12 +16,14 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const query = parseDiscoveryQuery(url);
+	const discovery = getDiscoveryLanding(query);
 	const discoveryStatus = getDiscoverySystemStatus();
 	const provenance = getLatestEmergingDetectionProvenance();
 	const enrichmentProgress = getEnrichmentProgress();
 	return {
 		query,
-		discovery: getDiscoveryLanding(query),
+		discovery,
+		clusterSurface: getClusterSurfaceState(discovery.fastestGrowing.length > 0),
 		discoveryStatus,
 		enrichmentProgress,
 		provenance,

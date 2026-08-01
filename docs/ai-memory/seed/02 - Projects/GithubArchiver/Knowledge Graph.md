@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`bugfix-ghost-cluster-eligibility`](entries/2026-08-01-bugfix-ghost-cluster-eligibility.md) (`bugfix`, `confirmed`, `permanent`) — Shared public cluster eligibility and generation-gated materialization
+  - `related` → [`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md), `caused-by` → [`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), `references` → `architecture-review-delta-pr28`, `implemented-by` → [`pr-32`](entries/2026-08-01-bugfix-ghost-cluster-eligibility.md)
 - [`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md) (`bugfix`, `confirmed`, `permanent`) — Wipe must clear stale cluster cards from materialization and TTL
   - `caused-by` → [`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), `related` → [`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), `related` → [`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), `implemented-by` → [`pr-30`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 - [`feature-low-value-repo-cleanup`](entries/2026-08-01-feature-low-value-repo-cleanup.md) (`feature`, `confirmed`, `permanent`) — Staged low-value repo cleanup with quarantine

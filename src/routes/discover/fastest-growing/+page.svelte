@@ -50,14 +50,12 @@
 		<p class="empty">
 			{#if data.clusterSurface.emptyReason === 'no-repositories'}
 				No repositories have been analyzed yet. Cluster cards appear only after live repositories
-				are ingested, enriched, and assigned to clusters.
+				are ingested, enriched, and assigned to clusters — not from predefined cluster types.
 			{:else if data.clusterSurface.emptyReason === 'clustering-incomplete'}
-				{data.clusterSurface.repoCount.toLocaleString()}
-				{data.clusterSurface.repoCount === 1 ? 'repository has' : 'repositories have'} been
-				indexed, but clustering has not yet completed. Cluster cards are generated only from live
-				membership records — not from predefined category definitions.
+				No clusters generated yet. Repository intelligence has not produced any qualifying
+				clusters.
 			{:else}
-				No clusters meet the growth guardrails yet.
+				Repository intelligence has not produced any qualifying clusters for growth yet.
 			{/if}
 		</p>
 	{/each}

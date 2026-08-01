@@ -1,4 +1,11 @@
 import { getStoredArchiveStory } from '$lib/server/db/archive-story';
+import {
+	computeClusterIntelligenceGeneration,
+	hasPublicClusterIntelligenceEvidence,
+	isPublicClusterEligible,
+	MIN_CLUSTER_CURRENT_COUNT,
+	MIN_CLUSTER_PREVIOUS_COUNT
+} from '$lib/server/cluster-eligibility';
 import { getClusterDefinition } from '$lib/server/cluster-registry';
 import {
 	countClusterMemberships,
@@ -16,6 +23,8 @@ import { DISCOVERY_PRESETS, type DiscoveryPreset } from '$lib/server/discovery-p
 import { getMaterializedDiscoveryLanding } from '$lib/server/discovery-materialized';
 import { listEmergingTopics, type EmergingTopicRow } from '$lib/server/emerging-topics';
 import { computeGrowthPercent } from '$lib/server/growth';
+
+export { MIN_CLUSTER_CURRENT_COUNT, MIN_CLUSTER_PREVIOUS_COUNT };
 
 /**
  * Development-only escape hatch. Production never serves placeholder cluster cards.
@@ -124,8 +133,6 @@ export type IncompleteSignal =
 	| 'no-cluster-match'
 	| 'conflicting-evidence';
 
-export const MIN_CLUSTER_CURRENT_COUNT = 20;
-export const MIN_CLUSTER_PREVIOUS_COUNT = 5;
 export const MIN_PROJECT_GROWTH = 25;
 export const MIN_HOMEPAGE_CLASSIFICATION_CONFIDENCE = 0.55;
 export const MIN_HOMEPAGE_ENRICHMENT_LEVEL = 1;
@@ -146,21 +153,50 @@ export interface ClusterSurfaceState {
 
 /** Live intelligence only — seeded cluster definitions are not displayable records. */
 export function getClusterSurfaceState(hasCards = false): ClusterSurfaceState {
-	const repoCount = countRepos();
-	const membershipCount = countClusterMemberships();
-	const populatedClusterCount = countPopulatedClusters();
+	const generation = computeClusterIntelligenceGeneration();
+	const repoCount = generation.activeRepositoryCount;
+	const membershipCount = generation.membershipCount;
+	const populatedClusterCount = generation.populatedClusterCount;
 	let emptyReason: ClusterSurfaceEmptyReason | null = null;
 	if (!hasCards) {
 		if (repoCount === 0) emptyReason = 'no-repositories';
-		else if (membershipCount === 0 || populatedClusterCount === 0)
+		else if (
+			!hasPublicClusterIntelligenceEvidence({
+				membershipCount,
+				activeRepositoryCount: repoCount
+			}) ||
+			populatedClusterCount === 0
+		) {
 			emptyReason = 'clustering-incomplete';
-		else emptyReason = 'no-growth-match';
+		} else emptyReason = 'no-growth-match';
 	}
 	return { repoCount, membershipCount, populatedClusterCount, emptyReason };
 }
 
+/** Global live-evidence gate — taxonomy/registry seed rows never qualify. */
 function hasLiveClusterIntelligence(): boolean {
-	return countClusterMemberships() > 0;
+	const generation = computeClusterIntelligenceGeneration();
+	return hasPublicClusterIntelligenceEvidence({
+		membershipCount: generation.membershipCount,
+		activeRepositoryCount: generation.activeRepositoryCount
+	});
+}
+
+function clusterEligibleForSurface(
+	cluster: ClusterAnalyticsRow,
+	surface: 'growth' | 'preliminary' | 'activity' | 'browse',
+	activeRepositoryCount: number
+): boolean {
+	return isPublicClusterEligible({
+		membershipCount: cluster.repo_count,
+		activeRepositoryCount,
+		confidence:
+			cluster.avg_interesting_score != null ? cluster.avg_interesting_score / 100 : null,
+		growthEvidenceCount: cluster.new_7d,
+		previousGrowthEvidenceCount: cluster.new_prev_7d,
+		recentActivityCount: cluster.new_24h,
+		surface
+	});
 }
 
 const INCOMPLETE_SIGNAL_LABELS: Record<IncompleteSignal, string> = {
@@ -241,8 +277,9 @@ export function getFastestGrowingClusters(opts: Partial<DiscoveryQuery> = {}): D
 	const query = normalizeQuery(opts);
 	// Registry seed rows are not intelligence — require live memberships.
 	if (!hasLiveClusterIntelligence()) return [];
+	const activeRepositoryCount = countRepos();
 	const clusters = cachedClusterAnalytics()
-		.filter((cluster) => cluster.repo_count > 0)
+		.filter((cluster) => clusterEligibleForSurface(cluster, 'growth', activeRepositoryCount))
 		.filter((cluster) => {
 			const growth = computeGrowthPercent(
 				cluster.new_7d,
@@ -252,8 +289,6 @@ export function getFastestGrowingClusters(opts: Partial<DiscoveryQuery> = {}): D
 			return growth != null;
 		})
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
-		.filter((cluster) => cluster.new_7d >= MIN_CLUSTER_CURRENT_COUNT)
-		.filter((cluster) => cluster.new_prev_7d >= MIN_CLUSTER_PREVIOUS_COUNT)
 		.filter((cluster) => (cluster.avg_interesting_score ?? 0) >= Math.max(0, query.minScore - 20))
 		.sort((a, b) => {
 			const weightedDelta = qualityWeightedGrowthScore(b) - qualityWeightedGrowthScore(a);
@@ -402,8 +437,9 @@ export function getPreliminaryProjectsToWatch(opts: Partial<DiscoveryQuery> = {}
 export function getPreliminaryGrowingClusters(opts: Partial<DiscoveryQuery> = {}): DiscoveryClusterCard[] {
 	const query = normalizeQuery(opts);
 	if (!hasLiveClusterIntelligence()) return [];
+	const activeRepositoryCount = countRepos();
 	return cachedClusterAnalytics()
-		.filter((cluster) => cluster.repo_count > 0)
+		.filter((cluster) => clusterEligibleForSurface(cluster, 'preliminary', activeRepositoryCount))
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
 		.sort((a, b) => b.new_24h - a.new_24h || b.repo_count - a.repo_count)
 		.slice(0, query.limit)
@@ -513,9 +549,10 @@ export function getNewHighSignalRepos(opts: Partial<DiscoveryQuery> = {}): Disco
 export function getActiveQualityClusters(opts: Partial<DiscoveryQuery> = {}): ActiveClusterCard[] {
 	const query = normalizeQuery(opts);
 	if (!hasLiveClusterIntelligence()) return [];
+	const activeRepositoryCount = countRepos();
 	return cachedClusterAnalytics()
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
-		.filter((cluster) => cluster.repo_count > 0)
+		.filter((cluster) => clusterEligibleForSurface(cluster, 'activity', activeRepositoryCount))
 		.filter((cluster) => (cluster.avg_interesting_score ?? 0) >= Math.max(0, query.minScore - 25))
 		.sort((a, b) => {
 			const activityDelta = b.new_7d - a.new_7d;

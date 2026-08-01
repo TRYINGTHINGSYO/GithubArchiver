@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 43;
+export const CURRENT_SCHEMA_VERSION = 44;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1488,6 +1488,24 @@ function migration043(database: Database.Database) {
 	`);
 }
 
+/**
+ * Durable fingerprint for public cluster intelligence materialization.
+ * Taxonomy/registry seed rows are independent and may exist with zero memberships.
+ */
+function migration044(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS cluster_intelligence_meta (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			generation_id TEXT NOT NULL,
+			materialized_at TEXT NOT NULL,
+			membership_count INTEGER NOT NULL DEFAULT 0,
+			active_repository_count INTEGER NOT NULL DEFAULT 0,
+			populated_cluster_count INTEGER NOT NULL DEFAULT 0,
+			updated_at TEXT NOT NULL
+		);
+	`);
+}
+
 /** Website discovery: CT + zone intake → shared candidates → liveness verify. */
 function migration037(database: Database.Database) {
 	database.exec(`
@@ -1577,7 +1595,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	40: migration040,
 	41: migration041,
 	42: migration042,
-	43: migration043
+	43: migration043,
+	44: migration044
 };
 
 export interface MigrationRunResult {
@@ -1728,6 +1747,11 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 			migration043(database);
 			repairs.push('043:low_value_cleanup');
 		}
+	}
+
+	if (version >= 44 && !tables.has('cluster_intelligence_meta')) {
+		migration044(database);
+		repairs.push('044:cluster_intelligence_meta');
 	}
 
 	return repairs;

@@ -448,19 +448,17 @@
 			</article>
 		{:else}
 			<p class="empty">
-				{#if data.snapshot.indexed === 0}
+				{#if data.clusterSurface.emptyReason === 'no-repositories'}
 					No repositories have been analyzed yet. Cluster cards appear only from live database
-					memberships after ingestion and clustering.
-				{:else if data.snapshot.activeClusters === 0}
-					{data.snapshot.indexed.toLocaleString()}
-					{data.snapshot.indexed === 1 ? 'repository is' : 'repositories are'} indexed, but
-					clustering has not yet completed. Predefined category definitions are not shown as cards.
+					memberships after ingestion and clustering — not from predefined cluster types.
+				{:else if data.clusterSurface.emptyReason === 'clustering-incomplete'}
+					No clusters generated yet. Repository intelligence has not produced any qualifying
+					clusters. Predefined cluster taxonomy is not shown as live intelligence.
 				{:else if data.enrichmentProgress.remaining > 0}
 					Clusters will appear as enrichment assigns repositories. {data.enrichmentProgress.enrichedTotal.toLocaleString()}
 					enriched so far; {data.enrichmentProgress.remaining.toLocaleString()} still waiting.
 				{:else}
-					No clusters meet quality thresholds yet. Additional categories will appear as repositories
-					are classified.
+					Repository intelligence has not produced any qualifying clusters for this surface yet.
 				{/if}
 			</p>
 		{/each}

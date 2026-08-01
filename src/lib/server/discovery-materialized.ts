@@ -1,6 +1,15 @@
+import {
+	clearClusterIntelligenceMeta,
+	computeClusterIntelligenceGeneration,
+	hasPublicClusterIntelligenceEvidence,
+	isPublicClusterEligible,
+	readStoredClusterIntelligenceMeta,
+	writeClusterIntelligenceMeta,
+	type PublicClusterSurface
+} from './cluster-eligibility.js';
 import { getDb } from './db/connection.js';
 import {
-	countClusterMemberships,
+	getClusterAnalytics,
 	listActiveClusterSummaries
 } from './db/clusters.js';
 import { countRepos, countUnenriched } from './db/repos.js';
@@ -30,6 +39,11 @@ import {
 } from './discovery-materialization.js';
 import { CURRENT_EMERGING_DETECTION_VERSION, listEmergingTopics } from './emerging-topics.js';
 import { clearTtlCache } from './ttl-cache.js';
+
+type MaterializedClusterPayload = DiscoveryClusterCard & {
+	_clusterGenerationId?: string;
+	_clusterSurface?: PublicClusterSurface;
+};
 
 export type DiscoveryTier = 'qualified' | 'preliminary';
 
@@ -129,6 +143,7 @@ export function materializeDiscoveryResults(
 		const qualifiedProjects = getProjectsToWatch(query);
 		const preliminaryProjects =
 			qualifiedProjects.length > 0 ? [] : getPreliminaryProjectsToWatch(query);
+		const generation = computeClusterIntelligenceGeneration();
 		const qualifiedClusters = getFastestGrowingClusters(query);
 		const preliminaryClusters =
 			qualifiedClusters.length > 0 ? [] : getPreliminaryGrowingClusters({ ...query, limit: 24 });
@@ -156,12 +171,20 @@ export function materializeDiscoveryResults(
 			...qualifiedClusters.map((item, index) => ({
 				rank: index + 1,
 				tier: 'qualified' as const,
-				payload: item
+				payload: {
+					...item,
+					_clusterGenerationId: generation.generationId,
+					_clusterSurface: 'growth' as const
+				} satisfies MaterializedClusterPayload
 			})),
 			...preliminaryClusters.map((item, index) => ({
 				rank: index + 1,
 				tier: 'preliminary' as const,
-				payload: item
+				payload: {
+					...item,
+					_clusterGenerationId: generation.generationId,
+					_clusterSurface: 'preliminary' as const
+				} satisfies MaterializedClusterPayload
 			}))
 		];
 		const deletedRows: MaterializedRow[] = deletedGems.map((item, index) => ({
@@ -203,6 +226,13 @@ export function materializeDiscoveryResults(
 			insertMaterializedRows('discovery_deleted_preserved', deletedRows, publishedAt);
 			insertMaterializedRows('discovery_unusual_finds', unusualRows, publishedAt);
 			insertMaterializedRows('discovery_emerging_topics', emergingRows, publishedAt);
+			writeClusterIntelligenceMeta({
+				generationId: generation.generationId,
+				materializedAt: publishedAt,
+				membershipCount: generation.membershipCount,
+				activeRepositoryCount: generation.activeRepositoryCount,
+				populatedClusterCount: generation.populatedClusterCount
+			});
 			updateDiscoverySystemStatus('idle');
 			markDiscoveryAnalysisComplete(publishedAt);
 		})();
@@ -271,16 +301,37 @@ export function getMaterializedDiscoveryLanding(
 	if (!status?.last_discovery_analysis_at) return null;
 
 	const limit = opts.limit ?? 50;
-	const repoCount = countRepos();
-	const membershipCount = countClusterMemberships();
-	// After a volume wipe (or partial wipe), materialization tables can outlive live
-	// memberships. Never surface cluster cards without live membership rows — seeded
-	// registry definitions alone are not intelligence.
-	const hasLiveClusters = membershipCount > 0;
+	const liveGeneration = computeClusterIntelligenceGeneration();
+	const storedMeta = readStoredClusterIntelligenceMeta();
+	const hasLiveClusters = hasPublicClusterIntelligenceEvidence({
+		membershipCount: liveGeneration.membershipCount,
+		activeRepositoryCount: liveGeneration.activeRepositoryCount,
+		generationId: storedMeta?.generationId ?? null,
+		expectedGenerationId: liveGeneration.generationId,
+		materializedAt: storedMeta?.materializedAt ?? status.last_discovery_analysis_at
+	});
+
+	// Volume wipe, membership purge, or generation mismatch → drop orphaned cluster payloads.
+	// Taxonomy/registry seed rows are never enough to keep cards alive.
 	if (!hasLiveClusters) {
-		purgeStaleClusterMaterialization();
+		const generationMismatch =
+			storedMeta != null && storedMeta.generationId !== liveGeneration.generationId;
+		purgeStaleClusterMaterialization({
+			// Keep meta that already correctly records an empty generation; rewrite on mismatch.
+			clearMeta: generationMismatch || (storedMeta?.membershipCount ?? 0) > 0
+		});
+		if ((storedMeta?.membershipCount ?? 0) > 0 && liveGeneration.membershipCount === 0) {
+			writeClusterIntelligenceMeta({
+				generationId: liveGeneration.generationId,
+				materializedAt: new Date().toISOString(),
+				membershipCount: liveGeneration.membershipCount,
+				activeRepositoryCount: liveGeneration.activeRepositoryCount,
+				populatedClusterCount: liveGeneration.populatedClusterCount
+			});
+		}
 	}
 
+	const repoCount = liveGeneration.activeRepositoryCount;
 	const emergingTopics =
 		repoCount === 0
 			? []
@@ -288,11 +339,17 @@ export function getMaterializedDiscoveryLanding(
 					(topic) => topic.detection_version === CURRENT_EMERGING_DETECTION_VERSION
 				);
 
+	const fastestGrowing = hasLiveClusters
+		? filterMaterializedClusterCards(
+				readMaterializedPayloads<MaterializedClusterPayload>('discovery_fastest_clusters'),
+				liveGeneration.generationId,
+				liveGeneration.activeRepositoryCount
+			).slice(0, limit)
+		: [];
+
 	return {
 		presets: DISCOVERY_PRESETS,
-		fastestGrowing: hasLiveClusters
-			? readMaterializedPayloads<DiscoveryClusterCard>('discovery_fastest_clusters').slice(0, limit)
-			: [],
+		fastestGrowing,
 		projectsToWatch: hasLiveClusters
 			? readMaterializedPayloads<ProjectsToWatchItem>('discovery_projects_to_watch').slice(0, limit)
 			: [],
@@ -305,13 +362,58 @@ export function getMaterializedDiscoveryLanding(
 				? []
 				: readMaterializedPayloads<DiscoveryRepoCard>('discovery_unusual_finds').slice(0, limit),
 		emergingTopics: emergingTopics.slice(0, limit),
-		// Use maintained repo_count — avoid N+1 analytics on every page load.
-		clusters: hasLiveClusters ? listActiveClusterSummaries(24) : []
+		// Browse list still requires live memberships — never taxonomy-only rows.
+		clusters: hasLiveClusters
+			? listActiveClusterSummaries(24).filter((cluster) =>
+					isPublicClusterEligible({
+						membershipCount: cluster.repo_count,
+						activeRepositoryCount: liveGeneration.activeRepositoryCount,
+						surface: 'browse'
+					})
+				)
+			: []
 	};
 }
 
-/** Drop orphaned cluster payloads when the live membership graph is empty. */
-function purgeStaleClusterMaterialization(): void {
+function stripClusterEligibilityMeta(card: MaterializedClusterPayload): DiscoveryClusterCard {
+	const { _clusterGenerationId: _g, _clusterSurface: _s, ...rest } = card;
+	return rest;
+}
+
+/**
+ * Re-check each materialized cluster card against live membership evidence.
+ * Stale payloads from a prior generation or below surface thresholds are dropped.
+ */
+function filterMaterializedClusterCards(
+	cards: MaterializedClusterPayload[],
+	expectedGenerationId: string,
+	activeRepositoryCount: number
+): DiscoveryClusterCard[] {
+	const eligible: DiscoveryClusterCard[] = [];
+	for (const card of cards) {
+		const surface: PublicClusterSurface = card._clusterSurface ?? 'growth';
+		const live = getClusterAnalytics(card.slug);
+		if (!live) continue;
+		const ok = isPublicClusterEligible({
+			membershipCount: live.repo_count,
+			activeRepositoryCount,
+			confidence: live.avg_interesting_score != null ? live.avg_interesting_score / 100 : null,
+			growthEvidenceCount: live.new_7d,
+			previousGrowthEvidenceCount: live.new_prev_7d,
+			recentActivityCount: live.new_24h,
+			materializedAt: null,
+			generationId: card._clusterGenerationId ?? null,
+			expectedGenerationId,
+			surface
+		});
+		if (!ok) continue;
+		eligible.push(stripClusterEligibilityMeta(card));
+	}
+	return eligible;
+}
+
+/** Drop orphaned cluster payloads when live evidence is missing or stale. */
+function purgeStaleClusterMaterialization(opts: { clearMeta?: boolean } = {}): void {
 	const db = getDb();
 	const tables = ['discovery_fastest_clusters', 'discovery_projects_to_watch'] as const;
 	for (const table of tables) {
@@ -320,6 +422,9 @@ function purgeStaleClusterMaterialization(): void {
 			.get(table) as { ok: number } | undefined;
 		if (!exists) continue;
 		db.prepare(`DELETE FROM ${table}`).run();
+	}
+	if (opts.clearMeta) {
+		clearClusterIntelligenceMeta();
 	}
 }
 

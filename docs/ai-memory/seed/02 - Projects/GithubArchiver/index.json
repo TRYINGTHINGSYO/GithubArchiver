@@ -1,9 +1,54 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-01T09:50:42.232Z",
+  "generatedAt": "2026-08-01T21:33:48.964Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "bugfix-ghost-cluster-eligibility",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-08-01",
+      "pr": 32,
+      "commit": "4634b8f",
+      "migration": null,
+      "area": [
+        "discovery",
+        "clusters",
+        "cache"
+      ],
+      "related": [
+        "bugfix-cluster-wipe-empty-state",
+        "feature-durable-discovery-materialization",
+        "architecture-review-delta-pr28",
+        "pr-32"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "bugfix-cluster-wipe-empty-state"
+        },
+        {
+          "type": "caused-by",
+          "id": "feature-durable-discovery-materialization"
+        },
+        {
+          "type": "references",
+          "id": "architecture-review-delta-pr28"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-32"
+        }
+      ],
+      "supersedes": null,
+      "title": "Shared public cluster eligibility and generation-gated materialization",
+      "path": "entries/2026-08-01-bugfix-ghost-cluster-eligibility.md",
+      "summary": "Hardened the PR #30 wipe fix with a single `isPublicClusterEligible` / `hasPublicClusterIntelligenceEvidence` predicate, a live membership generation fingerprint (`cluster_intelligence_meta`, migration 044), and per-card revalidation of materialized cluster payloads. Taxonomy/`CLUSTER_DEFINITIONS` seeding is unchanged and must never appear as live discovery cards."
+    },
     {
       "id": "bugfix-cluster-wipe-empty-state",
       "schema": 1,
