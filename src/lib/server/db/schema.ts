@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 43;
+export const CURRENT_SCHEMA_VERSION = 44;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1577,8 +1577,77 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	40: migration040,
 	41: migration041,
 	42: migration042,
-	43: migration043
+	43: migration043,
+	44: migration044
 };
+
+/**
+ * Intelligence quality: scoring version, evidence snapshot, human overrides,
+ * owner-pattern rules, and bulk review audit log. Additive only.
+ */
+function migration044(database: Database.Database) {
+	const repoCols = columnNames(database, 'repos');
+	for (const def of [
+		'scoring_version TEXT',
+		'classification_evidence_json TEXT',
+		'classification_warnings_json TEXT'
+	] as const) {
+		const name = def.split(' ')[0];
+		if (!repoCols.has(name)) {
+			database.exec(`ALTER TABLE repos ADD COLUMN ${def}`);
+		}
+	}
+
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS intelligence_human_overrides (
+			repository_id INTEGER PRIMARY KEY REFERENCES repos(id) ON DELETE CASCADE,
+			category TEXT,
+			primary_cluster_slug TEXT,
+			notes TEXT,
+			scoring_version TEXT,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			created_by TEXT
+		);
+
+		CREATE TABLE IF NOT EXISTS intelligence_owner_pattern_rules (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			owner TEXT NOT NULL,
+			description_template TEXT,
+			action TEXT NOT NULL,
+			target_category TEXT,
+			apply_existing INTEGER NOT NULL DEFAULT 0,
+			apply_future INTEGER NOT NULL DEFAULT 1,
+			created_at TEXT NOT NULL,
+			created_by TEXT,
+			active INTEGER NOT NULL DEFAULT 1
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_owner_pattern_rules_owner
+		  ON intelligence_owner_pattern_rules(owner, active);
+
+		CREATE TABLE IF NOT EXISTS intelligence_bulk_operations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			operation_type TEXT NOT NULL,
+			filter_json TEXT NOT NULL,
+			from_category TEXT,
+			to_category TEXT,
+			affected_count INTEGER NOT NULL,
+			sample_json TEXT,
+			rollback_json TEXT,
+			created_at TEXT NOT NULL,
+			created_by TEXT,
+			confirmed INTEGER NOT NULL DEFAULT 0
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_intelligence_bulk_ops_created
+		  ON intelligence_bulk_operations(created_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_repos_scoring_version
+		  ON repos(scoring_version)
+		  WHERE scoring_version IS NOT NULL;
+	`);
+}
 
 export interface MigrationRunResult {
 	before: number;
@@ -1727,6 +1796,25 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 		if (!cols.has('pending_deletion_at') || !cols.has('cleanup_protected')) {
 			migration043(database);
 			repairs.push('043:low_value_cleanup');
+		}
+	}
+
+	if (version >= 44) {
+		const cols = columnNames(database, 'repos');
+		const tables = new Set(
+			(
+				database
+					.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+					.all() as { name: string }[]
+			).map((row) => row.name)
+		);
+		if (
+			!cols.has('scoring_version') ||
+			!tables.has('intelligence_human_overrides') ||
+			!tables.has('intelligence_bulk_operations')
+		) {
+			migration044(database);
+			repairs.push('044:intelligence_quality');
 		}
 	}
 

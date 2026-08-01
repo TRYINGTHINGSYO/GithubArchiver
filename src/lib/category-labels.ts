@@ -1,37 +1,43 @@
 const CATEGORY_LABELS: Record<string, string> = {
+	application: 'Application',
 	product: 'Product',
 	library: 'Library',
 	framework: 'Framework',
-	'awesome-list': 'Awesome list',
+	'developer-tool': 'Developer tool',
+	dataset: 'Dataset',
+	documentation: 'Documentation',
+	template: 'Template',
 	'personal-website': 'Personal website',
+	'company-profile': 'Company profile',
+	'portfolio-collection': 'Portfolio collection',
 	portfolio: 'Portfolio',
 	'school-assignment': 'School assignment',
+	'research-project': 'Research project',
+	'awesome-list': 'Awesome list',
 	'ai-project': 'AI project',
 	game: 'Game',
+	bot: 'Bot',
 	devops: 'DevOps',
 	security: 'Security',
 	'data-science': 'Data science',
 	'mobile-app': 'Mobile app',
 	'hardware-iot': 'Hardware / IoT',
 	'spam-template': 'Spam / template',
+	'generated-content': 'Generated content',
 	unknown: 'Unknown',
 	// legacy display fallbacks
-	bot: 'Bot',
 	'cli-tool': 'CLI tool',
 	'web-app': 'Web app',
 	'data-ml': 'Data / ML',
 	'docs-site': 'Docs site',
-	template: 'Template',
 	other: 'Other'
 };
 
 const LEGACY_CATEGORY_MAP: Record<string, string> = {
-	bot: 'product',
 	'cli-tool': 'library',
-	'web-app': 'product',
+	'web-app': 'application',
 	'data-ml': 'data-science',
-	'docs-site': 'personal-website',
-	template: 'spam-template',
+	'docs-site': 'documentation',
 	other: 'unknown'
 };
 

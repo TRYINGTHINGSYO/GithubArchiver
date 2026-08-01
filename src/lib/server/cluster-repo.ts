@@ -45,7 +45,8 @@ const TOPIC_WEIGHT = 50;
 const NAME_WEIGHT = 25;
 const README_WEIGHT = 15;
 const FILE_WEIGHT = 10;
-const WEAK_WEIGHT = 5;
+/** Generic/weak terms (ai, agent, llm alone) — supporting only. */
+const WEAK_WEIGHT = 2;
 
 function categoryAllowed(def: ClusterDefinition, category: string | null): boolean {
 	if (!def.categories?.length) return true;
