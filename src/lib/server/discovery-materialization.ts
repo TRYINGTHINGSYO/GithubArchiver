@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { getDb } from './db/connection.js';
 
 /** Bump when materializer payload shape or section selection rules change. */
-export const DISCOVERY_MATERIALIZATION_ALGORITHM_VERSION = 1;
+export const DISCOVERY_MATERIALIZATION_ALGORITHM_VERSION = 2;
 
 /**
  * Explicit freshness window for homepage discovery materialization.

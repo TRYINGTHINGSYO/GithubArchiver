@@ -146,14 +146,14 @@
 			</article>
 		{:else}
 			<p class="empty">
-				{#if data.discoveryStatus.repositoriesDiscovered === 0}
+				{#if data.clusterSurface.emptyReason === 'no-repositories'}
 					No repositories have been analyzed yet. Fastest-growing cluster cards require live
-					repository intelligence.
-				{:else if data.discovery.clusters.length === 0}
-					Repositories are indexed, but clustering has not yet completed. Cards are built only from
-					live cluster memberships.
+					repository intelligence — not predefined cluster types.
+				{:else if data.clusterSurface.emptyReason === 'clustering-incomplete'}
+					No clusters generated yet. Repository intelligence has not produced any qualifying
+					clusters.
 				{:else}
-					No clusters meet the growth guardrails yet.
+					Repository intelligence has not produced any qualifying clusters for growth yet.
 				{/if}
 			</p>
 		{/each}
