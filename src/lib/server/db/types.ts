@@ -4,6 +4,8 @@ export interface RepoRow {
 	name: string;
 	full_name: string;
 	github_url: string;
+	/** GitHub numeric repository id when known; permanent identity across renames. */
+	github_id: number | null;
 	event_id: string;
 	created_at: string;
 	first_seen_at: string;
@@ -64,6 +66,7 @@ export interface NewRepo {
 	name: string;
 	full_name: string;
 	github_url: string;
+	github_id?: number | null;
 	event_id: string;
 	created_at: string;
 	first_seen_at: string;
@@ -87,6 +90,7 @@ export interface EnrichmentData {
 	visibility?: string | null;
 	owner_avatar_url?: string | null;
 	owner_type?: string | null;
+	github_id?: number | null;
 }
 
 export interface RepoQuery {

@@ -1,8 +1,10 @@
 import { existsSync, readdirSync, rmSync, statSync, statfsSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
+import { getDatabaseInventory, type DatabaseInventory } from './db-inventory';
 import { getDb } from './db/connection';
 import { listFavoriteRepoIds } from './db/favorites';
 import type { ArchiveSnapshotRow } from './db/types';
+import { runRetention, type RetentionReport } from './retention';
 import { getArchiveDir, resolveSafeSnapshotPath } from './snapshots';
 
 export interface StorageRepoSize {
@@ -53,6 +55,10 @@ export interface StorageReport {
 	old_snapshot_bytes: number;
 	keep_last_n: number;
 	cleanups: StorageCleanup[];
+	/** SQLite + backup volume inventory (always computed). */
+	database: DatabaseInventory;
+	/** Retention preview or applied actions when requested. */
+	retention?: RetentionReport;
 }
 
 export interface StoragePressureResult {
@@ -69,6 +75,14 @@ export interface StorageOptions {
 	deleteDuplicates?: boolean;
 	deleteZipSnapshots?: boolean;
 	trimOld?: boolean;
+	/** Preview or apply DB/job/backup retention. */
+	retention?: boolean;
+	applyRetention?: boolean;
+	vacuum?: boolean;
+	pruneJobRuns?: boolean;
+	pruneMetrics?: boolean;
+	pruneEvents?: boolean;
+	pruneBackups?: boolean;
 }
 
 const SAMPLE_LIMIT = 20;
@@ -547,6 +561,27 @@ export function runStorageAnalysis(opts: StorageOptions = {}): StorageReport {
 	const orphans = findOrphanFiles(snapshots, refreshedDiskFiles);
 	const old = findOldSnapshots(snapshots, protectedIds, keepLastN);
 
+	const wantRetention =
+		opts.retention ||
+		opts.applyRetention ||
+		opts.vacuum ||
+		opts.pruneJobRuns ||
+		opts.pruneMetrics ||
+		opts.pruneEvents ||
+		opts.pruneBackups ||
+		envFlag('STORAGE_RUN_RETENTION');
+
+	const retention = wantRetention
+		? runRetention({
+				apply: Boolean(opts.applyRetention || envFlag('STORAGE_APPLY_RETENTION')),
+				vacuum: Boolean(opts.vacuum || envFlag('STORAGE_VACUUM')),
+				jobRuns: opts.pruneJobRuns ?? true,
+				metrics: opts.pruneMetrics ?? true,
+				events: opts.pruneEvents ?? true,
+				backups: opts.pruneBackups ?? true
+			})
+		: undefined;
+
 	return {
 		total_bytes_on_disk: refreshedTotalOnDisk,
 		total_bytes_indexed: indexedBytes,
@@ -560,12 +595,15 @@ export function runStorageAnalysis(opts: StorageOptions = {}): StorageReport {
 		old_snapshots: old.rows,
 		old_snapshot_bytes: old.bytes,
 		keep_last_n: keepLastN,
-		cleanups
+		cleanups,
+		database: getDatabaseInventory(),
+		retention
 	};
 }
 
 export function getStorageReport(): StorageReport {
-	return runStorageAnalysis({ cleanup: false });
+	// Include retention preview on the admin page; inventory alone is cheap enough.
+	return runStorageAnalysis({ cleanup: false, retention: true });
 }
 
 export function enforceStoragePressureLimit(): StoragePressureResult {
@@ -586,7 +624,14 @@ export function enforceStoragePressureLimit(): StoragePressureResult {
 		deleteOrphans: true,
 		deleteDuplicates: true,
 		deleteZipSnapshots: true,
-		trimOld: true
+		trimOld: true,
+		applyRetention: true,
+		pruneJobRuns: true,
+		pruneMetrics: true,
+		pruneEvents: true,
+		pruneBackups: true,
+		// VACUUM needs substantial free space; skip under pressure.
+		vacuum: false
 	});
 	const freeBytesAfter = freeBytesForPath(archiveDir);
 	return {

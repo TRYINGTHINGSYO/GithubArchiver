@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 41;
+export const CURRENT_SCHEMA_VERSION = 42;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1416,6 +1416,44 @@ function migration041(database: Database.Database) {
 	`);
 }
 
+/**
+ * Permanent GitHub repository identity + retention-friendly uniqueness.
+ * `github_id` is nullable until enrichment/ingest fills it; unique when present.
+ * Case-insensitive owner/name uniqueness is applied only when no conflicts exist.
+ */
+function migration042(database: Database.Database) {
+	const repoCols = columnNames(database, 'repos');
+	if (!repoCols.has('github_id')) {
+		database.exec(`ALTER TABLE repos ADD COLUMN github_id INTEGER`);
+	}
+
+	database.exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS repos_github_id_unique
+		  ON repos(github_id)
+		  WHERE github_id IS NOT NULL;
+
+		CREATE INDEX IF NOT EXISTS idx_repos_github_id
+		  ON repos(github_id);
+	`);
+
+	const ownerNameDupes = database
+		.prepare(
+			`SELECT COUNT(*) AS c FROM (
+			   SELECT 1
+			   FROM repos
+			   GROUP BY LOWER(owner), LOWER(name)
+			   HAVING COUNT(*) > 1
+			 )`
+		)
+		.get() as { c: number };
+	if (ownerNameDupes.c === 0) {
+		database.exec(`
+			CREATE UNIQUE INDEX IF NOT EXISTS repos_owner_name_unique
+			  ON repos(LOWER(owner), LOWER(name));
+		`);
+	}
+}
+
 /** Website discovery: CT + zone intake → shared candidates → liveness verify. */
 function migration037(database: Database.Database) {
 	database.exec(`
@@ -1503,7 +1541,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	38: migration038,
 	39: migration039,
 	40: migration040,
-	41: migration041
+	41: migration041,
+	42: migration042
 };
 
 export interface MigrationRunResult {
@@ -1630,6 +1669,22 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 	if (version >= 41 && (!collectionTablesPresent || !collectionIndexesPresent)) {
 		migration041(database);
 		repairs.push('041:owner_collections');
+	}
+
+	// Schema 42 may be recorded without github_id / unique indexes.
+	if (version >= 42) {
+		const githubIdPresent = columnNames(database, 'repos').has('github_id');
+		const indexes = new Set(
+			(
+				database
+					.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`)
+					.all() as { name: string }[]
+			).map((row) => row.name)
+		);
+		if (!githubIdPresent || !indexes.has('repos_github_id_unique')) {
+			migration042(database);
+			repairs.push('042:repos_github_id');
+		}
 	}
 
 	return repairs;

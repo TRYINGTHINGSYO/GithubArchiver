@@ -18,6 +18,7 @@ import {
 	countRepos,
 	sumArchiveSnapshotBytes
 } from './db';
+import { pruneBackups } from './retention';
 
 export const BACKUPS_DIR = process.env.BACKUPS_DIR ?? './data/backups';
 
@@ -388,6 +389,9 @@ export async function runBackup(opts: BackupOptions = {}): Promise<BackupResult>
 		metadata = { ...metadata, total_bytes: dirSize(destDir) };
 		writeFileSync(join(destDir, 'metadata.json'), JSON.stringify(metadata, null, 2));
 	}
+
+	// Keep the live volume from accumulating every backup forever.
+	pruneBackups(true);
 
 	return {
 		dir: resultPath,

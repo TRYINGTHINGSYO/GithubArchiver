@@ -225,7 +225,8 @@ function toEnrichmentData(data: FetchedRepoMetadata): EnrichmentData {
 		license: data.license,
 		topics: data.topics,
 		pushed_at: data.pushed_at,
-		updated_at: data.updated_at
+		updated_at: data.updated_at,
+		github_id: data.github_id
 	};
 }
 

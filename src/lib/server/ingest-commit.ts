@@ -36,10 +36,10 @@ export function commitGhArchiveCreateBatch(
 	const db = getDb();
 	const insert = db.prepare(
 		`INSERT OR IGNORE INTO repos
-		 (owner, name, full_name, github_url, event_id, created_at, first_seen_at,
+		 (owner, name, full_name, github_url, github_id, event_id, created_at, first_seen_at,
 		  discovery_source, enrichment_status, enrichment_priority, enrichment_tier,
 		  enrichment_depth, next_enrichment_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, 'gharchive', ?, ?, ?, 'none', ?)`
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'gharchive', ?, ?, ?, 'none', ?)`
 	);
 	const insertEvent = db.prepare(
 		`INSERT INTO repository_events (repo_id, event_type, event_time, payload_json)
@@ -73,6 +73,7 @@ export function commitGhArchiveCreateBatch(
 				event.name,
 				event.full_name,
 				event.github_url,
+				event.github_id,
 				event.event_id,
 				event.created_at,
 				firstSeenAt,

@@ -100,16 +100,28 @@ function recoverFromStoragePressure(): Record<string, unknown> {
 		deleteOrphans: true,
 		deleteDuplicates: true,
 		deleteZipSnapshots: true,
-		trimOld: true
+		trimOld: true,
+		applyRetention: true,
+		pruneJobRuns: true,
+		pruneMetrics: true,
+		pruneEvents: true,
+		pruneBackups: true,
+		vacuum: false
 	});
-	const freed = report.cleanups.reduce((sum, item) => sum + (item.bytes_freed ?? 0), 0);
+	const archiveFreed = report.cleanups.reduce((sum, item) => sum + (item.bytes_freed ?? 0), 0);
+	const backupFreed =
+		report.retention?.actions.reduce((sum, item) => sum + (item.bytes_freed_estimate ?? 0), 0) ?? 0;
+	const freed = archiveFreed + backupFreed;
 	return {
 		storage_cleanup: true,
 		bytes_freed: freed,
 		bytes_freed_label: formatStorageBytes(freed),
 		total_bytes_on_disk: report.total_bytes_on_disk,
 		total_bytes_on_disk_label: formatStorageBytes(report.total_bytes_on_disk),
-		cleanups: report.cleanups
+		database_bytes: report.database.database_bytes,
+		backup_bytes: report.database.backups.bytes,
+		cleanups: report.cleanups,
+		retention: report.retention?.actions ?? []
 	};
 }
 

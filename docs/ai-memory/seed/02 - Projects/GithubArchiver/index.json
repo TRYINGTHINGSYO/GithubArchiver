@@ -1,9 +1,33 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-07-31T10:17:23.333Z",
+  "generatedAt": "2026-08-01T09:13:17.629Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-storage-retention-volume",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-08-01",
+      "pr": null,
+      "commit": null,
+      "migration": 42,
+      "area": [
+        "storage",
+        "sqlite",
+        "ops",
+        "railway"
+      ],
+      "related": [],
+      "relationships": [],
+      "supersedes": null,
+      "title": "Volume retention, dbstat inventory, and github_id uniqueness",
+      "path": "entries/2026-08-01-feature-storage-retention-volume.md",
+      "summary": "Least-disruption storage hygiene for the Railway SQLite volume:"
+    },
     {
       "id": "decision-mcp-first-dev-workflow",
       "schema": 1,

@@ -122,10 +122,20 @@ ADMIN_PASSWORD=change-me      # default is GitHub if omitted
 BACKGROUND_WORKER=auto        # default on Railway; set 0 to disable auto-scan
 PORT=8080                     # Railway sets this automatically
 STORAGE_MIN_FREE_BYTES=1073741824
-ENABLE_ARTIFACT_ARCHIVE=1     # optional: enable README/source/ZIP artifact storage
+ENABLE_ARTIFACT_ARCHIVE=0     # leave unset/0 (default); set 1 only to store README/source/ZIP artifacts
+METADATA_ONLY=1               # legacy flag; metadata-only is already the default
+JOB_RUNS_RETENTION_DAYS=30
+JOB_RUNS_FAILED_RETENTION_DAYS=90
+EVENT_RETENTION_DAYS=120
+METRICS_RETENTION_DAYS=365
+BACKUP_KEEP_DAILY=7
+BACKUP_KEEP_WEEKLY=4
+BACKUP_KEEP_MONTHLY=3
 ```
 
-When free archive volume space falls below `STORAGE_MIN_FREE_BYTES` (default: 1 GiB), archive cycles run storage cleanup before downloading more artifacts. Favorited repositories are protected during this pressure cleanup.
+When free archive volume space falls below `STORAGE_MIN_FREE_BYTES` (default: 1 GiB), archive cycles run storage cleanup (artifacts + retention) before downloading more artifacts. Favorited repositories are protected during this pressure cleanup.
+
+Use `/admin/storage` for SQLite `dbstat` sizes, row counts, duplicate repo analysis, retention preview, and VACUUM. Increase the Railway volume first if the disk is full — VACUUM needs free space.
 
 Deploy flow: Docker build (`npm ci` + `npm run build`) → `npm run db:migrate` → `npm run start:server`.  
 First deploy typically takes **5–10 minutes** (native `better-sqlite3` compile + SvelteKit build).
@@ -149,7 +159,7 @@ First deploy typically takes **5–10 minutes** (native `better-sqlite3` compile
 | `pipeline:once` | Single full cycle (no daemon loop) |
 | `backup` / `restore` | Local backup and restore |
 | `doctor` | Health checks; optional FTS rebuild / missing snapshot cleanup |
-| `storage:analyze` | Archive disk usage, duplicates, cleanup |
+| `storage:analyze` | Archive + database inventory, retention preview, cleanup |
 | `backfill:day` / `backfill:range` / `backfill:resume` | Resumable historical backfill |
 
 ```bash
@@ -241,6 +251,11 @@ Migrations are versioned in `schema_version` (current: **v14**).
 | `BACKUPS_DIR` | `./data/backups` | Backup output |
 | `METADATA_ONLY` | enabled | Legacy flag; metadata-only storage is the default |
 | `ENABLE_ARTIFACT_ARCHIVE` | — | Set `1` to opt into README/source/ZIP artifact downloads |
+| `JOB_RUNS_RETENTION_DAYS` | `30` | Delete successful/cancelled `job_runs` older than this |
+| `JOB_RUNS_FAILED_RETENTION_DAYS` | `90` | Delete failed/interrupted `job_runs` older than this |
+| `EVENT_RETENTION_DAYS` | `120` | Delete high-churn events (`metadata_updated` / `metrics_updated`) older than this |
+| `METRICS_RETENTION_DAYS` | `365` | Age out metric snapshots after daily collapse (latest per repo kept) |
+| `BACKUP_KEEP_DAILY` / `_WEEKLY` / `_MONTHLY` | `7` / `4` / `3` | On-volume backup retention after each backup run |
 | `ADMIN_PASSWORD` | `GitHub` | Shared admin login password |
 | `ADMIN_SESSION_SECRET` | `ADMIN_PASSWORD` | HMAC secret for admin session cookies |
 | `STORAGE_MIN_FREE_BYTES` | `1073741824` | Free-space threshold that triggers cleanup before archive downloads |

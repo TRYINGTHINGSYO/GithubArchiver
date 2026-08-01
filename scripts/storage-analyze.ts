@@ -2,13 +2,40 @@ import './load-env.js';
 import { formatBytes } from '../src/lib/utils.js';
 import { runStorageAnalysis } from '../src/lib/server/storage.js';
 
-const report = runStorageAnalysis({ cleanup: true });
+const report = runStorageAnalysis({ cleanup: true, retention: true });
 
 console.log('Archive storage analysis');
-console.log(`  On disk: ${formatBytes(report.total_bytes_on_disk)} (${report.file_count_on_disk} files)`);
+console.log(`  Database: ${formatBytes(report.database.database_bytes)} (+ ${formatBytes(report.database.wal_bytes)} wal)`);
+console.log(`  Backups: ${formatBytes(report.database.backups.bytes)} (${report.database.backups.file_count} files)`);
+console.log(`  Archives on disk: ${formatBytes(report.total_bytes_on_disk)} (${report.file_count_on_disk} files)`);
 console.log(`  Indexed: ${formatBytes(report.total_bytes_indexed)} (${report.snapshot_count} snapshots)`);
+console.log(`  Mode: ${report.database.metadata_only ? 'metadata-only' : 'artifacts enabled'}`);
 console.log(`  Keep last N (preview): ${report.keep_last_n}`);
 console.log('');
+
+if (report.database.row_counts.length) {
+	console.log('Row counts:');
+	for (const row of report.database.row_counts) {
+		console.log(`  ${row.name}: ${row.count.toLocaleString()}`);
+	}
+	console.log('');
+}
+
+if (report.database.table_sizes.length) {
+	console.log('Largest SQLite objects (dbstat):');
+	for (const row of report.database.table_sizes.slice(0, 15)) {
+		console.log(`  ${row.name}: ${formatBytes(row.bytes)} (${row.megabytes} MB)`);
+	}
+	console.log('');
+}
+
+if (report.retention) {
+	console.log('Retention preview:');
+	for (const action of report.retention.actions) {
+		console.log(`  [${action.id}] ${action.message}`);
+	}
+	console.log('');
+}
 
 console.log(`Largest repos (${report.largest_repos.length} shown):`);
 for (const repo of report.largest_repos.slice(0, 10)) {

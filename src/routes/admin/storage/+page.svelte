@@ -76,6 +76,35 @@
 			actionLoading = false;
 		}
 	}
+
+	async function runRetention(opts: Record<string, boolean>, label: string) {
+		const warning = opts.vacuum
+			? `${label}? VACUUM needs free disk space roughly the size of the database.`
+			: `${label}? This cannot be undone.`;
+		if (!confirm(warning)) return;
+		actionLoading = true;
+		actionMsg = '';
+		actionError = false;
+		try {
+			const res = await fetch('/api/admin/maintenance', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'retention', ...opts })
+			});
+			const json = await res.json();
+			if (!res.ok) throw new Error(json.error ?? res.statusText);
+			actionMsg = `${label} complete — see Job history for details`;
+			await invalidateAll();
+		} catch (err) {
+			actionError = true;
+			actionMsg = err instanceof Error ? err.message : String(err);
+		} finally {
+			actionLoading = false;
+		}
+	}
+
+	const db = $derived(report.database);
+	const retention = $derived(report.retention);
 </script>
 
 <svelte:head>
@@ -84,16 +113,155 @@
 
 <h1>Archive Storage</h1>
 <p class="storage-lead">
-	Disk usage, duplicates, and cleanup. Actions run in-process and results are saved to
-	<a href="/admin/jobs?type=maintenance">Job history</a>.
+	Disk usage, database inventory, duplicates, and cleanup. Actions run in-process and results are
+	saved to <a href="/admin/jobs?type=maintenance">Job history</a>.
 </p>
 
 <div class="stats-bar" style="margin-bottom: 1.5rem">
-	<span>{formatBytes(report.total_bytes_on_disk)} on disk</span>
-	<span>{formatBytes(report.total_bytes_indexed)} indexed</span>
-	<span>{report.snapshot_count} snapshots</span>
-	<span>{report.file_count_on_disk} files</span>
+	<span>{formatBytes(db.database_bytes)} database</span>
+	<span>{formatBytes(db.backups.bytes)} backups</span>
+	<span>{formatBytes(report.total_bytes_on_disk)} archives</span>
+	<span>{db.metadata_only ? 'metadata-only' : 'artifacts enabled'}</span>
 </div>
+
+<section class="detail-section">
+	<h2 class="section-title">Database volume</h2>
+	<p class="storage-meta mono">{db.database_path}</p>
+	<div class="stats-bar" style="margin-bottom: 1rem">
+		<span>{formatBytes(db.database_bytes)} db</span>
+		<span>{formatBytes(db.wal_bytes)} wal</span>
+		<span>{formatBytes(db.shm_bytes)} shm</span>
+		{#if db.freelist_count != null}
+			<span>{db.freelist_count.toLocaleString()} free pages</span>
+		{/if}
+	</div>
+
+	{#if db.row_counts.length > 0}
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>Table</th>
+					<th>Rows</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each db.row_counts as row}
+					<tr>
+						<td class="mono">{row.name}</td>
+						<td>{row.count.toLocaleString()}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{/if}
+
+	{#if db.table_sizes.length > 0}
+		<h3 class="section-title" style="margin-top: 1.25rem">Largest SQLite objects</h3>
+		<p class="storage-meta">From <code>dbstat</code> — includes tables and indexes (e.g. FTS).</p>
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Size</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each db.table_sizes.slice(0, 12) as row}
+					<tr>
+						<td class="mono">{row.name}</td>
+						<td>{formatBytes(row.bytes)} ({row.megabytes} MB)</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{/if}
+</section>
+
+<section class="detail-section">
+	<h2 class="section-title">Duplicate repositories</h2>
+	<p class="storage-meta">
+		Primary key is GitHub numeric id. Owner/name duplicates can be renames or case variants — do not
+		blind-delete by name alone.
+	</p>
+	{#if db.duplicate_github_ids.length === 0 && db.duplicate_owner_names.length === 0}
+		<p class="empty-state">No duplicate github_id or owner/name groups found.</p>
+	{:else}
+		{#if db.duplicate_github_ids.length > 0}
+			<p class="storage-meta">{db.duplicate_github_ids.length} github_id group(s)</p>
+			<ul class="storage-list">
+				{#each db.duplicate_github_ids as group}
+					<li class="mono">
+						github_id={group.github_id} ×{group.duplicate_count} · {group.full_names.join(', ')}
+					</li>
+				{/each}
+			</ul>
+		{/if}
+		{#if db.duplicate_owner_names.length > 0}
+			<p class="storage-meta">{db.duplicate_owner_names.length} owner/name group(s)</p>
+			<ul class="storage-list">
+				{#each db.duplicate_owner_names as group}
+					<li class="mono">
+						{group.owner}/{group.name} ×{group.duplicate_count} · {group.full_names.join(', ')}
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	{/if}
+</section>
+
+<section class="detail-section">
+	<h2 class="section-title">Retention preview</h2>
+	<p class="storage-meta">
+		Backups: {formatBytes(db.backups.bytes)} ({db.backups.file_count} files) · Artifacts:
+		{db.artifact_archive_enabled ? 'enabled' : 'disabled (recommended)'}
+	</p>
+	{#if retention}
+		<ul class="storage-list">
+			{#each retention.actions as action}
+				<li>
+					<span class="mono">{action.id}</span>
+					— {action.message}
+					{#if action.deleted > 0}
+						<span class="storage-meta">({action.deleted.toLocaleString()})</span>
+					{/if}
+				</li>
+			{/each}
+		</ul>
+	{/if}
+	<div class="storage-actions">
+		<button
+			type="button"
+			class="filter-btn"
+			disabled={actionLoading}
+			onclick={() =>
+				runRetention(
+					{ apply_retention: true, prune_job_runs: true, prune_metrics: true, prune_events: true, prune_backups: true },
+					'Apply retention (jobs, metrics, events, backups)'
+				)}
+		>
+			Apply retention
+		</button>
+		<button
+			type="button"
+			class="filter-btn"
+			disabled={actionLoading}
+			onclick={() =>
+				runRetention(
+					{
+						apply_retention: true,
+						vacuum: true,
+						prune_job_runs: false,
+						prune_metrics: false,
+						prune_events: false,
+						prune_backups: false
+					},
+					'VACUUM database'
+				)}
+		>
+			VACUUM database
+		</button>
+	</div>
+</section>
 
 <section class="detail-section">
 	<h2 class="section-title">Largest repos</h2>

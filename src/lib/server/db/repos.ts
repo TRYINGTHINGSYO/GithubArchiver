@@ -25,14 +25,15 @@ export function insertRepo(repo: NewRepo): { status: 'inserted' | 'skipped'; id?
 	const result = database
 		.prepare(
 			`INSERT OR IGNORE INTO repos
-			 (owner, name, full_name, github_url, event_id, created_at, first_seen_at, discovery_source)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+			 (owner, name, full_name, github_url, github_id, event_id, created_at, first_seen_at, discovery_source)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			repo.owner,
 			repo.name,
 			repo.full_name,
 			repo.github_url,
+			repo.github_id ?? null,
 			repo.event_id,
 			repo.created_at,
 			repo.first_seen_at,
@@ -177,6 +178,7 @@ export function saveEnrichment(id: number, data: EnrichmentData): void {
 				topics = ?,
 				pushed_at = ?,
 				updated_at = ?,
+				github_id = COALESCE(?, github_id),
 				enriched_at = COALESCE(enriched_at, ?),
 				enrichment_level = MAX(COALESCE(enrichment_level, 0), 1),
 				last_checked_at = ?
@@ -199,6 +201,7 @@ export function saveEnrichment(id: number, data: EnrichmentData): void {
 			JSON.stringify(data.topics),
 			data.pushed_at,
 			data.updated_at,
+			data.github_id ?? null,
 			now,
 			now,
 			id
@@ -228,6 +231,7 @@ export function saveRefreshUpdate(id: number, data: EnrichmentData): void {
 				topics = ?,
 				pushed_at = ?,
 				updated_at = ?,
+				github_id = COALESCE(?, github_id),
 				last_checked_at = ?
 			WHERE id = ?`
 		)
@@ -248,6 +252,7 @@ export function saveRefreshUpdate(id: number, data: EnrichmentData): void {
 			JSON.stringify(data.topics),
 			data.pushed_at,
 			data.updated_at,
+			data.github_id ?? null,
 			now,
 			id
 		);

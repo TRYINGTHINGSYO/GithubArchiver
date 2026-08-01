@@ -6,7 +6,7 @@ export const GH_ARCHIVE_BASE = 'https://data.gharchive.org';
 export interface GhArchiveEvent {
 	id: string | number;
 	type: string;
-	repo?: { name: string };
+	repo?: { id?: number; name: string };
 	created_at: string;
 	payload?: GhArchivePayload | string;
 }
@@ -24,6 +24,8 @@ export interface RepoCreateEvent {
 	name: string;
 	full_name: string;
 	github_url: string;
+	/** Numeric GitHub repository id when present on the GH Archive event. */
+	github_id: number | null;
 	event_id: string;
 	created_at: string;
 }
@@ -274,11 +276,13 @@ function toRepoCreateEvent(event: GhArchiveEvent): RepoCreateEvent | null {
 	if (!isRepositoryCreateEvent(event)) return null;
 	const [owner, name] = event.repo!.name.split('/');
 	if (!owner || !name) return null;
+	const githubId = event.repo?.id;
 	return {
 		owner,
 		name,
 		full_name: event.repo!.name,
 		github_url: `https://github.com/${event.repo!.name}`,
+		github_id: typeof githubId === 'number' && Number.isFinite(githubId) ? githubId : null,
 		event_id: String(event.id),
 		created_at: event.created_at
 	};

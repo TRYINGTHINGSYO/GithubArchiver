@@ -59,7 +59,8 @@ function toEnrichment(data: Awaited<ReturnType<typeof fetchRepoMetadata>>): Enri
 		license: data.license,
 		topics: data.topics,
 		pushed_at: data.pushed_at,
-		updated_at: data.updated_at
+		updated_at: data.updated_at,
+		github_id: data.github_id
 	};
 }
 
@@ -140,6 +141,7 @@ async function insertFromMetadata(
 		name: meta.name,
 		full_name: meta.full_name,
 		github_url: `https://github.com/${meta.full_name}`,
+		github_id: meta.github_id,
 		event_id: `${source}:${meta.full_name}:${now}`,
 		created_at: createdAt,
 		first_seen_at: now,

@@ -18,6 +18,7 @@ function headers(extra?: HeadersInit): HeadersInit {
 }
 
 export interface GitHubRepo {
+	id: number;
 	name: string;
 	full_name: string;
 	owner: { login: string; avatar_url: string | null; type: string | null };
@@ -272,6 +273,7 @@ export type FetchedRepoMetadata = {
 	owner: string;
 	name: string;
 	full_name: string;
+	github_id: number | null;
 	default_branch: string;
 	description: string | null;
 	homepage: string | null;
@@ -308,6 +310,7 @@ export async function fetchRepoMetadata(
 			owner,
 			name: repo,
 			full_name: `${owner}/${repo}`,
+			github_id: null,
 			default_branch: 'main',
 			description: null,
 			homepage: null,
@@ -337,6 +340,7 @@ export async function fetchRepoMetadata(
 		owner: gh.owner.login,
 		name: gh.name,
 		full_name: gh.full_name,
+		github_id: typeof gh.id === 'number' ? gh.id : null,
 		default_branch: gh.default_branch,
 		description: gh.description,
 		homepage: gh.homepage || null,

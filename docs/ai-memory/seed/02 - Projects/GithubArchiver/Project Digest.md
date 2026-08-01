@@ -63,6 +63,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-08-01** · `feature` · `confirmed` · `permanent` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-07-31** · `decision` · `confirmed` · `permanent` · `6fbaa7a` · `verified` · `mcp`, `project-memory`, `adoption` — [MCP is the primary knowledge and review layer](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
   - edges: references:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), related:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), validates:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 - **2026-07-31** · `feature` · `confirmed` · `permanent` · `closed` · `homepage`, `discovery`, `mcp` — [Harden homepage discovery materialization durability](entries/2026-07-31-feature-durable-discovery-materialization.md)
@@ -77,8 +78,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `observability`, `search-fallback`, `enrichment`, `emerging-topics` — [Three dashboard fields asserted things the data did not support](entries/2026-07-30-bugfix-dashboard-trust-semantics.md)
   - edges: supersedes:[`incident-search-fallback-stale`](entries/2026-07-18-pr-6-search-fallback-active.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), validates:`test-readiness-growth-gate`
-- **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `deploy`, `daemon` — [Railway healthcheck on / raced daemon ingest — deploy failed, site 502](entries/2026-07-30-bugfix-deploy-healthcheck-race.md)
-  - edges: caused-by:[`feature-ingest-timeout-hour-backoff`](entries/2026-07-30-feature-ingest-timeout-hour-backoff.md), related:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md)
 
 ## Open technical debt
 
@@ -87,6 +86,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-08-01** · `feature` · `confirmed` · `permanent` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `enrichment`, `daemon`, `observability` — [Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)

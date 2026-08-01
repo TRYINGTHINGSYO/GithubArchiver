@@ -13,6 +13,7 @@ function creates(n: number, offset = 0): RepoCreateEvent[] {
 		name: `repo-${offset + i}`,
 		full_name: `owner/repo-${offset + i}`,
 		github_url: `https://github.com/owner/repo-${offset + i}`,
+		github_id: 10_000 + offset + i,
 		event_id: `evt-${offset + i}`,
 		created_at: '2026-07-26T18:00:00.000Z'
 	}));
@@ -31,11 +32,15 @@ describe('commitGhArchiveCreates', () => {
 		expect(result.commitMs).toBeGreaterThanOrEqual(0);
 
 		const repos = getDb().prepare('SELECT COUNT(*) AS c FROM repos').get() as { c: number };
+		const withGithubId = getDb()
+			.prepare('SELECT COUNT(*) AS c FROM repos WHERE github_id IS NOT NULL')
+			.get() as { c: number };
 		const events = getDb()
 			.prepare(`SELECT COUNT(*) AS c FROM repository_events WHERE event_type = 'first_seen'`)
 			.get() as { c: number };
 		const fts = getDb().prepare('SELECT COUNT(*) AS c FROM repos_fts').get() as { c: number };
 		expect(repos.c).toBe(25);
+		expect(withGithubId.c).toBe(25);
 		expect(events.c).toBe(25);
 		expect(fts.c).toBe(25);
 
