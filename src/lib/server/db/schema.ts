@@ -1460,6 +1460,21 @@ function migration042(database: Database.Database) {
  * and dual-fills `collection_items` for repositories.
  */
 function migration044(database: Database.Database) {
+	// Drift repair may mark schema ≥44 before prerequisite DDL exists.
+	const tables = new Set(
+		(
+			database
+				.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+				.all() as { name: string }[]
+		).map((row) => row.name)
+	);
+	if (!tables.has('candidate_domains')) {
+		migration037(database);
+	}
+	if (!tables.has('collections')) {
+		migration041(database);
+	}
+
 	const domainCols = columnNames(database, 'candidate_domains');
 	for (const def of [
 		'rating_sum INTEGER NOT NULL DEFAULT 0',
@@ -1536,11 +1551,13 @@ function migration044(database: Database.Database) {
 	`);
 
 	// Backfill polymorphic items from existing repository memberships.
-	database.exec(`
-		INSERT OR IGNORE INTO collection_items (collection_id, item_type, item_key, created_at)
-		SELECT collection_id, 'repository', CAST(repo_id AS TEXT), created_at
-		FROM collection_repositories
-	`);
+	if (tables.has('collection_repositories')) {
+		database.exec(`
+			INSERT OR IGNORE INTO collection_items (collection_id, item_type, item_key, created_at)
+			SELECT collection_id, 'repository', CAST(repo_id AS TEXT), created_at
+			FROM collection_repositories
+		`);
+	}
 }
 
 /**
