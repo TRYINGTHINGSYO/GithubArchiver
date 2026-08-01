@@ -1,6 +1,8 @@
 ---
 id: feature-low-value-repo-cleanup
 date: 2026-08-01
+pr: 27
+commit: c998fd2
 area:
   - storage
   - sqlite

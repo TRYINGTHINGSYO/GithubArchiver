@@ -11,10 +11,10 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
-- [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md) (`feature`, `confirmed`, `permanent`) — Volume retention, dbstat inventory, and github_id uniqueness
-  - _none_
 - [`feature-low-value-repo-cleanup`](entries/2026-08-01-feature-low-value-repo-cleanup.md) (`feature`, `confirmed`, `permanent`) — Staged low-value repo cleanup with quarantine
   - `related` → [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
+- [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md) (`feature`, `confirmed`, `permanent`) — Volume retention, dbstat inventory, and github_id uniqueness
+  - _none_
 - [`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md) (`decision`, `confirmed`, `permanent`) — MCP is the primary knowledge and review layer
   - `references` → [`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), `related` → [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), `validates` → [`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 - [`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md) (`feature`, `confirmed`, `permanent`) — Harden homepage discovery materialization durability
