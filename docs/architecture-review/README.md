@@ -1,17 +1,18 @@
-# Architecture review update (current branch)
+# Architecture review update (PR #28 delta)
 
 - Review date: 2026-08-01
-- Reviewed branch: `cursor/architecture-review-delta-2dbd` (tracking `origin/cursor/intelligence-discovery-redesign-1514` / PR #28)
-- Reviewed commit: `2b77ed95201b0c395b445bdbb475966bedcc83bc`
-- Executable schema: **v44** (`CURRENT_SCHEMA_VERSION`)
-- Highest migration: **044** (`migration044` / website curation)
+- Reviewed **code** branch: `origin/cursor/intelligence-discovery-redesign-1514` (PR #28)
+- Reviewed **code** commit: `2b77ed95201b0c395b445bdbb475966bedcc83bc`
+- Docs PR branch: `cursor/architecture-review-delta-2dbd` (based on `main`; documentation only)
+- Executable schema on reviewed code: **v44** (`CURRENT_SCHEMA_VERSION`)
+- Highest migration on reviewed code: **044** (`migration044` / website curation)
 - Application code was **not** modified in this documentation pass
 
 ## Source note
 
-The cloud agent initially checked out `main` (`7a61a65`), which does **not** contain PR #28. Review continued only after switching to the PR #28 head so findings are not based on the stale exported workspace or on `main` alone.
+The cloud agent initially checked out `main` (`7a61a65`), which does **not** contain PR #28. Analysis continued only after checking out the PR #28 head so findings are not based on the stale exported workspace or on `main` alone.
 
-The prior documentation-only snapshot lives on `main` under `docs/architecture-review/` (commit `7a61a65`, schema v13 claims). This update is a delta against that snapshot.
+The prior documentation-only snapshot (schema v13 claims) remains in this directory as historical files (`overview.md`, `database.md`, etc., from `7a61a65`). **Treat those as stale for website/cluster/auth presence.** This update adds delta documents and fix packets against PR #28.
 
 ## Documents in this update
 
@@ -35,4 +36,8 @@ The prior documentation-only snapshot lives on `main` under `docs/architecture-r
 | CSRF | Absent | **Still absent** (app-level) |
 | `sourceAnalysis: null` | Broken | **Still broken** |
 | README compare missing symbols | Broken | **Still broken** (missing imports) |
-| Empty-volume cluster cards | Not diagnosed | **Confirmed** materialization stale-read; fix exists on `main` as PR #30 / `2c5b89f`, **not** on this branch |
+| Empty-volume cluster cards | Not diagnosed | **Confirmed** materialization stale-read; fix exists on `main` as PR #30 / `2c5b89f`, **not** on PR #28 head |
+
+## Historical snapshot files
+
+The original v13 export write-up files are retained for comparison but are **not** authoritative for current product presence. Start with `current-branch-delta.md`.

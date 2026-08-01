@@ -2,7 +2,7 @@
 id: architecture-review-delta-pr28
 date: 2026-08-01
 pr: null
-commit: null
+commit: 69e6d37
 area:
   - architecture
   - security

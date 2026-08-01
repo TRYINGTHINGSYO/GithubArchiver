@@ -1,15 +1,15 @@
 # Current-branch delta review
 
 - Prior review: `main` @ `7a61a65` (`docs/architecture-review/*`, schema v13 export)
-- Current review: `cursor/architecture-review-delta-2dbd` @ `2b77ed95201b0c395b445bdbb475966bedcc83bc` (PR #28 head)
+- Current review (code under analysis): `origin/cursor/intelligence-discovery-redesign-1514` @ `2b77ed95201b0c395b445bdbb475966bedcc83bc` (PR #28 head)
 - Labels: `still true` · `partially fixed` · `fixed` · `changed architecture` · `unable to verify`
 
 ## Step 1 verification (source under review)
 
 | Check | Result |
 |---|---|
-| Branch | `cursor/architecture-review-delta-2dbd` (tracks `origin/cursor/intelligence-discovery-redesign-1514`) |
-| Commit | `2b77ed95201b0c395b445bdbb475966bedcc83bc` |
+| Code branch reviewed | `origin/cursor/intelligence-discovery-redesign-1514` (PR #28) |
+| Code commit reviewed | `2b77ed95201b0c395b445bdbb475966bedcc83bc` |
 | PR #28 present | **Yes** — commits `042ad1f` … `2b77ed9`; GitHub PR open: Website Discovery Redesign Foundation |
 | Highest migration | **044** (`migration044` in `src/lib/server/db/schema.ts`) |
 | Executable schema version | **44** (`CURRENT_SCHEMA_VERSION = 44`) |
