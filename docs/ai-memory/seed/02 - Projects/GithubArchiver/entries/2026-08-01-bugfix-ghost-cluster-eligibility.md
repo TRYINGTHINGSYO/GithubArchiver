@@ -1,8 +1,8 @@
 ---
 id: bugfix-ghost-cluster-eligibility
 date: 2026-08-01
-pr: null
-commit: null
+pr: 32
+commit: 4634b8f
 area:
   - discovery
   - clusters
@@ -19,6 +19,8 @@ relationships:
     id: feature-durable-discovery-materialization
   - type: references
     id: architecture-review-delta-pr28
+  - type: implemented-by
+    id: pr-32
 title: Shared public cluster eligibility and generation-gated materialization
 ---
 
