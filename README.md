@@ -256,6 +256,7 @@ Migrations are versioned in `schema_version` (current: **v14**).
 | `EVENT_RETENTION_DAYS` | `120` | Delete high-churn events (`metadata_updated` / `metrics_updated`) older than this |
 | `METRICS_RETENTION_DAYS` | `365` | Age out metric snapshots after daily collapse (latest per repo kept) |
 | `BACKUP_KEEP_DAILY` / `_WEEKLY` / `_MONTHLY` | `7` / `4` / `3` | On-volume backup retention after each backup run |
+| `CLEANUP_QUARANTINE_DAYS` | `7` | Days quarantined low-value repos stay hidden before permanent purge |
 | `ADMIN_PASSWORD` | `GitHub` | Shared admin login password |
 | `ADMIN_SESSION_SECRET` | `ADMIN_PASSWORD` | HMAC secret for admin session cookies |
 | `STORAGE_MIN_FREE_BYTES` | `1073741824` | Free-space threshold that triggers cleanup before archive downloads |

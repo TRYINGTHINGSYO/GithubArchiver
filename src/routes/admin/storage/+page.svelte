@@ -105,6 +105,64 @@
 
 	const db = $derived(report.database);
 	const retention = $derived(report.retention);
+
+	let cleanupPreset = $state<'safe' | 'conservative' | 'balanced' | 'aggressive'>('balanced');
+	let minAgeDays = $state(30);
+	let protectEmergingDays = $state(30);
+	let cleanupPreviewOverride = $state<PageData['cleanupPreview'] | null>(null);
+
+	const cleanupPreview = $derived(cleanupPreviewOverride ?? data.cleanupPreview);
+	const selectedPresetMeta = $derived(
+		data.cleanupPresets.find((preset) => preset.id === cleanupPreset) ?? data.cleanupPresets[2]
+	);
+
+	async function runLowValueCleanup(
+		action: 'cleanup_preview' | 'cleanup_quarantine' | 'cleanup_restore' | 'cleanup_purge',
+		label: string,
+		extra: Record<string, unknown> = {}
+	) {
+		if (action !== 'cleanup_preview' && !confirm(`${label}? Review samples first if unsure.`)) return;
+		actionLoading = true;
+		actionMsg = '';
+		actionError = false;
+		try {
+			const res = await fetch('/api/admin/maintenance', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					action,
+					preset: cleanupPreset,
+					min_age_days: minAgeDays,
+					protect_emerging_days: protectEmergingDays,
+					sample_size: 100,
+					...extra
+				})
+			});
+			const json = await res.json();
+			if (!res.ok) throw new Error(json.error ?? res.statusText);
+			if (action === 'cleanup_preview' && json.report) {
+				cleanupPreviewOverride = json.report;
+				actionMsg = `Preview: ${json.report.match_count.toLocaleString()} repositories match ${cleanupPreset}`;
+			} else {
+				actionMsg = json.report?.message ?? `${label} complete`;
+				cleanupPreviewOverride = null;
+				await invalidateAll();
+			}
+		} catch (err) {
+			actionError = true;
+			actionMsg = err instanceof Error ? err.message : String(err);
+		} finally {
+			actionLoading = false;
+		}
+	}
+
+	function applyPresetDefaults(id: typeof cleanupPreset) {
+		cleanupPreset = id;
+		const preset = data.cleanupPresets.find((item) => item.id === id);
+		if (!preset) return;
+		minAgeDays = preset.minAgeDays;
+		protectEmergingDays = preset.protectEmergingDays;
+	}
 </script>
 
 <svelte:head>
@@ -206,6 +264,111 @@
 				{/each}
 			</ul>
 		{/if}
+	{/if}
+</section>
+
+<section class="detail-section">
+	<h2 class="section-title">Low-value repository cleanup</h2>
+	<p class="storage-meta">
+		Does <strong>not</strong> delete every unenriched repo. Targets zero-engagement junk while
+		protecting Favorites, Watch Later, collections, releases, websites, active projects, and
+		anything younger than the emerging-protection window. Recommended preset: <strong>Balanced</strong>.
+	</p>
+
+	<div class="storage-actions">
+		{#each data.cleanupPresets as preset}
+			<button
+				type="button"
+				class="filter-btn"
+				class:active={cleanupPreset === preset.id}
+				disabled={actionLoading}
+				onclick={() => applyPresetDefaults(preset.id)}
+			>
+				{preset.name}
+			</button>
+		{/each}
+	</div>
+	<p class="storage-meta">{selectedPresetMeta?.description}</p>
+
+	<div class="cleanup-controls">
+		<label>
+			Min age (days)
+			<input type="number" min="1" max="3650" bind:value={minAgeDays} />
+		</label>
+		<label>
+			Protect emerging younger than (days)
+			<input type="number" min="0" max="3650" bind:value={protectEmergingDays} />
+		</label>
+	</div>
+
+	<div class="stats-bar" style="margin-bottom: 1rem">
+		<span>{cleanupPreview.match_count.toLocaleString()} match preview</span>
+		<span>
+			~{cleanupPreview.estimated_bytes_recoverable == null
+				? '?'
+				: formatBytes(cleanupPreview.estimated_bytes_recoverable)} recoverable
+		</span>
+		<span>{cleanupPreview.already_quarantined.toLocaleString()} quarantined</span>
+		<span>{cleanupPreview.purge_eligible.toLocaleString()} purge-eligible</span>
+	</div>
+
+	<div class="storage-actions">
+		<button
+			type="button"
+			class="filter-btn"
+			disabled={actionLoading}
+			onclick={() => runLowValueCleanup('cleanup_preview', 'Preview low-value matches')}
+		>
+			Dry-run preview
+		</button>
+		<button
+			type="button"
+			class="filter-btn"
+			disabled={actionLoading}
+			onclick={() => runLowValueCleanup('cleanup_quarantine', 'Quarantine matching repositories')}
+		>
+			Quarantine matches
+		</button>
+		<button
+			type="button"
+			class="filter-btn"
+			disabled={actionLoading}
+			onclick={() => runLowValueCleanup('cleanup_restore', 'Restore quarantined repositories')}
+		>
+			Restore quarantine
+		</button>
+		<button
+			type="button"
+			class="filter-btn"
+			disabled={actionLoading}
+			onclick={() =>
+				runLowValueCleanup('cleanup_purge', 'Permanently purge quarantine-eligible repos', {
+					rebuild_fts: true
+				})}
+		>
+			Permanent purge (7d+)
+		</button>
+	</div>
+
+	{#if cleanupPreview.samples.length > 0}
+		<p class="storage-meta">Random sample ({cleanupPreview.samples.length})</p>
+		<ul class="storage-list">
+			{#each cleanupPreview.samples as sample}
+				<li>
+					<a href="/repo/{sample.full_name.split('/')[0]}/{sample.full_name.split('/')[1]}">
+						{sample.full_name}
+					</a>
+					<span class="storage-meta">
+						★{sample.stars ?? 0} · forks {sample.forks ?? 0} ·
+						{sample.language ?? 'no-lang'} ·
+						{sample.description ? sample.description.slice(0, 80) : 'no description'} ·
+						{timeAgo(sample.created_at)}
+					</span>
+				</li>
+			{/each}
+		</ul>
+	{:else}
+		<p class="empty-state">No preview samples for this preset.</p>
 	{/if}
 </section>
 
@@ -467,5 +630,33 @@
 		display: inline-flex;
 		align-items: center;
 		text-decoration: none;
+	}
+
+	.storage-actions .filter-btn.active {
+		border-color: var(--text);
+		background: color-mix(in srgb, var(--text) 8%, transparent);
+	}
+
+	.cleanup-controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem;
+		margin: 0 0 1rem;
+	}
+
+	.cleanup-controls label {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	.cleanup-controls input {
+		width: 8rem;
+		padding: 0.35rem 0.5rem;
+		border: 1px solid var(--border);
+		background: transparent;
+		color: var(--text);
 	}
 </style>

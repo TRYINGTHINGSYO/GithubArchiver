@@ -71,7 +71,7 @@ export function listUnenrichedRepos(
 	opts: { createdFrom?: string; createdTo?: string } = {}
 ): RepoRow[] {
 	const database = getDb();
-	const where = ['enriched_at IS NULL', 'deleted_at IS NULL'];
+	const where = ['enriched_at IS NULL', 'deleted_at IS NULL', 'pending_deletion_at IS NULL'];
 	const params: (string | number)[] = [];
 
 	if (opts.createdFrom) {

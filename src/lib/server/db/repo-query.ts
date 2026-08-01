@@ -143,6 +143,12 @@ export function buildRepoFilters(
 		where.push(`${alias}.deleted_at IS NULL`);
 	}
 
+	if (opts.pendingDeletionOnly) {
+		where.push(`${alias}.pending_deletion_at IS NOT NULL`);
+	} else if (!opts.includePendingDeletion) {
+		where.push(`${alias}.pending_deletion_at IS NULL`);
+	}
+
 	const effectiveMinStars =
 		opts.feed === 'new_100_stars'
 			? Math.max(opts.minStars ?? 0, 100)

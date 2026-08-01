@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 42;
+export const CURRENT_SCHEMA_VERSION = 43;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1454,6 +1454,40 @@ function migration042(database: Database.Database) {
 	}
 }
 
+/**
+ * Low-value repository cleanup: quarantine before permanent purge.
+ * `cleanup_protected` is a manual operator hold; favorites/collections are
+ * always treated as protected in application SQL.
+ */
+function migration043(database: Database.Database) {
+	const repoCols = columnNames(database, 'repos');
+	if (!repoCols.has('pending_deletion_at')) {
+		database.exec(`ALTER TABLE repos ADD COLUMN pending_deletion_at TEXT`);
+	}
+	if (!repoCols.has('cleanup_protected')) {
+		database.exec(
+			`ALTER TABLE repos ADD COLUMN cleanup_protected INTEGER NOT NULL DEFAULT 0`
+		);
+	}
+	if (!repoCols.has('cleanup_reason')) {
+		database.exec(`ALTER TABLE repos ADD COLUMN cleanup_reason TEXT`);
+	}
+
+	database.exec(`
+		CREATE INDEX IF NOT EXISTS idx_repos_pending_deletion
+		  ON repos(pending_deletion_at)
+		  WHERE pending_deletion_at IS NOT NULL;
+
+		CREATE INDEX IF NOT EXISTS idx_repos_cleanup_protected
+		  ON repos(cleanup_protected)
+		  WHERE cleanup_protected = 1;
+
+		CREATE INDEX IF NOT EXISTS idx_repos_low_value_scan
+		  ON repos(created_at, stars, forks)
+		  WHERE pending_deletion_at IS NULL AND cleanup_protected = 0;
+	`);
+}
+
 /** Website discovery: CT + zone intake → shared candidates → liveness verify. */
 function migration037(database: Database.Database) {
 	database.exec(`
@@ -1542,7 +1576,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	39: migration039,
 	40: migration040,
 	41: migration041,
-	42: migration042
+	42: migration042,
+	43: migration043
 };
 
 export interface MigrationRunResult {
@@ -1684,6 +1719,14 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 		if (!githubIdPresent || !indexes.has('repos_github_id_unique')) {
 			migration042(database);
 			repairs.push('042:repos_github_id');
+		}
+	}
+
+	if (version >= 43) {
+		const cols = columnNames(database, 'repos');
+		if (!cols.has('pending_deletion_at') || !cols.has('cleanup_protected')) {
+			migration043(database);
+			repairs.push('043:low_value_cleanup');
 		}
 	}
 

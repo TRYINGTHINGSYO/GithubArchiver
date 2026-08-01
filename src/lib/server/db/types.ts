@@ -57,6 +57,9 @@ export interface RepoRow {
 	enrichment_claim_expires_at?: string | null;
 	enrichment_etag?: string | null;
 	last_enrichment_http_status?: number | null;
+	pending_deletion_at?: string | null;
+	cleanup_protected?: number;
+	cleanup_reason?: string | null;
 }
 
 export type DiscoverySource = 'gharchive' | 'github_search' | 'manual' | 'trending';
@@ -108,6 +111,9 @@ export interface RepoQuery {
 	hasRelease?: boolean;
 	deletedOnly?: boolean;
 	includeDeleted?: boolean;
+	/** Include repos marked pending_deletion (hidden by default). */
+	includePendingDeletion?: boolean;
+	pendingDeletionOnly?: boolean;
 	minStars?: number;
 	maxStars?: number;
 	minForks?: number;

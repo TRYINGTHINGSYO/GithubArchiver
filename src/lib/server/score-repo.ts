@@ -53,7 +53,10 @@ const GENERIC_NAMES = new Set([
 	'untitled',
 	'new-repo',
 	'first-repo',
+	'my-first-repo',
 	'practice',
+	'homework',
+	'assignment',
 	'learning',
 	'tutorial',
 	'wip',
@@ -70,7 +73,9 @@ const STRONG_GENERIC_PATTERNS = [
 	/^demo\d*$/i,
 	/^temp\d*$/i,
 	/^asdf+$/i,
-	/^[a-z]{2,4}\d{1,3}$/i
+	/^[a-z]{2,4}\d{1,3}$/i,
+	/^(homework|assignment|practice)[-_]?\d*$/i,
+	/^my[-_]?first[-_]?repo\d*$/i
 ];
 
 export function isGenericRepoName(name: string): boolean {

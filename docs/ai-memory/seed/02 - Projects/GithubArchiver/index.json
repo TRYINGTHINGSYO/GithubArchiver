@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-01T09:13:31.670Z",
+  "generatedAt": "2026-08-01T09:16:53.534Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -27,6 +27,37 @@
       "title": "Volume retention, dbstat inventory, and github_id uniqueness",
       "path": "entries/2026-08-01-feature-storage-retention-volume.md",
       "summary": "Least-disruption storage hygiene for the Railway SQLite volume:"
+    },
+    {
+      "id": "feature-low-value-repo-cleanup",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-08-01",
+      "pr": null,
+      "commit": null,
+      "migration": 43,
+      "area": [
+        "storage",
+        "sqlite",
+        "ops",
+        "quality"
+      ],
+      "related": [
+        "feature-storage-retention-volume"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "feature-storage-retention-volume"
+        }
+      ],
+      "supersedes": null,
+      "title": "Staged low-value repo cleanup with quarantine",
+      "path": "entries/2026-08-01-feature-low-value-repo-cleanup.md",
+      "summary": "Adds staged cleanup for disposable repositories without deleting every unenriched or zero-star repo:"
     },
     {
       "id": "decision-mcp-first-dev-workflow",
