@@ -11,14 +11,14 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`architecture-review-delta-pr28`](entries/2026-08-01-architecture-review-delta-pr28.md) (`decision`, `confirmed`, `permanent`) — Architecture review updated against PR #28 (schema v44)
+  - `references` → `feature-intelligence-discovery-redesign`, `references` → `bugfix-pr28-release-hardening`, `related` → [`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 - [`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md) (`bugfix`, `confirmed`, `permanent`) — Wipe must clear stale cluster cards from materialization and TTL
   - `caused-by` → [`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), `related` → [`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), `related` → [`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), `implemented-by` → [`pr-30`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 - [`feature-low-value-repo-cleanup`](entries/2026-08-01-feature-low-value-repo-cleanup.md) (`feature`, `confirmed`, `permanent`) — Staged low-value repo cleanup with quarantine
   - `related` → [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md) (`feature`, `confirmed`, `permanent`) — Volume retention, dbstat inventory, and github_id uniqueness
   - _none_
-- [`architecture-review-delta-pr28`](entries/2026-08-01-architecture-review-delta-pr28.md) (`decision`, `confirmed`, `permanent`) — Architecture review updated against PR #28 (schema v44)
-  - `references` → `feature-intelligence-discovery-redesign`, `references` → `bugfix-pr28-release-hardening`, `related` → [`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 - [`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md) (`decision`, `confirmed`, `permanent`) — MCP is the primary knowledge and review layer
   - `references` → [`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), `related` → [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), `validates` → [`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 - [`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md) (`feature`, `confirmed`, `permanent`) — Harden homepage discovery materialization durability

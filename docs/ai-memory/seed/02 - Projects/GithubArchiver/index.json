@@ -1,9 +1,51 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-01T18:26:50.866Z",
+  "generatedAt": "2026-08-01T18:27:16.196Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "architecture-review-delta-pr28",
+      "schema": 1,
+      "type": "decision",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-08-01",
+      "pr": 31,
+      "commit": "6e3db4c",
+      "migration": null,
+      "area": [
+        "architecture",
+        "security",
+        "websites",
+        "clusters",
+        "schema"
+      ],
+      "related": [
+        "feature-intelligence-discovery-redesign",
+        "bugfix-pr28-release-hardening",
+        "bugfix-cluster-wipe-empty-state"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "feature-intelligence-discovery-redesign"
+        },
+        {
+          "type": "references",
+          "id": "bugfix-pr28-release-hardening"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-cluster-wipe-empty-state"
+        }
+      ],
+      "supersedes": null,
+      "title": "Architecture review updated against PR #28 (schema v44)",
+      "path": "entries/2026-08-01-architecture-review-delta-pr28.md",
+      "summary": "Re-ran the architecture review against PR #28 head (`cursor/intelligence-discovery-redesign-1514` @ `2b77ed9`) instead of the stale v13 export / `main`-only workspace. Produced delta review, verification results, empty-volume defect report, mutation inventory, fix packets 01–10, and PR sequence under `docs/architecture-review/`."
+    },
     {
       "id": "bugfix-cluster-wipe-empty-state",
       "schema": 1,
@@ -103,48 +145,6 @@
       "title": "Volume retention, dbstat inventory, and github_id uniqueness",
       "path": "entries/2026-08-01-feature-storage-retention-volume.md",
       "summary": "Least-disruption storage hygiene for the Railway SQLite volume:"
-    },
-    {
-      "id": "architecture-review-delta-pr28",
-      "schema": 1,
-      "type": "decision",
-      "status": "open",
-      "confidence": "confirmed",
-      "durability": "permanent",
-      "date": "2026-08-01",
-      "pr": null,
-      "commit": "69e6d37",
-      "migration": null,
-      "area": [
-        "architecture",
-        "security",
-        "websites",
-        "clusters",
-        "schema"
-      ],
-      "related": [
-        "feature-intelligence-discovery-redesign",
-        "bugfix-pr28-release-hardening",
-        "bugfix-cluster-wipe-empty-state"
-      ],
-      "relationships": [
-        {
-          "type": "references",
-          "id": "feature-intelligence-discovery-redesign"
-        },
-        {
-          "type": "references",
-          "id": "bugfix-pr28-release-hardening"
-        },
-        {
-          "type": "related",
-          "id": "bugfix-cluster-wipe-empty-state"
-        }
-      ],
-      "supersedes": null,
-      "title": "Architecture review updated against PR #28 (schema v44)",
-      "path": "entries/2026-08-01-architecture-review-delta-pr28.md",
-      "summary": "Re-ran the architecture review against PR #28 head (`cursor/intelligence-discovery-redesign-1514` @ `2b77ed9`) instead of the stale v13 export / `main`-only workspace. Produced delta review, verification results, empty-volume defect report, mutation inventory, fix packets 01–10, and PR sequence under `docs/architecture-review/`."
     },
     {
       "id": "decision-mcp-first-dev-workflow",
