@@ -4,6 +4,7 @@ import { saveRepoIntelligence } from '$lib/server/db/category-stats';
 import { parseTopics } from '$lib/server/db/repos';
 import type { EnrichmentData, RepoRow } from '$lib/server/db/types';
 import { classifyRepo } from '$lib/server/classify-repo';
+import { getHumanOverride } from '$lib/server/intelligence-audit';
 import { detectSignalTier, scoreRepoInteresting } from '$lib/server/score-repo';
 import { summarizeRepo } from '$lib/server/summarize-repo';
 
@@ -59,12 +60,19 @@ export function applyRepoIntelligence(repo: RepoRow, enrichment: EnrichmentData)
 		interesting.score
 	);
 
+	const override = getHumanOverride(repo.id);
 	saveRepoIntelligence(repo.id, {
 		summary,
-		category: classification.category,
+		category: override?.category
+			? (override.category as typeof classification.category)
+			: classification.category,
 		category_confidence: classification.confidence,
 		interesting_score: interesting.score,
-		signal_tier: signalTier
+		signal_tier: signalTier,
+		scoring_version: classification.scoringVersion,
+		classification_evidence_json: JSON.stringify(classification.evidence),
+		classification_warnings_json: JSON.stringify(classification.warnings),
+		preserveCategory: Boolean(override?.category)
 	});
 }
 

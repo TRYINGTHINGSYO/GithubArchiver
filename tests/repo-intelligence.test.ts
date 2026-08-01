@@ -88,7 +88,7 @@ describe('classify-repo', () => {
 		expect(result.category).toBe('library');
 	});
 
-	it('classifies API development tools as products instead of personal websites', () => {
+	it('classifies API development tools as developer-tool instead of personal websites', () => {
 		const result = classifyRepo({
 			owner: 'hoppscotch',
 			name: 'hoppscotch',
@@ -103,21 +103,25 @@ describe('classify-repo', () => {
 			readmeExcerpt: 'Hoppscotch is an open source API development ecosystem and request builder.',
 			filePaths: ['packages/hoppscotch-app/src/main.ts']
 		});
-		expect(result.category).toBe('product');
+		expect(result.category).toBe('developer-tool');
 		expect(result.confidence).toBeGreaterThan(0.8);
 	});
 
 	it('maps legacy categories', () => {
-		expect(normalizeCategory('web-app')).toBe('product');
+		expect(normalizeCategory('web-app')).toBe('application');
 		expect(normalizeCategory('data-ml')).toBe('data-science');
 		expect(normalizeCategory('product')).toBe('product');
+		expect(normalizeCategory('bot')).toBe('bot');
 	});
 
-	it('exports the full taxonomy', () => {
+	it('exports the expanded taxonomy', () => {
 		expect(REPO_CATEGORIES).toContain('ai-project');
 		expect(REPO_CATEGORIES).toContain('spam-template');
 		expect(REPO_CATEGORIES).toContain('awesome-list');
-		expect(REPO_CATEGORIES).toHaveLength(16);
+		expect(REPO_CATEGORIES).toContain('bot');
+		expect(REPO_CATEGORIES).toContain('company-profile');
+		expect(REPO_CATEGORIES).toContain('developer-tool');
+		expect(REPO_CATEGORIES.length).toBeGreaterThanOrEqual(20);
 	});
 });
 

@@ -1,7 +1,7 @@
 import type { RepoCategory } from '$lib/server/classify-repo';
 
 /** Bump when cluster rules change; repos below this version are re-clustered. */
-export const CURRENT_CLUSTER_VERSION = 2;
+export const CURRENT_CLUSTER_VERSION = 3;
 
 export type ClusterDefinition = {
 	slug: string;
@@ -31,7 +31,7 @@ export const CLUSTER_DEFINITIONS: ClusterDefinition[] = [
 		slug: 'mcp-servers',
 		name: 'MCP Servers',
 		description: 'Model Context Protocol servers and tool hosts.',
-		categories: ['ai-project', 'library', 'product'],
+		categories: ['ai-project', 'library', 'product', 'application', 'bot', 'developer-tool'],
 		topicPatterns: ['mcp', 'model-context-protocol'],
 		textPatterns: [
 			/model context protocol/i,
@@ -45,7 +45,7 @@ export const CLUSTER_DEFINITIONS: ClusterDefinition[] = [
 		slug: 'rag-applications',
 		name: 'RAG Applications',
 		description: 'Retrieval-augmented generation pipelines and apps.',
-		categories: ['ai-project', 'product', 'library'],
+		categories: ['ai-project', 'product', 'library', 'application'],
 		topicPatterns: ['rag', 'retrieval-augmented-generation', 'vector-search'],
 		textPatterns: [/\brag\b/i, /retrieval[- ]augmented/i, /vector (store|database|search)/i],
 		minimumScore: 0.45
@@ -54,24 +54,29 @@ export const CLUSTER_DEFINITIONS: ClusterDefinition[] = [
 		slug: 'ai-agents',
 		name: 'AI Agents',
 		description: 'Autonomous agents, orchestrators, and agent frameworks.',
-		categories: ['ai-project', 'product', 'library', 'framework'],
-		topicPatterns: ['ai-agent', 'agent', 'autonomous-agent', 'langgraph', 'crewai'],
+		categories: ['ai-project', 'product', 'library', 'framework', 'application', 'bot'],
+		topicPatterns: ['ai-agent', 'autonomous-agent', 'langgraph', 'crewai'],
 		textPatterns: [/\bai agent/i, /autonomous agent/i, /agent orchestr/i, /multi-agent/i],
+		weakTextPatterns: [/\bagent\b/i],
+		requireStrongEvidence: true,
 		minimumScore: 0.45
 	},
 	{
 		slug: 'llm-wrappers',
 		name: 'LLM Wrappers',
 		description: 'Thin clients and SDKs around large language models.',
-		categories: ['ai-project', 'library', 'product'],
-		topicPatterns: ['llm', 'openai', 'gpt', 'chatgpt', 'anthropic', 'claude'],
-		textPatterns: [/\bllm\b/i, /large language model/i, /openai api/i, /chat completion/i],
-		minimumScore: 0.4
+		categories: ['ai-project', 'library', 'product', 'developer-tool'],
+		topicPatterns: ['openai', 'chatgpt', 'anthropic', 'claude'],
+		textPatterns: [/large language model/i, /openai api/i, /chat completion/i, /\bllm (wrapper|client|sdk)\b/i],
+		weakTextPatterns: [/\bllm\b/i, /\bgpt\b/i],
+		requireStrongEvidence: true,
+		minimumScore: 0.45
 	},
 	{
 		slug: 'discord-bots',
 		name: 'Discord Bots',
 		description: 'Discord bots and Discord.js integrations.',
+		categories: ['bot', 'application', 'product', 'ai-project'],
 		topicPatterns: ['discord', 'discord-bot', 'discordjs'],
 		textPatterns: [/\bdiscord\.?js\b/i, /discord bot/i, /discord\.com\/api/i],
 		filePatterns: [/discord/i],
@@ -81,8 +86,9 @@ export const CLUSTER_DEFINITIONS: ClusterDefinition[] = [
 		slug: 'telegram-bots',
 		name: 'Telegram Bots',
 		description: 'Telegram bots and Telegram API clients.',
+		categories: ['bot', 'application', 'product', 'ai-project'],
 		topicPatterns: ['telegram', 'telegram-bot', 'telebot'],
-		textPatterns: [/\btelegram bot/i, /telegraf/i, /python-telegram-bot/i],
+		textPatterns: [/\btelegram bot/i, /telegraf/i, /python-telegram-bot/i, /bot token/i, /webhook/i],
 		filePatterns: [/telegram/i],
 		minimumScore: 0.45
 	},
@@ -90,10 +96,27 @@ export const CLUSTER_DEFINITIONS: ClusterDefinition[] = [
 		slug: 'portfolio-websites',
 		name: 'Portfolio Websites',
 		description: 'Personal portfolios, CV sites, and resume pages.',
-		categories: ['portfolio', 'personal-website'],
-		topicPatterns: ['portfolio', 'resume', 'cv'],
-		textPatterns: [/\bportfolio\b/i, /\bresume\b/i, /personal (site|website)/i],
-		minimumScore: 0.4
+		categories: ['portfolio', 'personal-website', 'portfolio-collection'],
+		topicPatterns: ['resume', 'cv'],
+		textPatterns: [
+			/\b(personal|professional) portfolio (website|site|page)\b/i,
+			/\bgraphic design portfolio\b/i,
+			/\bpersonal (site|website)\b/i,
+			/\bresume (website|site|page)\b/i
+		],
+		weakTextPatterns: [/\bportfolio\b/i],
+		negativeTextPatterns: [
+			/\bdata mining\b/i,
+			/\bdataset\b/i,
+			/\binterview simulator\b/i,
+			/\bcompany profile\b/i,
+			/\bportfolio lead\b/i,
+			/\banalytics\b/i,
+			/\bmachine learning\b/i
+		],
+		negativeTopicPatterns: ['dataset', 'machine-learning', 'data-mining'],
+		requireStrongEvidence: true,
+		minimumScore: 0.5
 	},
 	{
 		slug: 'e-commerce-apps',
@@ -254,8 +277,11 @@ export const CLUSTER_DEFINITIONS: ClusterDefinition[] = [
 		slug: 'trading-bots',
 		name: 'Trading Bots',
 		description: 'Crypto, forex, and stock trading automation.',
-		topicPatterns: ['trading-bot', 'trading', 'crypto-trading', 'algorithmic-trading', 'quant'],
+		categories: ['bot', 'application', 'product', 'ai-project'],
+		topicPatterns: ['trading-bot', 'crypto-trading', 'algorithmic-trading', 'quant'],
 		textPatterns: [/\btrading bot\b/i, /algorithmic trading/i, /crypto bot/i, /stock trading/i],
+		weakTextPatterns: [/\btrading\b/i],
+		requireStrongEvidence: true,
 		minimumScore: 0.45
 	},
 	{

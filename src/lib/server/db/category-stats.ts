@@ -60,10 +60,42 @@ export function saveRepoIntelligence(
 		category_confidence: number;
 		interesting_score: number;
 		signal_tier: SignalTier;
+		scoring_version?: string | null;
+		classification_evidence_json?: string | null;
+		classification_warnings_json?: string | null;
+		/** When true, do not overwrite category (human override). */
+		preserveCategory?: boolean;
 	}
 ): void {
 	const db = getDb();
 	const now = new Date().toISOString();
+	if (data.preserveCategory) {
+		db.prepare(
+			`UPDATE repos SET
+			   summary = ?,
+			   summary_generated_at = ?,
+			   category_confidence = ?,
+			   interesting_score = ?,
+			   signal_tier = ?,
+			   scored_at = ?,
+			   scoring_version = COALESCE(?, scoring_version),
+			   classification_evidence_json = COALESCE(?, classification_evidence_json),
+			   classification_warnings_json = COALESCE(?, classification_warnings_json)
+			 WHERE id = ?`
+		).run(
+			data.summary,
+			now,
+			data.category_confidence,
+			data.interesting_score,
+			data.signal_tier,
+			now,
+			data.scoring_version ?? null,
+			data.classification_evidence_json ?? null,
+			data.classification_warnings_json ?? null,
+			repoId
+		);
+		return;
+	}
 	db.prepare(
 		`UPDATE repos SET
 		   summary = ?,
@@ -73,7 +105,10 @@ export function saveRepoIntelligence(
 		   classified_at = ?,
 		   interesting_score = ?,
 		   signal_tier = ?,
-		   scored_at = ?
+		   scored_at = ?,
+		   scoring_version = ?,
+		   classification_evidence_json = ?,
+		   classification_warnings_json = ?
 		 WHERE id = ?`
 	).run(
 		data.summary,
@@ -84,6 +119,9 @@ export function saveRepoIntelligence(
 		data.interesting_score,
 		data.signal_tier,
 		now,
+		data.scoring_version ?? null,
+		data.classification_evidence_json ?? null,
+		data.classification_warnings_json ?? null,
 		repoId
 	);
 }

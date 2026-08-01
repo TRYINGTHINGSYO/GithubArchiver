@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-01T09:17:09.220Z",
+  "generatedAt": "2026-08-01T09:45:33.972Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -58,6 +58,29 @@
       "title": "Volume retention, dbstat inventory, and github_id uniqueness",
       "path": "entries/2026-08-01-feature-storage-retention-volume.md",
       "summary": "Least-disruption storage hygiene for the Railway SQLite volume:"
+    },
+    {
+      "id": "feature-intelligence-audit-quality",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-01",
+      "pr": null,
+      "commit": null,
+      "migration": 44,
+      "area": [
+        "intelligence",
+        "classification",
+        "admin"
+      ],
+      "related": [],
+      "relationships": [],
+      "supersedes": null,
+      "title": "Intelligence audit operator UI and classification quality fixes",
+      "path": "entries/2026-08-01-feature-intelligence-audit-quality.md",
+      "summary": "Focused intelligence-quality PR: expanded taxonomy (bot, company-profile, developer-tool, …), fixed bot-vs-library and portfolio name-token errors, compatible secondary clusters, owner-pattern bulk review with confirmation, human overrides preserved on reclassify, redesigned `/admin/intelligence` tabs + guided queue. Migration 044 adds scoring_version, evidence snapshot, overrides, bulk audit log."
     },
     {
       "id": "decision-mcp-first-dev-workflow",
