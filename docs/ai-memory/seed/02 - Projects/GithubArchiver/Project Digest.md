@@ -63,6 +63,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-08-01** · `feature` · `confirmed` · `release` · PR #28 · `cbb7d80` · migration 44 · `open` · `ui`, `websites`, `collections`, `schema` — [Dual discovery redesign — shell, ratings, random websites](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+  - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `c998fd2` · migration 43 · `open` · `storage`, `sqlite`, `ops`, `quality` — [Staged low-value repo cleanup with quarantine](entries/2026-08-01-feature-low-value-repo-cleanup.md)
   - edges: related:[`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
@@ -76,8 +78,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: related:`feat-mcp-intelligence-server`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-31** · `incident` · `confirmed` · `permanent` · `closed` · `db`, `homepage`, `discovery` — [schema_version 26 recorded without discovery materialization tables](entries/2026-07-31-incident-schema26-discovery-tables-missing.md)
   - edges: related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), related:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
-- **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `enrichment`, `daemon`, `observability` — [Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
-  - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 
 ## Open technical debt
 
@@ -86,6 +86,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-08-01** · `feature` · `confirmed` · `release` · PR #28 · `cbb7d80` · migration 44 · `open` · `ui`, `websites`, `collections`, `schema` — [Dual discovery redesign — shell, ratings, random websites](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+  - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `c998fd2` · migration 43 · `open` · `storage`, `sqlite`, `ops`, `quality` — [Staged low-value repo cleanup with quarantine](entries/2026-08-01-feature-low-value-repo-cleanup.md)
   - edges: related:[`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)

@@ -20,6 +20,8 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Open work
 
+- **2026-08-01** · `feature` · `confirmed` · `release` · PR #28 · `cbb7d80` · migration 44 · `open` · `ui`, `websites`, `collections`, `schema` — [Dual discovery redesign — shell, ratings, random websites](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+  - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `c998fd2` · migration 43 · `open` · `storage`, `sqlite`, `ops`, `quality` — [Staged low-value repo cleanup with quarantine](entries/2026-08-01-feature-low-value-repo-cleanup.md)
   - edges: related:[`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)

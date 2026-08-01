@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md) (`feature`, `confirmed`, `release`) — Dual discovery redesign — shell, ratings, random websites
+  - `implemented-by` → [`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), `references` → [`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
 - [`feature-low-value-repo-cleanup`](entries/2026-08-01-feature-low-value-repo-cleanup.md) (`feature`, `confirmed`, `permanent`) — Staged low-value repo cleanup with quarantine
   - `related` → [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md) (`feature`, `confirmed`, `permanent`) — Volume retention, dbstat inventory, and github_id uniqueness

@@ -1,9 +1,45 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-01T09:17:09.220Z",
+  "generatedAt": "2026-08-01T09:27:48.824Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-intelligence-discovery-redesign",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-01",
+      "pr": 28,
+      "commit": "cbb7d80",
+      "migration": 44,
+      "area": [
+        "ui",
+        "websites",
+        "collections",
+        "schema"
+      ],
+      "related": [
+        "pr-28",
+        "feature-website-discovery-v1"
+      ],
+      "relationships": [
+        {
+          "type": "implemented-by",
+          "id": "pr-28"
+        },
+        {
+          "type": "references",
+          "id": "feature-website-discovery-v1"
+        }
+      ],
+      "supersedes": null,
+      "title": "Dual discovery redesign — shell, ratings, random websites",
+      "path": "entries/2026-08-01-feature-intelligence-discovery-redesign.md",
+      "summary": "First PR slice of the repository intelligence + website discovery redesign."
+    },
     {
       "id": "feature-low-value-repo-cleanup",
       "schema": 1,
