@@ -96,7 +96,13 @@
 			{#if data.site.http_status}<span>HTTP {data.site.http_status}</span>{/if}
 		</div>
 		<div class="actions">
-			<a class="button" href={data.visitHref} target="_blank" rel="noopener noreferrer">Visit Website</a>
+			{#if data.visitHref}
+				<a class="button" href={data.visitHref} target="_blank" rel="noopener noreferrer"
+					>Visit Website</a
+				>
+			{:else}
+				<span class="button-secondary" aria-disabled="true">Visit unavailable</span>
+			{/if}
 			<button type="button" class="button-secondary" disabled={busy} onclick={toggleFavorite}>
 				{data.membership?.favorites ? 'Unfavorite' : 'Favorite'}
 			</button>

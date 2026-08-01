@@ -162,32 +162,86 @@ export function clearWebsiteVerifyBackoff(registrableDomain: string): void {
 
 export type LiveWebsiteSort = 'recent' | 'rated' | 'favorites';
 
+export interface LiveWebsiteFilters {
+	query?: string;
+	category?: string;
+}
+
+export interface LiveWebsiteCategory {
+	category: string;
+	count: number;
+}
+
+function liveWebsiteFilterSql(filters: LiveWebsiteFilters): {
+	where: string;
+	params: string[];
+} {
+	const clauses = [`verify_status = 'live'`];
+	const params: string[] = [];
+	const query = filters.query?.trim().slice(0, 100);
+	const category = filters.category?.trim().slice(0, 80);
+
+	if (query) {
+		const escaped = query.toLowerCase().replace(/[\\%_]/g, '\\$&');
+		clauses.push(`(
+			LOWER(registrable_domain) LIKE ? ESCAPE '\\'
+			OR LOWER(COALESCE(page_title, '')) LIKE ? ESCAPE '\\'
+			OR LOWER(COALESCE(summary, '')) LIKE ? ESCAPE '\\'
+		)`);
+		params.push(`%${escaped}%`, `%${escaped}%`, `%${escaped}%`);
+	}
+	if (category) {
+		clauses.push(`category = ?`);
+		params.push(category);
+	}
+
+	return { where: clauses.join(' AND '), params };
+}
+
 export function listLiveWebsites(
 	limit = 50,
 	offset = 0,
-	sort: LiveWebsiteSort = 'recent'
+	sort: LiveWebsiteSort = 'recent',
+	filters: LiveWebsiteFilters = {}
 ): CandidateDomainRow[] {
+	const { where, params } = liveWebsiteFilterSql(filters);
 	const orderBy =
 		sort === 'rated'
-			? `COALESCE(rating_avg, 0) DESC, COALESCE(rating_count, 0) DESC, COALESCE(verified_at, first_seen_at) DESC`
+			? `COALESCE(rating_avg, 0) DESC, COALESCE(rating_count, 0) DESC, COALESCE(verified_at, first_seen_at) DESC, registrable_domain ASC`
 			: sort === 'favorites'
-				? `COALESCE(favorite_count, 0) DESC, COALESCE(verified_at, first_seen_at) DESC`
-				: `COALESCE(verified_at, first_seen_at) DESC`;
+				? `COALESCE(favorite_count, 0) DESC, COALESCE(verified_at, first_seen_at) DESC, registrable_domain ASC`
+				: `COALESCE(verified_at, first_seen_at) DESC, registrable_domain ASC`;
 	return getDb()
 		.prepare(
 			`SELECT * FROM candidate_domains
-			 WHERE verify_status = 'live'
+			 WHERE ${where}
 			 ORDER BY ${orderBy}
 			 LIMIT ? OFFSET ?`
 		)
-		.all(limit, offset) as CandidateDomainRow[];
+		.all(...params, limit, offset) as CandidateDomainRow[];
 }
 
-export function countLiveWebsites(): number {
+export function countLiveWebsites(filters: LiveWebsiteFilters = {}): number {
+	const { where, params } = liveWebsiteFilterSql(filters);
 	const row = getDb()
-		.prepare(`SELECT COUNT(*) AS c FROM candidate_domains WHERE verify_status = 'live'`)
-		.get() as { c: number };
+		.prepare(`SELECT COUNT(*) AS c FROM candidate_domains WHERE ${where}`)
+		.get(...params) as { c: number };
 	return row.c;
+}
+
+export function listLiveWebsiteCategories(limit = 30): LiveWebsiteCategory[] {
+	return getDb()
+		.prepare(
+			`SELECT category, COUNT(*) AS count
+			 FROM candidate_domains
+			 WHERE verify_status = 'live'
+			   AND category IS NOT NULL
+			   AND TRIM(category) != ''
+			 GROUP BY category
+			 ORDER BY count DESC, category ASC
+			 LIMIT ?`
+		)
+		.all(limit) as LiveWebsiteCategory[];
 }
 
 export function getWebsitePipelineState(key: string): string | null {
@@ -248,16 +302,19 @@ export interface RandomWebsiteFilters {
 	workingOnly?: boolean;
 }
 
-/**
- * Pick a random live website, avoiding recently shown / hidden for this owner when provided.
- */
-export function pickRandomWebsite(filters: RandomWebsiteFilters = {}): CandidateDomainRow | null {
-	const db = getDb();
-	const params: (string | number)[] = [];
-	const where = [
-		`c.verify_status = 'live'`,
-		`COALESCE(c.random_eligible, 1) = 1`
-	];
+interface RandomWebsiteQuery {
+	where: string;
+	params: Array<string | number>;
+}
+
+export interface RandomWebsiteQueryPlan {
+	sql: string;
+	details: string[];
+}
+
+function randomWebsiteQuery(filters: RandomWebsiteFilters): RandomWebsiteQuery {
+	const params: Array<string | number> = [];
+	const where = [`c.verify_status = 'live'`, `c.random_eligible = 1`];
 
 	if (filters.workingOnly !== false) {
 		where.push(`c.http_status IS NOT NULL AND c.http_status < 400`);
@@ -289,14 +346,50 @@ export function pickRandomWebsite(filters: RandomWebsiteFilters = {}): Candidate
 		}
 	}
 
-	const row = db
+	return { where: where.join(' AND '), params };
+}
+
+function randomWebsiteSelectionSql(where: string): string {
+	return `SELECT c.* FROM candidate_domains c INDEXED BY idx_candidate_domains_random
+		 WHERE ${where}
+		 ORDER BY c.first_seen_at DESC
+		 LIMIT 1 OFFSET ?`;
+}
+
+/** Query-plan diagnostic used to prevent random discovery from regressing to a full sort. */
+export function explainRandomWebsiteSelection(
+	filters: RandomWebsiteFilters = {}
+): RandomWebsiteQueryPlan {
+	const { where, params } = randomWebsiteQuery(filters);
+	const sql = randomWebsiteSelectionSql(where);
+	const rows = getDb()
+		.prepare(`EXPLAIN QUERY PLAN ${sql}`)
+		.all(...params, 0) as Array<{ detail: string }>;
+	return { sql, details: rows.map((row) => row.detail) };
+}
+
+/**
+ * Pick a random live website, avoiding recently shown / hidden for this owner when provided.
+ */
+export function pickRandomWebsite(filters: RandomWebsiteFilters = {}): CandidateDomainRow | null {
+	const db = getDb();
+	const { where, params } = randomWebsiteQuery(filters);
+
+	const countRow = db
 		.prepare(
-			`SELECT c.* FROM candidate_domains c
-			 WHERE ${where.join(' AND ')}
-			 ORDER BY RANDOM()
-			 LIMIT 1`
+			`SELECT COUNT(*) AS count FROM candidate_domains c
+			 WHERE ${where}`
 		)
-		.get(...params) as CandidateDomainRow | undefined;
+		.get(...params) as { count: number };
+	if (countRow.count === 0) return null;
+
+	// Every eligible offset is equally likely. The named eligibility index provides
+	// first_seen_at order directly, so SQLite scans to the offset without a temp sort
+	// and the application never materializes the eligible IDs.
+	const offset = Math.floor(Math.random() * countRow.count);
+	const row = db
+		.prepare(randomWebsiteSelectionSql(where))
+		.get(...params, offset) as CandidateDomainRow | undefined;
 	return row ?? null;
 }
 

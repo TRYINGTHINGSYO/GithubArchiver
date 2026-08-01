@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	addRepositoryToCollection,
 	addWebsiteToCollection,
@@ -20,6 +20,7 @@ import {
 import {
 	hideWebsiteForOwner,
 	markWebsiteShown,
+	explainRandomWebsiteSelection,
 	pickRandomWebsite,
 	recordWebsiteVerifyResult,
 	upsertCandidateFromCt
@@ -341,6 +342,54 @@ describe('website ratings and independent favorites', () => {
 		expect(picks.has('alpha.dev')).toBe(false);
 		expect(picks.has('beta.dev')).toBe(true);
 	});
+
+	it('uses the eligibility index without a temporary random-selection sort', () => {
+		for (let index = 0; index < 30; index++) {
+			seedLiveWebsite(`site-${index}.dev`, `Site ${index}`);
+		}
+
+		const plan = explainRandomWebsiteSelection({
+			ownerType: owner.owner_type,
+			ownerKey: owner.owner_key,
+			excludeShownHours: 24
+		});
+		const planText = plan.details.join('\n');
+		expect(plan.sql).not.toMatch(/ORDER\s+BY\s+RANDOM/i);
+		expect(planText).not.toMatch(/USE TEMP B-TREE|ORDER BY RANDOM/i);
+		expect(planText).toContain('idx_candidate_domains_random');
+	});
+
+	it('selects the only eligible row and never generates an out-of-range offset', () => {
+		seedLiveWebsite('only-eligible.dev', 'Only eligible');
+		const random = vi.spyOn(Math, 'random').mockReturnValue(0.9999999999999999);
+		expect(pickRandomWebsite()?.registrable_domain).toBe('only-eligible.dev');
+		random.mockRestore();
+	});
+
+	it('repeated random selection returns only rows that satisfy every filter', () => {
+		for (let index = 0; index < 12; index++) {
+			seedLiveWebsite(`eligible-${index}.dev`, `Eligible ${index}`);
+			getDb()
+				.prepare(`UPDATE candidate_domains SET quality_score = ? WHERE registrable_domain = ?`)
+				.run(index / 10, `eligible-${index}.dev`);
+		}
+		seedLiveWebsite('disabled.dev', 'Disabled');
+		getDb()
+			.prepare(`UPDATE candidate_domains SET random_eligible = 0 WHERE registrable_domain = ?`)
+			.run('disabled.dev');
+		hideWebsiteForOwner('eligible-11.dev', owner.owner_type, owner.owner_key, true);
+
+		for (let index = 0; index < 80; index++) {
+			const site = pickRandomWebsite({
+				ownerType: owner.owner_type,
+				ownerKey: owner.owner_key,
+				excludeShownHours: 0,
+				minQuality: 0.8
+			});
+			expect(site).not.toBeNull();
+			expect(site?.registrable_domain).toMatch(/^eligible-(8|9|10)\.dev$/);
+		}
+	});
 });
 
 describe('website route domain normalization', () => {
@@ -357,18 +406,16 @@ describe('website route domain normalization', () => {
 	});
 
 	it('only builds http(s) visit hrefs', () => {
-		expect(
-			websiteVisitHref({
-				registrable_domain: 'safe.dev',
-				final_url: 'javascript:alert(1)'
-			})
-		).toBe('https://safe.dev/');
-		expect(
-			websiteVisitHref({
-				registrable_domain: 'safe.dev',
-				final_url: 'https://safe.dev/docs'
-			})
-		).toBe('https://safe.dev/docs');
+		expect(websiteVisitHref({ final_url: 'http://safe.dev/docs' })).toBe('http://safe.dev/docs');
+		expect(websiteVisitHref({ final_url: 'https://safe.dev/docs' })).toBe('https://safe.dev/docs');
+		expect(websiteVisitHref({ final_url: 'httpx://unsafe.example/path' })).toBeNull();
+		expect(websiteVisitHref({ final_url: 'javascript:alert(1)' })).toBeNull();
+		expect(websiteVisitHref({ final_url: 'data:text/plain,unsafe' })).toBeNull();
+		expect(websiteVisitHref({ final_url: 'file:///tmp/unsafe' })).toBeNull();
+		expect(websiteVisitHref({ final_url: '//unsafe.example/path' })).toBeNull();
+		expect(websiteVisitHref({ final_url: 'not a url' })).toBeNull();
+		expect(websiteVisitHref({ final_url: '' })).toBeNull();
+		expect(websiteVisitHref({ final_url: null })).toBeNull();
 	});
 });
 

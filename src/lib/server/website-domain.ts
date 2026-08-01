@@ -1,4 +1,5 @@
 import { parse as parseDomain } from 'tldts';
+export { websiteVisitHref } from '../website-visit.js';
 
 /** Default TLD allowlist — intake filter so CT firehose cannot drown SQLite. */
 export function websiteCtTlds(): string[] {
@@ -56,25 +57,6 @@ export function parseWebsiteRouteDomain(raw: string | null | undefined): string 
 	if (!value || value.includes(':') || value.includes('@')) return null;
 
 	return toRegistrableDomain(value);
-}
-
-/** Safe external visit URL for a known website row (never javascript:). */
-export function websiteVisitHref(site: {
-	registrable_domain: string;
-	final_url?: string | null;
-}): string {
-	const finalUrl = site.final_url?.trim() ?? '';
-	if (/^https?:\/\//i.test(finalUrl)) {
-		try {
-			const parsed = new URL(finalUrl);
-			if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-				return parsed.toString();
-			}
-		} catch {
-			/* fall through */
-		}
-	}
-	return `https://${site.registrable_domain}/`;
 }
 
 /** Extract hostnames from a CT name_value / SAN blob (newline or comma separated). */
