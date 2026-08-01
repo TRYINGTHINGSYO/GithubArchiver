@@ -13,7 +13,7 @@ Chronological event log (newest first). Source of truth is `entries/`.
 
 ## 2026-08-01
 
-- **2026-08-01** · `feature` · `confirmed` · `permanent` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
+- **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
 ## 2026-07-31
 
 - **2026-07-31** · `decision` · `confirmed` · `permanent` · `6fbaa7a` · `verified` · `mcp`, `project-memory`, `adoption` — [MCP is the primary knowledge and review layer](entries/2026-07-31-decision-mcp-first-dev-workflow.md)

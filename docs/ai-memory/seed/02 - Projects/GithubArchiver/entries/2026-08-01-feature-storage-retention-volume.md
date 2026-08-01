@@ -1,6 +1,8 @@
 ---
 id: feature-storage-retention-volume
 date: 2026-08-01
+pr: 27
+commit: a14cce3
 area:
   - storage
   - sqlite
