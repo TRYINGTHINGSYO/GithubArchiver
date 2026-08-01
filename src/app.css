@@ -22,6 +22,7 @@ html[data-theme='dark'] {
 	--radius: 10px;
 	--shell-left: 16.5rem;
 	--shell-right: 17rem;
+	--header-bg: rgba(11, 15, 20, 0.86);
 	--atmosphere:
 		radial-gradient(circle at top left, rgba(45, 212, 191, 0.1), transparent 32rem),
 		radial-gradient(circle at top right, rgba(94, 177, 255, 0.08), transparent 28rem),
@@ -45,6 +46,7 @@ html[data-theme='light'] {
 	--red: #c53030;
 	--purple: #6b46c1;
 	--shadow-soft: 0 16px 40px rgba(21, 32, 43, 0.08);
+	--header-bg: rgba(255, 255, 255, 0.9);
 	--atmosphere:
 		radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 30rem),
 		radial-gradient(circle at 80% 0%, rgba(11, 107, 203, 0.07), transparent 26rem),
@@ -109,7 +111,7 @@ code,
 	border-bottom: 1px solid var(--border);
 	padding: 0.85rem 0;
 	margin-bottom: 2rem;
-	background: rgba(11, 15, 20, 0.82);
+	background: var(--header-bg);
 	backdrop-filter: blur(16px);
 	position: sticky;
 	top: 0;
@@ -243,6 +245,10 @@ code,
 }
 
 .mobile-tabbar {
+	display: none;
+}
+
+.mobile-nav-backdrop {
 	display: none;
 }
 
@@ -605,8 +611,7 @@ a.repo-item:hover {
 	}
 
 	body {
-		background:
-			linear-gradient(180deg, #0b0f14 0%, #10151d 46%, #0b0f14 100%);
+		background: var(--atmosphere);
 		overflow-x: clip;
 	}
 
@@ -661,7 +666,8 @@ a.repo-item:hover {
 	.mobile-tabbar a {
 		display: grid;
 		place-items: center;
-		min-height: 2.55rem;
+		min-block-size: 2.75rem;
+		min-inline-size: 2.75rem;
 		min-width: 0;
 		padding: 0.2rem 0.25rem;
 		border: 1px solid var(--border);
@@ -677,9 +683,11 @@ a.repo-item:hover {
 	}
 
 	.mobile-tabbar a:hover,
-	.mobile-tabbar a:focus-visible {
+	.mobile-tabbar a:focus-visible,
+	.mobile-tabbar a.active {
 		border-color: var(--accent);
 		color: var(--accent);
+		background: var(--accent-dim);
 		text-decoration: none;
 	}
 
@@ -814,6 +822,31 @@ a.repo-item:hover {
 	.shell-left.open-mobile,
 	.shell-right.open-mobile {
 		display: block;
+	}
+
+	.mobile-nav-backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 85;
+		border: 0;
+		background: rgba(3, 7, 12, 0.7);
+		backdrop-filter: blur(4px);
+		cursor: pointer;
+	}
+
+	.shell-left.open-mobile {
+		position: fixed;
+		top: 0.65rem;
+		bottom: 0.65rem;
+		left: 0.65rem;
+		z-index: 90;
+		width: min(22rem, calc(100vw - 1.3rem));
+		max-height: none;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		padding: 0.75rem;
+		box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
 	}
 
 	.website-grid {

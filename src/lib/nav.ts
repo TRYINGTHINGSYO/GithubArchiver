@@ -50,12 +50,10 @@ export const NAV_SECTIONS: NavSection[] = [
 		id: 'websites',
 		title: 'Website Discovery',
 		links: [
-			{ href: '/websites', label: 'Website Discover', accent: 'web' },
+			{ href: '/websites', label: 'Browse Websites', accent: 'web' },
 			{ href: '/websites/random', label: 'Random Website', accent: 'web', hint: 'Primary random surface' },
-			{ href: '/websites', label: 'New Websites', accent: 'web' },
 			{ href: '/websites?sort=rated', label: 'Highest Rated', accent: 'web' },
-			{ href: '/websites?sort=favorites', label: 'Most Favorited', accent: 'web' },
-			{ href: '/websites', label: 'Recently Verified', accent: 'web' }
+			{ href: '/websites?sort=favorites', label: 'Most Favorited', accent: 'web' }
 		]
 	},
 	{

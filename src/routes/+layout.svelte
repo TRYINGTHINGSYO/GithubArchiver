@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { afterNavigate, beforeNavigate } from '$app/navigation';
-	import { navigating } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import '../app.css';
 	import ActivityStatusBar from '$lib/components/ActivityStatusBar.svelte';
 	import LeftNav from '$lib/components/LeftNav.svelte';
 	import RightRail from '$lib/components/RightRail.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import { onMount } from 'svelte';
+	import { activateModalDrawer, type ModalDrawerLifecycle } from '$lib/modal-drawer';
+	import { onDestroy, onMount, tick } from 'svelte';
 
 	let { children, data } = $props();
 	let navigationStartedAt = 0;
@@ -15,6 +16,48 @@
 	let leftCollapsed = $state(false);
 	let rightCollapsed = $state(false);
 	let mobileNavOpen = $state(false);
+	let mobileNavTrigger: HTMLButtonElement;
+	let mobileNavDrawer: HTMLElement;
+	let mobileDrawerLifecycle: ModalDrawerLifecycle | null = null;
+	let restoreMobileNavFocusAfterNavigation = false;
+
+	async function openMobileNav() {
+		if (mobileNavOpen) return;
+		mobileNavOpen = true;
+		await tick();
+		if (!mobileNavOpen || !mobileNavDrawer || !mobileNavTrigger) return;
+		mobileDrawerLifecycle?.deactivate({ restoreFocus: false });
+		mobileDrawerLifecycle = activateModalDrawer({
+			drawer: mobileNavDrawer,
+			trigger: mobileNavTrigger,
+			onRequestClose: closeMobileNav
+		});
+	}
+
+	function closeMobileNav(restoreFocus = true) {
+		if (!mobileNavOpen && !mobileDrawerLifecycle) return;
+		mobileNavOpen = false;
+		mobileDrawerLifecycle?.deactivate({ restoreFocus: false });
+		mobileDrawerLifecycle = null;
+		if (restoreFocus) {
+			void tick().then(() => {
+				if (!mobileNavOpen && mobileNavTrigger?.isConnected) mobileNavTrigger.focus();
+			});
+		}
+	}
+
+	function toggleMobileNav() {
+		if (mobileNavOpen) closeMobileNav();
+		else void openMobileNav();
+	}
+
+	function isMobileActive(href: string): boolean {
+		const path = page.url.pathname;
+		if (href === '/') return path === '/';
+		if (href === '/websites/random') return path === href;
+		if (href === '/websites') return path.startsWith('/websites') && path !== '/websites/random';
+		return path === href || path.startsWith(`${href}/`);
+	}
 
 	onMount(() => {
 		try {
@@ -23,6 +66,11 @@
 		} catch {
 			/* ignore */
 		}
+	});
+
+	onDestroy(() => {
+		closeMobileNav(false);
+		if (navigationProgressTimer) clearTimeout(navigationProgressTimer);
 	});
 
 	function persistRails() {
@@ -38,7 +86,10 @@
 		navigationProgressTimer = setTimeout(() => {
 			showNavigationProgress = true;
 		}, 100);
-		mobileNavOpen = false;
+		if (mobileNavOpen) {
+			restoreMobileNavFocusAfterNavigation = true;
+			closeMobileNav(false);
+		}
 	});
 
 	afterNavigate(({ to }) => {
@@ -52,6 +103,12 @@
 			performance.measure('gha:navigation', 'gha:navigation-start', 'gha:navigation-rendered');
 		}
 		navigationStartedAt = 0;
+		if (restoreMobileNavFocusAfterNavigation) {
+			restoreMobileNavFocusAfterNavigation = false;
+			void tick().then(() => {
+				if (mobileNavTrigger?.isConnected) mobileNavTrigger.focus();
+			});
+		}
 	});
 
 	const railRepos = $derived(
@@ -77,12 +134,15 @@
 	<div class="container header-bar">
 		<div class="brand-cluster">
 			<button
+				bind:this={mobileNavTrigger}
 				type="button"
 				class="mobile-nav-btn"
-				aria-label="Open navigation"
-				onclick={() => (mobileNavOpen = !mobileNavOpen)}
+				aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
+				aria-expanded={mobileNavOpen}
+				aria-controls="mobile-navigation-drawer"
+				onclick={toggleMobileNav}
 			>
-				Menu
+				{mobileNavOpen ? 'Close' : 'Menu'}
 			</button>
 			<a href="/" class="logo" data-sveltekit-preload-code="eager"
 				>Github<span>Archive+</span></a
@@ -110,12 +170,34 @@
 	<ActivityStatusBar initial={data.activity} />
 {/if}
 
+{#if mobileNavOpen}
+	<button
+		type="button"
+		class="mobile-nav-backdrop"
+		aria-label="Close navigation"
+		onclick={() => closeMobileNav()}
+	></button>
+{/if}
+
 <div
 	class="app-shell"
 	class:left-collapsed={leftCollapsed}
 	class:right-collapsed={rightCollapsed}
 >
-	<aside class="shell-pane shell-left shell-rail-card" class:open-mobile={mobileNavOpen}>
+	<aside
+		bind:this={mobileNavDrawer}
+		id="mobile-navigation-drawer"
+		class="shell-pane shell-left shell-rail-card"
+		class:open-mobile={mobileNavOpen}
+		role={mobileNavOpen ? 'dialog' : undefined}
+		aria-modal={mobileNavOpen ? 'true' : undefined}
+		aria-label={mobileNavOpen ? 'Navigation' : undefined}
+		tabindex="-1"
+	>
+		<div class="mobile-drawer-header">
+			<strong>Navigation</strong>
+			<button type="button" onclick={() => closeMobileNav()}>Close</button>
+		</div>
 		<button
 			type="button"
 			class="shell-collapse-btn desktop-only"
@@ -128,6 +210,14 @@
 		</button>
 		{#if !leftCollapsed || mobileNavOpen}
 			<LeftNav isAdmin={data.isAdmin} />
+			<div class="mobile-drawer-actions">
+				{#if data.isAdmin}
+					<a href="/logout">Log out</a>
+				{:else}
+					<a href="/login">Log in</a>
+				{/if}
+				<ThemeToggle />
+			</div>
 		{/if}
 	</aside>
 
@@ -153,16 +243,11 @@
 </div>
 
 <nav class="mobile-tabbar" aria-label="Primary mobile navigation">
-	<a href="/">Home</a>
-	<a href="/discover">Discover</a>
-	<a href="/websites">Websites</a>
-	<a href="/websites/random">Random</a>
-	<a href="/favorites">Saved</a>
-	{#if data.isAdmin}
-		<a href="/admin">Admin</a>
-	{:else}
-		<a href="/login">Login</a>
-	{/if}
+	<a href="/" class:active={isMobileActive('/')} aria-current={isMobileActive('/') ? 'page' : undefined}>Home</a>
+	<a href="/discover" class:active={isMobileActive('/discover')} aria-current={isMobileActive('/discover') ? 'page' : undefined}>Discover</a>
+	<a href="/websites" class:active={isMobileActive('/websites')} aria-current={isMobileActive('/websites') ? 'page' : undefined}>Websites</a>
+	<a href="/websites/random" class:active={isMobileActive('/websites/random')} aria-current={isMobileActive('/websites/random') ? 'page' : undefined}>Random</a>
+	<a href="/favorites" class:active={isMobileActive('/favorites')} aria-current={isMobileActive('/favorites') ? 'page' : undefined}>Saved</a>
 </nav>
 
 <style>
@@ -182,6 +267,13 @@
 		padding: 0.3rem 0.55rem;
 		font-size: 0.75rem;
 		cursor: pointer;
+		min-block-size: 2.75rem;
+		min-inline-size: 2.75rem;
+	}
+
+	.mobile-drawer-header,
+	.mobile-drawer-actions {
+		display: none;
 	}
 
 	.desktop-only {
@@ -195,6 +287,60 @@
 
 		.desktop-only {
 			display: none;
+		}
+
+		.mobile-drawer-header,
+		.mobile-drawer-actions {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.75rem;
+		}
+
+		.mobile-drawer-header {
+			position: sticky;
+			top: -0.75rem;
+			z-index: 1;
+			margin: -0.75rem -0.75rem 0.75rem;
+			padding: 0.8rem 0.85rem;
+			border-bottom: 1px solid var(--border);
+			background: var(--bg-elevated);
+		}
+
+		.mobile-drawer-header button,
+		.mobile-drawer-actions a {
+			min-block-size: 2.75rem;
+			min-inline-size: 2.75rem;
+			border: 1px solid var(--border);
+			border-radius: 9px;
+			background: var(--bg-subtle);
+			color: var(--text);
+			padding: 0.45rem 0.75rem;
+			font: inherit;
+			text-decoration: none;
+			cursor: pointer;
+		}
+
+		.mobile-drawer-actions {
+			position: sticky;
+			bottom: -0.75rem;
+			margin: 0.5rem -0.75rem -0.75rem;
+			padding: 0.75rem;
+			border-top: 1px solid var(--border);
+			background: var(--bg-elevated);
+		}
+
+		#mobile-navigation-drawer :global(.left-nav a),
+		#mobile-navigation-drawer :global(.section-toggle),
+		.mobile-drawer-actions :global(.theme-toggle) {
+			display: flex;
+			align-items: center;
+			min-block-size: 2.75rem;
+			min-inline-size: 2.75rem;
+		}
+
+		#mobile-navigation-drawer :global(.random-cta) {
+			justify-content: center;
 		}
 	}
 </style>
