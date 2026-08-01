@@ -18,6 +18,8 @@ Chronological event log (newest first). Source of truth is `entries/`.
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `c998fd2` · migration 43 · `open` · `storage`, `sqlite`, `ops`, `quality` — [Staged low-value repo cleanup with quarantine](entries/2026-08-01-feature-low-value-repo-cleanup.md)
   - edges: related:[`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
+- **2026-08-01** · `decision` · `confirmed` · `permanent` · `open` · `architecture`, `security`, `websites`, `clusters`, `schema` — [Architecture review updated against PR #28 (schema v44)](entries/2026-08-01-architecture-review-delta-pr28.md)
+  - edges: references:`feature-intelligence-discovery-redesign`, references:`bugfix-pr28-release-hardening`, related:[`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 ## 2026-07-31
 
 - **2026-07-31** · `decision` · `confirmed` · `permanent` · `6fbaa7a` · `verified` · `mcp`, `project-memory`, `adoption` — [MCP is the primary knowledge and review layer](entries/2026-07-31-decision-mcp-first-dev-workflow.md)

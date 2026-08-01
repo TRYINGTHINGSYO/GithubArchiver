@@ -68,6 +68,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `c998fd2` · migration 43 · `open` · `storage`, `sqlite`, `ops`, `quality` — [Staged low-value repo cleanup with quarantine](entries/2026-08-01-feature-low-value-repo-cleanup.md)
   - edges: related:[`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
+- **2026-08-01** · `decision` · `confirmed` · `permanent` · `open` · `architecture`, `security`, `websites`, `clusters`, `schema` — [Architecture review updated against PR #28 (schema v44)](entries/2026-08-01-architecture-review-delta-pr28.md)
+  - edges: references:`feature-intelligence-discovery-redesign`, references:`bugfix-pr28-release-hardening`, related:[`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 - **2026-07-31** · `decision` · `confirmed` · `permanent` · `6fbaa7a` · `verified` · `mcp`, `project-memory`, `adoption` — [MCP is the primary knowledge and review layer](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
   - edges: references:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), related:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), validates:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 - **2026-07-31** · `feature` · `confirmed` · `permanent` · `closed` · `homepage`, `discovery`, `mcp` — [Harden homepage discovery materialization durability](entries/2026-07-31-feature-durable-discovery-materialization.md)
@@ -76,8 +78,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: related:[`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), references:[`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
 - **2026-07-31** · `feature` · `confirmed` · `permanent` · `6fbaa7a` · `closed` · `mcp`, `project-memory` — [MCP project resources, prompts, and workspace review](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
   - edges: related:`feat-mcp-intelligence-server`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
-- **2026-07-31** · `incident` · `confirmed` · `permanent` · `closed` · `db`, `homepage`, `discovery` — [schema_version 26 recorded without discovery materialization tables](entries/2026-07-31-incident-schema26-discovery-tables-missing.md)
-  - edges: related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), related:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 
 ## Open technical debt
 
@@ -91,6 +91,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `c998fd2` · migration 43 · `open` · `storage`, `sqlite`, `ops`, `quality` — [Staged low-value repo cleanup with quarantine](entries/2026-08-01-feature-low-value-repo-cleanup.md)
   - edges: related:[`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
+- **2026-08-01** · `decision` · `confirmed` · `permanent` · `open` · `architecture`, `security`, `websites`, `clusters`, `schema` — [Architecture review updated against PR #28 (schema v44)](entries/2026-08-01-architecture-review-delta-pr28.md)
+  - edges: references:`feature-intelligence-discovery-redesign`, references:`bugfix-pr28-release-hardening`, related:[`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `enrichment`, `daemon`, `observability` — [Claimable backlog agrees with claim batch; planner scores claimable not raw unenriched](entries/2026-07-30-bugfix-claimable-retry-hygiene.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), related:[`incident-freshness-stall`](entries/2026-07-30-incident-freshness-stall.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `release` · `open` · `discovery`, `daemon`, `observability` — [GH Archive fetch AbortSignal timeout + ingest wall-clock + heartbeat](entries/2026-07-30-bugfix-ingest-fetch-timeout.md)
