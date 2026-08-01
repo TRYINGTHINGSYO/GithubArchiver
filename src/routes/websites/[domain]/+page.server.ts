@@ -10,10 +10,12 @@ import {
 	getWebsiteRatingAggregate,
 	listRecentWebsiteReviews
 } from '$lib/server/website-ratings';
+import { websiteVisitHref } from '$lib/server/website-domain';
+import { requireWebsiteRouteDomain } from '$lib/server/website-route';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
-	const domain = decodeURIComponent(params.domain).toLowerCase();
+	const domain = requireWebsiteRouteDomain(params.domain);
 	const site = getWebsiteByDomain(domain);
 	if (!site) throw error(404, 'Website not found');
 
@@ -32,9 +34,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		membership,
 		reviews,
 		sourceRepos,
-		visitHref:
-			site.final_url && site.final_url.startsWith('http')
-				? site.final_url
-				: `https://${site.registrable_domain}/`
+		visitHref: websiteVisitHref(site)
 	};
 };

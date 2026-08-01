@@ -1513,6 +1513,10 @@ function migration044(database: Database.Database) {
 		CREATE INDEX IF NOT EXISTS idx_website_ratings_owner
 		  ON website_ratings(owner_type, owner_key, updated_at DESC);
 
+		CREATE INDEX IF NOT EXISTS idx_website_ratings_active_lookup
+		  ON website_ratings(website_domain, owner_type, owner_key)
+		  WHERE deleted_at IS NULL;
+
 		CREATE TABLE IF NOT EXISTS website_user_state (
 			owner_type TEXT NOT NULL,
 			owner_key TEXT NOT NULL,
@@ -1526,6 +1530,10 @@ function migration044(database: Database.Database) {
 
 		CREATE INDEX IF NOT EXISTS idx_website_user_state_shown
 		  ON website_user_state(owner_type, owner_key, last_shown_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_website_user_state_hidden
+		  ON website_user_state(owner_type, owner_key, website_domain)
+		  WHERE hidden = 1;
 
 		CREATE TABLE IF NOT EXISTS collection_items (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1550,13 +1558,22 @@ function migration044(database: Database.Database) {
 		  ON candidate_domains(random_eligible, verify_status, first_seen_at DESC);
 	`);
 
-	// Backfill polymorphic items from existing repository memberships.
-	if (tables.has('collection_repositories')) {
-		database.exec(`
-			INSERT OR IGNORE INTO collection_items (collection_id, item_type, item_key, created_at)
-			SELECT collection_id, 'repository', CAST(repo_id AS TEXT), created_at
-			FROM collection_repositories
-		`);
+	// Backfill polymorphic items from existing repository memberships (idempotent).
+	const tablesAfter = new Set(
+		(
+			database
+				.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+				.all() as { name: string }[]
+		).map((row) => row.name)
+	);
+	if (tablesAfter.has('collection_repositories') && tablesAfter.has('collection_items')) {
+		database.transaction(() => {
+			database.exec(`
+				INSERT OR IGNORE INTO collection_items (collection_id, item_type, item_key, created_at)
+				SELECT collection_id, 'repository', CAST(repo_id AS TEXT), created_at
+				FROM collection_repositories
+			`);
+		})();
 	}
 }
 
@@ -1845,7 +1862,19 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 					.all() as { name: string }[]
 			).map((row) => row.name)
 		);
-		if (!tables.has('website_ratings') || !tables.has('collection_items')) {
+		const indexes = new Set(
+			(
+				database
+					.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`)
+					.all() as { name: string }[]
+			).map((row) => row.name)
+		);
+		if (
+			!tables.has('website_ratings') ||
+			!tables.has('collection_items') ||
+			!indexes.has('idx_website_user_state_hidden') ||
+			!indexes.has('idx_website_ratings_active_lookup')
+		) {
 			migration044(database);
 			repairs.push('044:website_curation');
 		}

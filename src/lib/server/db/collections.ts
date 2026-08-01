@@ -96,6 +96,16 @@ export function getOrCreateSystemCollection(
 
 export type CollectionItemType = 'repository' | 'website';
 
+/**
+ * Dual-write source of truth (PR #28):
+ * - Repository membership reads: `collection_repositories` (legacy + current).
+ * - Website membership reads: `collection_items` where item_type='website'.
+ * - Repository writes: both tables in one SQLite transaction.
+ * - Admin `repo_favorites` remains independent and is never dual-written.
+ * Retirement: a later migration can make `collection_items` authoritative for
+ * repositories and drop dual-write once reads are switched and verified.
+ */
+
 function syncCollectionItem(
 	collectionId: number,
 	itemType: CollectionItemType,

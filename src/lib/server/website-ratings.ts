@@ -22,8 +22,20 @@ export interface WebsiteRatingAggregate {
 	confidenceAverage: number | null;
 }
 
-function owner(owner: CollectionOwner): CollectionOwner {
-	return canonicalizeCollectionOwner(owner);
+export const WEBSITE_REVIEW_MAX_LENGTH = 2000;
+
+function owner(collectionOwner: CollectionOwner): CollectionOwner {
+	return canonicalizeCollectionOwner(collectionOwner);
+}
+
+function normalizeReview(review?: string | null): string | null {
+	if (review == null) return null;
+	const trimmed = String(review).trim();
+	if (!trimmed) return null;
+	if (trimmed.length > WEBSITE_REVIEW_MAX_LENGTH) {
+		throw new Error(`Review must be at most ${WEBSITE_REVIEW_MAX_LENGTH} characters`);
+	}
+	return trimmed;
 }
 
 function recomputeDomainAggregate(domain: string): void {
@@ -42,7 +54,12 @@ function recomputeDomainAggregate(domain: string): void {
 		`UPDATE candidate_domains
 		 SET rating_sum = ?, rating_count = ?, rating_avg = ?
 		 WHERE registrable_domain = ?`
-	).run(row.rating_sum, row.rating_count, row.rating_avg, domain);
+	).run(
+		row.rating_sum,
+		row.rating_count,
+		row.rating_count > 0 ? row.rating_avg : null,
+		domain
+	);
 }
 
 export function getWebsiteRatingAggregate(domain: string): WebsiteRatingAggregate {
@@ -99,6 +116,10 @@ export function getUserWebsiteRating(
 	return row ?? null;
 }
 
+/**
+ * Upsert the caller's rating only (owner-scoped). Aggregate recompute runs in the
+ * same SQLite transaction so concurrent writers cannot leave stale counts.
+ */
 export function upsertWebsiteRating(
 	domain: string,
 	collectionOwner: CollectionOwner,
@@ -109,39 +130,48 @@ export function upsertWebsiteRating(
 		throw new Error('Rating must be an integer from 1 to 5');
 	}
 	const o = owner(collectionOwner);
+	const normalizedReview = normalizeReview(review);
 	const now = new Date().toISOString();
 	const db = getDb();
-	db.prepare(
-		`INSERT INTO website_ratings
-		 (website_domain, owner_type, owner_key, rating, review, created_at, updated_at, deleted_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
-		 ON CONFLICT(website_domain, owner_type, owner_key) DO UPDATE SET
-		   rating = excluded.rating,
-		   review = excluded.review,
-		   updated_at = excluded.updated_at,
-		   deleted_at = NULL`
-	).run(domain, o.owner_type, o.owner_key, rating, review ?? null, now, now);
-	recomputeDomainAggregate(domain);
+	db.transaction(() => {
+		db.prepare(
+			`INSERT INTO website_ratings
+			 (website_domain, owner_type, owner_key, rating, review, created_at, updated_at, deleted_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+			 ON CONFLICT(website_domain, owner_type, owner_key) DO UPDATE SET
+			   rating = excluded.rating,
+			   review = excluded.review,
+			   updated_at = excluded.updated_at,
+			   deleted_at = NULL`
+		).run(domain, o.owner_type, o.owner_key, rating, normalizedReview, now, now);
+		recomputeDomainAggregate(domain);
+	})();
 	const row = getUserWebsiteRating(domain, o);
 	if (!row) throw new Error('Failed to persist website rating');
 	return row;
 }
 
+/** Soft-delete only the caller's active rating for this domain. */
 export function deleteWebsiteRating(
 	domain: string,
 	collectionOwner: CollectionOwner
 ): boolean {
 	const o = owner(collectionOwner);
 	const now = new Date().toISOString();
-	const result = getDb()
-		.prepare(
-			`UPDATE website_ratings
-			 SET deleted_at = ?, updated_at = ?
-			 WHERE website_domain = ? AND owner_type = ? AND owner_key = ? AND deleted_at IS NULL`
-		)
-		.run(now, now, domain, o.owner_type, o.owner_key);
-	if (result.changes > 0) recomputeDomainAggregate(domain);
-	return result.changes > 0;
+	const db = getDb();
+	let removed = false;
+	db.transaction(() => {
+		const result = db
+			.prepare(
+				`UPDATE website_ratings
+				 SET deleted_at = ?, updated_at = ?
+				 WHERE website_domain = ? AND owner_type = ? AND owner_key = ? AND deleted_at IS NULL`
+			)
+			.run(now, now, domain, o.owner_type, o.owner_key);
+		removed = result.changes > 0;
+		if (removed) recomputeDomainAggregate(domain);
+	})();
+	return removed;
 }
 
 export function listRecentWebsiteReviews(domain: string, limit = 20): WebsiteRatingRow[] {

@@ -3,8 +3,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	addRepositoryToCollection,
 	addWebsiteToCollection,
+	getRepositoryCollectionMembership,
 	getWebsiteCollectionMembership,
 	listCollectionWebsites,
+	removeRepositoryFromCollection,
 	removeWebsiteFromCollection
 } from '$lib/server/db/collections';
 import { getDb } from '$lib/server/db/connection';
@@ -16,6 +18,7 @@ import {
 	runMigrationsThrough
 } from '$lib/server/db/schema';
 import {
+	hideWebsiteForOwner,
 	markWebsiteShown,
 	pickRandomWebsite,
 	recordWebsiteVerifyResult,
@@ -24,9 +27,14 @@ import {
 import type { CollectionOwner } from '$lib/server/collection-owner';
 import {
 	deleteWebsiteRating,
+	getUserWebsiteRating,
 	getWebsiteRatingAggregate,
 	upsertWebsiteRating
 } from '$lib/server/website-ratings';
+import {
+	parseWebsiteRouteDomain,
+	websiteVisitHref
+} from '$lib/server/website-domain';
 import { createTestRepo, setupTestDb, teardownTestDb } from './helpers/db';
 
 const owner: CollectionOwner = {
@@ -108,9 +116,27 @@ describe('migration 044 website curation', () => {
 		db.exec(`DROP TABLE collection_items`);
 		db.exec(`DROP TABLE website_ratings`);
 		expect(repairSchemaDrift(db)).toContain('044:website_curation');
+
+		// Re-running backfill must not duplicate rows.
+		const before = (
+			db.prepare(`SELECT COUNT(*) AS c FROM collection_items`).get() as { c: number }
+		).c;
+		migrationBackfillAgain(db);
+		const after = (
+			db.prepare(`SELECT COUNT(*) AS c FROM collection_items`).get() as { c: number }
+		).c;
+		expect(after).toBe(before);
 		db.close();
 	});
 });
+
+function migrationBackfillAgain(db: Database.Database): void {
+	db.exec(`
+		INSERT OR IGNORE INTO collection_items (collection_id, item_type, item_key, created_at)
+		SELECT collection_id, 'repository', CAST(repo_id AS TEXT), created_at
+		FROM collection_repositories
+	`);
+}
 
 describe('website ratings and independent favorites', () => {
 	beforeEach(() => setupTestDb());
@@ -202,6 +228,102 @@ describe('website ratings and independent favorites', () => {
 		expect(row).toEqual({ item_type: 'repository', item_key: String(repo.id) });
 	});
 
+	it('keeps dual-write synchronized on unfavorite/delete', () => {
+		const repo = createTestRepo();
+		addRepositoryToCollection(owner, 'favorites', repo.id);
+		expect(removeRepositoryFromCollection(owner, 'favorites', repo.id).removed).toBe(true);
+		expect(getRepositoryCollectionMembership(owner, repo.id).favorites).toBe(false);
+		expect(
+			(
+				getDb()
+					.prepare(
+						`SELECT COUNT(*) AS c FROM collection_items
+						 WHERE item_type = 'repository' AND item_key = ?`
+					)
+					.get(String(repo.id)) as { c: number }
+			).c
+		).toBe(0);
+		expect(
+			(
+				getDb()
+					.prepare('SELECT COUNT(*) AS c FROM collection_repositories')
+					.get() as { c: number }
+			).c
+		).toBe(0);
+	});
+
+	it('does not let one owner delete another owner rating', () => {
+		seedLiveWebsite('owned.dev', 'Owned');
+		const other: CollectionOwner = {
+			owner_type: 'anonymous',
+			owner_key: 'anon:22222222-2222-4222-8222-222222222222'
+		};
+		upsertWebsiteRating('owned.dev', owner, 5, 'mine');
+		expect(deleteWebsiteRating('owned.dev', other)).toBe(false);
+		expect(getUserWebsiteRating('owned.dev', owner)?.rating).toBe(5);
+		expect(getWebsiteRatingAggregate('owned.dev').count).toBe(1);
+	});
+
+	it('recomputes aggregates correctly across concurrent-style updates', () => {
+		seedLiveWebsite('busy.dev', 'Busy');
+		const owners: CollectionOwner[] = [
+			owner,
+			{
+				owner_type: 'anonymous',
+				owner_key: 'anon:33333333-3333-4333-8333-333333333333'
+			},
+			{
+				owner_type: 'anonymous',
+				owner_key: 'anon:44444444-4444-4444-8444-444444444444'
+			}
+		];
+		for (const [index, o] of owners.entries()) {
+			upsertWebsiteRating('busy.dev', o, (index % 5) + 1);
+		}
+		upsertWebsiteRating('busy.dev', owners[0], 5);
+		deleteWebsiteRating('busy.dev', owners[1]);
+		const aggregate = getWebsiteRatingAggregate('busy.dev');
+		expect(aggregate.count).toBe(2);
+		const domain = getDb()
+			.prepare(
+				`SELECT rating_sum, rating_count, rating_avg FROM candidate_domains WHERE registrable_domain = ?`
+			)
+			.get('busy.dev') as { rating_sum: number; rating_count: number; rating_avg: number };
+		expect(domain.rating_count).toBe(aggregate.count);
+		expect(domain.rating_sum).toBe(5 + 3);
+		expect(aggregate.average).toBe(4);
+	});
+
+	it('handles empty random results and excludes hidden/dead/parked sites', () => {
+		expect(
+			pickRandomWebsite({
+				ownerType: owner.owner_type,
+				ownerKey: owner.owner_key
+			})
+		).toBeNull();
+
+		seedLiveWebsite('only.dev', 'Only');
+		hideWebsiteForOwner('only.dev', owner.owner_type, owner.owner_key, true);
+		expect(
+			pickRandomWebsite({
+				ownerType: owner.owner_type,
+				ownerKey: owner.owner_key
+			})
+		).toBeNull();
+
+		upsertCandidateFromCt('dead.dev', 'dead.dev');
+		recordWebsiteVerifyResult('dead.dev', { status: 'dead', httpStatus: 404 });
+		upsertCandidateFromCt('park.dev', 'park.dev');
+		recordWebsiteVerifyResult('park.dev', { status: 'parked', httpStatus: 200 });
+		expect(
+			pickRandomWebsite({
+				ownerType: owner.owner_type,
+				ownerKey: owner.owner_key,
+				excludeShownHours: 0
+			})
+		).toBeNull();
+	});
+
 	it('avoids recently shown websites in random discovery', () => {
 		seedLiveWebsite('alpha.dev', 'Alpha');
 		seedLiveWebsite('beta.dev', 'Beta');
@@ -218,5 +340,49 @@ describe('website ratings and independent favorites', () => {
 		}
 		expect(picks.has('alpha.dev')).toBe(false);
 		expect(picks.has('beta.dev')).toBe(true);
+	});
+});
+
+describe('website route domain normalization', () => {
+	it('normalizes hosts and rejects unsafe params', () => {
+		expect(parseWebsiteRouteDomain('Example.COM')).toBe('example.com');
+		expect(parseWebsiteRouteDomain('blog.example.com')).toBe('example.com');
+		expect(parseWebsiteRouteDomain('example.com:8080')).toBe('example.com');
+		expect(parseWebsiteRouteDomain('https://example.com/path')).toBe('example.com');
+		expect(parseWebsiteRouteDomain('xn--fsq.com')).toBe('xn--fsq.com');
+		expect(parseWebsiteRouteDomain('evil.com/../admin')).toBeNull();
+		expect(parseWebsiteRouteDomain('127.0.0.1')).toBeNull();
+		expect(parseWebsiteRouteDomain('not a host')).toBeNull();
+		expect(parseWebsiteRouteDomain('%E0%A4%A')).toBeNull();
+	});
+
+	it('only builds http(s) visit hrefs', () => {
+		expect(
+			websiteVisitHref({
+				registrable_domain: 'safe.dev',
+				final_url: 'javascript:alert(1)'
+			})
+		).toBe('https://safe.dev/');
+		expect(
+			websiteVisitHref({
+				registrable_domain: 'safe.dev',
+				final_url: 'https://safe.dev/docs'
+			})
+		).toBe('https://safe.dev/docs');
+	});
+});
+
+describe('random website keyboard shortcuts', () => {
+	it('ignores shortcuts while focus is in form controls', async () => {
+		const { shouldIgnoreRandomShortcutTarget } = await import('$lib/random-website-shortcuts');
+		const input = { tagName: 'INPUT', isContentEditable: false, closest: () => null };
+		const textarea = { tagName: 'TEXTAREA', isContentEditable: false, closest: () => null };
+		const select = { tagName: 'SELECT', isContentEditable: false, closest: () => null };
+		const button = { tagName: 'BUTTON', isContentEditable: false, closest: () => null };
+		expect(shouldIgnoreRandomShortcutTarget(input as unknown as EventTarget)).toBe(true);
+		expect(shouldIgnoreRandomShortcutTarget(textarea as unknown as EventTarget)).toBe(true);
+		expect(shouldIgnoreRandomShortcutTarget(select as unknown as EventTarget)).toBe(true);
+		expect(shouldIgnoreRandomShortcutTarget(button as unknown as EventTarget)).toBe(false);
+		expect(shouldIgnoreRandomShortcutTarget(null)).toBe(false);
 	});
 });

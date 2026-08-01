@@ -6,13 +6,10 @@ import {
 	removeWebsiteFromCollection
 } from '$lib/server/db/collections';
 import { getWebsiteByDomain } from '$lib/server/db/websites';
-
-function parseDomain(param: string): string {
-	return decodeURIComponent(param).trim().toLowerCase();
-}
+import { requireWebsiteRouteDomain } from '$lib/server/website-route';
 
 export const PUT: RequestHandler = async ({ params, locals }) => {
-	const domain = parseDomain(params.domain);
+	const domain = requireWebsiteRouteDomain(params.domain);
 	if (!getWebsiteByDomain(domain)) throw error(404, 'Website not found');
 	const result = addWebsiteToCollection(locals.collectionOwner, 'favorites', domain);
 	return json({
@@ -24,7 +21,7 @@ export const PUT: RequestHandler = async ({ params, locals }) => {
 };
 
 export const DELETE: RequestHandler = async ({ params, locals }) => {
-	const domain = parseDomain(params.domain);
+	const domain = requireWebsiteRouteDomain(params.domain);
 	if (!getWebsiteByDomain(domain)) throw error(404, 'Website not found');
 	const result = removeWebsiteFromCollection(locals.collectionOwner, 'favorites', domain);
 	return json({
@@ -36,7 +33,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 };
 
 export const GET: RequestHandler = async ({ params, locals }) => {
-	const domain = parseDomain(params.domain);
+	const domain = requireWebsiteRouteDomain(params.domain);
 	if (!getWebsiteByDomain(domain)) throw error(404, 'Website not found');
 	return json({
 		ok: true,

@@ -8,13 +8,17 @@ import {
 	getWebsiteRatingAggregate
 } from '$lib/server/website-ratings';
 import { getWebsiteCollectionMembership } from '$lib/server/db/collections';
+import { websiteVisitHref } from '$lib/server/website-domain';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const minQualityRaw = url.searchParams.get('min_quality');
 	const minQuality =
 		minQualityRaw != null && minQualityRaw !== '' ? Number(minQualityRaw) : undefined;
-	const workingOnly = url.searchParams.get('working') !== '0';
+	// Checkbox + hidden pair may send working=0&working=1; last value wins.
+	const workingValues = url.searchParams.getAll('working');
+	const workingOnly =
+		workingValues.length === 0 || workingValues[workingValues.length - 1] !== '0';
 	const completelyRandom = url.searchParams.get('mode') === 'random';
 
 	const owner = locals.collectionOwner;
@@ -47,12 +51,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			workingOnly,
 			completelyRandom
 		},
-		visitHref:
-			site?.final_url && site.final_url.startsWith('http')
-				? site.final_url
-				: site
-					? `https://${site.registrable_domain}/`
-					: null,
+		visitHref: site ? websiteVisitHref(site) : null,
 		whyInteresting: site
 			? site.summary?.trim() ||
 				(site.page_title

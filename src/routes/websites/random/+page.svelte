@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
+	import { shouldIgnoreRandomShortcutTarget } from '$lib/random-website-shortcuts';
 	import { timeAgo } from '$lib/utils';
 
 	let { data } = $props();
@@ -84,8 +85,7 @@
 	}
 
 	function onKeydown(event: KeyboardEvent) {
-		const tag = (event.target as HTMLElement | null)?.tagName;
-		if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+		if (shouldIgnoreRandomShortcutTarget(event.target)) return;
 		const key = event.key.toLowerCase();
 		if (key === 'n') {
 			event.preventDefault();
@@ -139,6 +139,7 @@
 					placeholder="Any"
 				/>
 			</label>
+			<input type="hidden" name="working" value="0" />
 			<label class="check">
 				<input type="checkbox" name="working" value="1" checked={data.filters.workingOnly} />
 				Working only
