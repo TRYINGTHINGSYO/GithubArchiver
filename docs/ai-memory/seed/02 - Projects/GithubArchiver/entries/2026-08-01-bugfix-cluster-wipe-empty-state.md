@@ -1,6 +1,8 @@
 ---
 id: bugfix-cluster-wipe-empty-state
 date: 2026-08-01
+pr: 30
+commit: 2c5b89f
 area:
   - discovery
   - clusters
@@ -17,6 +19,8 @@ relationships:
     id: feature-cache-hit-metrics
   - type: related
     id: incident-schema26-discovery-tables-missing
+  - type: implemented-by
+    id: pr-30
 title: Wipe must clear stale cluster cards from materialization and TTL
 ---
 
