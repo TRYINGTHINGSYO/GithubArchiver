@@ -47,7 +47,19 @@
 			</div>
 		</section>
 	{:else}
-		<p class="empty">No clusters meet the growth guardrails yet.</p>
+		<p class="empty">
+			{#if data.clusterSurface.emptyReason === 'no-repositories'}
+				No repositories have been analyzed yet. Cluster cards appear only after live repositories
+				are ingested, enriched, and assigned to clusters.
+			{:else if data.clusterSurface.emptyReason === 'clustering-incomplete'}
+				{data.clusterSurface.repoCount.toLocaleString()}
+				{data.clusterSurface.repoCount === 1 ? 'repository has' : 'repositories have'} been
+				indexed, but clustering has not yet completed. Cluster cards are generated only from live
+				membership records — not from predefined category definitions.
+			{:else}
+				No clusters meet the growth guardrails yet.
+			{/if}
+		</p>
 	{/each}
 </div>
 

@@ -1,6 +1,8 @@
 import { getStoredArchiveStory } from '$lib/server/db/archive-story';
 import { getClusterDefinition } from '$lib/server/cluster-registry';
 import {
+	countClusterMemberships,
+	countPopulatedClusters,
 	getRepoClusterMemberships,
 	listActiveClusterSummaries,
 	listClusterAnalytics,
@@ -8,12 +10,19 @@ import {
 } from '$lib/server/db/clusters';
 import { cached } from '$lib/server/ttl-cache';
 import { getDb } from '$lib/server/db/connection';
-import { parseTopics } from '$lib/server/db/repos';
+import { countRepos, parseTopics } from '$lib/server/db/repos';
 import type { RepoRow } from '$lib/server/db/types';
 import { DISCOVERY_PRESETS, type DiscoveryPreset } from '$lib/server/discovery-presets';
 import { getMaterializedDiscoveryLanding } from '$lib/server/discovery-materialized';
 import { listEmergingTopics, type EmergingTopicRow } from '$lib/server/emerging-topics';
 import { computeGrowthPercent } from '$lib/server/growth';
+
+/**
+ * Development-only escape hatch. Production never serves placeholder cluster cards.
+ * Set ALLOW_DEV_CLUSTER_PLACEHOLDERS=1 in non-production if local UI needs fixtures.
+ */
+export const ALLOW_DEV_CLUSTER_PLACEHOLDERS =
+	process.env.NODE_ENV !== 'production' && process.env.ALLOW_DEV_CLUSTER_PLACEHOLDERS === '1';
 
 export type DiscoveryPeriod = '7d' | '14d' | '30d';
 
@@ -122,6 +131,38 @@ export const MIN_HOMEPAGE_CLASSIFICATION_CONFIDENCE = 0.55;
 export const MIN_HOMEPAGE_ENRICHMENT_LEVEL = 1;
 const DEFAULT_LIMIT = 50;
 
+export type ClusterSurfaceEmptyReason =
+	| 'no-repositories'
+	| 'clustering-incomplete'
+	| 'no-growth-match';
+
+export interface ClusterSurfaceState {
+	repoCount: number;
+	membershipCount: number;
+	populatedClusterCount: number;
+	/** Why the growth surface has no cards, or null when cards may be shown. */
+	emptyReason: ClusterSurfaceEmptyReason | null;
+}
+
+/** Live intelligence only — seeded cluster definitions are not displayable records. */
+export function getClusterSurfaceState(hasCards = false): ClusterSurfaceState {
+	const repoCount = countRepos();
+	const membershipCount = countClusterMemberships();
+	const populatedClusterCount = countPopulatedClusters();
+	let emptyReason: ClusterSurfaceEmptyReason | null = null;
+	if (!hasCards) {
+		if (repoCount === 0) emptyReason = 'no-repositories';
+		else if (membershipCount === 0 || populatedClusterCount === 0)
+			emptyReason = 'clustering-incomplete';
+		else emptyReason = 'no-growth-match';
+	}
+	return { repoCount, membershipCount, populatedClusterCount, emptyReason };
+}
+
+function hasLiveClusterIntelligence(): boolean {
+	return countClusterMemberships() > 0;
+}
+
 const INCOMPLETE_SIGNAL_LABELS: Record<IncompleteSignal, string> = {
 	'unknown-category': 'unknown category',
 	'missing-language': 'missing language',
@@ -153,6 +194,17 @@ export function getDiscoveryLanding(opts: Partial<DiscoveryQuery> = {}): Discove
 		return {
 			...materialized,
 			presets: DISCOVERY_PRESETS
+		};
+	}
+	if (!hasLiveClusterIntelligence()) {
+		return {
+			presets: DISCOVERY_PRESETS,
+			fastestGrowing: [],
+			projectsToWatch: [],
+			deletedGems: getDeletedGems({ ...query, limit: 6 }),
+			unusualFinds: getUnusualFinds({ ...query, limit: 6 }),
+			emergingTopics: listEmergingTopics({ limit: 6 }),
+			clusters: []
 		};
 	}
 	return {
@@ -187,7 +239,10 @@ function qualityWeightedGrowthScore(cluster: ClusterAnalyticsRow): number {
 
 export function getFastestGrowingClusters(opts: Partial<DiscoveryQuery> = {}): DiscoveryClusterCard[] {
 	const query = normalizeQuery(opts);
+	// Registry seed rows are not intelligence — require live memberships.
+	if (!hasLiveClusterIntelligence()) return [];
 	const clusters = cachedClusterAnalytics()
+		.filter((cluster) => cluster.repo_count > 0)
 		.filter((cluster) => {
 			const growth = computeGrowthPercent(
 				cluster.new_7d,
@@ -346,6 +401,7 @@ export function getPreliminaryProjectsToWatch(opts: Partial<DiscoveryQuery> = {}
 /** Populated clusters with preliminary 24h activity when week-over-week growth is unavailable. */
 export function getPreliminaryGrowingClusters(opts: Partial<DiscoveryQuery> = {}): DiscoveryClusterCard[] {
 	const query = normalizeQuery(opts);
+	if (!hasLiveClusterIntelligence()) return [];
 	return cachedClusterAnalytics()
 		.filter((cluster) => cluster.repo_count > 0)
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
@@ -456,6 +512,7 @@ export function getNewHighSignalRepos(opts: Partial<DiscoveryQuery> = {}): Disco
  */
 export function getActiveQualityClusters(opts: Partial<DiscoveryQuery> = {}): ActiveClusterCard[] {
 	const query = normalizeQuery(opts);
+	if (!hasLiveClusterIntelligence()) return [];
 	return cachedClusterAnalytics()
 		.filter((cluster) => !query.cluster || cluster.slug === query.cluster)
 		.filter((cluster) => cluster.repo_count > 0)

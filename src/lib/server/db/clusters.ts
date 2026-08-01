@@ -59,6 +59,24 @@ export function listClusters(): ClusterRow[] {
 	return db.prepare('SELECT * FROM repo_clusters ORDER BY name').all() as ClusterRow[];
 }
 
+/** Live membership rows — registry seed definitions alone do not count. */
+export function countClusterMemberships(): number {
+	const db = getDb();
+	return (
+		db.prepare('SELECT COUNT(*) AS c FROM repository_cluster_memberships').get() as { c: number }
+	).c;
+}
+
+/** Clusters with at least one live membership (maintained repo_count). */
+export function countPopulatedClusters(): number {
+	const db = getDb();
+	return (
+		db
+			.prepare('SELECT COUNT(*) AS c FROM repo_clusters WHERE repo_count > 0')
+			.get() as { c: number }
+	).c;
+}
+
 export function saveRepoClusterMemberships(
 	repoId: number,
 	memberships: { slug: string; confidence: number; evidence: ClusterMatchEvidence }[]

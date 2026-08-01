@@ -145,12 +145,19 @@
 				{/if}
 			</article>
 		{:else}
-			<p class="empty">No clusters meet the growth guardrails yet.</p>
+			<p class="empty">
+				{#if data.discoveryStatus.repositoriesDiscovered === 0}
+					No repositories have been analyzed yet. Fastest-growing cluster cards require live
+					repository intelligence.
+				{:else if data.discovery.clusters.length === 0}
+					Repositories are indexed, but clustering has not yet completed. Cards are built only from
+					live cluster memberships.
+				{:else}
+					No clusters meet the growth guardrails yet.
+				{/if}
+			</p>
 		{/each}
 	</div>
-	{#if data.discovery.fastestGrowing.length === 0}
-		<p class="evidence">Additional categories will appear as repositories are classified.</p>
-	{/if}
 </section>
 
 <section class="section-block">
@@ -218,7 +225,14 @@
 				<span>{cluster.repo_count.toLocaleString()} repos</span>
 			</a>
 		{:else}
-			<p class="empty">Additional categories will appear as repositories are classified.</p>
+			<p class="empty">
+				{#if data.discoveryStatus.repositoriesDiscovered === 0}
+					No repositories have been analyzed yet.
+				{:else}
+					Clustering has not yet completed. Populated clusters appear here after memberships are
+					written.
+				{/if}
+			</p>
 		{/each}
 	</div>
 </section>

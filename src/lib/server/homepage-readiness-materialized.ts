@@ -1,6 +1,7 @@
 import { computeDataReadiness } from './data-readiness.js';
 import { getNewHighSignalRepos, type DiscoveryRepoCard } from './discovery.js';
 import { getDb } from './db/connection.js';
+import { countRepos } from './db/repos.js';
 import {
 	completeHomepageReadinessRun,
 	getPublishedHomepageReadinessSnapshot,
@@ -127,6 +128,8 @@ export function getHomepageHighSignalRepos(opts: {
 	limit?: number;
 	minScore?: number;
 } = {}): DiscoveryRepoCard[] {
+	// Fresh install / wiped volume — never serve snapshot cards without live repos.
+	if (countRepos() === 0) return [];
 	const snapshot = getPublishedHomepageReadinessSnapshot();
 	if (snapshot && isHomepageReadinessSnapshotFresh(snapshot)) {
 		const limit = opts.limit ?? 8;
@@ -139,6 +142,7 @@ export function getHomepageHighSignalRepos(opts: {
 }
 
 export function getHomepageHighSignalCount(): number {
+	if (countRepos() === 0) return 0;
 	const snapshot = getPublishedHomepageReadinessSnapshot();
 	if (snapshot && isHomepageReadinessSnapshotFresh(snapshot)) {
 		return snapshot.highSignalCount;

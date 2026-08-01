@@ -15,6 +15,8 @@ Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, 
   - `related` → [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md) (`feature`, `confirmed`, `permanent`) — Volume retention, dbstat inventory, and github_id uniqueness
   - _none_
+- [`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md) (`bugfix`, `confirmed`, `permanent`) — Wipe must clear stale cluster cards from materialization and TTL
+  - `caused-by` → [`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), `related` → [`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), `related` → [`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md)
 - [`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md) (`decision`, `confirmed`, `permanent`) — MCP is the primary knowledge and review layer
   - `references` → [`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), `related` → [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), `validates` → [`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 - [`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md) (`feature`, `confirmed`, `permanent`) — Harden homepage discovery materialization durability

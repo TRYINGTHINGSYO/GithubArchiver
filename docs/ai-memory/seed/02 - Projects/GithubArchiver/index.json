@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-01T09:17:09.220Z",
+  "generatedAt": "2026-08-01T09:50:29.428Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -58,6 +58,46 @@
       "title": "Volume retention, dbstat inventory, and github_id uniqueness",
       "path": "entries/2026-08-01-feature-storage-retention-volume.md",
       "summary": "Least-disruption storage hygiene for the Railway SQLite volume:"
+    },
+    {
+      "id": "bugfix-cluster-wipe-empty-state",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-08-01",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "discovery",
+        "clusters",
+        "cache"
+      ],
+      "related": [
+        "feature-durable-discovery-materialization",
+        "feature-cache-hit-metrics",
+        "incident-schema26-discovery-tables-missing"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "feature-durable-discovery-materialization"
+        },
+        {
+          "type": "related",
+          "id": "feature-cache-hit-metrics"
+        },
+        {
+          "type": "related",
+          "id": "incident-schema26-discovery-tables-missing"
+        }
+      ],
+      "supersedes": null,
+      "title": "Wipe must clear stale cluster cards from materialization and TTL",
+      "path": "entries/2026-08-01-bugfix-cluster-wipe-empty-state.md",
+      "summary": "After deleting the database volume (or wiping repos/memberships while leaving discovery materialization), “Fastest-growing clusters” could still show cluster cards."
     },
     {
       "id": "decision-mcp-first-dev-workflow",

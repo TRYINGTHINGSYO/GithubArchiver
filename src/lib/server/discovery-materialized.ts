@@ -1,5 +1,8 @@
 import { getDb } from './db/connection.js';
-import { listActiveClusterSummaries } from './db/clusters.js';
+import {
+	countClusterMemberships,
+	listActiveClusterSummaries
+} from './db/clusters.js';
 import { countRepos, countUnenriched } from './db/repos.js';
 import { getLatestJobsByType } from './db/jobs.js';
 import type {
@@ -26,6 +29,7 @@ import {
 	tryClaimDiscoveryMaterializationRun
 } from './discovery-materialization.js';
 import { CURRENT_EMERGING_DETECTION_VERSION, listEmergingTopics } from './emerging-topics.js';
+import { clearTtlCache } from './ttl-cache.js';
 
 export type DiscoveryTier = 'qualified' | 'preliminary';
 
@@ -208,6 +212,8 @@ export function materializeDiscoveryResults(
 			rowCounts,
 			published: true
 		});
+		// Live analytics TTL must not outrank a freshly published empty snapshot.
+		clearTtlCache();
 
 		return {
 			status: 'success',
@@ -265,30 +271,56 @@ export function getMaterializedDiscoveryLanding(
 	if (!status?.last_discovery_analysis_at) return null;
 
 	const limit = opts.limit ?? 50;
-	const emergingTopics = readMaterializedPayloads<{ detection_version?: number }>(
-		'discovery_emerging_topics'
-	).filter((topic) => topic.detection_version === CURRENT_EMERGING_DETECTION_VERSION);
+	const repoCount = countRepos();
+	const membershipCount = countClusterMemberships();
+	// After a volume wipe (or partial wipe), materialization tables can outlive live
+	// memberships. Never surface cluster cards without live membership rows — seeded
+	// registry definitions alone are not intelligence.
+	const hasLiveClusters = membershipCount > 0;
+	if (!hasLiveClusters) {
+		purgeStaleClusterMaterialization();
+	}
+
+	const emergingTopics =
+		repoCount === 0
+			? []
+			: readMaterializedPayloads<{ detection_version?: number }>('discovery_emerging_topics').filter(
+					(topic) => topic.detection_version === CURRENT_EMERGING_DETECTION_VERSION
+				);
+
 	return {
 		presets: DISCOVERY_PRESETS,
-		fastestGrowing: readMaterializedPayloads<DiscoveryClusterCard>('discovery_fastest_clusters').slice(
-			0,
-			limit
-		),
-		projectsToWatch: readMaterializedPayloads<ProjectsToWatchItem>(
-			'discovery_projects_to_watch'
-		).slice(0, limit),
-		deletedGems: readMaterializedPayloads<DeletedGemItem>('discovery_deleted_preserved').slice(
-			0,
-			limit
-		),
-		unusualFinds: readMaterializedPayloads<DiscoveryRepoCard>('discovery_unusual_finds').slice(
-			0,
-			limit
-		),
+		fastestGrowing: hasLiveClusters
+			? readMaterializedPayloads<DiscoveryClusterCard>('discovery_fastest_clusters').slice(0, limit)
+			: [],
+		projectsToWatch: hasLiveClusters
+			? readMaterializedPayloads<ProjectsToWatchItem>('discovery_projects_to_watch').slice(0, limit)
+			: [],
+		deletedGems:
+			repoCount === 0
+				? []
+				: readMaterializedPayloads<DeletedGemItem>('discovery_deleted_preserved').slice(0, limit),
+		unusualFinds:
+			repoCount === 0
+				? []
+				: readMaterializedPayloads<DiscoveryRepoCard>('discovery_unusual_finds').slice(0, limit),
 		emergingTopics: emergingTopics.slice(0, limit),
 		// Use maintained repo_count — avoid N+1 analytics on every page load.
-		clusters: listActiveClusterSummaries(24)
+		clusters: hasLiveClusters ? listActiveClusterSummaries(24) : []
 	};
+}
+
+/** Drop orphaned cluster payloads when the live membership graph is empty. */
+function purgeStaleClusterMaterialization(): void {
+	const db = getDb();
+	const tables = ['discovery_fastest_clusters', 'discovery_projects_to_watch'] as const;
+	for (const table of tables) {
+		const exists = db
+			.prepare(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = ?`)
+			.get(table) as { ok: number } | undefined;
+		if (!exists) continue;
+		db.prepare(`DELETE FROM ${table}`).run();
+	}
 }
 
 export function updateDiscoverySystemStatus(

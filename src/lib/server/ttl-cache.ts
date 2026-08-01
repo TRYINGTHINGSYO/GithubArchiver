@@ -155,7 +155,13 @@ export function getTtlCacheStats(): TtlCacheStats {
 	};
 }
 
-export function clearTtlCacheForTests(): void {
+/** Drop all process-local TTL entries (DB reopen, wipe, or tests). */
+export function clearTtlCache(): void {
 	cache.clear();
 	counters.clear();
+}
+
+/** @deprecated Prefer clearTtlCache() — kept for existing test imports. */
+export function clearTtlCacheForTests(): void {
+	clearTtlCache();
 }

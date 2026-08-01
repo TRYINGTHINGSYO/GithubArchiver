@@ -49,6 +49,12 @@ describe('scheduled jobs and discovery materialization', () => {
 	it('filters stale emerging-topic payloads from the materialized landing cache', () => {
 		materializeDiscoveryResults({ limit: 10, minScore: 40 });
 		const db = getDb();
+		// Landing suppresses intelligence when the corpus is empty (post-wipe).
+		db.prepare(
+			`INSERT INTO repos (owner, name, full_name, github_url, event_id, created_at, first_seen_at, discovery_source)
+			 VALUES ('acme', 'widget', 'acme/widget', 'https://github.com/acme/widget', 'e1',
+			         '2026-07-01T00:00:00.000Z', '2026-07-01T00:00:00.000Z', 'github_search')`
+		).run();
 		db.prepare(
 			`INSERT INTO discovery_emerging_topics
 			 (rank, tier, topic_key, payload_json, materialized_at)

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { clearTtlCache } from '$lib/server/ttl-cache';
 import { markDatabaseReady, resetDatabaseReadyForTests } from './ready';
 import { repairSchemaDrift, runMigrations } from './schema';
 
@@ -14,13 +15,21 @@ export const DB_PATH = getDatabasePath();
 let db: Database.Database | null = null;
 let dbPathOpened: string | null = null;
 
-export function getDb(): Database.Database {
-	const path = getDatabasePath();
-	if (db && dbPathOpened !== path) {
+function releaseDbHandle(): void {
+	if (db) {
 		db.close();
 		db = null;
 		dbPathOpened = null;
 		resetDatabaseReadyForTests();
+	}
+	// Process-local aggregates must not outlive the SQLite file they were computed from.
+	clearTtlCache();
+}
+
+export function getDb(): Database.Database {
+	const path = getDatabasePath();
+	if (db && dbPathOpened !== path) {
+		releaseDbHandle();
 	}
 	if (!db) {
 		mkdirSync(dirname(path), { recursive: true });
@@ -37,17 +46,14 @@ export function getDb(): Database.Database {
 		runMigrations(db);
 		repairSchemaDrift(db);
 		markDatabaseReady();
+		// Opening a new handle (fresh volume, path swap, or tests) starts with a cold cache.
+		clearTtlCache();
 	}
 	return db;
 }
 
 export function closeDb(): void {
-	if (db) {
-		db.close();
-		db = null;
-		dbPathOpened = null;
-		resetDatabaseReadyForTests();
-	}
+	releaseDbHandle();
 }
 
 /** Ensure the configured DB is opened, migrated, drift-repaired, and marked ready. */
