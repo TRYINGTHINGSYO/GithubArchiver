@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 43;
+export const CURRENT_SCHEMA_VERSION = 44;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1455,6 +1455,129 @@ function migration042(database: Database.Database) {
 }
 
 /**
+ * Website curation + polymorphic collections (additive).
+ * Keeps `candidate_domains` as website identity; keeps `collection_repositories`
+ * and dual-fills `collection_items` for repositories.
+ */
+function migration044(database: Database.Database) {
+	// Drift repair may mark schema ≥44 before prerequisite DDL exists.
+	const tables = new Set(
+		(
+			database
+				.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+				.all() as { name: string }[]
+		).map((row) => row.name)
+	);
+	if (!tables.has('candidate_domains')) {
+		migration037(database);
+	}
+	if (!tables.has('collections')) {
+		migration041(database);
+	}
+
+	const domainCols = columnNames(database, 'candidate_domains');
+	for (const def of [
+		'rating_sum INTEGER NOT NULL DEFAULT 0',
+		'rating_count INTEGER NOT NULL DEFAULT 0',
+		'rating_avg REAL',
+		'favorite_count INTEGER NOT NULL DEFAULT 0',
+		'view_count INTEGER NOT NULL DEFAULT 0',
+		'random_eligible INTEGER NOT NULL DEFAULT 1',
+		'category TEXT',
+		'summary TEXT',
+		'quality_score REAL'
+	] as const) {
+		const name = def.split(' ')[0];
+		if (!domainCols.has(name)) {
+			database.exec(`ALTER TABLE candidate_domains ADD COLUMN ${def}`);
+		}
+	}
+
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS website_ratings (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			website_domain TEXT NOT NULL,
+			owner_type TEXT NOT NULL,
+			owner_key TEXT NOT NULL,
+			rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+			review TEXT,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL,
+			deleted_at TEXT,
+			UNIQUE(website_domain, owner_type, owner_key)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_website_ratings_domain
+		  ON website_ratings(website_domain, deleted_at, rating);
+
+		CREATE INDEX IF NOT EXISTS idx_website_ratings_owner
+		  ON website_ratings(owner_type, owner_key, updated_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_website_ratings_active_lookup
+		  ON website_ratings(website_domain, owner_type, owner_key)
+		  WHERE deleted_at IS NULL;
+
+		CREATE TABLE IF NOT EXISTS website_user_state (
+			owner_type TEXT NOT NULL,
+			owner_key TEXT NOT NULL,
+			website_domain TEXT NOT NULL,
+			hidden INTEGER NOT NULL DEFAULT 0,
+			last_shown_at TEXT,
+			shown_count INTEGER NOT NULL DEFAULT 0,
+			updated_at TEXT NOT NULL,
+			PRIMARY KEY (owner_type, owner_key, website_domain)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_website_user_state_shown
+		  ON website_user_state(owner_type, owner_key, last_shown_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_website_user_state_hidden
+		  ON website_user_state(owner_type, owner_key, website_domain)
+		  WHERE hidden = 1;
+
+		CREATE TABLE IF NOT EXISTS collection_items (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+			item_type TEXT NOT NULL CHECK (item_type IN ('repository', 'website')),
+			item_key TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			UNIQUE(collection_id, item_type, item_key)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_collection_items_type_key
+		  ON collection_items(item_type, item_key);
+
+		CREATE INDEX IF NOT EXISTS idx_collection_items_collection
+		  ON collection_items(collection_id, created_at DESC);
+
+		CREATE INDEX IF NOT EXISTS idx_candidate_domains_rating
+		  ON candidate_domains(rating_avg DESC, rating_count DESC)
+		  WHERE verify_status = 'live';
+
+		CREATE INDEX IF NOT EXISTS idx_candidate_domains_random
+		  ON candidate_domains(random_eligible, verify_status, first_seen_at DESC);
+	`);
+
+	// Backfill polymorphic items from existing repository memberships (idempotent).
+	const tablesAfter = new Set(
+		(
+			database
+				.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+				.all() as { name: string }[]
+		).map((row) => row.name)
+	);
+	if (tablesAfter.has('collection_repositories') && tablesAfter.has('collection_items')) {
+		database.transaction(() => {
+			database.exec(`
+				INSERT OR IGNORE INTO collection_items (collection_id, item_type, item_key, created_at)
+				SELECT collection_id, 'repository', CAST(repo_id AS TEXT), created_at
+				FROM collection_repositories
+			`);
+		})();
+	}
+}
+
+/**
  * Low-value repository cleanup: quarantine before permanent purge.
  * `cleanup_protected` is a manual operator hold; favorites/collections are
  * always treated as protected in application SQL.
@@ -1577,7 +1700,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	40: migration040,
 	41: migration041,
 	42: migration042,
-	43: migration043
+	43: migration043,
+	44: migration044
 };
 
 export interface MigrationRunResult {
@@ -1727,6 +1851,32 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 		if (!cols.has('pending_deletion_at') || !cols.has('cleanup_protected')) {
 			migration043(database);
 			repairs.push('043:low_value_cleanup');
+		}
+	}
+
+	if (version >= 44) {
+		const tables = new Set(
+			(
+				database
+					.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+					.all() as { name: string }[]
+			).map((row) => row.name)
+		);
+		const indexes = new Set(
+			(
+				database
+					.prepare(`SELECT name FROM sqlite_master WHERE type = 'index'`)
+					.all() as { name: string }[]
+			).map((row) => row.name)
+		);
+		if (
+			!tables.has('website_ratings') ||
+			!tables.has('collection_items') ||
+			!indexes.has('idx_website_user_state_hidden') ||
+			!indexes.has('idx_website_ratings_active_lookup')
+		) {
+			migration044(database);
+			repairs.push('044:website_curation');
 		}
 	}
 

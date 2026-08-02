@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '$lib/server/db/connection';
 import {
 	countLiveWebsites,
+	listLiveWebsiteCategories,
 	listLiveWebsites,
 	listPendingVerifyDomains,
 	recordWebsiteVerifyResult,
@@ -76,6 +77,59 @@ describe('website discovery', () => {
 		expect(listPendingVerifyDomains(10).some((r) => r.registrable_domain === 'alpha.com')).toBe(
 			false
 		);
+	});
+
+	it('filters and sorts the website selector without losing structural totals', () => {
+		for (const [domain, title] of [
+			['alpha.dev', 'Alpha Docs'],
+			['beta.dev', 'Beta Studio'],
+			['gamma.dev', 'Gamma Learn']
+		] as const) {
+			upsertCandidateFromCt(domain, domain);
+			recordWebsiteVerifyResult(domain, {
+				status: 'live',
+				httpStatus: 200,
+				finalUrl: `https://${domain}/`,
+				pageTitle: title
+			});
+		}
+
+		const db = getDb();
+		db.prepare(
+			`UPDATE candidate_domains
+			 SET category = ?, summary = ?, rating_avg = ?, rating_count = ?, favorite_count = ?
+			 WHERE registrable_domain = ?`
+		).run('Documentation', 'API reference and examples', 4.8, 5, 2, 'alpha.dev');
+		db.prepare(
+			`UPDATE candidate_domains
+			 SET category = ?, summary = ?, rating_avg = ?, rating_count = ?, favorite_count = ?
+			 WHERE registrable_domain = ?`
+		).run('Design', 'Design tools', 5, 1, 8, 'beta.dev');
+		db.prepare(
+			`UPDATE candidate_domains
+			 SET category = ?, summary = ?, rating_avg = ?, rating_count = ?, favorite_count = ?
+			 WHERE registrable_domain = ?`
+		).run('Documentation', 'Learning guides', 3.5, 2, 1, 'gamma.dev');
+
+		expect(countLiveWebsites({ query: 'api' })).toBe(1);
+		expect(listLiveWebsites(10, 0, 'recent', { query: 'ALPHA' }).map((site) => site.registrable_domain)).toEqual([
+			'alpha.dev'
+		]);
+		expect(countLiveWebsites({ category: 'Documentation' })).toBe(2);
+		expect(listLiveWebsites(10, 0, 'rated').map((site) => site.registrable_domain)).toEqual([
+			'beta.dev',
+			'alpha.dev',
+			'gamma.dev'
+		]);
+		expect(listLiveWebsites(10, 0, 'favorites').map((site) => site.registrable_domain)).toEqual([
+			'beta.dev',
+			'alpha.dev',
+			'gamma.dev'
+		]);
+		expect(listLiveWebsiteCategories()).toEqual([
+			{ category: 'Documentation', count: 2 },
+			{ category: 'Design', count: 1 }
+		]);
 	});
 
 	it('detects parked titles and parking hosts', () => {

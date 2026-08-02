@@ -1,8 +1,23 @@
 <script lang="ts">
-	let { data } = $props();
+	import { navigating } from '$app/state';
+	import WebsiteCard from '$lib/components/WebsiteCard.svelte';
 
-	function hrefFor(domain: string, finalUrl: string | null): string {
-		return finalUrl && finalUrl.startsWith('http') ? finalUrl : `https://${domain}/`;
+	let { data } = $props();
+	let density = $state<'compact' | 'comfortable' | 'detailed'>('comfortable');
+	const isRefreshing = $derived(navigating.to?.url.pathname === '/websites');
+
+	function pageHref(pageNumber: number): string {
+		const params = new URLSearchParams();
+		if (data.query) params.set('q', data.query);
+		if (data.category) params.set('category', data.category);
+		if (data.sort !== 'recent') params.set('sort', data.sort);
+		if (pageNumber > 1) params.set('page', String(pageNumber));
+		const query = params.toString();
+		return query ? `/websites?${query}` : '/websites';
+	}
+
+	function submitSelect(event: Event) {
+		(event.currentTarget as HTMLSelectElement).form?.requestSubmit();
 	}
 </script>
 
@@ -10,59 +25,106 @@
 	<title>Websites — GithubArchive+</title>
 </svelte:head>
 
-<section class="websites-page">
+<section class="websites-page" class:refreshing={isRefreshing} aria-busy={isRefreshing}>
 	<header class="page-header">
-		<p class="eyebrow">Live web discovery</p>
-		<h1>Websites</h1>
+		<div class="heading-row">
+			<div>
+				<p class="eyebrow">First-class website discovery</p>
+				<h1>Find a website worth opening</h1>
+			</div>
+			<a class="random button-secondary" href="/websites/random">Surprise me</a>
+		</div>
 		<p class="lede">
-			Newly seen domains from Certificate Transparency (and optional registration feeds),
-			verified live — reverse-chronological, volume-first. Parked and dead hosts stay off this list.
+			Browse verified live domains, compare community signals, and open the details safely before
+			visiting an unfamiliar site.
 		</p>
-		<p class="meta">{data.total.toLocaleString()} verified live</p>
+
+		<form class="discovery-controls" method="GET" aria-label="Filter websites">
+			<label class="field search-field">
+				<span>Search websites</span>
+				<input
+					type="search"
+					name="q"
+					value={data.query}
+					placeholder="Domain, title, or description"
+					autocomplete="off"
+				/>
+			</label>
+
+			<label class="field">
+				<span>Category</span>
+				<select name="category" value={data.category} onchange={submitSelect}>
+					<option value="">All categories</option>
+					{#each data.categories as item}
+						<option value={item.category}>{item.category} ({item.count})</option>
+					{/each}
+				</select>
+			</label>
+
+			<label class="field">
+				<span>Sort by</span>
+				<select name="sort" value={data.sort} onchange={submitSelect}>
+					<option value="recent">Recently verified</option>
+					<option value="rated">Highest rated</option>
+					<option value="favorites">Most favorited</option>
+				</select>
+			</label>
+
+			<button class="button apply" type="submit" disabled={isRefreshing}>
+				{isRefreshing ? 'Updating…' : 'Search'}
+			</button>
+			{#if data.query || data.category || data.sort !== 'recent'}
+				<a class="clear" href="/websites">Clear</a>
+			{/if}
+		</form>
 	</header>
 
-	{#if data.sites.length === 0}
-		<p class="empty">No verified-live websites yet. Discovery runs in the background — check back soon.</p>
-	{:else}
-		<ul class="site-list">
-			{#each data.sites as site (site.registrable_domain)}
-				<li class="site-item">
-					<a
-						class="site-link"
-						href={hrefFor(site.registrable_domain, site.final_url)}
-						target="_blank"
-						rel="noopener noreferrer"
-					>
-						<span class="domain">{site.registrable_domain}</span>
-						{#if site.page_title}
-							<span class="title">{site.page_title}</span>
-						{/if}
-					</a>
-					<div class="badges">
-						{#if site.source_ct}
-							<span class="badge">CT</span>
-						{/if}
-						{#if site.source_zone}
-							<span class="badge">Zone</span>
-						{/if}
-						{#if site.http_status}
-							<span class="badge muted">{site.http_status}</span>
-						{/if}
-					</div>
-					<time datetime={site.verified_at ?? site.first_seen_at}>
-						{site.verified_at ?? site.first_seen_at}
-					</time>
-				</li>
-			{/each}
-		</ul>
+	<div class="results-bar" role="status" aria-live="polite">
+		<p>
+			<strong>{data.total.toLocaleString()}</strong>
+			{data.total === 1 ? 'website' : 'websites'}
+			{#if data.total !== data.allTotal}
+				<span>of {data.allTotal.toLocaleString()} verified live</span>
+			{:else}
+				<span>verified live</span>
+			{/if}
+		</p>
+		<label class="density-field">
+			<span>Card view</span>
+			<select bind:value={density}>
+				<option value="compact">Compact</option>
+				<option value="comfortable">Comfortable</option>
+				<option value="detailed">Detailed</option>
+			</select>
+		</label>
+	</div>
 
-		<nav class="pager" aria-label="Pagination">
+	{#if data.sites.length === 0}
+		<div class="empty">
+			{#if data.allTotal === 0}
+				<h2>Website discovery is warming up</h2>
+				<p>Verified sites will appear here as the background discovery pipeline confirms them.</p>
+				<a class="button-secondary" href="/discover">Explore repositories</a>
+			{:else}
+				<h2>No websites match those filters</h2>
+				<p>Try a shorter search, another category, or return to the complete verified list.</p>
+				<a class="button-secondary" href="/websites">Show all websites</a>
+			{/if}
+		</div>
+	{:else}
+		<div class="website-grid">
+			{#each data.sites as site (site.registrable_domain)}
+				<WebsiteCard {site} {density} />
+			{/each}
+		</div>
+
+		<nav class="pager" aria-label="Website pages">
 			{#if data.page > 1}
-				<a href={`/websites?page=${data.page - 1}`}>Newer</a>
+				<a class="button-secondary" href={pageHref(data.page - 1)}>Newer</a>
 			{/if}
 			<span>Page {data.page}</span>
 			{#if data.hasMore}
-				<a href={`/websites?page=${data.page + 1}`}>Older</a>
+				<a class="button-secondary" href={pageHref(data.page + 1)}>Older</a>
 			{/if}
 		</nav>
 	{/if}
@@ -70,89 +132,223 @@
 
 <style>
 	.websites-page {
-		padding: 1.5rem 0 3rem;
+		padding: 0.5rem 0 2rem;
 	}
+
+	.page-header {
+		border: 1px solid var(--border);
+		border-radius: 16px;
+		padding: clamp(1rem, 3vw, 1.5rem);
+		background:
+			linear-gradient(135deg, color-mix(in srgb, var(--web-accent) 11%, transparent), transparent 58%),
+			var(--bg-elevated);
+		box-shadow: var(--shadow-soft);
+	}
+
+	.heading-row,
+	.results-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
 	.eyebrow {
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
 		font-size: 0.75rem;
-		opacity: 0.7;
+		color: var(--web-accent);
 		margin: 0 0 0.35rem;
+		font-weight: 800;
 	}
-	.page-header h1 {
-		margin: 0 0 0.5rem;
-		font-size: clamp(1.8rem, 3vw, 2.4rem);
+
+	h1 {
+		margin: 0;
+		font-size: clamp(1.8rem, 4vw, 2.65rem);
+		line-height: 1.08;
 	}
+
 	.lede {
-		max-width: 42rem;
-		line-height: 1.45;
-		opacity: 0.85;
+		color: var(--text-muted);
+		max-width: 50rem;
+		margin: 0.75rem 0 1.1rem;
 	}
-	.meta {
-		font-size: 0.9rem;
-		opacity: 0.65;
+
+	.random {
+		flex: 0 0 auto;
+		border-color: color-mix(in srgb, var(--web-accent) 45%, var(--border));
 	}
-	.empty {
-		padding: 2rem 0;
-		opacity: 0.75;
-	}
-	.site-list {
-		list-style: none;
-		padding: 0;
-		margin: 1.5rem 0;
+
+	.discovery-controls {
 		display: grid;
+		grid-template-columns: minmax(13rem, 2fr) minmax(10rem, 1fr) minmax(10rem, 1fr) auto auto;
 		gap: 0.75rem;
+		align-items: end;
+		padding-top: 1rem;
+		border-top: 1px solid var(--border);
 	}
-	.site-item {
-		display: grid;
-		grid-template-columns: 1fr auto;
-		gap: 0.35rem 1rem;
-		padding: 0.85rem 0;
-		border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
-	}
-	.site-link {
-		grid-column: 1 / -1;
-		text-decoration: none;
-		color: inherit;
+
+	.field,
+	.density-field {
 		display: flex;
 		flex-direction: column;
-		gap: 0.2rem;
+		gap: 0.3rem;
+		min-width: 0;
+		color: var(--text-muted);
+		font-size: 0.76rem;
+		font-weight: 750;
 	}
-	.site-link:hover .domain {
-		text-decoration: underline;
+
+	input,
+	select {
+		width: 100%;
+		min-width: 0;
+		min-height: 2.75rem;
+		border: 1px solid var(--border-strong);
+		background: var(--bg-subtle);
+		color: var(--text);
+		border-radius: 10px;
+		padding: 0.55rem 0.7rem;
+		font: inherit;
+		font-weight: 500;
 	}
-	.domain {
-		font-weight: 650;
-		font-size: 1.05rem;
+
+	.apply {
+		min-height: 2.75rem;
+		cursor: pointer;
 	}
-	.title {
-		opacity: 0.75;
-		font-size: 0.92rem;
+
+	.apply:disabled {
+		cursor: wait;
+		opacity: 0.7;
 	}
-	.badges {
-		display: flex;
-		gap: 0.35rem;
-		flex-wrap: wrap;
+
+	.clear {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 2.75rem;
+		padding: 0 0.3rem;
+		color: var(--text-muted);
+		font-size: 0.85rem;
 	}
-	.badge {
-		font-size: 0.7rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		padding: 0.15rem 0.4rem;
-		border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+
+	.results-bar {
+		min-height: 4.25rem;
 	}
-	.badge.muted {
-		opacity: 0.65;
+
+	.results-bar p {
+		margin: 0;
+		color: var(--text);
 	}
-	time {
-		font-size: 0.8rem;
-		opacity: 0.55;
-		justify-self: end;
+
+	.results-bar p span {
+		color: var(--text-muted);
 	}
+
+	.density-field {
+		flex-direction: row;
+		align-items: center;
+		white-space: nowrap;
+	}
+
+	.density-field select {
+		min-height: 2.4rem;
+		width: auto;
+	}
+
+	.empty {
+		text-align: center;
+		padding: clamp(2rem, 8vw, 4rem) 1.25rem;
+		border: 1px dashed var(--border-strong);
+		border-radius: 16px;
+		background: var(--bg-elevated);
+		color: var(--text-muted);
+	}
+
+	.empty h2 {
+		margin: 0;
+		color: var(--text);
+	}
+
+	.empty p {
+		margin: 0.5rem auto 1.25rem;
+		max-width: 32rem;
+	}
+
 	.pager {
 		display: flex;
-		gap: 1rem;
 		align-items: center;
+		gap: 1rem;
+		justify-content: center;
 		margin-top: 1.5rem;
+		color: var(--text-muted);
+	}
+
+	.refreshing .website-grid {
+		opacity: 0.55;
+		transition: opacity 120ms ease;
+	}
+
+	@media (max-width: 820px) {
+		.discovery-controls {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		.search-field {
+			grid-column: 1 / -1;
+		}
+	}
+
+	@media (max-width: 620px) {
+		.websites-page {
+			padding-top: 0;
+		}
+
+		.page-header {
+			border-radius: 14px;
+			padding: 1rem;
+		}
+
+		.heading-row {
+			align-items: flex-start;
+			flex-direction: column;
+		}
+
+		.random {
+			width: 100%;
+		}
+
+		.discovery-controls {
+			grid-template-columns: 1fr;
+		}
+
+		.search-field {
+			grid-column: auto;
+		}
+
+		.clear {
+			min-height: 2.25rem;
+		}
+
+		.results-bar {
+			align-items: flex-start;
+			flex-direction: column;
+			padding: 0.85rem 0;
+			gap: 0.65rem;
+		}
+
+		.density-field {
+			width: 100%;
+			justify-content: space-between;
+		}
+
+		.density-field select {
+			width: min(11rem, 60%);
+		}
+
+		.pager {
+			justify-content: space-between;
+		}
 	}
 </style>

@@ -1,4 +1,5 @@
 import { parse as parseDomain } from 'tldts';
+export { websiteVisitHref } from '../website-visit.js';
 
 /** Default TLD allowlist — intake filter so CT firehose cannot drown SQLite. */
 export function websiteCtTlds(): string[] {
@@ -30,6 +31,32 @@ export function toRegistrableDomain(hostname: string): string | null {
 	const parsed = parseDomain(cleaned);
 	if (!parsed.domain || parsed.isIp || parsed.isPrivate) return null;
 	return parsed.domain.toLowerCase();
+}
+
+/**
+ * Normalize a route/API domain param to a registrable domain.
+ * Rejects empty values, IPs, and unparseable hosts. Strips scheme, port, path,
+ * query, and fragment so URL-shaped params cannot open-redirect or traverse.
+ */
+export function parseWebsiteRouteDomain(raw: string | null | undefined): string | null {
+	if (raw == null) return null;
+	let value: string;
+	try {
+		value = decodeURIComponent(String(raw)).trim();
+	} catch {
+		return null;
+	}
+	if (!value || value.length > 253) return null;
+	if (/[\s\\]/.test(value) || value.includes('..')) return null;
+
+	// Allow accidental URL-shaped params: keep host only.
+	value = value.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
+	value = value.split(/[/?#]/)[0] ?? '';
+	value = value.replace(/:\d+$/, '');
+	value = value.replace(/^\*\./, '').replace(/\.$/, '').toLowerCase();
+	if (!value || value.includes(':') || value.includes('@')) return null;
+
+	return toRegistrableDomain(value);
 }
 
 /** Extract hostnames from a CT name_value / SAN blob (newline or comma separated). */

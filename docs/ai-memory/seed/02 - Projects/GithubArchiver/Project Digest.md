@@ -65,6 +65,10 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 - **2026-08-01** · `bugfix` · `confirmed` · `permanent` · PR #30 · `2c5b89f` · `open` · `discovery`, `clusters`, `cache` — [Wipe must clear stale cluster cards from materialization and TTL](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
   - edges: caused-by:[`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), related:[`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), related:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), implemented-by:[`pr-30`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
+- **2026-08-01** · `bugfix` · `confirmed` · `release` · PR #28 · migration 44 · `open` · `websites`, `schema`, `collections` — [PR #28 release-blocking hardening for ratings and domains](entries/2026-08-01-bugfix-pr28-release-hardening.md)
+  - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+- **2026-08-01** · `feature` · `confirmed` · `release` · PR #28 · `cbb7d80` · migration 44 · `open` · `ui`, `websites`, `collections`, `schema` — [Dual discovery redesign — shell, ratings, random websites](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+  - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `c998fd2` · migration 43 · `open` · `storage`, `sqlite`, `ops`, `quality` — [Staged low-value repo cleanup with quarantine](entries/2026-08-01-feature-low-value-repo-cleanup.md)
   - edges: related:[`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
@@ -74,10 +78,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), references:[`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
 - **2026-07-31** · `feature` · `confirmed` · `permanent` · `closed` · `homepage`, `readiness`, `mcp` — [Materialize homepage readiness and high-signal snapshot](entries/2026-07-31-feature-homepage-readiness-materialization.md)
   - edges: related:[`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), references:[`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
-- **2026-07-31** · `feature` · `confirmed` · `permanent` · `6fbaa7a` · `closed` · `mcp`, `project-memory` — [MCP project resources, prompts, and workspace review](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
-  - edges: related:`feat-mcp-intelligence-server`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
-- **2026-07-31** · `incident` · `confirmed` · `permanent` · `closed` · `db`, `homepage`, `discovery` — [schema_version 26 recorded without discovery materialization tables](entries/2026-07-31-incident-schema26-discovery-tables-missing.md)
-  - edges: related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), related:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 
 ## Open technical debt
 
@@ -88,6 +88,10 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 - **2026-08-01** · `bugfix` · `confirmed` · `permanent` · PR #30 · `2c5b89f` · `open` · `discovery`, `clusters`, `cache` — [Wipe must clear stale cluster cards from materialization and TTL](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
   - edges: caused-by:[`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), related:[`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), related:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), implemented-by:[`pr-30`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
+- **2026-08-01** · `bugfix` · `confirmed` · `release` · PR #28 · migration 44 · `open` · `websites`, `schema`, `collections` — [PR #28 release-blocking hardening for ratings and domains](entries/2026-08-01-bugfix-pr28-release-hardening.md)
+  - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+- **2026-08-01** · `feature` · `confirmed` · `release` · PR #28 · `cbb7d80` · migration 44 · `open` · `ui`, `websites`, `collections`, `schema` — [Dual discovery redesign — shell, ratings, random websites](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+  - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `c998fd2` · migration 43 · `open` · `storage`, `sqlite`, `ops`, `quality` — [Staged low-value repo cleanup with quarantine](entries/2026-08-01-feature-low-value-repo-cleanup.md)
   - edges: related:[`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)

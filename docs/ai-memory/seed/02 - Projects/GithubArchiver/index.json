@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-01T09:50:42.232Z",
+  "generatedAt": "2026-08-02T02:34:41.865Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -48,6 +48,77 @@
       "title": "Wipe must clear stale cluster cards from materialization and TTL",
       "path": "entries/2026-08-01-bugfix-cluster-wipe-empty-state.md",
       "summary": "After deleting the database volume (or wiping repos/memberships while leaving discovery materialization), “Fastest-growing clusters” could still show cluster cards."
+    },
+    {
+      "id": "bugfix-pr28-release-hardening",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-01",
+      "pr": 28,
+      "commit": null,
+      "migration": 44,
+      "area": [
+        "websites",
+        "schema",
+        "collections"
+      ],
+      "related": [
+        "pr-28",
+        "feature-intelligence-discovery-redesign"
+      ],
+      "relationships": [
+        {
+          "type": "implemented-by",
+          "id": "pr-28"
+        },
+        {
+          "type": "references",
+          "id": "feature-intelligence-discovery-redesign"
+        }
+      ],
+      "supersedes": null,
+      "title": "PR #28 release-blocking hardening for ratings and domains",
+      "path": "entries/2026-08-01-bugfix-pr28-release-hardening.md",
+      "summary": "Release review fixes before merging the discovery redesign foundation:"
+    },
+    {
+      "id": "feature-intelligence-discovery-redesign",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-01",
+      "pr": 28,
+      "commit": "cbb7d80",
+      "migration": 44,
+      "area": [
+        "ui",
+        "websites",
+        "collections",
+        "schema"
+      ],
+      "related": [
+        "pr-28",
+        "feature-website-discovery-v1"
+      ],
+      "relationships": [
+        {
+          "type": "implemented-by",
+          "id": "pr-28"
+        },
+        {
+          "type": "references",
+          "id": "feature-website-discovery-v1"
+        }
+      ],
+      "supersedes": null,
+      "title": "Dual discovery redesign — shell, ratings, random websites",
+      "path": "entries/2026-08-01-feature-intelligence-discovery-redesign.md",
+      "summary": "First PR slice of the repository intelligence + website discovery redesign."
     },
     {
       "id": "feature-low-value-repo-cleanup",

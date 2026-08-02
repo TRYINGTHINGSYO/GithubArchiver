@@ -13,6 +13,10 @@ Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, 
 
 - [`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md) (`bugfix`, `confirmed`, `permanent`) — Wipe must clear stale cluster cards from materialization and TTL
   - `caused-by` → [`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), `related` → [`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), `related` → [`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), `implemented-by` → [`pr-30`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
+- [`bugfix-pr28-release-hardening`](entries/2026-08-01-bugfix-pr28-release-hardening.md) (`bugfix`, `confirmed`, `release`) — PR #28 release-blocking hardening for ratings and domains
+  - `implemented-by` → [`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), `references` → [`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+- [`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md) (`feature`, `confirmed`, `release`) — Dual discovery redesign — shell, ratings, random websites
+  - `implemented-by` → [`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), `references` → [`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
 - [`feature-low-value-repo-cleanup`](entries/2026-08-01-feature-low-value-repo-cleanup.md) (`feature`, `confirmed`, `permanent`) — Staged low-value repo cleanup with quarantine
   - `related` → [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 - [`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md) (`feature`, `confirmed`, `permanent`) — Volume retention, dbstat inventory, and github_id uniqueness

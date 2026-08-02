@@ -24,6 +24,11 @@ import {
 	parseRepoQueryParams,
 	repoQueryFiltersForUi
 } from '$lib/server/repo-search';
+import {
+	countLiveWebsites,
+	listHighestRatedWebsites,
+	listNewLiveWebsites
+} from '$lib/server/db/websites';
 import type { PageServerLoad } from './$types';
 
 function countClassifiedRepos(): number {
@@ -199,7 +204,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			emergingActive: discovery.emergingTopics.length,
 			stories: readiness.storyRepos,
 			activeClusters: activeClusterCount,
-			analyzedCoveragePercent
+			analyzedCoveragePercent,
+			liveWebsites: countLiveWebsites()
+		},
+		websites: {
+			newLive: listNewLiveWebsites(8),
+			highestRated: listHighestRatedWebsites(8)
 		},
 		isAdmin: locals.isAdmin
 	};

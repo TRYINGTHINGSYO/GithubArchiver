@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DiscoveryRepoCard from '$lib/components/DiscoveryRepoCard.svelte';
 	import StatusStory from '$lib/components/StatusStory.svelte';
+	import WebsiteCard from '$lib/components/WebsiteCard.svelte';
 	import { clusterGrowthAnalysisHref, homepageClusterTitleHref } from '$lib/cluster-links';
 	import { timeAgo } from '$lib/utils';
 	import type { PageData } from './$types';
@@ -93,6 +94,11 @@
 			label: 'Archive freshness',
 			value: systemHealthLabel,
 			detail: `Archive delay: ${archiveDelayLabel}`
+		},
+		{
+			label: 'Verified live websites',
+			value: data.snapshot.liveWebsites,
+			detail: 'First-class website discovery corpus'
 		}
 	]);
 
@@ -133,25 +139,25 @@
 </script>
 
 <svelte:head>
-	<title>GithubArchive+ — Repository intelligence</title>
+	<title>GithubArchive+ — Repository intelligence & website discovery</title>
 	<meta
 		name="description"
-		content="Classify, cluster, score, and contextualize GitHub repositories with evidence-backed discovery."
+		content="Discover GitHub repositories and the random websites connected to them — intelligence, archive depth, and community curation."
 	/>
 </svelte:head>
 
 <section class="hero" aria-labelledby="hero-heading">
 	<div class="hero-copy">
 		<p class="eyebrow">GithubArchive+</p>
-		<h1 id="hero-heading">Understand what GitHub is building—not just what was uploaded.</h1>
+		<h1 id="hero-heading">Repository intelligence and website discovery, side by side.</h1>
 		<p class="hero-lede">
-			GithubArchive+ classifies repositories, groups them into clusters, scores interestingness,
-			writes Archive Stories from evidence, and surfaces emerging themes with provenance—not raw
-			upload counters.
+			Classify and score repositories, then browse the live websites linked to them — rate, favorite,
+			and randomly explore without treating either product as secondary.
 		</p>
 		<div class="hero-actions">
 			<a class="btn primary" href="/discover">Explore discoveries</a>
-			<a class="btn" href="/discover/emerging">Browse emerging topics</a>
+			<a class="btn" href="/websites/random">Random Website</a>
+			<a class="btn" href="/websites">Browse websites</a>
 			<a class="btn" href="/search">Search repositories</a>
 		</div>
 	</div>
@@ -261,6 +267,28 @@
 			<span style={`width: ${Math.min(100, enrichPercent)}%`}></span>
 		</div>
 	</div>
+</section>
+
+<section class="section-block" aria-labelledby="websites-new-heading">
+	<div class="section-head">
+		<div>
+			<p class="eyebrow">Website discovery</p>
+			<h2 id="websites-new-heading">New verified websites</h2>
+			<p class="section-why">
+				Live domains from the website pipeline — equal weight with repository intelligence.
+			</p>
+		</div>
+		<a href="/websites/random">Random Website</a>
+	</div>
+	{#if data.websites.newLive.length === 0}
+		<p class="empty">No verified-live websites yet. Discovery runs in the background.</p>
+	{:else}
+		<div class="website-grid homepage-websites">
+			{#each data.websites.newLive as site (site.registrable_domain)}
+				<WebsiteCard {site} density="compact" />
+			{/each}
+		</div>
+	{/if}
 </section>
 
 <section class="section-block" aria-labelledby="emerging-heading">
@@ -522,6 +550,28 @@
 				<DiscoveryRepoCard {repo} />
 			{:else}
 				<p class="empty">No deleted repositories currently clear the quality + recoverability bar.</p>
+			{/each}
+		</div>
+	{/if}
+</section>
+
+<section class="section-block" aria-labelledby="websites-rated-heading">
+	<div class="section-head">
+		<div>
+			<p class="eyebrow">Community curation</p>
+			<h2 id="websites-rated-heading">Highest-rated websites</h2>
+			<p class="section-why">
+				Confidence-aware ratings — one active score per visitor per domain.
+			</p>
+		</div>
+		<a href="/websites">All websites</a>
+	</div>
+	{#if data.websites.highestRated.length === 0}
+		<p class="empty">No ratings yet. Open Random Website and be the first to score a find.</p>
+	{:else}
+		<div class="website-grid homepage-websites">
+			{#each data.websites.highestRated as site (site.registrable_domain)}
+				<WebsiteCard {site} density="compact" />
 			{/each}
 		</div>
 	{/if}
