@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 import { accessRequirement, requiresSameOrigin } from '$lib/server/auth/access';
 import { assertSameOrigin, requireAdmin, requireUser } from '$lib/server/auth/guards';
+import {
+	hasAuthSessionCookie,
+	isAuthConfigured,
+	shouldResolveAuthSession
+} from '$lib/server/auth/runtime';
 import type { AuthUser } from '$lib/server/auth/types';
 
 function eventFor(path: string, options: { method?: string; origin?: string; user?: AuthUser | null } = {}) {
@@ -54,6 +59,43 @@ describe('route access policy', () => {
 		expect(requiresSameOrigin('/api/me/saved-repos', 'DELETE')).toBe(true);
 		expect(requiresSameOrigin('/api/admin/status', 'GET')).toBe(false);
 		expect(requiresSameOrigin('/api/repos', 'POST')).toBe(false);
+	});
+});
+
+describe('auth runtime policy', () => {
+	it('never resolves Auth.js for the health check', () => {
+		expect(shouldResolveAuthSession('/api/health', null, null, 'secret')).toBe(false);
+		expect(
+			shouldResolveAuthSession(
+				'/api/health/',
+				null,
+				'__Secure-authjs.session-token=session',
+				'secret'
+			)
+		).toBe(false);
+	});
+
+	it('resolves sessions only when configured and useful', () => {
+		expect(shouldResolveAuthSession('/api/repos', null, null, 'secret')).toBe(false);
+		expect(shouldResolveAuthSession('/admin', 'admin', null, 'secret')).toBe(true);
+		expect(
+			shouldResolveAuthSession(
+				'/repo/acme/widget',
+				null,
+				'__Secure-authjs.session-token.0=session',
+				'secret'
+			)
+		).toBe(true);
+		expect(shouldResolveAuthSession('/admin', 'admin', null, '')).toBe(false);
+	});
+
+	it('recognizes regular, secure, and chunked Auth.js session cookies', () => {
+		expect(hasAuthSessionCookie('authjs.session-token=session')).toBe(true);
+		expect(hasAuthSessionCookie('theme=dark; __Secure-authjs.session-token=session')).toBe(true);
+		expect(hasAuthSessionCookie('__Host-authjs.session-token.1=session')).toBe(true);
+		expect(hasAuthSessionCookie('theme=dark')).toBe(false);
+		expect(isAuthConfigured('   ')).toBe(false);
+		expect(isAuthConfigured('secret')).toBe(true);
 	});
 });
 

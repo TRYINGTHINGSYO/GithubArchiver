@@ -1,9 +1,10 @@
-import type { Handle } from '@sveltejs/kit';
+import { error, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { handle as authenticationHandle } from './auth';
 import { ensureBackgroundWorker } from '$lib/server/background-daemon';
 import { accessRequirement, requiresSameOrigin } from '$lib/server/auth/access';
 import { assertSameOrigin, requireAdmin, requireUser } from '$lib/server/auth/guards';
+import { isAuthConfigured, shouldResolveAuthSession } from '$lib/server/auth/runtime';
 import type { AuthUser } from '$lib/server/auth/types';
 import { resolveAnonymousCollectionOwner } from '$lib/server/collection-owner';
 import { ensureDatabaseReady } from '$lib/server/db/connection';
@@ -36,13 +37,30 @@ const applicationHandle: Handle = async ({ event, resolve }) => {
 };
 
 const authorizationHandle: Handle = async ({ event, resolve }) => {
-	const session = await event.locals.auth();
-	event.locals.session = session;
-	event.locals.user = (session?.user as AuthUser | undefined) ?? null;
-	event.locals.isAdmin = event.locals.user?.role === 'admin';
+	event.locals.session = null;
+	event.locals.user = null;
+	event.locals.isAdmin = false;
 	event.locals.collectionOwner = resolveAnonymousCollectionOwner(event.cookies);
 
 	const requirement = accessRequirement(event.url.pathname, event.request.method);
+	const authConfigured = isAuthConfigured();
+	if (
+		shouldResolveAuthSession(
+			event.url.pathname,
+			requirement,
+			event.request.headers.get('cookie')
+		)
+	) {
+		const session = await event.locals.auth();
+		event.locals.session = session;
+		event.locals.user = (session?.user as AuthUser | undefined) ?? null;
+		event.locals.isAdmin = event.locals.user?.role === 'admin';
+	}
+
+	if (requirement !== null && !authConfigured) {
+		throw error(503, 'Authentication is not configured');
+	}
+
 	if (requirement === 'admin') requireAdmin(event);
 	else if (requirement === 'user') requireUser(event);
 
