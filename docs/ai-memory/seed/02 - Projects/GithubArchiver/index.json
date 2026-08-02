@@ -1,9 +1,40 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-02T02:34:41.865Z",
+  "generatedAt": "2026-08-02T18:45:30.964Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-auth-user-foundation",
+      "schema": 1,
+      "type": "feature",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-08-02",
+      "pr": null,
+      "commit": null,
+      "migration": 45,
+      "area": [
+        "auth",
+        "security",
+        "accounts",
+        "sqlite"
+      ],
+      "related": [
+        "feature-intelligence-discovery-redesign"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "feature-intelligence-discovery-redesign"
+        }
+      ],
+      "supersedes": null,
+      "title": "Auth.js GitHub accounts and centralized access control",
+      "path": "entries/2026-08-02-feature-auth-user-foundation.md",
+      "summary": "- Adds Auth.js GitHub OAuth with a SQLite adapter for users, linked accounts, and database sessions."
+    },
     {
       "id": "bugfix-cluster-wipe-empty-state",
       "schema": 1,

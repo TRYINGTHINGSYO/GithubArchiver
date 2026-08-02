@@ -115,8 +115,8 @@ These are based on static repository references, not a whole-program tree-shaker
 
 ## Security debt
 
-- Public administrative mutation and data export.
-- No CSP, security-header policy, trusted proxy/origin configuration, or secure-cookie model.
+- Admin and export authorization is now centralized, but job/audit rows still do not record the acting user.
+- No CSP or comprehensive security-header policy; deployment still relies on trusted Host forwarding. Auth.js supplies HTTP-only, SameSite session cookies.
 - Regex Markdown sanitization and trusted FTS HTML.
 - Remote README images/links can track or deceive users.
 - Archive ingestion/parser threat model is undocumented; compressed expansion and malicious filenames require deeper tests.

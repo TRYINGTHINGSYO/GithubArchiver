@@ -46,12 +46,16 @@ This lets Railway run safely without large artifact storage. The durable record 
 
 ```bash
 npm install
-cp .env.example .env          # add GITHUB_TOKEN (public_repo scope)
+cp .env.example .env          # add GitHub OAuth credentials and AUTH_SECRET
 npm run db:init
 npm run dev                   # http://localhost:5173
 ```
 
-Open **[/admin](http://localhost:5173/admin)** and click **GitHub Search Ingest** or **Start Auto-Scan**.
+Configure a GitHub OAuth app with callback URL
+`http://localhost:5173/auth/callback/github`, add its credentials plus `AUTH_SECRET`, and put your
+stable numeric GitHub ID in `ADMIN_GITHUB_IDS`. Then open
+**[/admin](http://localhost:5173/admin)**, sign in, and click **GitHub Search Ingest** or
+**Start Auto-Scan**.
 
 Or run workers manually:
 
@@ -74,7 +78,10 @@ Use `stop-githubarchive.bat` to stop the server. See [docs/LOCAL_DESKTOP.md](doc
 
 All operations run **in-process** inside the web server and are recorded in `job_runs` for recall.
 
-Admin routes and catalog mutation actions require the shared admin login. `ADMIN_PASSWORD` is required in production; if it is missing, admin login fails closed. Local development retains the `GitHub` fallback. Favorites are global across the site, not account-specific.
+Admin routes and catalog mutation actions require an Auth.js GitHub session whose stable GitHub ID
+or login is present in the explicit admin allowlist. Other signed-in users can use personal saved
+repository APIs without receiving system-administrator privileges. Legacy shared-password admin
+cookies are no longer accepted.
 
 | Tab | URL | Purpose |
 |-----|-----|---------|
@@ -113,7 +120,11 @@ DATABASE_PATH=/data/githubarchive.db
 ARCHIVE_DIR=/data/archives
 BACKUPS_DIR=/data/backups
 GITHUB_TOKEN=ghp_...          # public_repo scope only
-ADMIN_PASSWORD=change-me      # required in production; local default is GitHub
+AUTH_SECRET=...               # generate a high-entropy secret
+AUTH_GITHUB_ID=...            # GitHub OAuth app client ID
+AUTH_GITHUB_SECRET=...        # GitHub OAuth app client secret
+ADMIN_GITHUB_IDS=12345678     # comma-separated stable GitHub user IDs
+ORIGIN=https://your-domain    # adapter-node public origin behind Railway's proxy
 ```
 
 ### Optional
@@ -182,7 +193,7 @@ Each shard fetches up to `SEARCH_MAX_PAGES` pages (100 repos/page). Stats per sh
 
 ## Database schema
 
-Migrations are versioned in `schema_version` (current: **v14**).
+Migrations are versioned in `schema_version` (current: **v45**).
 
 | Table | Purpose |
 |-------|---------|
@@ -198,6 +209,8 @@ Migrations are versioned in `schema_version` (current: **v14**).
 | `job_runs` | Worker/daemon/maintenance job history |
 | `backfill_jobs` / `backfill_hours` | Resumable backfill progress |
 | `search_ingest_stats` | Per-shard GitHub Search telemetry |
+| `users` / `oauth_accounts` / `user_sessions` | Auth.js GitHub identities and database sessions |
+| `user_saved_repos` | User-owned repository bookmarks and notes |
 | `schema_version` | Applied migration versions |
 
 **Local paths:** `./data/githubarchive.db`, `./data/archives/`, `./data/backups/`  
@@ -257,8 +270,12 @@ Migrations are versioned in `schema_version` (current: **v14**).
 | `METRICS_RETENTION_DAYS` | `365` | Age out metric snapshots after daily collapse (latest per repo kept) |
 | `BACKUP_KEEP_DAILY` / `_WEEKLY` / `_MONTHLY` | `7` / `4` / `3` | On-volume backup retention after each backup run |
 | `CLEANUP_QUARANTINE_DAYS` | `7` | Days quarantined low-value repos stay hidden before permanent purge |
-| `ADMIN_PASSWORD` | required in production | Shared admin login password; local development defaults to `GitHub` |
-| `ADMIN_SESSION_SECRET` | `ADMIN_PASSWORD` | HMAC secret for admin session cookies |
+| `AUTH_SECRET` | required | Auth.js session and CSRF signing secret |
+| `AUTH_GITHUB_ID` | required | GitHub OAuth app client ID |
+| `AUTH_GITHUB_SECRET` | required | GitHub OAuth app client secret |
+| `ADMIN_GITHUB_IDS` | none | Comma-separated stable GitHub IDs granted admin access |
+| `ADMIN_GITHUB_LOGINS` | none | Optional comma-separated GitHub login compatibility allowlist |
+| `ORIGIN` | request origin | Public adapter-node origin; set explicitly behind a production proxy |
 | `STORAGE_MIN_FREE_BYTES` | `1073741824` | Free-space threshold that triggers cleanup before archive downloads |
 | `BACKGROUND_WORKER` | `auto` on Railway | In-process auto-scan on boot |
 | `SEARCH_SHARD_MAX_DEPTH` | `3` | Search sharding depth |

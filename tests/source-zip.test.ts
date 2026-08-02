@@ -35,7 +35,7 @@ describe('source-zip', () => {
 		const db = getDb();
 		const version = (db.prepare('SELECT MAX(version) as v FROM schema_version').get() as { v: number }).v;
 		expect(version).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(44);
+		expect(CURRENT_SCHEMA_VERSION).toBe(45);
 	});
 
 	it('builds predictable zip paths under ARCHIVE_DIR/zips', () => {
@@ -130,6 +130,11 @@ describe('source-zip', () => {
 			head_sha: 'legacy-head',
 			archived_at: now
 		});
+
+		expect(getRepoZipDownloadUrl(repo.owner, repo.name, repo.id)).toBeNull();
+		expect(getRepoZipDownloadUrl(repo.owner, repo.name, repo.id, true)).toBe(
+			`/api/repo/${repo.owner}/${repo.name}/export?type=source`
+		);
 
 		const result = await ensureZipForLatestSource(repo, 'export');
 		expect(result).toBe('saved');

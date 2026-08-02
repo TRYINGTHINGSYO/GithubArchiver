@@ -159,7 +159,12 @@ export async function ensureZipForLatestSource(
 	return zipId ? 'saved' : 'missing';
 }
 
-export function getRepoZipDownloadUrl(owner: string, name: string, repoId: number): string | null {
+export function getRepoZipDownloadUrl(
+	owner: string,
+	name: string,
+	repoId: number,
+	allowPrepare = false
+): string | null {
 	if (isMetadataOnlyMode()) return null;
 
 	const zip = getLatestArchiveSnapshot(repoId, 'zip');
@@ -169,11 +174,11 @@ export function getRepoZipDownloadUrl(owner: string, name: string, repoId: numbe
 				return `/api/snapshots/${zip.id}`;
 			}
 		} catch {
-			// fall through to export
+			// A missing file can be regenerated only through the authenticated POST below.
 		}
 	}
 
-	if (getLatestArchiveSnapshot(repoId, 'source')) {
+	if (allowPrepare && getLatestArchiveSnapshot(repoId, 'source')) {
 		return `/api/repo/${owner}/${name}/export?type=source`;
 	}
 

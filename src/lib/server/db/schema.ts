@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 44;
+export const CURRENT_SCHEMA_VERSION = 45;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1577,6 +1577,69 @@ function migration044(database: Database.Database) {
 	}
 }
 
+/** Auth.js-compatible GitHub accounts, database sessions, roles, and user bookmarks. */
+function migration045(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS users (
+			id TEXT PRIMARY KEY,
+			name TEXT,
+			email TEXT COLLATE NOCASE UNIQUE,
+			email_verified TEXT,
+			image TEXT,
+			github_login TEXT COLLATE NOCASE,
+			role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+			created_at TEXT NOT NULL DEFAULT (datetime('now')),
+			updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+		);
+
+		CREATE TABLE IF NOT EXISTS oauth_accounts (
+			id TEXT NOT NULL UNIQUE,
+			user_id TEXT NOT NULL,
+			type TEXT NOT NULL,
+			provider TEXT NOT NULL,
+			provider_account_id TEXT NOT NULL,
+			refresh_token TEXT,
+			access_token TEXT,
+			expires_at INTEGER,
+			token_type TEXT,
+			scope TEXT,
+			id_token TEXT,
+			session_state TEXT,
+			PRIMARY KEY (provider, provider_account_id),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_oauth_accounts_user
+		  ON oauth_accounts(user_id);
+
+		CREATE TABLE IF NOT EXISTS user_sessions (
+			id TEXT PRIMARY KEY,
+			session_token TEXT NOT NULL UNIQUE,
+			user_id TEXT NOT NULL,
+			expires TEXT NOT NULL,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_user_sessions_user
+		  ON user_sessions(user_id);
+		CREATE INDEX IF NOT EXISTS idx_user_sessions_expires
+		  ON user_sessions(expires);
+
+		CREATE TABLE IF NOT EXISTS user_saved_repos (
+			user_id TEXT NOT NULL,
+			repo_id INTEGER NOT NULL,
+			notes TEXT,
+			created_at TEXT NOT NULL DEFAULT (datetime('now')),
+			PRIMARY KEY (user_id, repo_id),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+			FOREIGN KEY (repo_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_user_saved_repos_user
+		  ON user_saved_repos(user_id, created_at DESC);
+	`);
+}
+
 /**
  * Low-value repository cleanup: quarantine before permanent purge.
  * `cleanup_protected` is a manual operator hold; favorites/collections are
@@ -1701,7 +1764,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	41: migration041,
 	42: migration042,
 	43: migration043,
-	44: migration044
+	44: migration044,
+	45: migration045
 };
 
 export interface MigrationRunResult {
@@ -1877,6 +1941,25 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 		) {
 			migration044(database);
 			repairs.push('044:website_curation');
+		}
+	}
+
+	if (version >= 45) {
+		const authTables = new Set(
+			(
+				database
+					.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+					.all() as { name: string }[]
+			).map((row) => row.name)
+		);
+		if (
+			!authTables.has('users') ||
+			!authTables.has('oauth_accounts') ||
+			!authTables.has('user_sessions') ||
+			!authTables.has('user_saved_repos')
+		) {
+			migration045(database);
+			repairs.push('045:user_accounts');
 		}
 	}
 

@@ -1,9 +1,16 @@
 # GithubArchive+ architecture review
 
+> **Status update (2026-08-02):** This review records the pre-account baseline. Migration 45 now
+> adds Auth.js-backed GitHub users, OAuth accounts, database sessions, roles, and saved repositories.
+> Central middleware protects admin, mutation, snapshot, and export surfaces and enforces
+> same-origin checks for protected mutations. Findings elsewhere in this review that say
+> authentication, authorization, or origin validation are entirely absent are retained as
+> historical evidence and no longer describe the current code.
+
 - Snapshot date: 2026-08-01
 - Reviewed source: the exported workspace at `GithubArchiver-main`
 - Application version: `0.1.0`
-- Executable database schema: v13
+- Executable database schema at review time: v13 (current application schema: v45)
 
 This directory is the documentation-only engineering snapshot requested for GithubArchive+. It describes the repository as it exists, including incomplete, broken, risky, generated, and planned behavior. No application code, schema, data, or configuration was changed as part of this review.
 

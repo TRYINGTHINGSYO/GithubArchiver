@@ -11,6 +11,10 @@ generated: true
 
 Chronological event log (newest first). Source of truth is `entries/`.
 
+## 2026-08-02
+
+- **2026-08-02** · `feature` · `confirmed` · `permanent` · migration 45 · `verified` · `auth`, `security`, `accounts`, `sqlite` — [Auth.js GitHub accounts and centralized access control](entries/2026-08-02-feature-auth-user-foundation.md)
+  - edges: related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 ## 2026-08-01
 
 - **2026-08-01** · `bugfix` · `confirmed` · `permanent` · PR #30 · `2c5b89f` · `open` · `discovery`, `clusters`, `cache` — [Wipe must clear stale cluster cards from materialization and TTL](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)

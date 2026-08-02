@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`feature-auth-user-foundation`](entries/2026-08-02-feature-auth-user-foundation.md) (`feature`, `confirmed`, `permanent`) — Auth.js GitHub accounts and centralized access control
+  - `related` → [`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - [`bugfix-cluster-wipe-empty-state`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md) (`bugfix`, `confirmed`, `permanent`) — Wipe must clear stale cluster cards from materialization and TTL
   - `caused-by` → [`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), `related` → [`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), `related` → [`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), `implemented-by` → [`pr-30`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 - [`bugfix-pr28-release-hardening`](entries/2026-08-01-bugfix-pr28-release-hardening.md) (`bugfix`, `confirmed`, `release`) — PR #28 release-blocking hardening for ratings and domains

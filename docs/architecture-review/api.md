@@ -2,9 +2,17 @@
 
 ## Global behavior
 
+> **Current security boundary (schema v45):** Public discovery reads remain open. Auth.js GitHub
+> sessions protect `/admin`, `/api/admin/*`, personal APIs, snapshots, bulk exports, repository
+> mutations, and on-demand repository exports. Admin access comes only from the configured GitHub
+> ID/login allowlist. Protected state-changing requests also require an exact same-origin `Origin`
+> header. The older endpoint notes below are retained as a review-time snapshot.
+
 All endpoints are SvelteKit server routes in the same Node process as the website. There is no version prefix, OpenAPI description, client SDK, authentication, authorization, API key, per-client rate limit, request schema library, or consistent error envelope. JSON routes generally use `{ error }` for failures; SvelteKit `error()` routes use its framework error response. Download routes return file streams or buffers.
 
-Every endpoint below is publicly callable in the current implementation, including administrative and destructive operations.
+At review time every endpoint below was publicly callable, including administrative and destructive
+operations. The current centralized access policy supersedes that historical behavior for the
+protected surfaces listed above.
 
 List/search query parsing is shared. Supported query parameters are:
 

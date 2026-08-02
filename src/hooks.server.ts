@@ -1,6 +1,10 @@
 import type { Handle } from '@sveltejs/kit';
+import { sequence } from '@sveltejs/kit/hooks';
+import { handle as authenticationHandle } from './auth';
 import { ensureBackgroundWorker } from '$lib/server/background-daemon';
-import { ADMIN_COOKIE, verifyAdminSessionValue } from '$lib/server/auth';
+import { accessRequirement, requiresSameOrigin } from '$lib/server/auth/access';
+import { assertSameOrigin, requireAdmin, requireUser } from '$lib/server/auth/guards';
+import type { AuthUser } from '$lib/server/auth/types';
 import { resolveAnonymousCollectionOwner } from '$lib/server/collection-owner';
 import { ensureDatabaseReady } from '$lib/server/db/connection';
 
@@ -10,7 +14,7 @@ const PROBE_RE =
 
 let workerBooted = false;
 
-export const handle: Handle = async ({ event, resolve }) => {
+const applicationHandle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
 
 	if (!workerBooted) {
@@ -21,8 +25,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 		ensureBackgroundWorker();
 	}
 
-	event.locals.isAdmin = verifyAdminSessionValue(event.cookies.get(ADMIN_COOKIE));
-
 	if (PROBE_RE.test(path) || /^\/(?:en|es)\//i.test(path)) {
 		return new Response(null, {
 			status: 404,
@@ -30,16 +32,25 @@ export const handle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
+	return resolve(event);
+};
+
+const authorizationHandle: Handle = async ({ event, resolve }) => {
+	const session = await event.locals.auth();
+	event.locals.session = session;
+	event.locals.user = (session?.user as AuthUser | undefined) ?? null;
+	event.locals.isAdmin = event.locals.user?.role === 'admin';
 	event.locals.collectionOwner = resolveAnonymousCollectionOwner(event.cookies);
 
-	if (!event.locals.isAdmin && (path === '/admin' || path.startsWith('/admin/') || path.startsWith('/api/admin/'))) {
-		if (path.startsWith('/api/')) {
-			return Response.json({ ok: false, error: 'Admin login required.' }, { status: 401 });
-		}
-		const loginUrl = new URL('/login', event.url);
-		loginUrl.searchParams.set('next', `${event.url.pathname}${event.url.search}`);
-		return Response.redirect(loginUrl, 303);
+	const requirement = accessRequirement(event.url.pathname, event.request.method);
+	if (requirement === 'admin') requireAdmin(event);
+	else if (requirement === 'user') requireUser(event);
+
+	if (requiresSameOrigin(event.url.pathname, event.request.method)) {
+		assertSameOrigin(event);
 	}
 
 	return resolve(event);
 };
+
+export const handle: Handle = sequence(applicationHandle, authenticationHandle, authorizationHandle);

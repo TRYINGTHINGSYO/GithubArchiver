@@ -207,38 +207,31 @@ function loadListArchiveMeta(
 	if (!metadataOnly) {
 		const snapRows = db
 			.prepare(
-				`SELECT a.repo_id, a.id, a.snapshot_type
+				`SELECT a.repo_id, a.id
 				 FROM archive_snapshots a
 				 INNER JOIN (
 					SELECT repo_id, snapshot_type, MAX(archived_at) AS max_at
 					FROM archive_snapshots
 					WHERE repo_id IN (${placeholders})
-					  AND snapshot_type IN ('zip', 'source')
+					  AND snapshot_type = 'zip'
 					GROUP BY repo_id, snapshot_type
 				 ) latest
 				   ON latest.repo_id = a.repo_id
 				  AND latest.snapshot_type = a.snapshot_type
 				  AND latest.max_at = a.archived_at`
 			)
-			.all(...ids) as Array<{ repo_id: number; id: number; snapshot_type: string }>;
+			.all(...ids) as Array<{ repo_id: number; id: number }>;
 
-		const byRepo = new Map<number, { zipId: number | null; hasSource: boolean }>();
+		const byRepo = new Map<number, number>();
 		for (const snap of snapRows) {
-			const cur = byRepo.get(snap.repo_id) ?? { zipId: null, hasSource: false };
-			if (snap.snapshot_type === 'zip') cur.zipId = snap.id;
-			if (snap.snapshot_type === 'source') cur.hasSource = true;
-			byRepo.set(snap.repo_id, cur);
+			byRepo.set(snap.repo_id, snap.id);
 		}
 
 		for (const repo of repos) {
 			const meta = out.get(repo.id);
-			const snaps = byRepo.get(repo.id);
-			if (!meta || !snaps) continue;
-			if (snaps.zipId != null) {
-				meta.downloadZipUrl = `/api/snapshots/${snaps.zipId}`;
-			} else if (snaps.hasSource) {
-				meta.downloadZipUrl = `/api/repo/${repo.owner}/${repo.name}/export?type=source`;
-			}
+			const zipId = byRepo.get(repo.id);
+			if (!meta || zipId == null) continue;
+			meta.downloadZipUrl = `/api/snapshots/${zipId}`;
 		}
 	}
 
@@ -1659,7 +1652,7 @@ export function getRepoWithSnapshots(owner: string, name: string) {
 	return {
 		repo,
 		metadataOnly,
-		downloadZipUrl: getRepoZipDownloadUrl(repo.owner, repo.name, row.id),
+		downloadZipUrl: getRepoZipDownloadUrl(repo.owner, repo.name, row.id, true),
 		snapshots,
 		readmeSnapshots,
 		sourceSnapshots,

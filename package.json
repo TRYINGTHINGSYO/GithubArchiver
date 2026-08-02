@@ -70,6 +70,8 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@auth/core": "^0.41.3",
+    "@auth/sveltekit": "^1.11.3",
     "archiver": "^8.0.0",
     "better-sqlite3": "^11.9.1",
     "dotenv": "^16.5.0",

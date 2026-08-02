@@ -5,6 +5,7 @@ import type { LayoutServerLoad } from './$types';
 
 /** Keep layout load cheap — heavy stats/daemon work belongs on page or API routes. */
 export const load: LayoutServerLoad = async ({ locals }) => {
+	const user = locals.user;
 	let healthy = true;
 	let activity = null;
 	let railRepos: Array<{ full_name: string; interesting_score: number | null }> = [];
@@ -42,6 +43,16 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	return {
 		healthy,
 		isAdmin: locals.isAdmin,
+		user: user
+			? {
+					id: user.id,
+					name: user.name,
+					email: user.email,
+					image: user.image,
+					role: user.role,
+					githubLogin: user.githubLogin
+				}
+			: null,
 		activity,
 		railRepos,
 		railWebsites

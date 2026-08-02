@@ -122,6 +122,24 @@
 		}
 	}
 
+	async function prepareRepoExport(url: string) {
+		actionRunning = 'export';
+		actionMessage = null;
+		try {
+			const response = await fetch(url, { method: 'POST' });
+			const body = (await response.json()) as { downloadUrl?: string; error?: string };
+			if (!response.ok || !body.downloadUrl) {
+				actionMessage = { type: 'error', text: body.error ?? 'Archive export failed' };
+				return;
+			}
+			window.location.assign(body.downloadUrl);
+		} catch (err) {
+			actionMessage = { type: 'error', text: err instanceof Error ? err.message : String(err) };
+		} finally {
+			actionRunning = null;
+		}
+	}
+
 	function analyzeOnOpen(event: Event) {
 		const detail = event.currentTarget as HTMLDetailsElement;
 		if (detail.open && data.latestSource && !sourceAnalysis && !actionRunning) {
@@ -220,8 +238,25 @@
 	{/if}
 	<a href={data.repo.github_url} target="_blank" rel="noopener noreferrer">View GitHub</a>
 	<a href="/repo/{data.repo.owner}/{data.repo.name}/timeline">Timeline</a>
-	{#if data.downloadZipUrl}
-		<a class="download-zip" href={data.downloadZipUrl} download>Download ZIP</a>
+	{#if data.downloadZipUrl?.includes('/export')}
+		{#if data.user?.role === 'admin'}
+			<button
+				type="button"
+				class="download-zip"
+				disabled={Boolean(actionRunning)}
+				onclick={() => prepareRepoExport(data.downloadZipUrl as string)}
+			>
+				{actionRunning === 'export' ? 'Preparing ZIP' : 'Prepare ZIP'}
+			</button>
+		{/if}
+	{:else if data.downloadZipUrl}
+		{#if data.user}
+			<a class="download-zip" href={data.downloadZipUrl} download>Download ZIP</a>
+		{:else}
+			<a href="/auth/signin?callbackUrl={encodeURIComponent(`/repo/${data.repo.owner}/${data.repo.name}`)}">
+				Sign in to download
+			</a>
+		{/if}
 	{/if}
 </div>
 

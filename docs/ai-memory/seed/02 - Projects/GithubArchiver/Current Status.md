@@ -90,6 +90,8 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Recent merges / verified
 
+- **2026-08-02** · `feature` · `confirmed` · `permanent` · migration 45 · `verified` · `auth`, `security`, `accounts`, `sqlite` — [Auth.js GitHub accounts and centralized access control](entries/2026-08-02-feature-auth-user-foundation.md)
+  - edges: related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - **2026-07-31** · `decision` · `confirmed` · `permanent` · `6fbaa7a` · `verified` · `mcp`, `project-memory`, `adoption` — [MCP is the primary knowledge and review layer](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
   - edges: references:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), related:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), validates:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `observability`, `search-fallback`, `enrichment`, `emerging-topics` — [Three dashboard fields asserted things the data did not support](entries/2026-07-30-bugfix-dashboard-trust-semantics.md)
@@ -104,8 +106,6 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), caused-by:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md)
 - **2026-07-30** · `decision` · `confirmed` · `permanent` · `verified` · `ingest`, `architecture` — [High-volume ingestion needs a narrow bulk write path](entries/2026-07-30-decision-high-volume-bulk-ingest-path.md)
   - edges: caused-by:[`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), implemented-by:[`bugfix-ingest-hour-transaction`](entries/2026-07-30-bugfix-ingest-hour-transaction.md), references:[`migration-038-archive-hour-metrics`](entries/2026-07-30-migration-038-archive-hour-metrics.md)
-- **2026-07-30** · `feature` · `confirmed` · `permanent` · `verified` · `emerging`, `daemon` — [Wire emerging into in-process daemon on own cadence](entries/2026-07-30-feature-emerging-in-process-cadence.md)
-  - edges: caused-by:[`incident-emerging-never-scheduled`](entries/2026-07-30-incident-emerging-never-scheduled.md)
 
 ## Next priorities
 
