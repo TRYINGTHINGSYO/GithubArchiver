@@ -16,7 +16,8 @@ export type ScheduledJobName =
 	| 'backup'
 	| 'website_ct'
 	| 'website_zone'
-	| 'website_verify';
+	| 'website_verify'
+	| 'email_digest';
 
 export interface ScheduledJobRow {
 	job_name: string;

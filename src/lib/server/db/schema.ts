@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 45;
+export const CURRENT_SCHEMA_VERSION = 46;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1640,6 +1640,39 @@ function migration045(database: Database.Database) {
 	`);
 }
 
+/** Opt-in personalized email digests and per-repository delivery deduplication. */
+function migration046(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS user_email_preferences (
+			user_id TEXT PRIMARY KEY,
+			enabled INTEGER NOT NULL DEFAULT 0 CHECK (enabled IN (0, 1)),
+			minimum_score REAL NOT NULL DEFAULT 55 CHECK (minimum_score >= 0 AND minimum_score <= 100),
+			last_digest_at TEXT,
+			created_at TEXT NOT NULL DEFAULT (datetime('now')),
+			updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_user_email_preferences_enabled
+		  ON user_email_preferences(enabled, last_digest_at);
+
+		CREATE TABLE IF NOT EXISTS personalized_email_deliveries (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id TEXT NOT NULL,
+			repo_id INTEGER NOT NULL,
+			digest_key TEXT NOT NULL,
+			provider_message_id TEXT,
+			sent_at TEXT NOT NULL,
+			UNIQUE(user_id, repo_id),
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+			FOREIGN KEY (repo_id) REFERENCES repos(id) ON DELETE CASCADE
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_personalized_email_deliveries_user_sent
+		  ON personalized_email_deliveries(user_id, sent_at DESC);
+	`);
+}
+
 /**
  * Low-value repository cleanup: quarantine before permanent purge.
  * `cleanup_protected` is a manual operator hold; favorites/collections are
@@ -1765,7 +1798,8 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	42: migration042,
 	43: migration043,
 	44: migration044,
-	45: migration045
+	45: migration045,
+	46: migration046
 };
 
 export interface MigrationRunResult {
@@ -1960,6 +1994,23 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 		) {
 			migration045(database);
 			repairs.push('045:user_accounts');
+		}
+	}
+
+	if (version >= 46) {
+		const notificationTables = new Set(
+			(
+				database
+					.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+					.all() as { name: string }[]
+			).map((row) => row.name)
+		);
+		if (
+			!notificationTables.has('user_email_preferences') ||
+			!notificationTables.has('personalized_email_deliveries')
+		) {
+			migration046(database);
+			repairs.push('046:personalized_email_alerts');
 		}
 	}
 

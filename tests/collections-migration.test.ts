@@ -20,8 +20,8 @@ describe('migration 41 owner collections', () => {
 		db.pragma('foreign_keys = ON');
 		runMigrations(db);
 
-		expect(CURRENT_SCHEMA_VERSION).toBe(45);
-		expect(getSchemaVersion(db)).toBe(45);
+		expect(CURRENT_SCHEMA_VERSION).toBe(46);
+		expect(getSchemaVersion(db)).toBe(46);
 		expect(objectNames(db, 'table')).toEqual(
 			expect.arrayContaining(['collections', 'collection_repositories', 'repo_favorites'])
 		);

@@ -14,6 +14,10 @@ import { runEmergingTopicCycle, type EmergingCycleResult } from './workers/emerg
 import { runWebsiteCtDiscoverCycle } from './workers/website-ct.js';
 import { runWebsiteVerifyCycle } from './workers/website-verify.js';
 import { runWebsiteZoneDiscoverCycle } from './workers/website-zone.js';
+import {
+	runPersonalizedEmailDigest,
+	type PersonalizedDigestResult
+} from './personalized-email.js';
 
 /**
  * Cadenced jobs for the in-process daemon. These use `scheduled_jobs` intervals
@@ -25,7 +29,8 @@ export const IN_PROCESS_CADENCE_JOBS: ScheduledJobName[] = [
 	'homepage_readiness',
 	'website_ct',
 	'website_zone',
-	'website_verify'
+	'website_verify',
+	'email_digest'
 ];
 
 /** How often the orphan safety-net may run (default 2 min). */
@@ -52,7 +57,49 @@ export interface CadenceRunResult {
 		| EmergingCycleResult
 		| DiscoveryMaterializationResult
 		| Awaited<ReturnType<typeof runHomepageReadinessMaterializationCycle>>
+		| PersonalizedDigestResult
 		| { error: string };
+}
+
+/** Send one consent-based personalized digest batch when its daily cadence is due. */
+export async function maybeRunDuePersonalizedEmailDigest(
+	opts: {
+		now?: number;
+		shouldSkip?: () => boolean;
+		log?: (line: string) => void;
+	} = {}
+): Promise<CadenceRunResult> {
+	if (opts.shouldSkip?.()) return { ran: false, hadFailure: false };
+	if (!isJobDue('email_digest', opts.now ?? Date.now())) {
+		return { ran: false, hadFailure: false };
+	}
+
+	opts.log?.('[daemon] cadence: personalized email digest due');
+	try {
+		const result = await runScheduledJob('email_digest', async () => {
+			const digest = await runPersonalizedEmailDigest();
+			if (digest.errors.length > 0) {
+				throw new Error(`${digest.errors.length} personalized email delivery error(s)`);
+			}
+			return digest;
+		});
+		if (!result.configured) {
+			opts.log?.('[daemon] email_digest: skipped (RESEND_API_KEY or EMAIL_FROM unset)');
+		} else {
+			opts.log?.(
+				`[daemon] email_digest: ${result.usersEmailed}/${result.usersConsidered} users, ${result.recommendationsSent} recommendations`
+			);
+		}
+		return {
+			ran: true,
+			hadFailure: false,
+			detail: result
+		};
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		opts.log?.(`[daemon] email_digest failed: ${message}`);
+		return { ran: true, hadFailure: true, detail: { error: message } };
+	}
 }
 
 /**

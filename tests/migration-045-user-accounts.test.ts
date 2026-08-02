@@ -12,8 +12,8 @@ describe('migration 045 user accounts', () => {
 				db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'").get()
 			).toBeUndefined();
 
-			const result = runMigrationsThrough(db, CURRENT_SCHEMA_VERSION);
-			expect(CURRENT_SCHEMA_VERSION).toBe(45);
+			const result = runMigrationsThrough(db, 45);
+			expect(CURRENT_SCHEMA_VERSION).toBe(46);
 			expect(result.applied).toEqual([45]);
 
 			const tables = (

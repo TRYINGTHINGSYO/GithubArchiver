@@ -27,7 +27,8 @@ export const DAEMON_JOB_INTERVALS: Record<ScheduledJobName, number> = {
 	backup: Number(process.env.DAEMON_BACKUP_INTERVAL_MS ?? 24 * HOUR),
 	website_ct: Number(process.env.DAEMON_WEBSITE_CT_INTERVAL_MS ?? 10 * MINUTE),
 	website_zone: Number(process.env.DAEMON_WEBSITE_ZONE_INTERVAL_MS ?? 1 * HOUR),
-	website_verify: Number(process.env.DAEMON_WEBSITE_VERIFY_INTERVAL_MS ?? 2 * MINUTE)
+	website_verify: Number(process.env.DAEMON_WEBSITE_VERIFY_INTERVAL_MS ?? 2 * MINUTE),
+	email_digest: Number(process.env.EMAIL_DIGEST_INTERVAL_MS ?? 24 * HOUR)
 };
 
 export const DAEMON_JOB_ORDER: ScheduledJobName[] = [
@@ -44,6 +45,7 @@ export const DAEMON_JOB_ORDER: ScheduledJobName[] = [
 	'website_ct',
 	'website_zone',
 	'website_verify',
+	'email_digest',
 	'archive',
 	'deletionCheck',
 	'backup'

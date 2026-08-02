@@ -8,6 +8,7 @@ export const authConfig: SvelteKitAuthConfig = {
 	adapter: githubArchiveAdapter,
 	providers: [
 		GitHub({
+			authorization: { params: { scope: 'read:user user:email' } },
 			profile(profile) {
 				const id = String(profile.id);
 				return {

@@ -9,6 +9,7 @@ function isMutation(method: string): boolean {
 }
 
 export function accessRequirement(pathname: string, method = 'GET'): AccessRequirement {
+	if (pathname === '/account' || pathname.startsWith('/account/')) return 'user';
 	if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'admin';
 	if (pathname === '/api/admin' || pathname.startsWith('/api/admin/')) return 'admin';
 	if (pathname === '/api/export' || pathname.startsWith('/api/export/')) return 'admin';

@@ -7,6 +7,7 @@ import {
 	maybeRunDueDiscoveryCycle,
 	maybeRunDueEmergingCycle,
 	maybeRunDueHomepageReadinessCycle,
+	maybeRunDuePersonalizedEmailDigest,
 	maybeRunDueWebsiteCycles
 } from './daemon-cadence';
 import { queryBacklogSnapshot } from './daemon-backlog';
@@ -420,6 +421,13 @@ async function runLoop(): Promise<void> {
 					log: appendLog
 				});
 				if (readiness.hadFailure) hadFailure = true;
+			}
+			if (!stopRequested) {
+				const emailDigest = await maybeRunDuePersonalizedEmailDigest({
+					shouldSkip: () => stopRequested,
+					log: appendLog
+				});
+				if (emailDigest.hadFailure) hadFailure = true;
 			}
 			if (!stopRequested) {
 				const websites = await maybeRunDueWebsiteCycles({

@@ -156,9 +156,9 @@
 			<a href="/search" class="admin-link">Search</a>
 			<a href="/favorites" class="admin-link">Saved</a>
 			{#if data.user}
-				<span class="admin-link" title={data.user.email ?? undefined}>
+				<a class="admin-link" href="/account/notifications" title={data.user.email ?? undefined}>
 					{data.user.githubLogin ? `@${data.user.githubLogin}` : (data.user.name ?? 'Account')}
-				</span>
+				</a>
 				{#if data.isAdmin}<a href="/admin" class="admin-link">Admin</a>{/if}
 				<a href="/logout" class="admin-link">Logout</a>
 			{:else}

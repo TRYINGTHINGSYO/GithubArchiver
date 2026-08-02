@@ -5,6 +5,7 @@ import {
 	PUT as addMembership
 } from '../src/routes/api/collections/[kind]/repositories/[repoId]/+server';
 import type { CollectionOwner } from '$lib/server/collection-owner';
+import { getDb } from '$lib/server/db/connection';
 import { createTestRepo, setupTestDb, teardownTestDb } from './helpers/db';
 
 const collectionOwner: CollectionOwner = {
@@ -57,5 +58,41 @@ describe('collection membership API', () => {
 				{ repo_id: unsaved.id, favorites: false, watch_later: false }
 			]
 		});
+	});
+
+	it('uses signed-in saves as personalized recommendation interests', async () => {
+		const now = new Date().toISOString();
+		getDb()
+			.prepare(
+				`INSERT INTO users
+				 (id, name, email, role, created_at, updated_at)
+				 VALUES ('user-1', 'Ada', 'ada@example.com', 'user', ?, ?)`
+			)
+			.run(now, now);
+		const repo = createTestRepo();
+		const locals = {
+			collectionOwner,
+			user: { id: 'user-1' }
+		};
+
+		await addMembership({
+			locals,
+			params: { kind: 'favorites', repoId: String(repo.id) }
+		} as never);
+		expect(
+			getDb()
+				.prepare('SELECT COUNT(*) AS count FROM user_saved_repos WHERE user_id = ?')
+				.get('user-1')
+		).toEqual({ count: 1 });
+
+		await removeMembership({
+			locals,
+			params: { kind: 'favorites', repoId: String(repo.id) }
+		} as never);
+		expect(
+			getDb()
+				.prepare('SELECT COUNT(*) AS count FROM user_saved_repos WHERE user_id = ?')
+				.get('user-1')
+		).toEqual({ count: 0 });
 	});
 });

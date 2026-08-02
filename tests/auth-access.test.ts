@@ -48,6 +48,7 @@ describe('route access policy', () => {
 	});
 
 	it('requires a user for personal and snapshot routes while leaving public reads public', () => {
+		expect(accessRequirement('/account/notifications')).toBe('user');
 		expect(accessRequirement('/api/me/saved-repos')).toBe('user');
 		expect(accessRequirement('/api/snapshots/12')).toBe('user');
 		expect(accessRequirement('/api/repos')).toBeNull();
