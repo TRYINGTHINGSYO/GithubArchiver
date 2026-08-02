@@ -1,4 +1,4 @@
-import { error, type Handle } from '@sveltejs/kit';
+import { error, redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { handle as authenticationHandle } from './auth';
 import { ensureBackgroundWorker } from '$lib/server/background-daemon';
@@ -33,6 +33,14 @@ const applicationHandle: Handle = async ({ event, resolve }) => {
 		});
 	}
 
+	if ((path === '/auth/signin' || path.startsWith('/auth/signin/')) && !isAuthConfigured()) {
+		const callbackUrl = event.url.searchParams.get('callbackUrl');
+		const loginUrl = callbackUrl
+			? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`
+			: '/login';
+		throw redirect(303, loginUrl);
+	}
+
 	return resolve(event);
 };
 
@@ -58,7 +66,13 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
 	}
 
 	if (requirement !== null && !authConfigured) {
-		throw error(503, 'Authentication is not configured');
+		if (event.url.pathname.startsWith('/api/')) {
+			throw error(503, 'Authentication is not configured');
+		}
+		throw redirect(
+			303,
+			`/login?callbackUrl=${encodeURIComponent(`${event.url.pathname}${event.url.search}`)}`
+		);
 	}
 
 	if (requirement === 'admin') requireAdmin(event);
