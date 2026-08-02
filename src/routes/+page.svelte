@@ -62,24 +62,32 @@
 			: 'Pending'
 	);
 
-	const publicSnapshotMetrics = $derived([
+	const heroMetrics = $derived([
 		{
-			label: 'Repositories analyzed',
+			label: 'Analyzed',
 			value: data.snapshot.enriched,
-			detail: `${data.snapshot.analyzedCoveragePercent}% understanding coverage`
+			detail: `${data.snapshot.analyzedCoveragePercent}% coverage`
 		},
 		{
-			label: 'New repositories discovered',
+			label: 'Discovered',
 			value: data.discoveryStatus.repositoriesDiscovered,
 			detail: data.discoveryStatus.lastIngestionAt
-				? `Last discovery ${timeAgo(data.discoveryStatus.lastIngestionAt)}`
+				? `Updated ${timeAgo(data.discoveryStatus.lastIngestionAt)}`
 				: 'Discovery worker pending'
 		},
 		{
-			label: 'Emerging topics detected',
+			label: 'Emerging topics',
 			value: data.snapshot.emergingActive,
-			detail: 'Evidence-gated candidates'
+			detail: 'Evidence-gated'
 		},
+		{
+			label: 'Live websites',
+			value: data.snapshot.liveWebsites,
+			detail: 'Verified destinations'
+		}
+	]);
+
+	const publicSnapshotMetrics = $derived([
 		{
 			label: 'Growing categories',
 			value: data.clusters.items.length,
@@ -94,11 +102,6 @@
 			label: 'Archive freshness',
 			value: systemHealthLabel,
 			detail: `Archive delay: ${archiveDelayLabel}`
-		},
-		{
-			label: 'Verified live websites',
-			value: data.snapshot.liveWebsites,
-			detail: 'First-class website discovery corpus'
 		}
 	]);
 
@@ -147,27 +150,42 @@
 </svelte:head>
 
 <section class="hero" aria-labelledby="hero-heading">
-	<div class="hero-copy">
-		<p class="eyebrow">GithubArchive+</p>
-		<h1 id="hero-heading">Repository intelligence and website discovery, side by side.</h1>
-		<p class="hero-lede">
-			Classify and score repositories, then browse the live websites linked to them — rate, favorite,
-			and randomly explore without treating either product as secondary.
-		</p>
-		<div class="hero-actions">
-			<a class="btn primary" href="/discover">Explore discoveries</a>
-			<a class="btn" href="/websites/random">Random Website</a>
-			<a class="btn" href="/websites">Browse websites</a>
-			<a class="btn" href="/search">Search repositories</a>
+	<div class="hero-main">
+		<div class="hero-copy">
+			<p class="eyebrow">Live GitHub intelligence</p>
+			<h1 id="hero-heading">Find the repositories worth watching.</h1>
+			<p class="hero-lede">
+				GithubArchive+ turns the live GitHub firehose into ranked repositories, emerging topics,
+				and verified websites you can act on.
+			</p>
+			<div class="hero-actions">
+				<a class="btn primary" href="/discover">Explore discoveries</a>
+				<a class="btn" href="/search">Search repositories</a>
+			</div>
+		</div>
+		<div class="hero-kpis" aria-label="Live discovery metrics">
+			<p class="kpi-label"><span></span> Live index</p>
+			<div class="hero-signal-grid">
+				{#each heroMetrics as metric}
+					<article class="hero-signal">
+						<strong>{typeof metric.value === 'number' ? metric.value.toLocaleString() : metric.value}</strong>
+						<span>{metric.label}</span>
+						<small>{metric.detail}</small>
+					</article>
+				{/each}
+			</div>
 		</div>
 	</div>
 	{#if featuredRepo}
 		<aside class="hero-preview" aria-label="Repository intelligence preview">
-			<p class="eyebrow">Live intelligence</p>
-			<p class="preview-caption">
-				A real repository already classified, scored, and explained — not a marketing mock.
-			</p>
-			<DiscoveryRepoCard repo={featuredRepo} />
+			<div class="preview-heading">
+				<div>
+					<p class="eyebrow">Repository to watch</p>
+					<p class="preview-caption">A live opportunity surfaced from the current archive.</p>
+				</div>
+				<a class="preview-link" href="/discover/projects-to-watch">View watchlist <span aria-hidden="true">→</span></a>
+			</div>
+			<DiscoveryRepoCard repo={featuredRepo} variant="featured" />
 		</aside>
 	{/if}
 </section>
@@ -176,7 +194,7 @@
 	<div class="section-head">
 		<div>
 			<p class="eyebrow">Discovery signals</p>
-			<h2 id="snapshot-heading">What matters right now</h2>
+			<h2 id="snapshot-heading">Signals worth following</h2>
 			<p class="section-why">
 				Public signals summarize discovery value. Detailed pipeline counters stay in operations
 				where they belong.
@@ -661,16 +679,26 @@
 <style>
 	.hero,
 	.section-block {
-		margin-bottom: 1.25rem;
+		margin-bottom: 1.5rem;
 	}
 
 	.hero {
+		position: relative;
+		overflow: hidden;
+		padding: clamp(1.5rem, 3vw, 2.5rem);
+		border: 1px solid var(--border);
+		border-radius: 18px;
+		background:
+			linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 42%),
+			var(--bg-elevated);
+		box-shadow: 0 20px 55px rgba(0, 0, 0, 0.14);
+	}
+
+	.hero-main {
 		display: grid;
-		grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
-		gap: clamp(1.25rem, 3vw, 2.5rem);
-		align-items: start;
-		padding: clamp(1.5rem, 4vw, 3rem) 0 1.5rem;
-		border-bottom: 1px solid var(--border);
+		grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.75fr);
+		gap: clamp(1.5rem, 3vw, 3rem);
+		align-items: end;
 	}
 
 	.hero-copy {
@@ -679,17 +707,37 @@
 
 	.hero-preview {
 		min-width: 0;
-		border: 1px solid var(--border);
-		border-radius: 18px;
-		background: var(--bg-elevated);
-		padding: 1rem;
+		margin-top: clamp(1.5rem, 3vw, 2.25rem);
+		padding-top: 1.25rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.preview-heading {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 0.85rem;
 	}
 
 	.preview-caption {
-		margin: 0 0 0.85rem;
+		margin: 0;
 		color: var(--text-muted);
-		font-size: 0.9rem;
+		font-size: 0.92rem;
 		line-height: 1.5;
+	}
+
+	.preview-link {
+		flex: 0 0 auto;
+		color: var(--text);
+		font-size: 0.88rem;
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.preview-link:hover {
+		color: var(--accent);
+		text-decoration: none;
 	}
 
 	.eyebrow {
@@ -703,10 +751,10 @@
 
 	.hero h1 {
 		margin: 0;
-		max-width: 18ch;
-		font-size: clamp(1.7rem, 4.2vw, 2.85rem);
-		line-height: 1.12;
-		letter-spacing: -0.02em;
+		max-width: 15ch;
+		font-size: clamp(2.35rem, 4vw, 4rem);
+		line-height: 1.02;
+		letter-spacing: -0.045em;
 	}
 
 	.hero-lede,
@@ -722,9 +770,9 @@
 	}
 
 	.hero-lede {
-		max-width: 42rem;
-		margin: 1rem 0 1.35rem;
-		font-size: 1.05rem;
+		max-width: 39rem;
+		margin: 1.1rem 0 1.4rem;
+		font-size: clamp(1rem, 1.3vw, 1.12rem);
 	}
 
 	.hero-actions,
@@ -740,7 +788,8 @@
 		justify-content: center;
 		border: 1px solid var(--border);
 		border-radius: 10px;
-		padding: 0.7rem 1rem;
+		min-height: 2.75rem;
+		padding: 0.72rem 1rem;
 		background: var(--bg-elevated);
 		color: var(--text);
 		font-weight: 600;
@@ -753,16 +802,81 @@
 	}
 
 	.btn.primary {
-		background: color-mix(in srgb, var(--accent) 22%, var(--bg-elevated));
-		border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-		color: var(--text);
+		background: var(--accent);
+		border-color: var(--accent);
+		color: #06111c;
+	}
+
+	.hero-kpis {
+		border-left: 1px solid var(--border);
+		padding-left: clamp(1.25rem, 2vw, 2rem);
+	}
+
+	.kpi-label {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		margin: 0 0 0.75rem;
+		color: var(--text-muted);
+		font-size: 0.76rem;
+		font-weight: 800;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.kpi-label span {
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 999px;
+		background: var(--green);
+		box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 14%, transparent);
+	}
+
+	.hero-signal-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.65rem;
+	}
+
+	.hero-signal {
+		min-width: 0;
+		border-top: 1px solid var(--border-strong);
+		padding: 0.72rem 0 0.25rem;
+	}
+
+	.hero-signal strong,
+	.hero-signal span,
+	.hero-signal small {
+		display: block;
+	}
+
+	.hero-signal strong {
+		font-family: var(--font-mono);
+		font-size: clamp(1.15rem, 1.7vw, 1.5rem);
+		line-height: 1.2;
+	}
+
+	.hero-signal span {
+		margin-top: 0.2rem;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+
+	.hero-signal small {
+		margin-top: 0.15rem;
+		color: var(--text-muted);
+		font-size: 0.75rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.section-block {
 		border: 1px solid var(--border);
-		border-radius: 18px;
+		border-radius: 16px;
 		background: var(--bg-elevated);
-		padding: clamp(1rem, 3vw, 1.75rem);
+		padding: clamp(1.15rem, 2.4vw, 1.65rem);
+		box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08);
 	}
 
 	.section-head {
@@ -798,7 +912,7 @@
 	}
 
 	.metric-grid {
-		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
 	}
 
 	.metric-value {
@@ -817,7 +931,7 @@
 	.disabled-feature {
 		border: 1px solid var(--border);
 		border-radius: 14px;
-		background: var(--bg);
+		background: var(--bg-subtle);
 		padding: 1rem;
 	}
 
@@ -841,15 +955,15 @@
 	}
 
 	.cluster-grid {
-		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
 	}
 
 	.repo-grid {
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
 	}
 
 	.browse-grid {
-		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
 	}
 
 	.cluster-title {
@@ -1033,10 +1147,28 @@
 		border: 0;
 	}
 
+	@media (max-width: 1600px) {
+		.hero-main {
+			grid-template-columns: 1fr;
+			align-items: start;
+		}
+
+		.hero-kpis {
+			border-top: 1px solid var(--border);
+			border-left: 0;
+			padding-top: 1.25rem;
+			padding-left: 0;
+		}
+
+		.hero-signal-grid {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+
 	@media (max-width: 900px) {
 		.hero {
-			grid-template-columns: 1fr;
-			padding-top: 1rem;
+			padding: 1.15rem;
+			border-radius: 14px;
 		}
 
 		.section-head {
@@ -1046,7 +1178,7 @@
 
 		.hero h1 {
 			max-width: none;
-			font-size: clamp(1.55rem, 8vw, 2rem);
+			font-size: clamp(2rem, 10vw, 2.8rem);
 		}
 
 		.hero-actions {
@@ -1056,6 +1188,15 @@
 
 		.hero-actions .btn {
 			width: 100%;
+		}
+
+		.hero-signal-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.preview-heading {
+			align-items: start;
+			flex-direction: column;
 		}
 
 		.metric-grid {
@@ -1074,7 +1215,8 @@
 	}
 
 	@media (max-width: 360px) {
-		.metric-grid {
+		.metric-grid,
+		.hero-signal-grid {
 			grid-template-columns: 1fr;
 		}
 	}

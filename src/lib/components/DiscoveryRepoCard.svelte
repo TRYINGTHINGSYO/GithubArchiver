@@ -27,7 +27,10 @@
 		rankingReason: string;
 	}
 
-	let { repo }: { repo: DiscoveryRepoCardData } = $props();
+	let {
+		repo,
+		variant = 'default'
+	}: { repo: DiscoveryRepoCardData; variant?: 'default' | 'featured' } = $props();
 
 	const href = $derived(repoDetailPath(repo.owner, repo.name));
 	const categoryLabel = $derived(formatCategoryLabel(repo.category));
@@ -36,7 +39,7 @@
 	const storyLine = $derived(repo.storyPreview?.split('. ').slice(0, 2).join('. '));
 </script>
 
-<article class="discovery-repo-card">
+<article class="discovery-repo-card" class:featured={variant === 'featured'}>
 	<a
 		class="card-main-link"
 		href={href}
@@ -44,8 +47,8 @@
 		data-sveltekit-preload-code="eager"
 	></a>
 	<div class="card-head">
-		<div>
-			<span class="repo-name">{repo.full_name}</span>
+		<div class="repo-copy">
+			<span class="repo-name" title={repo.full_name}>{repo.full_name}</span>
 			{#if blurb}<p class="description">{blurb}</p>{/if}
 		</div>
 		<div class="score-box">
@@ -108,6 +111,13 @@
 			transform 0.15s ease;
 	}
 
+	.discovery-repo-card.featured {
+		display: grid;
+		grid-template-columns: minmax(0, 1.35fr) minmax(250px, 0.65fr);
+		column-gap: 1.25rem;
+		padding: 1.15rem;
+	}
+
 	.discovery-repo-card:hover {
 		background: var(--bg-hover);
 		border-color: var(--border-strong);
@@ -137,12 +147,19 @@
 		align-items: start;
 	}
 
+	.repo-copy {
+		min-width: 0;
+	}
+
 	.repo-name {
+		display: block;
 		color: var(--text);
 		font-family: var(--font-mono);
 		font-weight: 700;
 		text-decoration: none;
-		overflow-wrap: anywhere;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.repo-name:hover {
@@ -155,6 +172,13 @@
 		color: var(--text-muted);
 		line-height: 1.5;
 		margin: 0.45rem 0 0;
+	}
+
+	.description {
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
 	}
 
 	.score-box {
@@ -188,6 +212,8 @@
 
 	.save-controls {
 		margin-top: 0.65rem;
+		position: relative;
+		z-index: 2;
 	}
 
 	.facts span,
@@ -220,6 +246,36 @@
 		margin-top: 0.85rem;
 	}
 
+	.story > p:not(.story-label) {
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 4;
+	}
+
+	.featured .card-head {
+		grid-column: 1 / -1;
+	}
+
+	.featured .description {
+		max-width: 52rem;
+		-webkit-line-clamp: 2;
+	}
+
+	.featured .facts,
+	.featured .save-controls,
+	.featured .clusters {
+		grid-column: 1;
+	}
+
+	.featured .story {
+		grid-column: 2;
+		grid-row: 2 / span 3;
+		margin: 0;
+		padding-left: 1.25rem;
+		border-left: 1px solid var(--border);
+	}
+
 	.story-label {
 		margin: 0;
 		color: var(--text);
@@ -237,13 +293,23 @@
 		margin-top: 0.75rem;
 	}
 
-	@media (max-width: 640px) {
+	@media (max-width: 720px) {
+		.discovery-repo-card.featured {
+			display: block;
+		}
+
 		.card-head {
 			grid-template-columns: 1fr;
 		}
 
 		.score-box {
 			width: fit-content;
+		}
+
+		.featured .story {
+			margin-top: 0.85rem;
+			padding: 0;
+			border-left: 0;
 		}
 	}
 

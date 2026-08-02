@@ -3,10 +3,10 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 const STORAGE_KEY = 'gha-theme';
 
 export function readStoredTheme(): ThemeMode {
-	if (typeof localStorage === 'undefined') return 'system';
+	if (typeof localStorage === 'undefined') return 'dark';
 	const raw = localStorage.getItem(STORAGE_KEY);
 	if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
-	return 'system';
+	return 'dark';
 }
 
 export function storeTheme(mode: ThemeMode): void {

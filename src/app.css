@@ -20,8 +20,9 @@ html[data-theme='dark'] {
 	--font-display: 'IBM Plex Serif', 'IBM Plex Sans', Georgia, serif;
 	--shadow-soft: 0 18px 60px rgba(0, 0, 0, 0.24);
 	--radius: 10px;
-	--shell-left: 16.5rem;
-	--shell-right: 17rem;
+	--shell-left: 14.5rem;
+	--shell-right: 20rem;
+	--content-max: 105rem;
 	--header-bg: rgba(11, 15, 20, 0.86);
 	--atmosphere:
 		radial-gradient(circle at top left, rgba(45, 212, 191, 0.1), transparent 32rem),
@@ -102,15 +103,15 @@ code,
 }
 
 .container {
-	max-width: 1180px;
+	max-width: var(--content-max);
 	margin: 0 auto;
-	padding: 0 1.5rem;
+	padding: 0 clamp(1rem, 2.5vw, 2.5rem);
 }
 
 .site-header {
 	border-bottom: 1px solid var(--border);
-	padding: 0.85rem 0;
-	margin-bottom: 2rem;
+	padding: 0.75rem 0;
+	margin-bottom: 1.25rem;
 	background: var(--header-bg);
 	backdrop-filter: blur(16px);
 	position: sticky;
@@ -743,8 +744,8 @@ a.repo-item:hover {
 .app-shell {
 	display: grid;
 	grid-template-columns: var(--shell-left) minmax(0, 1fr) var(--shell-right);
-	gap: 1.25rem;
-	width: min(1480px, calc(100% - 2rem));
+	gap: clamp(1rem, 1.5vw, 1.5rem);
+	width: min(var(--content-max), calc(100% - clamp(2rem, 4vw, 5rem)));
 	margin: 0 auto;
 	padding: 0 0 5rem;
 	align-items: start;
@@ -773,14 +774,15 @@ a.repo-item:hover {
 .shell-center {
 	min-width: 0;
 	padding-bottom: 2rem;
+	container-type: inline-size;
 }
 
 .shell-rail-card {
 	border: 1px solid var(--border);
-	border-radius: 16px;
-	background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
-	box-shadow: var(--shadow-soft);
-	padding: 0.75rem;
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+	box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+	padding: 0.8rem;
 }
 
 .shell-collapse-btn {
@@ -801,6 +803,24 @@ a.repo-item:hover {
 	gap: 0.85rem;
 }
 
+@media (max-width: 1280px) {
+	.app-shell,
+	.app-shell.right-collapsed {
+		grid-template-columns: var(--shell-left) minmax(0, 1fr);
+	}
+
+	.app-shell.left-collapsed,
+	.app-shell.left-collapsed.right-collapsed {
+		grid-template-columns: 3rem minmax(0, 1fr);
+	}
+
+	.shell-right {
+		position: static;
+		grid-column: 2;
+		max-height: none;
+	}
+}
+
 @media (max-width: 1100px) {
 	.app-shell,
 	.app-shell.left-collapsed,
@@ -814,14 +834,17 @@ a.repo-item:hover {
 		max-height: none;
 	}
 
-	.shell-left,
-	.shell-right {
+	.shell-left {
 		display: none;
 	}
 
-	.shell-left.open-mobile,
-	.shell-right.open-mobile {
+	.shell-left.open-mobile {
 		display: block;
+	}
+
+	.shell-right {
+		display: block;
+		grid-column: 1;
 	}
 
 	.mobile-nav-backdrop {

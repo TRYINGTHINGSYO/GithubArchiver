@@ -23,7 +23,7 @@
 				<ul>
 					{#each trendingWebsites as site}
 						<li>
-							<a href={`/websites/${encodeURIComponent(site.domain)}`}>{site.domain}</a>
+							<a href={`/websites/${encodeURIComponent(site.domain)}`} title={site.domain}>{site.domain}</a>
 							{#if site.rating != null}
 								<span class="meta">{site.rating.toFixed(1)}★</span>
 							{/if}
@@ -48,7 +48,7 @@
 				<ul>
 					{#each trendingRepos as repo}
 						<li>
-							<a href={`/repo/${repo.full_name}`}>{repo.full_name}</a>
+							<a href={`/repo/${repo.full_name}`} title={repo.full_name}>{repo.full_name}</a>
 							{#if repo.score != null}
 								<span class="meta">{Math.round(repo.score)}</span>
 							{/if}
@@ -83,15 +83,18 @@
 
 <style>
 	.right-rail {
-		display: flex;
-		flex-direction: column;
-		gap: 1.25rem;
+		display: grid;
+		gap: 1.4rem;
 		padding: 0.25rem 0 2rem;
+	}
+
+	section {
+		min-width: 0;
 	}
 
 	section h2 {
 		margin: 0 0 0.5rem;
-		font-size: 0.72rem;
+		font-size: 0.76rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--text-muted);
@@ -107,16 +110,21 @@
 	li {
 		display: flex;
 		justify-content: space-between;
+		align-items: center;
 		gap: 0.5rem;
-		padding: 0.35rem 0;
+		padding: 0.46rem 0;
 		border-bottom: 1px solid var(--border);
-		font-size: 0.86rem;
+		font-size: 0.89rem;
+		min-width: 0;
 	}
 
 	a {
 		color: var(--text);
 		text-decoration: none;
-		word-break: break-all;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	a:hover {
@@ -128,6 +136,14 @@
 	.blurb {
 		color: var(--text-muted);
 		font-size: 0.8rem;
+	}
+
+	.meta {
+		flex: 0 0 auto;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		padding: 0.12rem 0.38rem;
+		font-family: var(--font-mono);
 	}
 
 	.topics {
@@ -148,5 +164,13 @@
 		border-color: var(--accent);
 		color: var(--accent);
 		text-decoration: none;
+	}
+
+	@media (max-width: 1280px) and (min-width: 701px) {
+		.right-rail {
+			grid-template-columns: minmax(0, 1.3fr) minmax(12rem, 0.8fr) minmax(11rem, 0.7fr);
+			gap: 1.5rem;
+			padding: 0.25rem 0 0.4rem;
+		}
 	}
 </style>

@@ -18,7 +18,7 @@
 		<script>
 			(function () {
 				try {
-					var mode = localStorage.getItem('gha-theme') || 'system';
+					var mode = localStorage.getItem('gha-theme') || 'dark';
 					var dark = mode === 'dark' || (mode !== 'light' && !window.matchMedia('(prefers-color-scheme: light)').matches);
 					document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 					document.documentElement.style.colorScheme = dark ? 'dark' : 'light';

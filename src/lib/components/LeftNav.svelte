@@ -79,14 +79,13 @@
 	.random-cta {
 		display: block;
 		text-align: center;
-		padding: 0.7rem 0.85rem;
-		border-radius: 12px;
-		background: linear-gradient(135deg, rgba(20, 184, 166, 0.22), rgba(56, 189, 248, 0.12));
-		border: 1px solid color-mix(in srgb, var(--web-accent) 45%, var(--border));
+		padding: 0.72rem 0.85rem;
+		border-radius: 10px;
+		background: color-mix(in srgb, var(--web-accent) 12%, var(--bg-subtle));
+		border: 1px solid color-mix(in srgb, var(--web-accent) 38%, var(--border));
 		color: var(--text);
-		font-family: var(--font-display);
-		font-weight: 600;
-		letter-spacing: 0.01em;
+		font-weight: 700;
+		letter-spacing: 0;
 		text-decoration: none;
 	}
 
@@ -103,11 +102,11 @@
 		border: 0;
 		background: transparent;
 		color: var(--text-muted);
-		font-size: 0.72rem;
+		font-size: 0.76rem;
 		font-weight: 700;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		padding: 0.35rem 0.2rem;
+		padding: 0.4rem 0.25rem;
 		cursor: pointer;
 	}
 
@@ -124,11 +123,14 @@
 
 	a {
 		display: block;
-		padding: 0.32rem 0.45rem;
+		padding: 0.42rem 0.5rem;
 		border-radius: 8px;
 		color: var(--text-muted);
-		font-size: 0.9rem;
+		font-size: 0.94rem;
 		text-decoration: none;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	a:hover {
