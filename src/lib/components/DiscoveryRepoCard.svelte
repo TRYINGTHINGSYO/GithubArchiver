@@ -206,6 +206,8 @@
 	.clusters {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: flex-start;
+		align-content: flex-start;
 		gap: 0.5rem;
 		margin-top: 0.75rem;
 	}
@@ -266,6 +268,7 @@
 	.featured .save-controls,
 	.featured .clusters {
 		grid-column: 1;
+		align-self: start;
 	}
 
 	.featured .story {
