@@ -1,16 +1,15 @@
 import { json } from '@sveltejs/kit';
 import { eventLabel, listMemoryEvents, listRecentEvents, parseEventPayload, type RepoEventType } from '$lib/server/events';
 import { REPO_EVENT_TYPES } from '$lib/server/events';
+import { boundedInteger, positiveInteger } from '$lib/server/number-params';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url }) => {
-	const limit = Math.min(Number(url.searchParams.get('limit') ?? 100), 500);
+	const limit = boundedInteger(url.searchParams.get('limit'), 100, { min: 1, max: 500 });
 	const eventType = url.searchParams.get('type') as RepoEventType | null;
 	const since = url.searchParams.get('since') ?? undefined;
-	const repoId = url.searchParams.get('repo_id') ? Number(url.searchParams.get('repo_id')) : undefined;
-	const sinceLiveId = url.searchParams.get('since_live_id')
-		? Number(url.searchParams.get('since_live_id'))
-		: undefined;
+	const repoId = positiveInteger(url.searchParams.get('repo_id'));
+	const sinceLiveId = positiveInteger(url.searchParams.get('since_live_id'));
 
 	if (eventType && !REPO_EVENT_TYPES.includes(eventType)) {
 		return json({ error: 'invalid event type' }, { status: 400 });
@@ -20,7 +19,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		limit,
 		eventType: eventType ?? undefined,
 		since,
-		repoId: Number.isFinite(repoId) ? repoId : undefined
+		repoId
 	}).map((e) => ({
 		id: e.id,
 		repo_id: e.repo_id,
@@ -34,7 +33,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	}));
 
 	const memoryEvents = listMemoryEvents({
-		sinceId: Number.isFinite(sinceLiveId) ? sinceLiveId : undefined,
+		sinceId: sinceLiveId,
 		limit
 	});
 

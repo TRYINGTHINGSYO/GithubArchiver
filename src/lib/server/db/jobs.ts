@@ -1,6 +1,7 @@
 import { getDb } from './connection.js';
 import type { JobRunRow, JobStatus, JobType } from './types.js';
 import { formatDurationCompact } from '$lib/utils';
+import { boundedInteger } from '../number-params.js';
 
 export function startJobRun(
 	jobType: JobType,
@@ -86,8 +87,8 @@ export function getRunningJobByType(jobType: JobType): JobRunRow | null {
 
 export function listJobRuns(opts: { limit?: number; jobType?: string; offset?: number } = {}): JobRunRow[] {
 	const db = getDb();
-	const limit = opts.limit ?? 50;
-	const offset = opts.offset ?? 0;
+	const limit = boundedInteger(opts.limit, 50, { min: 1, max: 200 });
+	const offset = boundedInteger(opts.offset, 0, { min: 0, max: 1_000_000 });
 	if (opts.jobType) {
 		return db
 			.prepare(

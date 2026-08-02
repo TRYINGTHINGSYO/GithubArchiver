@@ -8,8 +8,18 @@ function parseScope(value: string | null): BulkExportScope | null {
 	return null;
 }
 
+export const GET: RequestHandler = async () => {
+	return json(
+		{ ok: false, error: 'Starting an export requires an authenticated POST.' },
+		{ status: 405, headers: { Allow: 'POST' } }
+	);
+};
+
 /** Start an async bulk export job; poll /api/export/bulk/[jobId] for status. */
-export const GET: RequestHandler = async ({ url }) => {
+export const POST: RequestHandler = async ({ locals, url }) => {
+	if (!locals.isAdmin) {
+		return json({ ok: false, error: 'Admin login required.' }, { status: 401 });
+	}
 	const scope = parseScope(url.searchParams.get('scope'));
 	const format = url.searchParams.get('format') ?? 'zip';
 

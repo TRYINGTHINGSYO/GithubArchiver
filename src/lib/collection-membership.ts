@@ -16,6 +16,7 @@ interface Entry {
 	pending: Set<SystemCollectionKind>;
 	listeners: Set<Listener>;
 	revision: number;
+	mutationRevisions: Record<SystemCollectionKind, number>;
 }
 
 const entries = new Map<number, Entry>();
@@ -31,7 +32,8 @@ function entryFor(repoId: number): Entry {
 			hydrated: false,
 			pending: new Set(),
 			listeners: new Set(),
-			revision: 0
+			revision: 0,
+			mutationRevisions: { favorites: 0, watch_later: 0 }
 		};
 		entries.set(repoId, entry);
 	}
@@ -123,6 +125,8 @@ export async function setCollectionMembership(
 	const entry = entryFor(repoId);
 	const previous = entry[kind];
 	entry.revision += 1;
+	const mutationRevision = entry.mutationRevisions[kind] + 1;
+	entry.mutationRevisions[kind] = mutationRevision;
 	entry[kind] = value;
 	entry.pending.add(kind);
 	notify(entry);
@@ -139,14 +143,19 @@ export async function setCollectionMembership(
 		if (!response.ok || !body.ok || !body.membership) {
 			throw new Error(body.error ?? 'Unable to update saved repositories.');
 		}
-		entry.favorites = Boolean(body.membership.favorites);
-		entry.watch_later = Boolean(body.membership.watch_later);
-		entry.hydrated = true;
+		if (entry.mutationRevisions[kind] === mutationRevision) {
+			entry[kind] = Boolean(body.membership[kind]);
+			entry.hydrated = true;
+		}
 	} catch (error) {
-		entry[kind] = previous;
+		if (entry.mutationRevisions[kind] === mutationRevision) {
+			entry[kind] = previous;
+		}
 		throw error;
 	} finally {
-		entry.pending.delete(kind);
+		if (entry.mutationRevisions[kind] === mutationRevision) {
+			entry.pending.delete(kind);
+		}
 		notify(entry);
 	}
 }

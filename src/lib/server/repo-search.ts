@@ -1,5 +1,6 @@
 import type { RepoQuery } from '$lib/server/db/types';
 import { parseRepoSort } from '$lib/server/db/repo-query';
+import { boundedInteger } from '$lib/server/number-params';
 
 export const REPO_PAGE_SIZES = [10, 25, 50, 75, 100] as const;
 export type RepoPageSize = (typeof REPO_PAGE_SIZES)[number];
@@ -72,7 +73,7 @@ export function parseRepoQueryParams(url: URL): RepoQuery {
 		clusters,
 		clusterMatch,
 		minClusterConfidence: minClusterConfidenceRaw ? Number(minClusterConfidenceRaw) : undefined,
-		page: Number(url.searchParams.get('page') ?? 1),
+		page: boundedInteger(url.searchParams.get('page'), 1, { min: 1, max: 1_000_000 }),
 		perPage: parseRepoPageSize(url.searchParams.get('per_page'))
 	};
 }

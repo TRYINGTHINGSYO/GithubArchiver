@@ -3,7 +3,10 @@ import { saveRepoFromInput } from '$lib/server/repo-save';
 import type { RequestHandler } from './$types';
 
 /** Look up a GitHub repo and save it into the local catalog (optional archive). */
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ locals, request }) => {
+	if (!locals.isAdmin) {
+		return json({ ok: false, error: 'Admin login required.' }, { status: 401 });
+	}
 	const body = (await request.json().catch(() => ({}))) as {
 		q?: string;
 		owner?: string;

@@ -61,6 +61,18 @@ describe('homepage readiness + high-signal materialization', () => {
 		expect(getHomepageHighSignalCount()).toBe(snapshot!.highSignalCount);
 	});
 
+	it('does not substitute the current snapshot for an explicit historical window', () => {
+		const result = materializeHomepageReadiness();
+		expect(result.status).toBe('success');
+		const snapshot = getPublishedHomepageReadinessSnapshot();
+		expect(snapshot).not.toBeNull();
+
+		const periodEnd = new Date('2025-01-15T00:00:00.000Z');
+		const historical = getDataReadiness({ windowDays: 7, periodEnd });
+		expect(historical.windowEnd).toBe(periodEnd.toISOString());
+		expect(historical.windowEnd).not.toBe(snapshot!.readiness.windowEnd);
+	});
+
 	it('preserves published snapshot when a refresh fails', () => {
 		const first = materializeHomepageReadiness();
 		expect(first.status).toBe('success');

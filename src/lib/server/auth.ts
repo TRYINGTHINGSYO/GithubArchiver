@@ -4,17 +4,26 @@ import type { Cookies } from '@sveltejs/kit';
 export const ADMIN_COOKIE = 'gha_admin';
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+const DEVELOPMENT_ADMIN_PASSWORD = 'GitHub';
 
-function adminPassword(): string {
-	return process.env.ADMIN_PASSWORD || 'GitHub';
+function configuredValue(name: string): string | null {
+	const value = process.env[name]?.trim();
+	return value ? value : null;
 }
 
-function sessionSecret(): string {
-	return process.env.ADMIN_SESSION_SECRET || adminPassword();
+function adminPassword(): string | null {
+	return (
+		configuredValue('ADMIN_PASSWORD') ??
+		(process.env.NODE_ENV === 'production' ? null : DEVELOPMENT_ADMIN_PASSWORD)
+	);
 }
 
-function sign(payload: string): string {
-	return createHmac('sha256', sessionSecret()).update(payload).digest('hex');
+function sessionSecret(): string | null {
+	return configuredValue('ADMIN_SESSION_SECRET') ?? adminPassword();
+}
+
+function sign(payload: string, secret: string): string {
+	return createHmac('sha256', secret).update(payload).digest('hex');
 }
 
 function safeEqual(a: string, b: string): boolean {
@@ -24,16 +33,27 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 export function verifyAdminPassword(password: string): boolean {
-	return safeEqual(password, adminPassword());
+	const expected = adminPassword();
+	return expected !== null && safeEqual(password, expected);
+}
+
+export function isAdminAuthConfigured(): boolean {
+	return adminPassword() !== null && sessionSecret() !== null;
 }
 
 export function createAdminSessionValue(): string {
+	const secret = sessionSecret();
+	if (!secret) {
+		throw new Error('Admin authentication requires ADMIN_PASSWORD in production.');
+	}
 	const payload = `admin:${Date.now()}`;
-	return `${payload}.${sign(payload)}`;
+	return `${payload}.${sign(payload, secret)}`;
 }
 
 export function verifyAdminSessionValue(value: string | undefined): boolean {
 	if (!value) return false;
+	const secret = sessionSecret();
+	if (!secret) return false;
 	const separator = value.lastIndexOf('.');
 	if (separator <= 0) return false;
 	const payload = value.slice(0, separator);
@@ -42,7 +62,7 @@ export function verifyAdminSessionValue(value: string | undefined): boolean {
 	const issuedAt = Number(payload.slice('admin:'.length));
 	if (!Number.isFinite(issuedAt)) return false;
 	if (Date.now() - issuedAt > SESSION_MAX_AGE_SECONDS * 1000) return false;
-	return safeEqual(signature, sign(payload));
+	return safeEqual(signature, sign(payload, secret));
 }
 
 export function setAdminSessionCookie(cookies: Cookies): void {
@@ -57,4 +77,16 @@ export function setAdminSessionCookie(cookies: Cookies): void {
 
 export function clearAdminSessionCookie(cookies: Cookies): void {
 	cookies.delete(ADMIN_COOKIE, { path: '/' });
+}
+
+export function safeAdminNextPath(value: string | null | undefined): string {
+	if (!value || !value.startsWith('/') || /[\\\u0000-\u001f\u007f]/.test(value)) return '/admin';
+	try {
+		const base = new URL('http://admin.local');
+		const target = new URL(value, base);
+		if (target.origin !== base.origin) return '/admin';
+		return `${target.pathname}${target.search}${target.hash}`;
+	} catch {
+		return '/admin';
+	}
 }

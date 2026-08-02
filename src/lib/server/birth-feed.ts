@@ -8,6 +8,7 @@ import {
 } from '$lib/server/db/birth-feed';
 import { momentTag, velocityIndicator } from '$lib/server/intelligence';
 import { getRepoZipDownloadUrl } from '$lib/server/source-zip';
+import { boundedInteger } from '$lib/server/number-params';
 
 export interface BirthFeedItem {
 	id: number;
@@ -101,7 +102,7 @@ export function parseBirthFeedParams(url: URL): BirthFeedOptions {
 		archivedOnly: url.searchParams.get('archived_only') === '1',
 		hasReadme: url.searchParams.get('has_readme') === '1',
 		hasRelease: url.searchParams.get('has_release') === '1',
-		page: Number(url.searchParams.get('page') ?? 1),
-		perPage: Number(url.searchParams.get('per_page') ?? 50)
+		page: boundedInteger(url.searchParams.get('page'), 1, { min: 1, max: 1_000_000 }),
+		perPage: boundedInteger(url.searchParams.get('per_page'), 50, { min: 1, max: 100 })
 	};
 }

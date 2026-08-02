@@ -1,3 +1,5 @@
+import { boundedInteger } from '$lib/server/number-params';
+
 export interface LiveBusEvent {
 	id: number;
 	type: string;
@@ -18,7 +20,7 @@ export function publishLiveEvent(event: Omit<LiveBusEvent, 'id'>): LiveBusEvent 
 }
 
 export function listLiveEvents(opts: { sinceId?: number; limit?: number } = {}): LiveBusEvent[] {
-	const limit = Math.min(Math.max(opts.limit ?? 50, 1), MAX_EVENTS);
+	const limit = boundedInteger(opts.limit, 50, { min: 1, max: MAX_EVENTS });
 	return events
 		.filter((event) => opts.sinceId === undefined || event.id > opts.sinceId)
 		.slice(0, limit);

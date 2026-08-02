@@ -4,9 +4,10 @@ import {
 	listEmergingTopics
 } from '$lib/server/emerging-topics';
 import type { PageServerLoad } from './$types';
+import { boundedInteger } from '$lib/server/number-params';
 
 export const load: PageServerLoad = async ({ url }) => {
-	const limit = Number(url.searchParams.get('limit') ?? 50);
+	const limit = boundedInteger(url.searchParams.get('limit'), 50, { min: 1, max: 100 });
 	const periodEndRaw = url.searchParams.get('period_end');
 	const periodEnd = periodEndRaw ? new Date(periodEndRaw) : undefined;
 	const readiness = getDataReadiness({
@@ -14,7 +15,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		periodEnd: periodEnd && !Number.isNaN(periodEnd.getTime()) ? periodEnd : undefined
 	});
 
-	const topics = listEmergingTopics({ limit: Math.min(Math.max(1, limit), 100) }).map((topic) => {
+	const topics = listEmergingTopics({ limit }).map((topic) => {
 		let growthSuppressedReason: string | null = null;
 		let prevalenceLiftPercent: number | null = null;
 		try {

@@ -1,5 +1,6 @@
 import { getDb } from './connection';
 import type { RepoEventRow } from './types';
+import { boundedInteger } from '../number-params.js';
 
 export function insertRepoEvent(
 	repoId: number,
@@ -19,13 +20,14 @@ export function insertRepoEvent(
 
 export function listRepoEvents(repoId: number, limit = 200): RepoEventRow[] {
 	const database = getDb();
+	const safeLimit = boundedInteger(limit, 200, { min: 1, max: 500 });
 	return database
 		.prepare(
 			`SELECT * FROM repository_events WHERE repo_id = ?
 			 AND event_time GLOB '????-??-??T*'
 			 ORDER BY event_time DESC LIMIT ?`
 		)
-		.all(repoId, limit) as RepoEventRow[];
+		.all(repoId, safeLimit) as RepoEventRow[];
 }
 
 export function listRecentEvents(opts: {
@@ -35,7 +37,7 @@ export function listRecentEvents(opts: {
 	repoId?: number;
 }): (RepoEventRow & { owner: string; name: string; full_name: string })[] {
 	const database = getDb();
-	const limit = opts.limit ?? 100;
+	const limit = boundedInteger(opts.limit, 100, { min: 1, max: 500 });
 	const where: string[] = ["e.event_time GLOB '????-??-??T*'"];
 	const params: (string | number)[] = [];
 

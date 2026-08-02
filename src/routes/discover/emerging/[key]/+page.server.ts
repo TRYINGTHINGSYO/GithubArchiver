@@ -7,13 +7,14 @@ import {
 import { parseTopics } from '$lib/server/db/repos';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ locals, params }) => {
 	const detail = getEmergingTopicDetail(params.key);
 	const provenance = getLatestEmergingDetectionProvenance();
 	if (!detail) {
 		const staleTopic = getStaleEmergingTopicSummary(params.key);
 		if (!staleTopic) error(404, 'Emerging topic not found');
 		return {
+			isAdmin: locals.isAdmin,
 			state: 'stale' as const,
 			staleTopic,
 			detail: null,
@@ -21,6 +22,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		};
 	}
 	return {
+		isAdmin: locals.isAdmin,
 		state: 'current' as const,
 		detail: {
 			...detail,

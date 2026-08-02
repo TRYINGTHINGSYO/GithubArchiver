@@ -9,6 +9,7 @@
 	let savingStatus = $state(false);
 	let reviewReason = $state('valid-trend');
 	let mergeTarget = $state('');
+	let reviewMessage = $state<{ type: 'ok' | 'error'; text: string } | null>(null);
 
 	const isStale = $derived(data.state === 'stale');
 	const detail = $derived(data.detail);
@@ -59,13 +60,27 @@
 	async function postReview(body: Record<string, unknown>) {
 		if (savingStatus || !topic) return;
 		savingStatus = true;
+		reviewMessage = null;
 		try {
-			await fetch(`/api/discovery/emerging/${topic.key}`, {
+			const response = await fetch(`/api/discovery/emerging/${topic.key}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(body)
 			});
+			const result = (await response.json().catch(() => ({}))) as {
+				ok?: boolean;
+				error?: string;
+			};
+			if (!response.ok || !result.ok) {
+				throw new Error(result.error ?? 'Unable to update the emerging topic.');
+			}
+			reviewMessage = { type: 'ok', text: 'Review state updated.' };
 			await invalidateAll();
+		} catch (error) {
+			reviewMessage = {
+				type: 'error',
+				text: error instanceof Error ? error.message : String(error)
+			};
 		} finally {
 			savingStatus = false;
 		}
@@ -156,27 +171,36 @@
 	{/if}
 	<div class="status-actions" aria-label="Review status">
 		<span>Status: {topic.status}{topic.review_reason ? ` (${topic.review_reason})` : ''}</span>
-		<label class="reason-picker">
-			Reason
-			<select bind:value={reviewReason}>
-				{#each REVIEW_REASONS as reason}
-					<option value={reason}>{reason}</option>
-				{/each}
-			</select>
-		</label>
-		<button disabled={savingStatus} onclick={() => setStatus('reviewing')}>Reviewing</button>
-		<button disabled={savingStatus} onclick={() => setStatus('promoted')}>Promoted</button>
-		<button disabled={savingStatus} onclick={() => setStatus('dismissed')}>Dismiss</button>
-		<button disabled={savingStatus} onclick={excludeTerm}>Exclude term</button>
+		{#if data.isAdmin}
+			<label class="reason-picker">
+				Reason
+				<select bind:value={reviewReason}>
+					{#each REVIEW_REASONS as reason}
+						<option value={reason}>{reason}</option>
+					{/each}
+				</select>
+			</label>
+			<button disabled={savingStatus} onclick={() => setStatus('reviewing')}>Reviewing</button>
+			<button disabled={savingStatus} onclick={() => setStatus('promoted')}>Promoted</button>
+			<button disabled={savingStatus} onclick={() => setStatus('dismissed')}>Dismiss</button>
+			<button disabled={savingStatus} onclick={excludeTerm}>Exclude term</button>
+		{/if}
 	</div>
-	<div class="status-actions merge-row" aria-label="Merge into another candidate">
-		<input
-			type="text"
-			placeholder="canonical key, e.g. claude-code"
-			bind:value={mergeTarget}
-		/>
-		<button disabled={savingStatus || !mergeTarget.trim()} onclick={mergeInto}>Merge into</button>
-	</div>
+	{#if data.isAdmin}
+		<div class="status-actions merge-row" aria-label="Merge into another candidate">
+			<input
+				type="text"
+				placeholder="canonical key, e.g. claude-code"
+				bind:value={mergeTarget}
+			/>
+			<button disabled={savingStatus || !mergeTarget.trim()} onclick={mergeInto}>Merge into</button>
+		</div>
+		{#if reviewMessage}
+			<p class:error-message={reviewMessage.type === 'error'} role="status" aria-live="polite">
+				{reviewMessage.text}
+			</p>
+		{/if}
+	{/if}
 </section>
 
 {#if history}
@@ -332,6 +356,10 @@
 
 	.hint {
 		font-size: 0.95rem;
+	}
+
+	.error-message {
+		color: var(--red, #d44);
 	}
 
 	.status-actions,

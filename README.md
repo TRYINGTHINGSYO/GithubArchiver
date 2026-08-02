@@ -74,7 +74,7 @@ Use `stop-githubarchive.bat` to stop the server. See [docs/LOCAL_DESKTOP.md](doc
 
 All operations run **in-process** inside the web server and are recorded in `job_runs` for recall.
 
-Admin routes and repo mutation actions require the shared admin login. Set `ADMIN_PASSWORD` in production; if it is not set, the default password is `GitHub`. Favorites are global across the site, not account-specific.
+Admin routes and catalog mutation actions require the shared admin login. `ADMIN_PASSWORD` is required in production; if it is missing, admin login fails closed. Local development retains the `GitHub` fallback. Favorites are global across the site, not account-specific.
 
 | Tab | URL | Purpose |
 |-----|-----|---------|
@@ -113,7 +113,7 @@ DATABASE_PATH=/data/githubarchive.db
 ARCHIVE_DIR=/data/archives
 BACKUPS_DIR=/data/backups
 GITHUB_TOKEN=ghp_...          # public_repo scope only
-ADMIN_PASSWORD=change-me      # default is GitHub if omitted
+ADMIN_PASSWORD=change-me      # required in production; local default is GitHub
 ```
 
 ### Optional
@@ -257,7 +257,7 @@ Migrations are versioned in `schema_version` (current: **v14**).
 | `METRICS_RETENTION_DAYS` | `365` | Age out metric snapshots after daily collapse (latest per repo kept) |
 | `BACKUP_KEEP_DAILY` / `_WEEKLY` / `_MONTHLY` | `7` / `4` / `3` | On-volume backup retention after each backup run |
 | `CLEANUP_QUARANTINE_DAYS` | `7` | Days quarantined low-value repos stay hidden before permanent purge |
-| `ADMIN_PASSWORD` | `GitHub` | Shared admin login password |
+| `ADMIN_PASSWORD` | required in production | Shared admin login password; local development defaults to `GitHub` |
 | `ADMIN_SESSION_SECRET` | `ADMIN_PASSWORD` | HMAC secret for admin session cookies |
 | `STORAGE_MIN_FREE_BYTES` | `1073741824` | Free-space threshold that triggers cleanup before archive downloads |
 | `BACKGROUND_WORKER` | `auto` on Railway | In-process auto-scan on boot |

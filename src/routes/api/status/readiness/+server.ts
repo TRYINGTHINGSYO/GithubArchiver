@@ -1,9 +1,10 @@
 import { json } from '@sveltejs/kit';
 import { getDataReadiness } from '$lib/server/data-readiness';
+import { boundedInteger } from '$lib/server/number-params';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url }) => {
-	const windowDays = Number(url.searchParams.get('window_days') ?? 7);
+	const windowDays = boundedInteger(url.searchParams.get('window_days'), 7, { min: 1, max: 90 });
 	const periodEndRaw = url.searchParams.get('period_end');
 	const periodEnd = periodEndRaw ? new Date(periodEndRaw) : undefined;
 	if (periodEnd && Number.isNaN(periodEnd.getTime())) {
@@ -12,7 +13,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	return json(
 		getDataReadiness({
-			windowDays: Number.isFinite(windowDays) ? windowDays : 7,
+			windowDays,
 			periodEnd
 		})
 	);

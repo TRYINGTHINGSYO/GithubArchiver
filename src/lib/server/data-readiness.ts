@@ -56,7 +56,9 @@ export function getDataReadiness(opts: {
 	const minEnriched = opts.minEnriched ?? EMERGING_READY_MIN_ENRICHED;
 	const minOwners = opts.minOwners ?? EMERGING_READY_MIN_OWNERS;
 
-	if (!opts.forceLive) {
+	// Published homepage readiness describes the current window. An explicit
+	// periodEnd is a historical/as-of query and must be computed for that date.
+	if (!opts.forceLive && opts.periodEnd === undefined) {
 		const snapshot = getPublishedHomepageReadinessSnapshot();
 		if (
 			snapshot &&

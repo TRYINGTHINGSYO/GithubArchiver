@@ -2,6 +2,7 @@ import { getDb } from './connection.js';
 import { buildRepoFilters, buildRepoOrderBy } from './repo-query.js';
 import { parseTopics } from './repos.js';
 import type { RepoQuery, RepoRow } from './types.js';
+import { boundedInteger } from '../number-params.js';
 
 export interface BirthFeedQuery {
 	source?: string;
@@ -57,8 +58,8 @@ const BIRTH_FEED_SELECT = `
 
 export function queryBirthFeed(opts: BirthFeedQuery): BirthFeedResult {
 	const db = getDb();
-	const page = Math.max(1, opts.page ?? 1);
-	const perPage = Math.min(Math.max(1, opts.perPage ?? 50), 100);
+	const page = boundedInteger(opts.page, 1, { min: 1, max: 1_000_000 });
+	const perPage = boundedInteger(opts.perPage, 50, { min: 1, max: 100 });
 	const offset = (page - 1) * perPage;
 	const { clause, params } = buildBirthFeedWhere(opts);
 	const orderBy = buildRepoOrderBy({ ...opts, sort: opts.sort ?? 'newest_discovered' }, 'r');

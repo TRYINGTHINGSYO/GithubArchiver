@@ -19,7 +19,10 @@ export const GET: RequestHandler = async ({ params }) => {
 	return json(detail);
 };
 
-export const POST: RequestHandler = async ({ params, request }) => {
+export const POST: RequestHandler = async ({ locals, params, request }) => {
+	if (!locals.isAdmin) {
+		return json({ ok: false, error: 'Admin login required.' }, { status: 401 });
+	}
 	const body = (await request.json().catch(() => ({}))) as {
 		action?: 'set-status' | 'merge' | 'exclude';
 		status?: string;

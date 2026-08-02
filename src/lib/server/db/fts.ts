@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { getLatestReadmePath } from './archive.js';
 import { getDb } from './connection.js';
 import type { RepoQuery, RepoQueryResult, RepoRow } from './types.js';
+import { boundedInteger } from '../number-params.js';
 
 const README_FTS_MAX_CHARS = 50_000;
 
@@ -84,8 +85,8 @@ export function searchReposFts(opts: RepoQuery): RepoQueryResult {
 	}
 
 	const db = getDb();
-	const page = Math.max(1, opts.page ?? 1);
-	const perPage = Math.min(Math.max(1, opts.perPage ?? 50), 100);
+	const page = boundedInteger(opts.page, 1, { min: 1, max: 1_000_000 });
+	const perPage = boundedInteger(opts.perPage, 50, { min: 1, max: 100 });
 	const offset = (page - 1) * perPage;
 	const { clause, params } = buildRepoFilters(opts);
 	const filterSql = clause ? `AND ${clause.replace(/^WHERE /, '')}` : '';

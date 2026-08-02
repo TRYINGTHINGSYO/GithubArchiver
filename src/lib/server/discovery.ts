@@ -16,6 +16,7 @@ import { DISCOVERY_PRESETS, type DiscoveryPreset } from '$lib/server/discovery-p
 import { getMaterializedDiscoveryLanding } from '$lib/server/discovery-materialized';
 import { listEmergingTopics, type EmergingTopicRow } from '$lib/server/emerging-topics';
 import { computeGrowthPercent } from '$lib/server/growth';
+import { boundedInteger, boundedNumber } from '$lib/server/number-params';
 
 /**
  * Development-only escape hatch. Production never serves placeholder cluster cards.
@@ -175,14 +176,13 @@ const INCOMPLETE_SIGNAL_LABELS: Record<IncompleteSignal, string> = {
 export function parseDiscoveryQuery(url: URL): DiscoveryQuery {
 	const periodRaw = url.searchParams.get('period') ?? '7d';
 	const period = periodRaw === '14d' || periodRaw === '30d' ? periodRaw : '7d';
-	const limit = Number(url.searchParams.get('limit') ?? DEFAULT_LIMIT);
 	return {
 		period,
 		language: url.searchParams.get('language') || undefined,
 		category: url.searchParams.get('category') || undefined,
 		cluster: url.searchParams.get('cluster') || undefined,
-		minScore: Number(url.searchParams.get('min_score') ?? 55),
-		limit: Number.isFinite(limit) ? Math.min(Math.max(1, limit), 100) : DEFAULT_LIMIT,
+		minScore: boundedNumber(url.searchParams.get('min_score'), 55, { min: 0, max: 100 }),
+		limit: boundedInteger(url.searchParams.get('limit'), DEFAULT_LIMIT, { min: 1, max: 100 }),
 		includeCoursework: url.searchParams.get('include_coursework') === '1'
 	};
 }
@@ -891,8 +891,8 @@ function normalizeQuery(opts: Partial<DiscoveryQuery>): DiscoveryQuery {
 		language: opts.language,
 		category: opts.category,
 		cluster: opts.cluster,
-		minScore: opts.minScore ?? 55,
-		limit: opts.limit ?? DEFAULT_LIMIT,
+		minScore: boundedNumber(opts.minScore, 55, { min: 0, max: 100 }),
+		limit: boundedInteger(opts.limit, DEFAULT_LIMIT, { min: 1, max: 100 }),
 		includeCoursework: opts.includeCoursework ?? false
 	};
 }

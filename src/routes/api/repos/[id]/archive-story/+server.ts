@@ -4,12 +4,17 @@ import { CURRENT_STORY_VERSION } from '$lib/server/archive-story-types';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, url }) => {
+	if (url.searchParams.get('regenerate') === '1') {
+		return json(
+			{ ok: false, error: 'Regeneration requires the authenticated POST endpoint.' },
+			{ status: 405, headers: { Allow: 'GET' } }
+		);
+	}
 	const repoId = Number(params.id);
 	if (!Number.isFinite(repoId) || repoId <= 0) error(400, 'Invalid repository id');
 
-	const regenerate = url.searchParams.get('regenerate') === '1';
 	const result = getArchiveStoryForRepo(repoId, {
-		regenerate,
+		regenerate: false,
 		version: CURRENT_STORY_VERSION
 	});
 	if (!result) error(404, 'Repository not found');

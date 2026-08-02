@@ -21,7 +21,7 @@
 		exportJobId = null;
 		exportDownloadUrl = null;
 		try {
-			const res = await fetch(`/api/export/bulk?scope=${scope}&format=zip`);
+			const res = await fetch(`/api/export/bulk?scope=${scope}&format=zip`, { method: 'POST' });
 			const json = await res.json();
 			if (!res.ok) throw new Error(json.error ?? res.statusText);
 			exportJobId = json.jobId;

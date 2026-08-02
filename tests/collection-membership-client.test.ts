@@ -66,4 +66,53 @@ describe('collection membership client coordinator', () => {
 		expect(snapshots.at(-1)).toMatchObject({ favorites: true, pending: [] });
 		unsubscribe();
 	});
+
+	it('keeps the newest overlapping mutation when responses arrive out of order', async () => {
+		const snapshots: CollectionMembershipSnapshot[] = [];
+		const resolvers: Array<(response: Response) => void> = [];
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(
+				() =>
+					new Promise<Response>((resolve) => {
+						resolvers.push(resolve);
+					})
+			)
+		);
+		const unsubscribe = subscribeCollectionMembership(31, (value) => snapshots.push(value));
+
+		await vi.waitFor(() => expect(resolvers).toHaveLength(1));
+		resolvers.shift()!(
+			Response.json({
+				ok: true,
+				memberships: [{ repo_id: 31, favorites: false, watch_later: false }]
+			})
+		);
+		await vi.waitFor(() => expect(snapshots.at(-1)?.hydrated).toBe(true));
+
+		const favorite = setCollectionMembership(31, 'favorites', true);
+		const unfavorite = setCollectionMembership(31, 'favorites', false);
+		await vi.waitFor(() => expect(resolvers).toHaveLength(2));
+
+		// The newer request succeeds first.
+		resolvers[1](
+			Response.json({
+				ok: true,
+				membership: { favorites: false, watch_later: false }
+			})
+		);
+		await unfavorite;
+		expect(snapshots.at(-1)).toMatchObject({ favorites: false, pending: [] });
+
+		// The stale response must not resurrect the older optimistic value.
+		resolvers[0](
+			Response.json({
+				ok: true,
+				membership: { favorites: true, watch_later: false }
+			})
+		);
+		await favorite;
+		expect(snapshots.at(-1)).toMatchObject({ favorites: false, pending: [] });
+		unsubscribe();
+	});
 });

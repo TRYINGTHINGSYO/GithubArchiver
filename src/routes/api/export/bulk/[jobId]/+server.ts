@@ -4,7 +4,10 @@ import { getBulkExportZipPath } from '$lib/server/bulk-export';
 import { getJobRunById, parseJobDetail } from '$lib/server/db/jobs';
 import type { RequestHandler } from './$types';
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ locals, params }) => {
+	if (!locals.isAdmin) {
+		return json({ ok: false, error: 'Admin login required.' }, { status: 401 });
+	}
 	const jobId = Number(params.jobId);
 	if (!Number.isFinite(jobId) || jobId <= 0) {
 		return json({ error: 'Invalid job id' }, { status: 400 });

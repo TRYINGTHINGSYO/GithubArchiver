@@ -1,5 +1,6 @@
 import { getDb } from './connection';
 import type { ReleaseAssetRow, ReleaseInput, ReleaseRow } from './types';
+import { boundedInteger } from '../number-params.js';
 
 export function insertReleaseIfNew(repoId: number, release: ReleaseInput): number | null {
 	const database = getDb();
@@ -56,6 +57,7 @@ export function listLatestReleases(limit = 50): (ReleaseRow & {
 	full_name: string;
 })[] {
 	const database = getDb();
+	const safeLimit = boundedInteger(limit, 50, { min: 1, max: 100 });
 	return database
 		.prepare(
 			`SELECT rl.*, r.owner, r.name, r.full_name
@@ -64,7 +66,7 @@ export function listLatestReleases(limit = 50): (ReleaseRow & {
 			 ORDER BY COALESCE(rl.published_at, rl.first_seen_at) DESC
 			 LIMIT ?`
 		)
-		.all(limit) as (ReleaseRow & { owner: string; name: string; full_name: string })[];
+		.all(safeLimit) as (ReleaseRow & { owner: string; name: string; full_name: string })[];
 }
 
 export function listRepoReleases(repoId: number): ReleaseRow[] {
