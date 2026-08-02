@@ -167,11 +167,10 @@
 			<ThemeToggle />
 		</nav>
 	</div>
+	{#if data.activity}
+		<ActivityStatusBar initial={data.activity} />
+	{/if}
 </header>
-
-{#if data.activity}
-	<ActivityStatusBar initial={data.activity} />
-{/if}
 
 {#if mobileNavOpen}
 	<button
@@ -204,12 +203,15 @@
 		<button
 			type="button"
 			class="shell-collapse-btn desktop-only"
+			aria-label={leftCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+			title={leftCollapsed ? 'Expand navigation' : 'Collapse navigation'}
 			onclick={() => {
 				leftCollapsed = !leftCollapsed;
 				persistRails();
 			}}
 		>
-			{leftCollapsed ? 'Show nav' : 'Collapse nav'}
+			<span class="shell-collapse-glyph" aria-hidden="true">{leftCollapsed ? '›' : '‹'}</span>
+			{#if !leftCollapsed}<span>Hide navigation</span>{/if}
 		</button>
 		{#if !leftCollapsed || mobileNavOpen}
 			<LeftNav isAdmin={data.isAdmin} />
@@ -232,12 +234,15 @@
 		<button
 			type="button"
 			class="shell-collapse-btn desktop-only"
+			aria-label={rightCollapsed ? 'Expand intelligence rail' : 'Collapse intelligence rail'}
+			title={rightCollapsed ? 'Expand intelligence rail' : 'Collapse intelligence rail'}
 			onclick={() => {
 				rightCollapsed = !rightCollapsed;
 				persistRails();
 			}}
 		>
-			{rightCollapsed ? 'Show rail' : 'Collapse rail'}
+			{#if !rightCollapsed}<span>Hide insights</span>{/if}
+			<span class="shell-collapse-glyph" aria-hidden="true">{rightCollapsed ? '‹' : '›'}</span>
 		</button>
 		{#if !rightCollapsed}
 			<RightRail trendingRepos={railRepos} trendingWebsites={railWebsites} />

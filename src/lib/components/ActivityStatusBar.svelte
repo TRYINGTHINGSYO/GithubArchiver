@@ -42,15 +42,13 @@
 		<span class="indicator" aria-hidden="true"></span>
 		<span class="stack">
 			<span class="row">
-				<span class="label">Current activity</span>
+				<span class="label">Live activity</span>
 				<span class="message">{activity.message}</span>
-			</span>
-			{#if showEnrichmentCounts && activity.progress}
-				<span class="row">
-					<span class="label">Progress</span>
+				{#if showEnrichmentCounts && activity.progress}
+					<span class="separator" aria-hidden="true">·</span>
 					<span class="counts">{formatEnrichmentCounts(activity.progress)}</span>
-				</span>
-			{/if}
+				{/if}
+			</span>
 		</span>
 	</div>
 {:else}
@@ -58,7 +56,7 @@
 		<span class="indicator" aria-hidden="true"></span>
 		<span class="stack">
 			<span class="row">
-				<span class="label">Current activity</span>
+				<span class="label">Live activity</span>
 				<span class="message">Status unavailable</span>
 			</span>
 		</span>
@@ -68,11 +66,14 @@
 <style>
 	.activity-bar {
 		display: flex;
-		align-items: flex-start;
+		align-items: center;
 		gap: 0.55rem;
-		padding: 0.45rem 1.5rem;
-		border-bottom: 1px solid var(--border);
-		background: var(--bg-elevated);
+		width: min(var(--content-max), 100%);
+		min-height: 2.35rem;
+		margin: 0.55rem auto 0;
+		padding: 0.4rem clamp(1rem, 2.5vw, 2.5rem);
+		border-top: 1px solid var(--border);
+		background: color-mix(in srgb, var(--bg-subtle) 64%, transparent);
 		font-size: 0.78rem;
 		color: var(--text-muted);
 	}
@@ -86,19 +87,20 @@
 
 	.row {
 		display: flex;
-		align-items: baseline;
+		align-items: center;
 		gap: 0.55rem;
 		min-width: 0;
 	}
 
 	.label {
 		flex-shrink: 0;
-		min-width: 7.2rem;
-		font-weight: 650;
-		font-size: 0.7rem;
-		letter-spacing: 0.03em;
+		padding-right: 0.65rem;
+		border-right: 1px solid var(--border-strong);
+		font-weight: 750;
+		font-size: 0.68rem;
+		letter-spacing: 0.07em;
 		text-transform: uppercase;
-		color: var(--text-muted);
+		color: var(--accent);
 		white-space: nowrap;
 	}
 
@@ -112,14 +114,22 @@
 		font-weight: 600;
 	}
 
+	.message {
+		flex: 1;
+	}
+
 	.counts {
+		flex-shrink: 0;
 		font-variant-numeric: tabular-nums;
+	}
+
+	.separator {
+		color: var(--border-strong);
 	}
 
 	.indicator {
 		width: 0.5rem;
 		height: 0.5rem;
-		margin-top: 0.35rem;
 		border-radius: 50%;
 		background: var(--text-muted);
 		flex-shrink: 0;
@@ -152,11 +162,17 @@
 
 	@media (max-width: 820px) {
 		.activity-bar {
-			padding: 0.45rem 1rem;
+			margin-top: 0.45rem;
+			padding: 0.38rem 1rem;
 		}
 
 		.label {
-			min-width: 0;
+			display: none;
+		}
+
+		.separator,
+		.counts {
+			display: none;
 		}
 	}
 </style>
