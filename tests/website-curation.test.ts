@@ -30,12 +30,15 @@ import {
 	deleteWebsiteRating,
 	getUserWebsiteRating,
 	getWebsiteRatingAggregate,
+	listRecentWebsiteReviews,
 	upsertWebsiteRating
 } from '$lib/server/website-ratings';
 import {
 	parseWebsiteRouteDomain,
 	websiteVisitHref
 } from '$lib/server/website-domain';
+import { parseWebsiteQualityFilter } from '$lib/website-random-filters';
+import { load as loadWebsiteDetail } from '../src/routes/websites/[domain]/+page.server';
 import { createTestRepo, setupTestDb, teardownTestDb } from './helpers/db';
 
 const owner: CollectionOwner = {
@@ -177,6 +180,37 @@ describe('website ratings and independent favorites', () => {
 
 		expect(deleteWebsiteRating('rate-me.dev', owner)).toBe(true);
 		expect(getWebsiteRatingAggregate('rate-me.dev').count).toBe(1);
+	});
+
+	it('returns public reviews without exposing visitor identity fields', () => {
+		seedLiveWebsite('reviews.dev', 'Reviews');
+		upsertWebsiteRating('reviews.dev', owner, 5, 'Public review');
+
+		const reviews = listRecentWebsiteReviews('reviews.dev');
+		expect(reviews).toHaveLength(1);
+		expect(reviews[0]).toMatchObject({ rating: 5, review: 'Public review' });
+		expect(reviews[0]).not.toHaveProperty('id');
+		expect(reviews[0]).not.toHaveProperty('owner_type');
+		expect(reviews[0]).not.toHaveProperty('owner_key');
+		expect(reviews[0]).not.toHaveProperty('website_domain');
+	});
+
+	it('returns the current view count after recording a detail-page visit', async () => {
+		seedLiveWebsite('viewed.dev', 'Viewed');
+
+		const result = (await loadWebsiteDetail({
+			params: { domain: 'viewed.dev' },
+			locals: { collectionOwner: owner }
+		} as Parameters<typeof loadWebsiteDetail>[0])) as { site: { view_count?: number } };
+
+		expect(result.site.view_count).toBe(1);
+		expect(
+			(
+				getDb()
+					.prepare(`SELECT view_count FROM candidate_domains WHERE registrable_domain = ?`)
+					.get('viewed.dev') as { view_count: number }
+			).view_count
+		).toBe(1);
 	});
 
 	it('favorites websites independently from repository favorites', () => {
@@ -416,6 +450,24 @@ describe('website route domain normalization', () => {
 		expect(websiteVisitHref({ final_url: 'not a url' })).toBeNull();
 		expect(websiteVisitHref({ final_url: '' })).toBeNull();
 		expect(websiteVisitHref({ final_url: null })).toBeNull();
+	});
+});
+
+describe('random website quality filter', () => {
+	it.each([
+		[null, null],
+		['', null],
+		['   ', null],
+		['0', 0],
+		['0.8', 0.8],
+		['1', 1],
+		['-0.1', null],
+		['1.1', null],
+		['Infinity', null],
+		['NaN', null],
+		['not-a-number', null]
+	])('parses %s as %s', (value, expected) => {
+		expect(parseWebsiteQualityFilter(value)).toBe(expected);
 	});
 });
 

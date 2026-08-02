@@ -9,12 +9,11 @@ import {
 } from '$lib/server/website-ratings';
 import { getWebsiteCollectionMembership } from '$lib/server/db/collections';
 import { websiteVisitHref } from '$lib/server/website-domain';
+import { parseWebsiteQualityFilter } from '$lib/website-random-filters';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	const minQualityRaw = url.searchParams.get('min_quality');
-	const minQuality =
-		minQualityRaw != null && minQualityRaw !== '' ? Number(minQualityRaw) : undefined;
+	const minQuality = parseWebsiteQualityFilter(url.searchParams.get('min_quality'));
 	// Checkbox + hidden pair may send working=0&working=1; last value wins.
 	const workingValues = url.searchParams.getAll('working');
 	const workingOnly =
@@ -25,7 +24,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const site = pickRandomWebsite({
 		ownerType: owner.owner_type,
 		ownerKey: owner.owner_key,
-		minQuality: Number.isFinite(minQuality) ? minQuality : undefined,
+		minQuality: minQuality ?? undefined,
 		workingOnly,
 		excludeShownHours: completelyRandom ? 0 : 24
 	});
@@ -47,7 +46,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		membership,
 		sourceRepos,
 		filters: {
-			minQuality: Number.isFinite(minQuality) ? minQuality : null,
+			minQuality,
 			workingOnly,
 			completelyRandom
 		},

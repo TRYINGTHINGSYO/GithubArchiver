@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	const sourceRepos = listSourceReposForWebsite(domain, 12);
 
 	return {
-		site,
+		site: { ...site, view_count: (site.view_count ?? 0) + 1 },
 		aggregate,
 		userRating,
 		membership,

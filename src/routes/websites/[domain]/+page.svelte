@@ -1,31 +1,36 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
 	import { timeAgo } from '$lib/utils';
 
 	let { data } = $props();
-	let rating = $state(data.userRating?.rating ?? 0);
-	let review = $state(data.userRating?.review ?? '');
+	let rating = $derived(data.userRating?.rating ?? 0);
+	let review = $derived(data.userRating?.review ?? '');
+	let hasRating = $derived(Boolean(data.userRating));
+	let favorite = $derived(Boolean(data.membership?.favorites));
+	let aggregateAverage = $derived(data.aggregate.average);
+	let aggregateCount = $derived(data.aggregate.count);
+	let confidenceAverage = $derived(data.aggregate.confidenceAverage);
 	let busy = $state(false);
 	let message = $state('');
 
 	$effect(() => {
-		rating = data.userRating?.rating ?? 0;
-		review = data.userRating?.review ?? '';
+		data.site.registrable_domain;
+		message = '';
 	});
 
 	async function toggleFavorite() {
+		if (busy) return;
 		busy = true;
 		message = '';
 		try {
-			const favorited = data.membership?.favorites;
+			const favorited = favorite;
 			const res = await fetch(
 				`/api/websites/${encodeURIComponent(data.site.registrable_domain)}/favorite`,
 				{ method: favorited ? 'DELETE' : 'PUT' }
 			);
-			const json = await res.json();
+			const json = await res.json().catch(() => ({}));
 			if (!res.ok) throw new Error(json.message ?? json.error ?? res.statusText);
+			favorite = Boolean(json.favorited);
 			message = favorited ? 'Removed from favorites' : 'Favorited website';
-			await invalidateAll();
 		} catch (err) {
 			message = err instanceof Error ? err.message : String(err);
 		} finally {
@@ -34,6 +39,7 @@
 	}
 
 	async function saveRating() {
+		if (busy) return;
 		if (rating < 1 || rating > 5) {
 			message = 'Choose 1–5 stars';
 			return;
@@ -46,10 +52,15 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ rating, review: review.trim() || null })
 			});
-			const json = await res.json();
+			const json = await res.json().catch(() => ({}));
 			if (!res.ok) throw new Error(json.error ?? res.statusText);
+			rating = json.rating?.rating ?? rating;
+			review = json.rating?.review ?? '';
+			hasRating = true;
+			aggregateAverage = json.aggregate?.average ?? null;
+			aggregateCount = json.aggregate?.count ?? 0;
+			confidenceAverage = json.aggregate?.confidenceAverage ?? null;
 			message = 'Rating saved';
-			await invalidateAll();
 		} catch (err) {
 			message = err instanceof Error ? err.message : String(err);
 		} finally {
@@ -58,17 +69,22 @@
 	}
 
 	async function clearRating() {
+		if (busy) return;
 		busy = true;
+		message = '';
 		try {
 			const res = await fetch(`/api/websites/${encodeURIComponent(data.site.registrable_domain)}/rating`, {
 				method: 'DELETE'
 			});
-			const json = await res.json();
+			const json = await res.json().catch(() => ({}));
 			if (!res.ok) throw new Error(json.error ?? res.statusText);
 			rating = 0;
 			review = '';
+			hasRating = false;
+			aggregateAverage = json.aggregate?.average ?? null;
+			aggregateCount = json.aggregate?.count ?? 0;
+			confidenceAverage = json.aggregate?.confidenceAverage ?? null;
 			message = 'Rating removed';
-			await invalidateAll();
 		} catch (err) {
 			message = err instanceof Error ? err.message : String(err);
 		} finally {
@@ -89,9 +105,9 @@
 			<p class="title">{data.site.page_title}</p>
 		{/if}
 		<div class="stats">
-			<span>{data.aggregate.average?.toFixed(1) ?? '—'} avg</span>
-			<span>{data.aggregate.count} ratings</span>
-			<span>Confidence {data.aggregate.confidenceAverage?.toFixed(1) ?? '—'}</span>
+			<span>{aggregateAverage?.toFixed(1) ?? '—'} avg</span>
+			<span>{aggregateCount} ratings</span>
+			<span>Confidence {confidenceAverage?.toFixed(1) ?? '—'}</span>
 			<span class="status">{data.site.verify_status}</span>
 			{#if data.site.http_status}<span>HTTP {data.site.http_status}</span>{/if}
 		</div>
@@ -104,7 +120,7 @@
 				<span class="button-secondary" aria-disabled="true">Visit unavailable</span>
 			{/if}
 			<button type="button" class="button-secondary" disabled={busy} onclick={toggleFavorite}>
-				{data.membership?.favorites ? 'Unfavorite' : 'Favorite'}
+				{favorite ? 'Unfavorite' : 'Favorite'}
 			</button>
 			<a class="button-secondary" href="/websites/random">Next Random Website</a>
 			<a class="button-ghost" href="/websites">All websites</a>
@@ -121,6 +137,7 @@
 					class:active={rating >= value}
 					onclick={() => (rating = value)}
 					aria-label={`${value} stars`}
+					disabled={busy}
 				>
 					★
 				</button>
@@ -129,13 +146,13 @@
 		<textarea bind:value={review} rows="3" placeholder="Optional short review"></textarea>
 		<div class="actions">
 			<button type="button" class="button" disabled={busy} onclick={saveRating}>Save rating</button>
-			{#if data.userRating}
+			{#if hasRating}
 				<button type="button" class="button-ghost" disabled={busy} onclick={clearRating}
 					>Remove</button
 				>
 			{/if}
 		</div>
-		{#if message}<p class="hint">{message}</p>{/if}
+		{#if message}<p class="hint" role="status" aria-live="polite">{message}</p>{/if}
 	</section>
 
 	<section class="panel">

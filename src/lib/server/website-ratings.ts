@@ -22,6 +22,12 @@ export interface WebsiteRatingAggregate {
 	confidenceAverage: number | null;
 }
 
+export interface PublicWebsiteReview {
+	rating: number;
+	review: string;
+	updated_at: string;
+}
+
 export const WEBSITE_REVIEW_MAX_LENGTH = 2000;
 
 function owner(collectionOwner: CollectionOwner): CollectionOwner {
@@ -174,10 +180,10 @@ export function deleteWebsiteRating(
 	return removed;
 }
 
-export function listRecentWebsiteReviews(domain: string, limit = 20): WebsiteRatingRow[] {
+export function listRecentWebsiteReviews(domain: string, limit = 20): PublicWebsiteReview[] {
 	return getDb()
 		.prepare(
-			`SELECT * FROM website_ratings
+			`SELECT rating, review, updated_at FROM website_ratings
 			 WHERE website_domain = ?
 			   AND deleted_at IS NULL
 			   AND review IS NOT NULL
@@ -185,5 +191,5 @@ export function listRecentWebsiteReviews(domain: string, limit = 20): WebsiteRat
 			 ORDER BY updated_at DESC
 			 LIMIT ?`
 		)
-		.all(domain, limit) as WebsiteRatingRow[];
+		.all(domain, limit) as PublicWebsiteReview[];
 }

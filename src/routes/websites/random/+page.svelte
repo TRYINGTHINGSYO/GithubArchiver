@@ -1,16 +1,26 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { shouldIgnoreRandomShortcutTarget } from '$lib/random-website-shortcuts';
 	import { timeAgo } from '$lib/utils';
+	import {
+		WEBSITE_QUALITY_MAX,
+		WEBSITE_QUALITY_MIN,
+		WEBSITE_QUALITY_STEP
+	} from '$lib/website-random-filters';
 
 	let { data } = $props();
-	let rating = $state(data.userRating?.rating ?? 0);
+	let rating = $derived(data.userRating?.rating ?? 0);
+	let savedRating = $derived(data.userRating?.rating ?? null);
+	let favorite = $derived(Boolean(data.membership?.favorites));
+	let aggregateAverage = $derived(data.aggregate?.average ?? null);
+	let aggregateCount = $derived(data.aggregate?.count ?? 0);
 	let busy = $state(false);
 	let message = $state('');
 
 	$effect(() => {
-		rating = data.userRating?.rating ?? 0;
+		data.site?.registrable_domain;
+		message = '';
 	});
 
 	function nextHref(overrides: Record<string, string | null> = {}) {
@@ -23,8 +33,21 @@
 		return qs ? `/websites/random?${qs}` : '/websites/random';
 	}
 
+	async function nextRandom(overrides: Record<string, string | null> = {}) {
+		if (busy) return;
+		busy = true;
+		message = '';
+		try {
+			await goto(nextHref(overrides), { invalidateAll: true });
+		} catch (err) {
+			message = err instanceof Error ? err.message : String(err);
+		} finally {
+			busy = false;
+		}
+	}
+
 	async function saveRating(value = rating) {
-		if (!data.site || value < 1) return;
+		if (busy || !data.site || value < 1) return;
 		busy = true;
 		message = '';
 		try {
@@ -36,11 +59,13 @@
 					body: JSON.stringify({ rating: value })
 				}
 			);
-			const json = await res.json();
+			const json = await res.json().catch(() => ({}));
 			if (!res.ok) throw new Error(json.message ?? json.error ?? res.statusText);
 			rating = value;
+			savedRating = json.rating?.rating ?? value;
+			aggregateAverage = json.aggregate?.average ?? null;
+			aggregateCount = json.aggregate?.count ?? 0;
 			message = 'Rated';
-			await invalidateAll();
 		} catch (err) {
 			message = err instanceof Error ? err.message : String(err);
 		} finally {
@@ -49,18 +74,19 @@
 	}
 
 	async function toggleFavorite() {
-		if (!data.site) return;
+		if (busy || !data.site) return;
+		message = '';
 		busy = true;
 		try {
-			const favorited = data.membership?.favorites;
+			const favorited = favorite;
 			const res = await fetch(
 				`/api/websites/${encodeURIComponent(data.site.registrable_domain)}/favorite`,
 				{ method: favorited ? 'DELETE' : 'PUT' }
 			);
-			const json = await res.json();
+			const json = await res.json().catch(() => ({}));
 			if (!res.ok) throw new Error(json.message ?? json.error ?? res.statusText);
+			favorite = Boolean(json.favorited);
 			message = favorited ? 'Removed from favorites' : 'Favorited';
-			await invalidateAll();
 		} catch (err) {
 			message = err instanceof Error ? err.message : String(err);
 		} finally {
@@ -69,16 +95,22 @@
 	}
 
 	async function skipAndHide() {
+		if (busy) return;
 		if (!data.site) {
-			await goto(nextHref());
+			await nextRandom();
 			return;
 		}
 		busy = true;
+		message = '';
 		try {
-			await fetch(`/api/websites/${encodeURIComponent(data.site.registrable_domain)}/hide`, {
+			const res = await fetch(`/api/websites/${encodeURIComponent(data.site.registrable_domain)}/hide`, {
 				method: 'PUT'
 			});
-			await goto(nextHref());
+			const json = await res.json().catch(() => ({}));
+			if (!res.ok) throw new Error(json.message ?? json.error ?? res.statusText);
+			await goto(nextHref(), { invalidateAll: true });
+		} catch (err) {
+			message = err instanceof Error ? err.message : String(err);
 		} finally {
 			busy = false;
 		}
@@ -86,10 +118,11 @@
 
 	function onKeydown(event: KeyboardEvent) {
 		if (shouldIgnoreRandomShortcutTarget(event.target)) return;
+		if (busy) return;
 		const key = event.key.toLowerCase();
 		if (key === 'n') {
 			event.preventDefault();
-			void goto(nextHref());
+			void nextRandom();
 		} else if (key === 's') {
 			event.preventDefault();
 			void skipAndHide();
@@ -128,13 +161,13 @@
 		</p>
 		<form class="filters" method="GET" action="/websites/random">
 			<label>
-				Min quality
+				Min quality (0–1)
 				<input
 					type="number"
 					name="min_quality"
-					min="0"
-					max="100"
-					step="1"
+					min={WEBSITE_QUALITY_MIN}
+					max={WEBSITE_QUALITY_MAX}
+					step={WEBSITE_QUALITY_STEP}
 					value={data.filters.minQuality ?? ''}
 					placeholder="Any"
 				/>
@@ -160,7 +193,9 @@
 	{#if !data.site}
 		<div class="empty panel">
 			<p>No eligible live websites matched these filters (or all were recently shown/hidden).</p>
-			<a class="button" href="/websites/random?mode=random">Try completely random</a>
+			<button type="button" class="button" disabled={busy} onclick={() => nextRandom({ mode: 'random' })}
+				>Try completely random</button
+			>
 			<a class="button-ghost" href="/websites">Browse all websites</a>
 		</div>
 	{:else}
@@ -177,9 +212,9 @@
 				{/if}
 				<p class="why">{data.whyInteresting}</p>
 				<div class="stats">
-					<span>{data.aggregate?.average?.toFixed(1) ?? '—'} avg</span>
-					<span>{data.aggregate?.count ?? 0} ratings</span>
-					<span>Your rating: {data.userRating?.rating ?? '—'}</span>
+					<span>{aggregateAverage?.toFixed(1) ?? '—'} avg</span>
+					<span>{aggregateCount} ratings</span>
+					<span>Your rating: {savedRating ?? '—'}</span>
 					<span class="status">{data.site.verify_status}</span>
 					{#if data.site.verified_at}
 						<span>Verified {timeAgo(data.site.verified_at)}</span>
@@ -190,11 +225,15 @@
 						<a class="button" href={data.visitHref} target="_blank" rel="noopener noreferrer"
 							>Visit Website</a
 						>
+					{:else}
+						<span class="button-secondary" aria-disabled="true">Visit unavailable</span>
 					{/if}
 					<button type="button" class="button-secondary" disabled={busy} onclick={toggleFavorite}>
-						{data.membership?.favorites ? 'Unfavorite' : 'Favorite'}
+						{favorite ? 'Unfavorite' : 'Favorite'}
 					</button>
-					<a class="button-secondary" href={nextHref()}>Next Random Website</a>
+					<button type="button" class="button-secondary" disabled={busy} onclick={() => nextRandom()}
+						>Next Random Website</button
+					>
 					<button type="button" class="button-ghost" disabled={busy} onclick={skipAndHide}
 						>Skip</button
 					>
@@ -203,7 +242,7 @@
 						href={`/websites/${encodeURIComponent(data.site.registrable_domain)}`}>Details</a
 					>
 				</div>
-				{#if message}<p class="hint">{message}</p>{/if}
+				{#if message}<p class="hint" role="status" aria-live="polite">{message}</p>{/if}
 			</div>
 		</article>
 
