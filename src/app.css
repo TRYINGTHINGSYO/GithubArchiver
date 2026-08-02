@@ -883,3 +883,9 @@ a.repo-item:hover {
 		padding-bottom: 6.5rem;
 	}
 }
+
+@media (max-width: 700px) {
+	.shell-right {
+		display: none;
+	}
+}

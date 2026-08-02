@@ -1203,8 +1203,24 @@
 
 		.repo-grid,
 		.cluster-grid,
-		.browse-grid {
-			grid-template-columns: 1fr;
+		.browse-grid,
+		.homepage-websites {
+			display: flex;
+			overflow-x: auto;
+			overflow-y: hidden;
+			scroll-snap-type: x mandatory;
+			scroll-padding-inline: 0.1rem;
+			overscroll-behavior-inline: contain;
+			padding: 0.1rem 0 0.65rem;
+			scrollbar-width: thin;
+		}
+
+		.repo-grid > :global(*),
+		.cluster-grid > :global(*),
+		.homepage-websites > :global(*),
+		.browse-grid > a {
+			flex: 0 0 min(82vw, 20rem);
+			scroll-snap-align: start;
 		}
 	}
 

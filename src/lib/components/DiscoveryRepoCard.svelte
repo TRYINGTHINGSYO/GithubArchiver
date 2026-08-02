@@ -310,9 +310,7 @@
 		}
 
 		.featured .story {
-			margin-top: 0.85rem;
-			padding: 0;
-			border-left: 0;
+			display: none;
 		}
 	}
 
