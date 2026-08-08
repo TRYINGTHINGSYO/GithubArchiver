@@ -11,6 +11,10 @@ generated: true
 
 Chronological event log (newest first). Source of truth is `entries/`.
 
+## 2026-08-03
+
+- **2026-08-03** · `feature` · `confirmed` · `permanent` · `verified` · `auth`, `admin`, `security` — [Restore ADMIN_PASSWORD admin login beside GitHub OAuth](entries/2026-08-03-feature-admin-password-fallback.md)
+  - edges: related:[`feature-auth-user-foundation`](entries/2026-08-02-feature-auth-user-foundation.md)
 ## 2026-08-02
 
 - **2026-08-02** · `feature` · `confirmed` · `permanent` · migration 45 · `verified` · `auth`, `security`, `accounts`, `sqlite` — [Auth.js GitHub accounts and centralized access control](entries/2026-08-02-feature-auth-user-foundation.md)

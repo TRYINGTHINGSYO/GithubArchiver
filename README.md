@@ -78,10 +78,13 @@ Use `stop-githubarchive.bat` to stop the server. See [docs/LOCAL_DESKTOP.md](doc
 
 All operations run **in-process** inside the web server and are recorded in `job_runs` for recall.
 
-Admin routes and catalog mutation actions require an Auth.js GitHub session whose stable GitHub ID
-or login is present in the explicit admin allowlist. Other signed-in users can use personal saved
-repository APIs without receiving system-administrator privileges. Legacy shared-password admin
-cookies are no longer accepted.
+Admin routes and catalog mutation actions require either:
+
+1. An Auth.js GitHub session whose stable GitHub ID or login is on the admin allowlist, or
+2. The shared `ADMIN_PASSWORD` session from `/login` (works even when GitHub OAuth is not configured)
+
+Other signed-in GitHub users can use personal saved repository APIs without receiving
+system-administrator privileges.
 
 | Tab | URL | Purpose |
 |-----|-----|---------|
@@ -270,9 +273,11 @@ Migrations are versioned in `schema_version` (current: **v45**).
 | `METRICS_RETENTION_DAYS` | `365` | Age out metric snapshots after daily collapse (latest per repo kept) |
 | `BACKUP_KEEP_DAILY` / `_WEEKLY` / `_MONTHLY` | `7` / `4` / `3` | On-volume backup retention after each backup run |
 | `CLEANUP_QUARANTINE_DAYS` | `7` | Days quarantined low-value repos stay hidden before permanent purge |
-| `AUTH_SECRET` | required | Auth.js session and CSRF signing secret |
-| `AUTH_GITHUB_ID` | required | GitHub OAuth app client ID |
-| `AUTH_GITHUB_SECRET` | required | GitHub OAuth app client secret |
+| `AUTH_SECRET` | required for GitHub login | Auth.js session and CSRF signing secret |
+| `AUTH_GITHUB_ID` | required for GitHub login | GitHub OAuth app client ID |
+| `AUTH_GITHUB_SECRET` | required for GitHub login | GitHub OAuth app client secret |
+| `ADMIN_PASSWORD` | `GitHub` | Shared admin password login at `/login` |
+| `ADMIN_SESSION_SECRET` | `ADMIN_PASSWORD` | HMAC secret for admin password session cookies |
 | `ADMIN_GITHUB_IDS` | none | Comma-separated stable GitHub IDs granted admin access |
 | `ADMIN_GITHUB_LOGINS` | none | Optional comma-separated GitHub login compatibility allowlist |
 | `ORIGIN` | request origin | Public adapter-node origin; set explicitly behind a production proxy |

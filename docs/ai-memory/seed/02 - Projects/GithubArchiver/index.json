@@ -1,9 +1,39 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-02T18:45:30.964Z",
+  "generatedAt": "2026-08-03T22:32:06.613Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-admin-password-fallback",
+      "schema": 1,
+      "type": "feature",
+      "status": "verified",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-08-03",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "auth",
+        "admin",
+        "security"
+      ],
+      "related": [
+        "feature-auth-user-foundation"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "feature-auth-user-foundation"
+        }
+      ],
+      "supersedes": null,
+      "title": "Restore ADMIN_PASSWORD admin login beside GitHub OAuth",
+      "path": "entries/2026-08-03-feature-admin-password-fallback.md",
+      "summary": "- Restores shared `ADMIN_PASSWORD` cookie sessions (`gha_admin`) as an admin access path."
+    },
     {
       "id": "feature-auth-user-foundation",
       "schema": 1,

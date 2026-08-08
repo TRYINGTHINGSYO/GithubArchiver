@@ -3,6 +3,11 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { handle as authenticationHandle } from './auth';
 import { ensureBackgroundWorker } from '$lib/server/background-daemon';
 import { accessRequirement, requiresSameOrigin } from '$lib/server/auth/access';
+import {
+	ADMIN_COOKIE,
+	PASSWORD_ADMIN_USER,
+	verifyAdminSessionValue
+} from '$lib/server/auth/admin-password';
 import { assertSameOrigin, requireAdmin, requireUser } from '$lib/server/auth/guards';
 import { isAuthConfigured, shouldResolveAuthSession } from '$lib/server/auth/runtime';
 import type { AuthUser } from '$lib/server/auth/types';
@@ -14,6 +19,21 @@ const PROBE_RE =
 	/^\/(?:contact(?:-us|o)?|contactus|about(?:-us)?|support|help|team|pricing|legal|privacy|terms|company|kontakt|contatti|contato|reach-us|get-in-touch|nosotros|sobre-nosotros|impressum|wp-admin|wp-login|\.env|phpmyadmin)(?:\/|$)/i;
 
 let workerBooted = false;
+
+function applyPasswordAdmin(event: Parameters<Handle>[0]['event']): boolean {
+	if (!verifyAdminSessionValue(event.cookies.get(ADMIN_COOKIE))) return false;
+	event.locals.isAdmin = true;
+	if (!event.locals.user) {
+		event.locals.user = PASSWORD_ADMIN_USER;
+		event.locals.session = {
+			user: PASSWORD_ADMIN_USER,
+			expires: new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString()
+		};
+	} else if (event.locals.user.role !== 'admin') {
+		event.locals.user = { ...event.locals.user, role: 'admin' };
+	}
+	return true;
+}
 
 const applicationHandle: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
@@ -65,7 +85,18 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
 		event.locals.isAdmin = event.locals.user?.role === 'admin';
 	}
 
-	if (requirement !== null && !authConfigured) {
+	const passwordAdmin = applyPasswordAdmin(event);
+
+	if (requirement !== null && !authConfigured && !passwordAdmin) {
+		if (requirement === 'admin') {
+			if (event.url.pathname.startsWith('/api/')) {
+				throw error(401, 'Admin login required');
+			}
+			throw redirect(
+				303,
+				`/login?callbackUrl=${encodeURIComponent(`${event.url.pathname}${event.url.search}`)}`
+			);
+		}
 		if (event.url.pathname.startsWith('/api/')) {
 			throw error(503, 'Authentication is not configured');
 		}

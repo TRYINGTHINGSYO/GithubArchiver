@@ -63,6 +63,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-08-03** · `feature` · `confirmed` · `permanent` · `verified` · `auth`, `admin`, `security` — [Restore ADMIN_PASSWORD admin login beside GitHub OAuth](entries/2026-08-03-feature-admin-password-fallback.md)
+  - edges: related:[`feature-auth-user-foundation`](entries/2026-08-02-feature-auth-user-foundation.md)
 - **2026-08-02** · `feature` · `confirmed` · `permanent` · migration 45 · `verified` · `auth`, `security`, `accounts`, `sqlite` — [Auth.js GitHub accounts and centralized access control](entries/2026-08-02-feature-auth-user-foundation.md)
   - edges: related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - **2026-08-01** · `bugfix` · `confirmed` · `permanent` · PR #30 · `2c5b89f` · `open` · `discovery`, `clusters`, `cache` — [Wipe must clear stale cluster cards from materialization and TTL](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
@@ -76,8 +78,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 - **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `a14cce3` · migration 42 · `open` · `storage`, `sqlite`, `ops`, `railway` — [Volume retention, dbstat inventory, and github_id uniqueness](entries/2026-08-01-feature-storage-retention-volume.md)
 - **2026-07-31** · `decision` · `confirmed` · `permanent` · `6fbaa7a` · `verified` · `mcp`, `project-memory`, `adoption` — [MCP is the primary knowledge and review layer](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
   - edges: references:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md), related:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), validates:[`feature-mcp-resources-prompts-review`](entries/2026-07-31-feature-mcp-resources-prompts-review.md)
-- **2026-07-31** · `feature` · `confirmed` · `permanent` · `closed` · `homepage`, `discovery`, `mcp` — [Harden homepage discovery materialization durability](entries/2026-07-31-feature-durable-discovery-materialization.md)
-  - edges: caused-by:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), related:[`research-homepage-readiness-cache`](entries/2026-07-30-research-homepage-readiness-cache.md), references:[`decision-mcp-first-dev-workflow`](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
 
 ## Open technical debt
 

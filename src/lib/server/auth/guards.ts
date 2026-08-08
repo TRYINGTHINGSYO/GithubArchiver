@@ -1,8 +1,16 @@
 import { error, redirect, type RequestEvent } from '@sveltejs/kit';
+import { isAuthConfigured } from './runtime';
 import type { AuthUser } from './types';
 
 function returnTo(event: RequestEvent): string {
 	return `${event.url.pathname}${event.url.search}`;
+}
+
+function signInPath(event: RequestEvent): string {
+	const callback = encodeURIComponent(returnTo(event));
+	return isAuthConfigured()
+		? `/auth/signin?callbackUrl=${callback}`
+		: `/login?callbackUrl=${callback}`;
 }
 
 export function requireUser(event: RequestEvent): AuthUser {
@@ -10,7 +18,7 @@ export function requireUser(event: RequestEvent): AuthUser {
 		if (event.url.pathname.startsWith('/api/')) {
 			throw error(401, 'Unauthorized');
 		}
-		throw redirect(303, `/auth/signin?callbackUrl=${encodeURIComponent(returnTo(event))}`);
+		throw redirect(303, signInPath(event));
 	}
 	return event.locals.user;
 }

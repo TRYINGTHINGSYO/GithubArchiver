@@ -90,6 +90,8 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Recent merges / verified
 
+- **2026-08-03** · `feature` · `confirmed` · `permanent` · `verified` · `auth`, `admin`, `security` — [Restore ADMIN_PASSWORD admin login beside GitHub OAuth](entries/2026-08-03-feature-admin-password-fallback.md)
+  - edges: related:[`feature-auth-user-foundation`](entries/2026-08-02-feature-auth-user-foundation.md)
 - **2026-08-02** · `feature` · `confirmed` · `permanent` · migration 45 · `verified` · `auth`, `security`, `accounts`, `sqlite` — [Auth.js GitHub accounts and centralized access control](entries/2026-08-02-feature-auth-user-foundation.md)
   - edges: related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - **2026-07-31** · `decision` · `confirmed` · `permanent` · `6fbaa7a` · `verified` · `mcp`, `project-memory`, `adoption` — [MCP is the primary knowledge and review layer](entries/2026-07-31-decision-mcp-first-dev-workflow.md)
@@ -104,8 +106,6 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
   - edges: related:`pr-11-retrieval-scoring`, related:`pr-12-multistage-retrieval`, references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md)
 - **2026-07-30** · `bugfix` · `confirmed` · `permanent` · `verified` · `daemon`, `ingest`, `jobs` — [Periodic job_runs reconcile + boot age-0 so stuck running cannot last forever](entries/2026-07-30-bugfix-periodic-job-reconcile.md)
   - edges: caused-by:[`incident-daemon-ingest-hang`](entries/2026-07-30-incident-daemon-ingest-hang.md), caused-by:[`incident-deploy-abort-stream-crash`](entries/2026-07-30-incident-deploy-abort-stream-crash.md), related:[`bugfix-ingest-fetch-timeout`](entries/2026-07-30-bugfix-ingest-fetch-timeout.md), related:[`feature-running-job-age-homepage`](entries/2026-07-30-feature-running-job-age-homepage.md)
-- **2026-07-30** · `decision` · `confirmed` · `permanent` · `verified` · `ingest`, `architecture` — [High-volume ingestion needs a narrow bulk write path](entries/2026-07-30-decision-high-volume-bulk-ingest-path.md)
-  - edges: caused-by:[`incident-ingest-timeout-covers-db-writes`](entries/2026-07-30-incident-ingest-timeout-covers-db-writes.md), implemented-by:[`bugfix-ingest-hour-transaction`](entries/2026-07-30-bugfix-ingest-hour-transaction.md), references:[`migration-038-archive-hour-metrics`](entries/2026-07-30-migration-038-archive-hour-metrics.md)
 
 ## Next priorities
 

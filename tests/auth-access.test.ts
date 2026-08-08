@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 import { accessRequirement, requiresSameOrigin } from '$lib/server/auth/access';
 import { assertSameOrigin, requireAdmin, requireUser } from '$lib/server/auth/guards';
@@ -8,6 +8,10 @@ import {
 	shouldResolveAuthSession
 } from '$lib/server/auth/runtime';
 import type { AuthUser } from '$lib/server/auth/types';
+
+afterEach(() => {
+	vi.unstubAllEnvs();
+});
 
 function eventFor(path: string, options: { method?: string; origin?: string; user?: AuthUser | null } = {}) {
 	const url = new URL(path, 'https://archive.example');
@@ -129,7 +133,10 @@ describe('authorization guards', () => {
 		expect(() => requireAdmin(eventFor('/api/admin/workers', { user: regularUser }))).toThrow();
 	});
 
-	it('redirects anonymous page requests to Auth.js with a safe return path', () => {
+	it('redirects anonymous page requests to Auth.js when OAuth is configured', () => {
+		vi.stubEnv('AUTH_SECRET', 'secret');
+		vi.stubEnv('AUTH_GITHUB_ID', 'client');
+		vi.stubEnv('AUTH_GITHUB_SECRET', 'provider-secret');
 		try {
 			requireUser(eventFor('/admin/jobs?type=archive'));
 			throw new Error('expected redirect');
@@ -137,6 +144,21 @@ describe('authorization guards', () => {
 			expect(err).toMatchObject({
 				status: 303,
 				location: '/auth/signin?callbackUrl=%2Fadmin%2Fjobs%3Ftype%3Darchive'
+			});
+		}
+	});
+
+	it('redirects anonymous page requests to password login when OAuth is unavailable', () => {
+		vi.stubEnv('AUTH_SECRET', '');
+		vi.stubEnv('AUTH_GITHUB_ID', '');
+		vi.stubEnv('AUTH_GITHUB_SECRET', '');
+		try {
+			requireUser(eventFor('/admin/jobs?type=archive'));
+			throw new Error('expected redirect');
+		} catch (err) {
+			expect(err).toMatchObject({
+				status: 303,
+				location: '/login?callbackUrl=%2Fadmin%2Fjobs%3Ftype%3Darchive'
 			});
 		}
 	});

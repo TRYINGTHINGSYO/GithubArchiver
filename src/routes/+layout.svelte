@@ -155,10 +155,16 @@
 			<a href="/websites/random" class="admin-link">Random</a>
 			<a href="/search" class="admin-link">Search</a>
 			<a href="/favorites" class="admin-link">Saved</a>
-			{#if data.user}
-				<a class="admin-link" href="/account/notifications" title={data.user.email ?? undefined}>
-					{data.user.githubLogin ? `@${data.user.githubLogin}` : (data.user.name ?? 'Account')}
-				</a>
+			{#if data.user || data.isAdmin}
+				{#if data.user?.githubLogin}
+					<a class="admin-link" href="/account/notifications" title={data.user.email ?? undefined}>
+						@{data.user.githubLogin}
+					</a>
+				{:else if data.user && data.user.id !== 'password-admin'}
+					<a class="admin-link" href="/account/notifications" title={data.user.email ?? undefined}>
+						{data.user.name ?? 'Account'}
+					</a>
+				{/if}
 				{#if data.isAdmin}<a href="/admin" class="admin-link">Admin</a>{/if}
 				<a href="/logout" class="admin-link">Logout</a>
 			{:else}
@@ -216,7 +222,7 @@
 		{#if !leftCollapsed || mobileNavOpen}
 			<LeftNav isAdmin={data.isAdmin} />
 			<div class="mobile-drawer-actions">
-				{#if data.user}
+				{#if data.user || data.isAdmin}
 					<a href="/logout">Log out</a>
 				{:else}
 					<a href="/login">Log in</a>
