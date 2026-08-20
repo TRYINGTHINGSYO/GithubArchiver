@@ -31,6 +31,8 @@ export interface SemanticRepoQueryResult extends RepoQueryResult {
 	 * full corpus size.
 	 */
 	pagination: 'candidate-window' | 'fts' | 'list';
+	/** How TurboVec candidates were constrained (observability / readiness). */
+	retrievalPath?: 'allowlist' | 'post-filter' | 'unfiltered' | 'fts' | 'list';
 }
 
 function hasExplicitHardFilters(opts: RepoQuery): boolean {
@@ -140,7 +142,8 @@ function ftsFallback(
 		})),
 		searchMode: mode === 'keyword' || !configEnabled ? 'keyword' : mode,
 		semanticAvailable: false,
-		pagination: 'fts'
+		pagination: 'fts',
+		retrievalPath: 'fts'
 	};
 }
 
@@ -161,7 +164,8 @@ export async function searchReposSemanticAware(
 		totalPages: 1,
 		searchMode: mode,
 		semanticAvailable,
-		pagination: 'candidate-window'
+		pagination: 'candidate-window',
+		retrievalPath: 'unfiltered'
 	});
 
 	if (!opts.q?.trim()) {
@@ -178,7 +182,8 @@ export async function searchReposSemanticAware(
 			})),
 			searchMode: 'keyword',
 			semanticAvailable: false,
-			pagination: 'list'
+			pagination: 'list',
+			retrievalPath: 'list'
 		};
 	}
 
@@ -339,6 +344,11 @@ export async function searchReposSemanticAware(
 		totalPages: Math.max(1, Math.ceil(total / perPage)),
 		searchMode: mode,
 		semanticAvailable,
-		pagination: 'candidate-window'
+		pagination: 'candidate-window',
+		retrievalPath: allowlist
+			? 'allowlist'
+			: useCandidatePostFilter
+				? 'post-filter'
+				: 'unfiltered'
 	};
 }

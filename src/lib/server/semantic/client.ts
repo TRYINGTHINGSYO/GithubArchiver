@@ -128,7 +128,11 @@ export async function semanticWorkerSimilar(opts: {
 
 export async function semanticWorkerIndexBatch(
 	items: SemanticIndexItem[]
-): Promise<{ indexed: number; failed: Array<{ vectorId: number; error: string }> }> {
+): Promise<{
+	indexed: number;
+	failed: Array<{ vectorId: number; error: string }>;
+	timings?: { embedMs: number; upsertMs: number; itemCount: number };
+}> {
 	const res = await workerFetch('/indexBatch', {
 		method: 'POST',
 		body: JSON.stringify({ items }),
@@ -141,6 +145,7 @@ export async function semanticWorkerIndexBatch(
 	return (await res.json()) as {
 		indexed: number;
 		failed: Array<{ vectorId: number; error: string }>;
+		timings?: { embedMs: number; upsertMs: number; itemCount: number };
 	};
 }
 

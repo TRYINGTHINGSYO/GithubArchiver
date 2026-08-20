@@ -563,7 +563,10 @@ const NOISE_TEMPLATES: Array<{
 	language: string;
 	topics: string[];
 	category: string;
+	/** Near-miss family for intent discrimination (not gold). */
+	nearMiss?: string;
 }> = [
+	// Generic boilerplate
 	{
 		desc: (i) => `Utility #${i} for formatting JSON logs in CI pipelines`,
 		language: 'Go',
@@ -595,44 +598,266 @@ const NOISE_TEMPLATES: Array<{
 		category: 'other'
 	},
 	{
-		desc: (i) => `Kubernetes CRD example ${i} for operators`,
-		language: 'Go',
-		topics: ['kubernetes', 'crd'],
-		category: 'devops'
-	},
-	{
-		desc: (i) => `CSV charting widget ${i} for dashboards`,
-		language: 'TypeScript',
-		topics: ['charts', 'csv'],
-		category: 'web'
-	},
-	{
 		desc: (i) => `Arduino sketch ${i} blinking LEDs on a breadboard`,
 		language: 'C',
 		topics: ['arduino', 'hardware'],
 		category: 'hardware'
 	},
 	{
-		desc: (i) => `Photo gallery theme ${i} for static sites`,
-		language: 'CSS',
-		topics: ['photos', 'theme'],
-		category: 'web'
-	},
-	{
 		desc: (i) => `Benchmark harness ${i} for HTTP microservices`,
 		language: 'Rust',
 		topics: ['benchmark', 'http'],
 		category: 'developer-tools'
+	},
+	// Near-miss: voice libraries that are NOT assistants
+	{
+		desc: (i) =>
+			`Low-level Opus voice codec bindings #${i} for streaming PCM frames (not an assistant)`,
+		language: 'C',
+		topics: ['opus', 'codec', 'audio'],
+		category: 'developer-tools',
+		nearMiss: 'voice'
+	},
+	{
+		desc: (i) =>
+			`Microphone gain normalizer library ${i} for VoIP SDKs — no wake word or dialogue`,
+		language: 'C++',
+		topics: ['audio', 'voip', 'dsp'],
+		category: 'developer-tools',
+		nearMiss: 'voice'
+	},
+	// Near-miss: Discord bots that do NOT use voice
+	{
+		desc: (i) =>
+			`Discord moderation bot ${i} that filters text spam and assigns roles (text-only)`,
+		language: 'TypeScript',
+		topics: ['discord', 'moderation', 'bot'],
+		category: 'developer-tools',
+		nearMiss: 'discord'
+	},
+	{
+		desc: (i) =>
+			`Discord slash-command bot ${i} for posting GIFs and polls — no voice channel support`,
+		language: 'Python',
+		topics: ['discord', 'bot', 'slash-commands'],
+		category: 'developer-tools',
+		nearMiss: 'discord'
+	},
+	// Near-miss: Windows utilities that are NOT analyzers
+	{
+		desc: (i) =>
+			`Windows tray utility ${i} that toggles dark mode and clipboard history`,
+		language: 'C#',
+		topics: ['windows', 'desktop', 'utility'],
+		category: 'developer-tools',
+		nearMiss: 'windows'
+	},
+	{
+		desc: (i) =>
+			`Generic binary hex editor widget ${i} for browsing files (not PE-aware)`,
+		language: 'C++',
+		topics: ['hex', 'binary', 'editor'],
+		category: 'developer-tools',
+		nearMiss: 'windows'
+	},
+	// Near-miss: download libraries that are NOT download managers
+	{
+		desc: (i) =>
+			`HTTP client retry helper ${i} wrapping fetch for single-file downloads in scripts`,
+		language: 'TypeScript',
+		topics: ['http', 'download', 'fetch'],
+		category: 'networking',
+		nearMiss: 'download'
+	},
+	{
+		desc: (i) =>
+			`BitTorrent protocol unit-test fixtures ${i} — not a user-facing downloader`,
+		language: 'Go',
+		topics: ['bittorrent', 'testing'],
+		category: 'networking',
+		nearMiss: 'download'
+	},
+	// Near-miss: network libraries that are NOT monitoring
+	{
+		desc: (i) =>
+			`TCP socket multiplexer library ${i} for building custom proxies`,
+		language: 'Rust',
+		topics: ['tcp', 'networking', 'proxy'],
+		category: 'networking',
+		nearMiss: 'network'
+	},
+	{
+		desc: (i) =>
+			`ASN lookup CLI ${i} mapping IPs to orgs — not an infrastructure dashboard`,
+		language: 'Go',
+		topics: ['asn', 'networking', 'cli'],
+		category: 'networking',
+		nearMiss: 'network'
+	},
+	// Near-miss: Minecraft mods unrelated to economy
+	{
+		desc: (i) =>
+			`Minecraft fabric mod ${i} adding biome foliage shaders (no shops or currency)`,
+		language: 'Java',
+		topics: ['minecraft', 'fabric', 'graphics'],
+		category: 'games',
+		nearMiss: 'minecraft'
+	},
+	{
+		desc: (i) =>
+			`Paper plugin ${i} that teleports players between hubs — not economy tracking`,
+		language: 'Java',
+		topics: ['minecraft', 'paper', 'teleport'],
+		category: 'games',
+		nearMiss: 'minecraft'
+	},
+	// Near-miss: note editors that are NOT local-first apps
+	{
+		desc: (i) =>
+			`Cloud-synced collaborative notepad ${i} requiring a hosted backend account`,
+		language: 'TypeScript',
+		topics: ['notes', 'saas', 'collaboration'],
+		category: 'productivity',
+		nearMiss: 'notes'
+	},
+	{
+		desc: (i) =>
+			`Markdown lint rule pack ${i} for CI — not a note-taking application`,
+		language: 'JavaScript',
+		topics: ['markdown', 'lint'],
+		category: 'developer-tools',
+		nearMiss: 'notes'
+	},
+	// Near-miss: Git tools that are NOT TUIs
+	{
+		desc: (i) =>
+			`Git hook installer ${i} that enforces commit message formats (non-interactive)`,
+		language: 'Go',
+		topics: ['git', 'hooks', 'ci'],
+		category: 'developer-tools',
+		nearMiss: 'git'
+	},
+	{
+		desc: (i) =>
+			`Library ${i} for parsing git objects in memory — no terminal UI`,
+		language: 'Rust',
+		topics: ['git', 'parser'],
+		category: 'developer-tools',
+		nearMiss: 'git'
+	},
+	// Near-miss: photo libraries that are NOT managers
+	{
+		desc: (i) =>
+			`EXIF metadata reader crate ${i} for extracting camera tags from JPEGs`,
+		language: 'Rust',
+		topics: ['exif', 'photos', 'metadata'],
+		category: 'media',
+		nearMiss: 'photos'
+	},
+	{
+		desc: (i) =>
+			`Photo gallery theme ${i} for static sites — no upload/library management`,
+		language: 'CSS',
+		topics: ['photos', 'theme', 'static'],
+		category: 'web',
+		nearMiss: 'photos'
+	},
+	// Near-miss: database tools that are NOT migration tools
+	{
+		desc: (i) =>
+			`Postgres connection pooler config samples ${i} — no schema versioning`,
+		language: 'Go',
+		topics: ['postgres', 'pooling'],
+		category: 'databases',
+		nearMiss: 'db'
+	},
+	{
+		desc: (i) =>
+			`SQL pretty-printer library ${i} for logging queries in apps`,
+		language: 'TypeScript',
+		topics: ['sql', 'formatting'],
+		category: 'databases',
+		nearMiss: 'db'
+	},
+	// Near-miss: CSV libraries that are NOT ETL tools
+	{
+		desc: (i) =>
+			`RFC4180 CSV parser ${i} exposing row iterators — no database loading`,
+		language: 'Python',
+		topics: ['csv', 'parser'],
+		category: 'data',
+		nearMiss: 'csv'
+	},
+	{
+		desc: (i) =>
+			`CSV charting widget ${i} for dashboards — visualization only`,
+		language: 'TypeScript',
+		topics: ['charts', 'csv'],
+		category: 'web',
+		nearMiss: 'csv'
+	},
+	// Near-miss: Kubernetes examples that are NOT lightweight orchestration products
+	{
+		desc: (i) =>
+			`Kubernetes CRD example ${i} for operators — teaching sample, not a product`,
+		language: 'Go',
+		topics: ['kubernetes', 'crd', 'example'],
+		category: 'devops',
+		nearMiss: 'k8s'
+	},
+	{
+		desc: (i) =>
+			`Helm chart helper script ${i} rendering nginx values for demos`,
+		language: 'Go',
+		topics: ['helm', 'kubernetes'],
+		category: 'devops',
+		nearMiss: 'k8s'
+	},
+	// Near-miss: RSS / password / LLM adjacent
+	{
+		desc: (i) =>
+			`RSS XML schema validator ${i} — not a feed reader product`,
+		language: 'Python',
+		topics: ['rss', 'xml', 'validation'],
+		category: 'web',
+		nearMiss: 'rss'
+	},
+	{
+		desc: (i) =>
+			`Password strength meter UI kit ${i} — not a self-hosted vault`,
+		language: 'TypeScript',
+		topics: ['passwords', 'ui'],
+		category: 'security',
+		nearMiss: 'password'
+	},
+	{
+		desc: (i) =>
+			`Tokenizer vocabulary dump ${i} for research notebooks — not a local LLM runner`,
+		language: 'Python',
+		topics: ['nlp', 'tokenizer'],
+		category: 'ai',
+		nearMiss: 'llm'
+	},
+	{
+		desc: (i) =>
+			`SSH config snippet manager ${i} for developers — not infra monitoring`,
+		language: 'Go',
+		topics: ['ssh', 'devtools'],
+		category: 'developer-tools',
+		nearMiss: 'ops'
 	}
 ];
+
+export const NOISE_TEMPLATE_COUNT = NOISE_TEMPLATES.length;
 
 export function buildNoiseRepos(count: number): GoldRepo[] {
 	const out: GoldRepo[] = [];
 	for (let i = 0; i < count; i++) {
 		const t = NOISE_TEMPLATES[i % NOISE_TEMPLATES.length]!;
+		const near = t.nearMiss ? `-nm-${t.nearMiss}` : '';
 		out.push({
 			owner: `noise${i % 97}`,
-			name: `pkg-${i}`,
+			name: `pkg-${i}${near}`,
 			description: t.desc(i),
 			language: t.language,
 			topics: t.topics,

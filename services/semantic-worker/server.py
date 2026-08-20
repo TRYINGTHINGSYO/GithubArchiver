@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, Optional
@@ -160,11 +161,16 @@ class Handler(BaseHTTPRequestHandler):
                 items = body.get("items") or []
                 failed = []
                 indexed = 0
+                embed_ms = 0.0
+                upsert_ms = 0.0
                 if items:
                     texts = [str(item.get("text") or "") for item in items]
+                    t_embed0 = time.perf_counter()
                     vectors = state.embedder.embed_batch(texts)
+                    embed_ms = (time.perf_counter() - t_embed0) * 1000.0
                     arr = np.asarray(vectors, dtype=np.float32)
                     ids = [int(item["vectorId"]) for item in items]
+                    t_up0 = time.perf_counter()
                     try:
                         state.store.upsert(ids, arr)
                         indexed = len(ids)
@@ -183,7 +189,19 @@ class Handler(BaseHTTPRequestHandler):
                                         "error": str(item_exc),
                                     }
                                 )
-                self._write_json(200, {"indexed": indexed, "failed": failed})
+                    upsert_ms = (time.perf_counter() - t_up0) * 1000.0
+                self._write_json(
+                    200,
+                    {
+                        "indexed": indexed,
+                        "failed": failed,
+                        "timings": {
+                            "embedMs": embed_ms,
+                            "upsertMs": upsert_ms,
+                            "itemCount": len(items),
+                        },
+                    },
+                )
                 return
             if path == "/remove":
                 ids = [int(x) for x in (body.get("vector_ids") or [])]
