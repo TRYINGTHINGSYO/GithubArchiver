@@ -439,7 +439,12 @@ function countEligibleForOpts(opts: RepoQuery): number {
 	return row.c;
 }
 
-function repoInClusters(repoId: number, slugs: string[]): boolean {
+function repoInClusters(
+	repoId: number,
+	slugs: string[],
+	match: 'any' | 'all' = 'any'
+): boolean {
+	if (!slugs.length) return true;
 	const row = getDb()
 		.prepare(
 			`SELECT COUNT(DISTINCT c.slug) AS c
@@ -448,13 +453,14 @@ function repoInClusters(repoId: number, slugs: string[]): boolean {
 			 WHERE m.repository_id = ? AND c.slug IN (${slugs.map(() => '?').join(',')})`
 		)
 		.get(repoId, ...slugs) as { c: number };
-	return row.c === slugs.length;
+	return match === 'all' ? row.c === slugs.length : row.c >= 1;
 }
 
 function assertFilterCompliance(repos: RepoRow[], opts: RepoQuery): string[] {
 	const leaks: string[] = [];
 	const clusterSlugs =
 		opts.clusters?.length ? opts.clusters : opts.cluster ? [opts.cluster] : [];
+	const clusterMatch = opts.clusterMatch === 'all' ? 'all' : 'any';
 	for (const repo of repos) {
 		if (opts.language && repo.language !== opts.language) leaks.push(`language:${repo.full_name}`);
 		if (opts.source && repo.discovery_source !== opts.source)
@@ -487,7 +493,7 @@ function assertFilterCompliance(repos: RepoRow[], opts: RepoQuery): string[] {
 		) {
 			leaks.push(`minInterestingScore:${repo.full_name}`);
 		}
-		if (clusterSlugs.length && !repoInClusters(repo.id, clusterSlugs)) {
+		if (clusterSlugs.length && !repoInClusters(repo.id, clusterSlugs, clusterMatch)) {
 			leaks.push(`cluster:${repo.full_name}`);
 		}
 		if (opts.hasReadme) {

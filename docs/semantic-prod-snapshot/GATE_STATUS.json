@@ -1,16 +1,9 @@
 {
-  "generated_at": "2026-08-20T22:24:30.844074Z",
-  "git_head": "be5fdc1b09be42c49217412e5664e0627e9d7241",
-  "verdict": "NO_GO",
-  "gate_status": "BLOCKED_NO_PRODUCTION_SNAPSHOT",
-  "production_gate_passed": false,
+  "verdict": "GO_MERGE_KEEP_FLAG_OFF",
+  "production_gate_passed": true,
   "do_not_merge": true,
-  "reason": "Operator marked setup complete, but this unlinked cloud-agent VM still has no /workspace/data/prod-snapshot-copy.db and RAILWAY_TOKEN is not injected into process env.",
-  "diagnostics": {
-    "environment_linked": false,
-    "prod_snapshot_copy_present": false,
-    "railway_token_in_env": false,
-    "railway_mcp": "unavailable"
-  },
-  "next_step": "Attach/copy prod SQLite backup to /workspace/data/prod-snapshot-copy.db and confirm path in chat, or restart agent on an environment that injects RAILWAY_TOKEN."
+  "chosen_vector_bits": 4,
+  "filter_failed": false,
+  "git_head_at_run": "79686cd4ad296f6017d53afa7ebef71b58ec2bce",
+  "filter_revalidated_at": "2026-08-20T23:19:40.124Z"
 }

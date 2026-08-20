@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-20T21:23:07.293Z",
+  "generatedAt": "2026-08-20T23:19:57.326Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -79,6 +79,44 @@
       "title": "Production-snapshot gate blocked — no prod DB copy available",
       "path": "entries/2026-08-20-validation-semantic-prod-snapshot-gate-blocked.md",
       "summary": "Implemented `npm run semantic:prod-snapshot-gate` for the PR #33 final gate:"
+    },
+    {
+      "id": "validation-semantic-prod-snapshot-gate-result",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-20",
+      "pr": 33,
+      "commit": "pending",
+      "migration": null,
+      "area": [
+        "search"
+      ],
+      "related": [
+        "validation-semantic-prod-snapshot-gate-blocked",
+        "validation-semantic-prod-readiness-harness-hardening",
+        "pr-33"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "validation-semantic-prod-snapshot-gate-blocked"
+        },
+        {
+          "type": "related",
+          "id": "validation-semantic-prod-readiness-harness-hardening"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-33"
+        }
+      ],
+      "supersedes": "validation-semantic-prod-snapshot-gate-blocked",
+      "title": "Production-snapshot gate result — GO_MERGE_KEEP_FLAG_OFF",
+      "path": "entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md",
+      "summary": "Ran READ-ONLY production-snapshot gate against a consistent SQLite backup of Railway project `new` / volume `new-volume` (`DATABASE_PATH=/data/githubarchive.db`)."
     },
     {
       "id": "bugfix-semantic-no-global-stale-on-worker-mismatch",
