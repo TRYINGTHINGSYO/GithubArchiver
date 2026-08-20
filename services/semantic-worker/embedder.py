@@ -35,9 +35,11 @@ def _l2_normalize(vec: List[float]) -> List[float]:
 
 class HashingEmbeddingProvider(EmbeddingProvider):
     """
-    Lightweight deterministic embedder for CI / offline use.
+    Deterministic CI/test embedder — NOT true semantic understanding.
+
     Character + token n-grams are hashed into a fixed-width bag and L2-normalized.
-    Not a substitute for MiniLM in production relevance, but stable and dependency-free.
+    Use this for offline tests and smoke checks only. Production retrieval must
+    use sentence-transformers (see requirements-prod.txt).
     """
 
     def __init__(self, dimensions: int = 384, model_id: str = "hashing-v1"):

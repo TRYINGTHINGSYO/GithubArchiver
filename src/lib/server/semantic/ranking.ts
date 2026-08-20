@@ -54,11 +54,23 @@ function qualityRaw(c: RankCandidate): number {
 }
 
 /**
- * BM25 from SQLite is lower-is-better. Convert to higher-is-better before normalize.
+ * SQLite FTS5 `bm25()` returns **negative** scores by design: more-negative
+ * means a stronger lexical match (e.g. -12.7 beats -1.1).
+ *
+ * Convert to higher-is-better similarity for hybrid min-max normalization.
+ * Do **not** clamp with Math.max(0, …) — that collapses all typical FTS5
+ * scores to the same value.
  */
 export function bm25ToSimilarity(bm25: number | null | undefined): number | null {
 	if (typeof bm25 !== 'number' || !Number.isFinite(bm25)) return null;
-	return 1 / (1 + Math.max(0, bm25));
+	// Negate: -12.7 → 12.7, -1.1 → 1.1 (order preserved, higher = better).
+	return -bm25;
+}
+
+/** Inverse of {@link bm25ToSimilarity} for callers that still expose raw fts_rank. */
+export function similarityToBm25(similarity: number | null | undefined): number | null {
+	if (typeof similarity !== 'number' || !Number.isFinite(similarity)) return null;
+	return -similarity;
 }
 
 export function rankHybridCandidates(

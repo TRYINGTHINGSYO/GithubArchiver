@@ -190,6 +190,17 @@ class Handler(BaseHTTPRequestHandler):
                 removed = state.store.remove(ids)
                 self._write_json(200, {"removed": removed})
                 return
+            if path == "/contains":
+                ids = [int(x) for x in (body.get("vector_ids") or [])]
+                present = []
+                missing = []
+                for vid in ids:
+                    if state.store.contains(int(vid)):
+                        present.append(int(vid))
+                    else:
+                        missing.append(int(vid))
+                self._write_json(200, {"present": present, "missing": missing})
+                return
             if path == "/sync":
                 last = state.store.sync()
                 self._write_json(200, {"ok": True, "lastSyncAt": last})

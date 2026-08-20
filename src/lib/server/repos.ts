@@ -368,7 +368,8 @@ export function listRepos(opts: ListReposOptions = {}) {
 		...result,
 		repos: result.repos.map((row) => toSummary(row, listMeta.get(row.id))),
 		search_mode: opts.q?.trim() ? ('fts' as const) : ('list' as const),
-		semantic_available: false
+		semantic_available: false,
+		pagination: opts.q?.trim() ? ('fts' as const) : ('list' as const)
 	};
 }
 
@@ -416,7 +417,8 @@ export async function listReposSearchAware(opts: ListReposOptions = {}) {
 		...result,
 		repos: result.repos.map((row) => toSummary(row, listMeta.get(row.id))),
 		search_mode: result.searchMode,
-		semantic_available: result.semanticAvailable
+		semantic_available: result.semanticAvailable,
+		pagination: result.pagination
 	};
 }
 

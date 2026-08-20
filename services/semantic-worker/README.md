@@ -6,10 +6,16 @@ compressed vectors in [TurboVec](https://github.com/RyanCodrai/turbovec) `IdMapI
 ## Setup
 
 ```bash
+# Base (TurboVec + hashing CI embedder)
 pip install -r services/semantic-worker/requirements.txt
-# optional quality embedder:
-# pip install sentence-transformers
+
+# Production MiniLM embedder (required for real semantic retrieval)
+pip install -r services/semantic-worker/requirements-prod.txt
 ```
+
+`hashing-v1` is a deterministic token/char n-gram bag for CI only — not true
+semantic understanding. Production must set
+`SEMANTIC_EMBEDDING_PROVIDER=sentence-transformers`.
 
 ## Run
 

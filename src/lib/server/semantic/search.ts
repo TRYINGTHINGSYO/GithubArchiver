@@ -5,7 +5,7 @@ import { queryRepos } from '../db/repos.js';
 import type { RepoQuery, RepoQueryResult, RepoRow } from '../db/types.js';
 import { getSemanticConfig, isSemanticSearchEnabled, type SemanticSearchMode } from './config.js';
 import { semanticWorkerHealth, semanticWorkerSearch } from './client.js';
-import { bm25ToSimilarity, rankHybridCandidates } from './ranking.js';
+import { bm25ToSimilarity, rankHybridCandidates, similarityToBm25 } from './ranking.js';
 
 export interface SemanticRepoHit extends RepoRow {
 	fts_rank: number | null;
@@ -19,6 +19,12 @@ export interface SemanticRepoQueryResult extends RepoQueryResult {
 	repos: SemanticRepoHit[];
 	searchMode: SemanticSearchMode;
 	semanticAvailable: boolean;
+	/**
+	 * Semantic/hybrid pagination ranks a bounded retrieval window, then pages
+	 * within that window. `total` / `totalPages` describe the window — not the
+	 * full corpus size.
+	 */
+	pagination: 'candidate-window' | 'fts' | 'list';
 }
 
 function hasHardFilters(opts: RepoQuery): boolean {
@@ -44,6 +50,16 @@ function hasHardFilters(opts: RepoQuery): boolean {
 	);
 }
 
+function countEligibleRepos(opts: RepoQuery): number {
+	const db = getDb();
+	const { clause, params } = buildRepoFilters({ ...opts, q: undefined });
+	const filterSql = clause ? clause : 'WHERE 1=1';
+	const totalRow = db
+		.prepare(`SELECT COUNT(*) AS c FROM repos ${filterSql}`)
+		.get(...params) as { c: number };
+	return totalRow.c;
+}
+
 function listEligibleRepoIds(opts: RepoQuery, softMax: number): {
 	ids: number[];
 	truncated: boolean;
@@ -52,10 +68,7 @@ function listEligibleRepoIds(opts: RepoQuery, softMax: number): {
 	const db = getDb();
 	const { clause, params } = buildRepoFilters({ ...opts, q: undefined });
 	const filterSql = clause ? clause : 'WHERE 1=1';
-	const totalRow = db
-		.prepare(`SELECT COUNT(*) AS c FROM repos ${filterSql}`)
-		.get(...params) as { c: number };
-	const totalEligible = totalRow.c;
+	const totalEligible = countEligibleRepos(opts);
 	const ids = (
 		db
 			.prepare(`SELECT id FROM repos ${filterSql} ORDER BY id ASC LIMIT ?`)
@@ -67,6 +80,24 @@ function listEligibleRepoIds(opts: RepoQuery, softMax: number): {
 		truncated,
 		totalEligible
 	};
+}
+
+/** Apply the complete SQL hard-filter set to an explicit candidate id list. */
+export function filterRepoIdsByQuery(ids: number[], opts: RepoQuery): number[] {
+	if (ids.length === 0) return [];
+	const db = getDb();
+	const { clause, params } = buildRepoFilters({ ...opts, q: undefined });
+	const filterSql = clause ? clause.replace(/^WHERE\s+/i, 'AND ') : '';
+	const placeholders = ids.map(() => '?').join(', ');
+	const rows = db
+		.prepare(
+			`SELECT id FROM repos
+			 WHERE id IN (${placeholders})
+			 ${filterSql}`
+		)
+		.all(...ids, ...params) as { id: number }[];
+	const allowed = new Set(rows.map((r) => r.id));
+	return ids.filter((id) => allowed.has(id));
 }
 
 function loadReposByIds(ids: number[]): RepoRow[] {
@@ -96,7 +127,8 @@ export async function searchReposSemanticAware(
 		perPage,
 		totalPages: 1,
 		searchMode: mode,
-		semanticAvailable
+		semanticAvailable,
+		pagination: 'candidate-window'
 	});
 
 	if (!opts.q?.trim()) {
@@ -112,7 +144,8 @@ export async function searchReposSemanticAware(
 				match_reason: null
 			})),
 			searchMode: 'keyword',
-			semanticAvailable: false
+			semanticAvailable: false,
+			pagination: 'list'
 		};
 	}
 
@@ -138,29 +171,37 @@ export async function searchReposSemanticAware(
 				match_reason: 'lexical' as const
 			})),
 			searchMode: mode === 'keyword' || !config.enabled ? 'keyword' : mode,
-			semanticAvailable: false
+			semanticAvailable: false,
+			pagination: 'fts'
 		};
 	}
 
 	const candidateLimit = Math.min(500, Math.max(perPage * 5, 50));
 	let allowlist: number[] | undefined;
-	let allowlistTruncated = false;
+	let useCandidatePostFilter = false;
 
 	if (hasHardFilters(opts)) {
 		const eligible = listEligibleRepoIds(opts, config.allowlistSoftMax);
-		allowlistTruncated = eligible.truncated;
-		if (eligible.ids.length === 0) return empty(true);
+		if (eligible.totalEligible === 0) return empty(true);
 		if (!eligible.truncated) {
 			allowlist = eligible.ids;
+		} else {
+			// Pathological allowlist: retrieve a global semantic window, then apply
+			// the COMPLETE SQL filter to those candidate IDs only (never approximate
+			// eligibility with the first N repo ids).
+			useCandidatePostFilter = true;
 		}
-		// If truncated, search without allowlist and post-filter (documented fallback).
 	}
+
+	const retrievalK = useCandidatePostFilter
+		? Math.min(2_000, Math.max(candidateLimit * 4, perPage * 20))
+		: candidateLimit;
 
 	let semanticHits: Array<{ vectorId: number; score: number }> = [];
 	try {
 		semanticHits = await semanticWorkerSearch({
 			query: opts.q,
-			k: candidateLimit,
+			k: retrievalK,
 			allowlist
 		});
 	} catch {
@@ -174,7 +215,8 @@ export async function searchReposSemanticAware(
 				match_reason: 'lexical' as const
 			})),
 			searchMode: mode,
-			semanticAvailable: false
+			semanticAvailable: false,
+			pagination: 'fts'
 		};
 	}
 
@@ -183,7 +225,7 @@ export async function searchReposSemanticAware(
 		semanticScoreById.set(hit.vectorId, hit.score);
 	}
 
-	let lexicalById = new Map<
+	const lexicalById = new Map<
 		number,
 		{ lexicalScore: number | null; snippet: string | null; row: RepoRow }
 	>();
@@ -203,17 +245,14 @@ export async function searchReposSemanticAware(
 		}
 	}
 
-	const idSet = new Set<number>([
+	let idSet = new Set<number>([
 		...semanticScoreById.keys(),
 		...lexicalById.keys()
 	]);
 
-	// Post-filter when allowlist was truncated or semantic-only without allowlist.
-	if (hasHardFilters(opts) && (allowlistTruncated || !allowlist)) {
-		const eligible = new Set(listEligibleRepoIds(opts, config.allowlistSoftMax * 2).ids);
-		for (const id of [...idSet]) {
-			if (!eligible.has(id)) idSet.delete(id);
-		}
+	if (hasHardFilters(opts) && useCandidatePostFilter) {
+		const kept = filterRepoIdsByQuery([...idSet], opts);
+		idSet = new Set(kept);
 	}
 
 	const missingIds = [...idSet].filter((id) => !lexicalById.has(id));
@@ -227,26 +266,27 @@ export async function searchReposSemanticAware(
 	}
 
 	if (mode === 'semantic') {
-		// Drop pure-lexical-only ids when user asked for semantic-only.
 		for (const id of [...idSet]) {
 			if (!semanticScoreById.has(id)) idSet.delete(id);
 		}
 	}
 
-	const candidates = [...idSet].map((id) => {
-		const lex = lexicalById.get(id);
-		const row = lex?.row;
-		return {
-			id,
-			semanticScore: semanticScoreById.get(id) ?? null,
-			lexicalScore: mode === 'semantic' ? null : (lex?.lexicalScore ?? null),
-			interestingScore: row?.interesting_score ?? null,
-			stars: row?.stars ?? null,
-			signalTier: row?.signal_tier ?? null,
-			snippet: lex?.snippet ?? null,
-			row
-		};
-	}).filter((c) => c.row);
+	const candidates = [...idSet]
+		.map((id) => {
+			const lex = lexicalById.get(id);
+			const row = lex?.row;
+			return {
+				id,
+				semanticScore: semanticScoreById.get(id) ?? null,
+				lexicalScore: mode === 'semantic' ? null : (lex?.lexicalScore ?? null),
+				interestingScore: row?.interesting_score ?? null,
+				stars: row?.stars ?? null,
+				signalTier: row?.signal_tier ?? null,
+				snippet: lex?.snippet ?? null,
+				row
+			};
+		})
+		.filter((c) => c.row);
 
 	const ranked = rankHybridCandidates(
 		candidates.map((c) => ({
@@ -264,6 +304,7 @@ export async function searchReposSemanticAware(
 		}
 	);
 
+	// Candidate-window pagination: total is the ranked retrieval window, not corpus size.
 	const total = ranked.length;
 	const offset = (page - 1) * perPage;
 	const pageRows = ranked.slice(offset, offset + perPage);
@@ -273,7 +314,7 @@ export async function searchReposSemanticAware(
 		const base = byId.get(r.id)!;
 		return {
 			...base.row!,
-			fts_rank: base.lexicalScore != null ? 1 / Math.max(base.lexicalScore, 1e-9) - 1 : null,
+			fts_rank: similarityToBm25(base.lexicalScore),
 			fts_snippet: base.snippet,
 			semantic_score: r.semanticScore ?? null,
 			final_score: r.finalScore,
@@ -288,6 +329,7 @@ export async function searchReposSemanticAware(
 		perPage,
 		totalPages: Math.max(1, Math.ceil(total / perPage)),
 		searchMode: mode,
-		semanticAvailable
+		semanticAvailable,
+		pagination: 'candidate-window'
 	};
 }

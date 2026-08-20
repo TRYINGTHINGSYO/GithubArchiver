@@ -74,7 +74,7 @@ export function getSemanticConfig(): SemanticConfig {
 		qualityWeight: envNumber('SEMANTIC_QUALITY_WEIGHT', 0.1),
 		batchSize: Math.max(1, Math.floor(envNumber('SEMANTIC_INDEX_BATCH_SIZE', 64))),
 		allowlistSoftMax: Math.max(
-			100,
+			1,
 			Math.floor(envNumber('SEMANTIC_ALLOWLIST_SOFT_MAX', SEMANTIC_ALLOWLIST_SOFT_MAX))
 		),
 		documentVersion: SEMANTIC_DOCUMENT_VERSION,

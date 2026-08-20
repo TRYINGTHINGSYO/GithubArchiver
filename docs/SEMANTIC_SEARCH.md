@@ -26,7 +26,7 @@ category/dates   lexical rank  semantic similarity
 | Layer | Owns |
 |-------|------|
 | **SQLite** | Repositories, websites, metadata, ratings, collections, hide/show, index *state* |
-| **Embedding provider** | Text → float32 vectors (hashing or MiniLM) |
+| **Embedding provider** | Text → float32 vectors |
 | **TurboVec worker** | Compressed vector index + id map (`IdMapIndex`) |
 | **GithubArchiver ranking** | Combines semantic + lexical + archive quality |
 
@@ -37,31 +37,34 @@ When `SEMANTIC_SEARCH_ENABLED` is off or the worker is down:
 - pages do not crash
 - enrichment/daemon jobs do not fail
 
-## Enable
+## Enable (production)
 
-1. Install worker deps: `pip install -r services/semantic-worker/requirements.txt`
-2. Set env (see `.env.example`):
-   - `SEMANTIC_SEARCH_ENABLED=1`
-   - `SEMANTIC_INDEX_PATH=./data/semantic/index.tvim`
-   - `SEMANTIC_EMBEDDING_PROVIDER=hashing` (CI/dev) or `sentence-transformers`
-   - `SEMANTIC_EMBEDDING_MODEL=…`
-   - `SEMANTIC_VECTOR_BITS=2` (3/4 also supported)
-3. Start worker: `npm run semantic:worker`
-4. Build index: `npm run semantic:index`
-5. Open `/search` and choose **Hybrid** / **Semantic**
+```bash
+pip install -r services/semantic-worker/requirements.txt
+pip install -r services/semantic-worker/requirements-prod.txt   # MiniLM
+export SEMANTIC_SEARCH_ENABLED=1
+export SEMANTIC_EMBEDDING_PROVIDER=sentence-transformers
+export SEMANTIC_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+export SEMANTIC_EMBEDDING_DIMS=384
+export SEMANTIC_INDEX_PATH=./data/semantic/index.tvim
+npm run semantic:worker
+npm run semantic:index
+```
+
+### Embedding providers
+
+| Provider | Model | Use |
+|----------|-------|-----|
+| `hashing` | `hashing-v1` | **CI / deterministic tests only.** Token/char n-gram bag — not true semantic retrieval. |
+| `sentence-transformers` (alias `local`) | `all-MiniLM-L6-v2` | **Production local embedder** (384-d). Install via `requirements-prod.txt`. |
+
+Do not treat hashing-v1 results as semantic quality metrics for the live archive.
 
 ## Semantic document
 
-`buildRepositorySemanticDocument` (see `src/lib/server/semantic/document.ts`)
-assembles a deterministic text card:
-
-- name / full name
-- description / summary
-- language, topics, classification
-- homepage
-- truncated, cleaned README signal (badges/install noise removed)
-
-Versioned by `SEMANTIC_DOCUMENT_VERSION`. Changing construction marks rows stale.
+`buildRepositorySemanticDocument` assembles a deterministic text card (name,
+description/summary, language, topics, classification, homepage, cleaned README).
+Versioned by `SEMANTIC_DOCUMENT_VERSION`.
 
 ## Fingerprint
 
@@ -69,16 +72,16 @@ Versioned by `SEMANTIC_DOCUMENT_VERSION`. Changing construction marks rows stale
 SHA256(document_version + entity_id + document + embedding_model)
 ```
 
-Stored in `semantic_index_state` (migration 047). Vectors themselves are **not**
-stored in SQLite.
+Stored in `semantic_index_state` (migration 047). Vectors are **not** stored in SQLite.
 
 ## Ranking formula
 
-Within each candidate set:
+SQLite FTS5 `bm25()` returns **negative** scores (more-negative = better). We convert
+with `lexical_similarity = -bm25` before min-max normalization.
 
 ```
 semantic_norm = minmax(semantic_score)
-lexical_norm  = minmax(1 / (1 + bm25))
+lexical_norm  = minmax(-bm25)          # FTS5-native negatives preserved
 quality_norm  = minmax(interesting_score/100 or soft log10(stars))
 
 final_score =
@@ -88,61 +91,84 @@ final_score =
   / weight_sum
 ```
 
-Defaults: `0.55 / 0.35 / 0.10`. Popularity cannot fully drown meaning.
+Defaults: `0.55 / 0.35 / 0.10`.
 
 ## Hard filters + allowlists
 
-SQLite evaluates hard filters first. Eligible ids are passed to TurboVec
-`search(..., allowlist=…)`.
+Normal path:
 
-If the eligible set exceeds `SEMANTIC_ALLOWLIST_SOFT_MAX` (default 50k), the
-worker searches without allowlist and results are post-filtered in SQL. This is
-a documented fallback for pathological filter selectivity — not the common path.
+```
+SQLite hard filters → eligible IDs → TurboVec allowlist search
+```
 
-## Incremental indexing
+When eligible count exceeds `SEMANTIC_ALLOWLIST_SOFT_MAX`:
 
-After enrichment (when enabled), repos are enqueued as `pending`. The
-`semantic_index` cadence job / `npm run semantic:index` embeds changed
-fingerprints only. States: `pending → indexing → indexed | failed`, plus
-`stale` / `removed`.
+```
+TurboVec global top-K (enlarged)
+        ↓
+SELECT id FROM repos WHERE id IN (candidates) AND <complete hard filters>
+        ↓
+rank matching candidates only
+```
 
-DB rows are marked `indexed` **only after** a successful worker upsert.
+Never approximate eligibility with “first N repo ids”.
+
+## Pagination
+
+Semantic/hybrid search ranks a **bounded candidate window**, then pages inside
+that window. `total` / `totalPages` describe the window (`pagination:
+'candidate-window'`), not the full corpus. Keyword/FTS mode still uses true FTS
+pagination.
+
+## Incremental indexing (crash-safe)
+
+```
+mark indexing
+  → embed / TurboVec upsert
+  → durable TurboVec sync()
+  → mark SQLite indexed
+```
+
+If sync fails, rows stay `failed` / retryable — never `indexed` without a durable
+vector. Removals follow the same rule: remove → sync → mark `removed`, including
+removals-only cycles.
+
+Backfill selects repos that are **missing / stale / incompatible** via
+`LEFT JOIN semantic_index_state` ordered by `repos.id ASC`, so already-indexed
+newest repos cannot starve the historical archive.
+
+Startup/index-cycle reconciliation repairs:
+
+- SQLite `indexed` but vector missing → `stale`
+- SQLite `removed` but vector still present → remove + durable sync
 
 ## Deletion
 
-Deleted / pending-deletion / missing repos are removed from TurboVec and marked
-`removed` in SQLite during index cycles.
+Deleted / pending-deletion / missing repos are removed from TurboVec, synced, then
+marked `removed` in SQLite.
 
 ## Model / dimension mismatches
 
-On-disk manifest (`.tvim.meta.json`) stores schema version, document version,
-embedding model, dimensions, and bit width. Startup refuses incompatible indexes
-— no silent rebuild. Use `npm run semantic:rebuild`.
+On-disk `.tvim.meta.json` stores schema version, document version, embedding model,
+dimensions, and bit width. Startup refuses incompatible indexes — no silent rebuild.
+Use `npm run semantic:rebuild`.
 
-## Similar repositories
-
-`GET /api/repo/:owner/:repo/similar` re-embeds the repo’s semantic document and
-queries TurboVec, excluding self and hidden rows.
-
-## Benchmarks & eval
+## Commands
 
 ```bash
-npm run semantic:benchmark   # 10k/100k × 2/3/4-bit (hashing vectors)
-npm run semantic:eval        # Recall@10 / Precision@10 / MRR on fixtures
+npm run semantic:worker
+npm run semantic:index          # --limit --batch-size --force --dry-run --repo-id
+npm run semantic:rebuild
+npm run semantic:eval
+npm run semantic:benchmark      # 10k/100k × 2/3/4-bit
 ```
-
-## Website-ready IDs
-
-`semantic_index_state.entity_type` is `repository | website`. Repository vector
-ids equal `repos.id`. Website ids use a reserved high-bit hash space via
-`semanticEntityRef('website', domain)` so websites can join later without a
-schema rewrite.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
 | Mode control missing | Feature flag off — expected |
-| Hybrid falls back to keyword | Worker down — check `npm run semantic:worker` |
-| Dimension mismatch error | Rebuild after model change |
-| Index grows but search empty | Ensure fingerprints marked indexed + sync |
+| Hybrid falls back to keyword | Worker down — start `semantic:worker` |
+| Dimension / model mismatch | Explicit rebuild after changing provider |
+| Production setup missing MiniLM | Install `requirements-prod.txt` |
+| Index grows but search empty | Check sync succeeded before rows marked indexed |

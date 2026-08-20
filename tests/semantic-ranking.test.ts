@@ -33,8 +33,25 @@ describe('hybrid ranking', () => {
 		expect(ranked[0]!.id).toBe(1);
 	});
 
-	it('converts bm25 lower-is-better into similarity', () => {
-		expect(bm25ToSimilarity(0)!).toBeGreaterThan(bm25ToSimilarity(10)!);
+	it('converts FTS5-style negative bm25 into higher-is-better similarity', () => {
+		// SQLite FTS5: more-negative = better match.
+		expect(bm25ToSimilarity(-12.7)!).toBeGreaterThan(bm25ToSimilarity(-1.1)!);
+		expect(bm25ToSimilarity(-12.7)!).toBeCloseTo(12.7);
+		expect(bm25ToSimilarity(-1.1)!).toBeCloseTo(1.1);
+		// Must not collapse all negative scores to the same value.
+		expect(bm25ToSimilarity(-12.7)).not.toBe(bm25ToSimilarity(-6.2));
 		expect(bm25ToSimilarity(null)).toBeNull();
+	});
+
+	it('preserves lexical order when hybrid-ranking real FTS5-negative scores', () => {
+		const ranked = rankHybridCandidates(
+			[
+				{ id: 1, semanticScore: 0.5, lexicalScore: bm25ToSimilarity(-12.7), stars: 10 },
+				{ id: 2, semanticScore: 0.5, lexicalScore: bm25ToSimilarity(-1.1), stars: 10 }
+			],
+			{ semanticWeight: 0.0, lexicalWeight: 1.0, qualityWeight: 0.0 }
+		);
+		expect(ranked[0]!.id).toBe(1);
+		expect(ranked[0]!.lexicalNorm).toBeGreaterThan(ranked[1]!.lexicalNorm);
 	});
 });

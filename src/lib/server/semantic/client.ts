@@ -156,6 +156,21 @@ export async function semanticWorkerRemove(vectorIds: number[]): Promise<{ remov
 	return (await res.json()) as { removed: number };
 }
 
+export async function semanticWorkerContains(
+	vectorIds: number[]
+): Promise<{ present: number[]; missing: number[] }> {
+	if (vectorIds.length === 0) return { present: [], missing: [] };
+	const res = await workerFetch('/contains', {
+		method: 'POST',
+		body: JSON.stringify({ vector_ids: vectorIds })
+	});
+	if (!res.ok) {
+		const body = await res.text();
+		throw new Error(`semantic worker contains failed: ${res.status} ${body}`);
+	}
+	return (await res.json()) as { present: number[]; missing: number[] };
+}
+
 export async function semanticWorkerSync(): Promise<{ ok: boolean; lastSyncAt: string }> {
 	const res = await workerFetch('/sync', {
 		method: 'POST',

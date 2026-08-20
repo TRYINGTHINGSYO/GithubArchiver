@@ -20,6 +20,7 @@ export { semanticEntityRef, repositoryVectorId, type SemanticEntityType } from '
 export {
 	rankHybridCandidates,
 	bm25ToSimilarity,
+	similarityToBm25,
 	type RankCandidate,
 	type RankedCandidate
 } from './ranking.js';
