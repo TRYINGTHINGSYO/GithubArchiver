@@ -2,7 +2,7 @@
 id: validation-semantic-prod-snapshot-gate-blocked
 date: 2026-08-20
 pr: 33
-commit: pending
+commit: b1426aa
 area:
   - search
 type: research
