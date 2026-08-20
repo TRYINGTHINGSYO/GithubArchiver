@@ -1,36 +1,16 @@
 {
-  "generated_at": "2026-08-20T21:22:56.575Z",
-  "git_head": "e1067519d07edbb061e87b7abe1ebcda7eb9d05e",
+  "generated_at": "2026-08-20T22:24:30.844074Z",
+  "git_head": "be5fdc1b09be42c49217412e5664e0627e9d7241",
   "verdict": "NO_GO",
   "gate_status": "BLOCKED_NO_PRODUCTION_SNAPSHOT",
   "production_gate_passed": false,
   "do_not_merge": true,
-  "reason": "No operator-supplied production SQLite copy was available. Railway MCP/CLI unavailable. Synthetic corpus must not substitute.",
-  "operator_requirements": {
-    "env": {
-      "SEMANTIC_PROD_SNAPSHOT_SOURCE": "/absolute/path/to/prod-copy.db",
-      "SEMANTIC_PROD_SNAPSHOT_ACK": "I_CONFIRM_THIS_IS_A_NON_PRODUCTION_COPY"
-    },
-    "command": "npm run semantic:prod-snapshot-gate",
-    "artifact": "A non-writable copy/backup of the production GithubArchiver SQLite DATABASE_PATH file (not the live volume path)."
+  "reason": "Operator marked setup complete, but this unlinked cloud-agent VM still has no /workspace/data/prod-snapshot-copy.db and RAILWAY_TOKEN is not injected into process env.",
+  "diagnostics": {
+    "environment_linked": false,
+    "prod_snapshot_copy_present": false,
+    "railway_token_in_env": false,
+    "railway_mcp": "unavailable"
   },
-  "safety_proof": {
-    "ok": true,
-    "mode": "safety-proof",
-    "production_gate_passed": false,
-    "source_fingerprint": {
-      "path": "/tmp/semantic-prod-snapshot-safety-14868/fixture-source.db",
-      "size": 20783104,
-      "mtimeMs": 1787260976495.3428,
-      "ino": 1967480
-    },
-    "source_unchanged": true,
-    "work_db": "/tmp/semantic-prod-snapshot-safety-14868/fixture-work.db",
-    "inventory_sample": {
-      "total": 10000,
-      "eligible": 9995,
-      "enriched": 10000
-    },
-    "note": "Copy→work-open→inventory succeeded; source file bytes/mtime/ino unchanged. This does NOT pass the production gate."
-  }
+  "next_step": "Attach/copy prod SQLite backup to /workspace/data/prod-snapshot-copy.db and confirm path in chat, or restart agent on an environment that injects RAILWAY_TOKEN."
 }
