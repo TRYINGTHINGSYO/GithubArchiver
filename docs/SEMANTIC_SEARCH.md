@@ -39,17 +39,57 @@ When `SEMANTIC_SEARCH_ENABLED` is off or the worker is down:
 
 ## Enable (production)
 
+Keep the feature flag **off** until you intentionally enable it after human review:
+
 ```bash
-pip install -r services/semantic-worker/requirements.txt
-pip install -r services/semantic-worker/requirements-prod.txt   # MiniLM
-export SEMANTIC_SEARCH_ENABLED=1
+# Required for Railway / production MiniLM (from production-snapshot gate):
+export SEMANTIC_SEARCH_ENABLED=0          # leave OFF until ready
 export SEMANTIC_EMBEDDING_PROVIDER=sentence-transformers
 export SEMANTIC_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 export SEMANTIC_EMBEDDING_DIMS=384
+export SEMANTIC_VECTOR_BITS=4             # set explicitly — do not rely on code fallback
 export SEMANTIC_INDEX_PATH=./data/semantic/index.tvim
+```
+
+```bash
+pip install -r services/semantic-worker/requirements.txt
+pip install -r services/semantic-worker/requirements-prod.txt   # MiniLM
 npm run semantic:worker
 npm run semantic:index
 ```
+
+### Vector bits (production MiniLM)
+
+The production-snapshot gate on the real GithubArchiver archive selected **4-bit**:
+
+- mean semantic top-10 overlap vs 2-bit ≈ 0.76 (material ranking disagreement)
+- 4-bit index ≈ 1.9× disk vs 2-bit
+- no meaningful hybrid latency penalty
+
+**Set `SEMANTIC_VECTOR_BITS=4` explicitly in the production MiniLM worker and app env.**
+The application/worker code fallback remains `2` so hashing CI and local defaults stay
+compatible. Omitting the env var in production would silently ship 2-bit and ignore
+the gate evidence — always set `4` for MiniLM Railway deploys.
+
+### Coverage (do not overclaim)
+
+Semantic retrieval only has vectors for the **enriched / eligible** subset.
+
+From the production-snapshot gate (2026-08-20):
+
+| Metric | Count |
+|--------|------:|
+| Total repositories in production SQLite | 816,347 |
+| Semantic-eligible (enriched, not deleted/pending) | 46,360 |
+
+That is roughly **5.7%** of the archive. Quality and recall improve as enrichment
+coverage grows. Do **not** claim semantic coverage of the entire archive.
+
+## Feature flag
+
+Ship with **`SEMANTIC_SEARCH_ENABLED=0`**. Keyword/FTS remains the default experience.
+Enable experimentally only after human review of
+`docs/semantic-prod-snapshot/HUMAN_REVIEW.md`.
 
 ### Embedding providers
 

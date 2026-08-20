@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`decision-semantic-prod-4bit-flag-off`](entries/2026-08-20-decision-semantic-prod-4bit-flag-off.md) (`decision`, `confirmed`, `permanent`) — Production MiniLM uses SEMANTIC_VECTOR_BITS=4; flag stays OFF at merge
+  - `related` → [`validation-semantic-prod-snapshot-gate-result`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md), `implemented-by` → [`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
 - [`validation-semantic-prod-readiness-harness-hardening`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md) (`research`, `confirmed`, `release`) — Prod-readiness harness hardened (latency, worker RSS, filters, noise)
   - `supersedes` → [`validation-semantic-production-readiness`](entries/2026-08-20-validation-semantic-production-readiness.md), `related` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `implemented-by` → [`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
 - [`validation-semantic-prod-snapshot-gate-blocked`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-blocked.md) (`research`, `confirmed`, `release`) — Production-snapshot gate blocked — no prod DB copy available

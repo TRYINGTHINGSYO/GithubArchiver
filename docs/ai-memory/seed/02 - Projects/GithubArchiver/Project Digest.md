@@ -63,6 +63,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-08-20** · `decision` · `confirmed` · `permanent` · PR #33 · `pending` · `open` · `search` — [Production MiniLM uses SEMANTIC_VECTOR_BITS=4; flag stays OFF at merge](entries/2026-08-20-decision-semantic-prod-4bit-flag-off.md)
+  - edges: related:[`validation-semantic-prod-snapshot-gate-result`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
 - **2026-08-20** · `research` · `confirmed` · `release` · PR #33 · `ff30ae7` · `open` · `search` — [Prod-readiness harness hardened (latency, worker RSS, filters, noise)](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
   - edges: supersedes:[`validation-semantic-production-readiness`](entries/2026-08-20-validation-semantic-production-readiness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
 - **2026-08-20** · `research` · `confirmed` · `release` · PR #33 · `b1426aa` · `open` · `search` — [Production-snapshot gate blocked — no prod DB copy available](entries/2026-08-20-validation-semantic-prod-snapshot-gate-blocked.md)
@@ -77,8 +79,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - **2026-08-20** · `feature` · `confirmed` · `permanent` · `open` · `search`, `enrichment`, `sqlite` — [TurboVec semantic search layer behind feature flag](entries/2026-08-20-feature-semantic-search-turbovec.md)
   - edges: references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
-- **2026-08-20** · `research` · `confirmed` · `release` · `open` · `search` — [MiniLM + TurboVec production-readiness validation (10k representative corpus)](entries/2026-08-20-validation-semantic-production-readiness.md)
-  - edges: related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
 
 ## Open technical debt
 
@@ -87,6 +87,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-08-20** · `decision` · `confirmed` · `permanent` · PR #33 · `pending` · `open` · `search` — [Production MiniLM uses SEMANTIC_VECTOR_BITS=4; flag stays OFF at merge](entries/2026-08-20-decision-semantic-prod-4bit-flag-off.md)
+  - edges: related:[`validation-semantic-prod-snapshot-gate-result`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
 - **2026-08-20** · `research` · `confirmed` · `release` · PR #33 · `ff30ae7` · `open` · `search` — [Prod-readiness harness hardened (latency, worker RSS, filters, noise)](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
   - edges: supersedes:[`validation-semantic-production-readiness`](entries/2026-08-20-validation-semantic-production-readiness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
 - **2026-08-20** · `research` · `confirmed` · `release` · PR #33 · `b1426aa` · `open` · `search` — [Production-snapshot gate blocked — no prod DB copy available](entries/2026-08-20-validation-semantic-prod-snapshot-gate-blocked.md)
