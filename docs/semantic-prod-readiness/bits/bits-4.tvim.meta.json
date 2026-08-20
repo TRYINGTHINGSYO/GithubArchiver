@@ -1,0 +1,9 @@
+{
+  "dimensions": 384,
+  "embeddingModel": "sentence-transformers/all-MiniLM-L6-v2",
+  "indexedCount": 3000,
+  "lastSyncAt": "2026-08-20T20:52:11Z",
+  "quantizationBits": 4,
+  "schemaVersion": 1,
+  "semanticDocumentVersion": 1
+}

@@ -1,0 +1,3738 @@
+{
+  "generated_at": "2026-08-20T20:52:12.568Z",
+  "git_head": "655a65c7055366c635db9e455177751e7ae8495b",
+  "disclaimer": "No production DB was available in this environment. Corpus is a representative 10k-repo GithubArchiver-shaped sample (curated gold + realistic noise). Quality conclusions use MiniLM, not hashing-v1.",
+  "indexReport": {
+    "corpus": {
+      "requested": 10000,
+      "seeded": 10000,
+      "total": 10000,
+      "eligible": 9995,
+      "deleted": 3,
+      "pending_deletion": 2,
+      "gold": 43,
+      "noise": 9957
+    },
+    "indexing": {
+      "indexed": 9995,
+      "failed": 0,
+      "sqlite_indexed_current": 9995,
+      "status_counts": {
+        "indexed": 9995
+      },
+      "wall_clock_s": 37.288,
+      "repos_per_sec": 268.04870199528,
+      "embed_proxy_s": 34.83363785400009,
+      "sync_s": 0.5437416629999133,
+      "index_bytes": 1326771,
+      "model_load_s": 4.81,
+      "peak_rss_mb_node": 190,
+      "rss_before_mb": 163
+    },
+    "worker_model": {
+      "ok": true,
+      "modelId": "sentence-transformers/all-MiniLM-L6-v2",
+      "dimensions": 384,
+      "vectorBits": 2,
+      "indexedCount": 0,
+      "indexPath": "/workspace/data/semantic/prod-readiness-2bit.tvim",
+      "schemaVersion": 1,
+      "semanticDocumentVersion": 1
+    }
+  },
+  "quality": {
+    "macro": {
+      "keyword": {
+        "recallAt10": 0.1,
+        "precisionAt10": 0.02,
+        "mrr": 0.2
+      },
+      "semantic": {
+        "recallAt10": 0.96,
+        "precisionAt10": 0.19200000000000006,
+        "mrr": 0.9733333333333334
+      },
+      "hybrid": {
+        "recallAt10": 0.94,
+        "precisionAt10": 0.18800000000000006,
+        "mrr": 0.9733333333333334
+      }
+    },
+    "semantic_vs_keyword_wins": 20,
+    "keyword_vs_semantic_wins": 0,
+    "ties": 5,
+    "regressions": [],
+    "query_latency_ms": {
+      "p50": 103.9653890000045,
+      "p95": 109.19682900000771,
+      "mean": 102.53763683999946
+    }
+  },
+  "perQuery": [
+    {
+      "id": "offline-voice",
+      "query": "local voice assistant that works offline",
+      "notes": "meaning: no \"assistant\" in one relevant desc",
+      "relevant": [
+        "voice/wake-word-local",
+        "voice/offline-speech-kit"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.4644570052623749
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.4571276903152466
+          },
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": 0.24215465784072876
+          },
+          {
+            "full_name": "voice/discord-tts",
+            "id": 4,
+            "score": 0.1846352368593216
+          },
+          {
+            "full_name": "ai/llamacpp-ui",
+            "id": 40,
+            "score": 0.1539698839187622
+          },
+          {
+            "full_name": "notes/ink-local",
+            "id": 18,
+            "score": 0.1336265206336975
+          },
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.1320887953042984
+          },
+          {
+            "full_name": "ai/local-infer",
+            "id": 41,
+            "score": 0.1271185576915741
+          },
+          {
+            "full_name": "ops/k3s-helper",
+            "id": 12,
+            "score": 0.12671077251434326
+          },
+          {
+            "full_name": "noise61/pkg-8112",
+            "id": 8156,
+            "score": 0.12335295230150223
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.6166666666666667
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.5922631045339304
+          },
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": 0.30090024560896517
+          },
+          {
+            "full_name": "ai/llamacpp-ui",
+            "id": 40,
+            "score": 0.18103891736996597
+          },
+          {
+            "full_name": "voice/discord-tts",
+            "id": 4,
+            "score": 0.16068933159220902
+          },
+          {
+            "full_name": "notes/ink-local",
+            "id": 18,
+            "score": 0.13697888068991979
+          },
+          {
+            "full_name": "noise61/pkg-8112",
+            "id": 8156,
+            "score": 0.10146163892256149
+          },
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.1013229604095273
+          },
+          {
+            "full_name": "ai/local-infer",
+            "id": 41,
+            "score": 0.1004825588225894
+          },
+          {
+            "full_name": "ops/k3s-helper",
+            "id": 12,
+            "score": 0.0998666383381355
+          }
+        ]
+      }
+    },
+    {
+      "id": "windows-analyzer",
+      "query": "Windows program/executable analyzer",
+      "notes": "meaning-based",
+      "relevant": [
+        "win/pe-inspector",
+        "win/binary-explain"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/binary-explain",
+            "id": 6,
+            "score": 0.38725343346595764
+          },
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.3531344532966614
+          },
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.2149692326784134
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.2089226245880127
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.18510733544826508
+          },
+          {
+            "full_name": "noise36/pkg-1879",
+            "id": 1923,
+            "score": 0.15495625138282776
+          },
+          {
+            "full_name": "noise86/pkg-1929",
+            "id": 1973,
+            "score": 0.1531541794538498
+          },
+          {
+            "full_name": "noise45/pkg-239",
+            "id": 283,
+            "score": 0.15638260543346405
+          },
+          {
+            "full_name": "noise21/pkg-3319",
+            "id": 3363,
+            "score": 0.15256793797016144
+          },
+          {
+            "full_name": "noise96/pkg-1939",
+            "id": 1983,
+            "score": 0.1499823033809662
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/binary-explain",
+            "id": 6,
+            "score": 0.6078947368421054
+          },
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.549963169394461
+          },
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.23563945284458082
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.17520609721510105
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.1553272371834552
+          },
+          {
+            "full_name": "noise36/pkg-1879",
+            "id": 1923,
+            "score": 0.12702175311279143
+          },
+          {
+            "full_name": "noise86/pkg-1929",
+            "id": 1973,
+            "score": 0.12312800780916426
+          },
+          {
+            "full_name": "noise21/pkg-3319",
+            "id": 3363,
+            "score": 0.1165981551797741
+          },
+          {
+            "full_name": "noise96/pkg-1939",
+            "id": 1983,
+            "score": 0.11627452024083929
+          },
+          {
+            "full_name": "noise45/pkg-239",
+            "id": 283,
+            "score": 0.11431420934306796
+          }
+        ]
+      }
+    },
+    {
+      "id": "download-manager",
+      "query": "torrent and normal download manager",
+      "notes": null,
+      "relevant": [
+        "dl/motrix-like",
+        "dl/aria-desktop"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.3881630301475525
+          },
+          {
+            "full_name": "dl/aria-desktop",
+            "id": 9,
+            "score": 0.28049933910369873
+          },
+          {
+            "full_name": "dev/turbo-cache-proxy",
+            "id": 26,
+            "score": 0.1733488291501999
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.16804827749729156
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.15729361772537231
+          },
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": 0.1598103642463684
+          },
+          {
+            "full_name": "archive/gh-mirror",
+            "id": 16,
+            "score": 0.14292335510253906
+          },
+          {
+            "full_name": "noise70/pkg-3853",
+            "id": 3897,
+            "score": 0.1478015035390854
+          },
+          {
+            "full_name": "notes/ink-local",
+            "id": 18,
+            "score": 0.12982328236103058
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.13522149622440338
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.65
+          },
+          {
+            "full_name": "dl/aria-desktop",
+            "id": 9,
+            "score": 0.42217493355249236
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.17906717113628917
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.16951888078645985
+          },
+          {
+            "full_name": "dev/turbo-cache-proxy",
+            "id": 26,
+            "score": 0.16459323790323627
+          },
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": 0.1609562561995997
+          },
+          {
+            "full_name": "archive/gh-mirror",
+            "id": 16,
+            "score": 0.13532735964156234
+          },
+          {
+            "full_name": "notes/ink-local",
+            "id": 18,
+            "score": 0.13255540706523303
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.12174964610440059
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.12013016216272586
+          }
+        ]
+      }
+    },
+    {
+      "id": "net-monitor",
+      "query": "self-hosted network monitoring",
+      "notes": "meaning: keep an eye on machines",
+      "relevant": [
+        "ops/infra-dashboard",
+        "ops/host-pulse"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.2890971899032593
+          },
+          {
+            "full_name": "ops/infra-dashboard",
+            "id": 10,
+            "score": 0.2664821147918701
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.24636942148208618
+          },
+          {
+            "full_name": "noise20/pkg-3609",
+            "id": 3653,
+            "score": 0.17298853397369385
+          },
+          {
+            "full_name": "noise79/pkg-2019",
+            "id": 2063,
+            "score": 0.16020087897777557
+          },
+          {
+            "full_name": "noise3/pkg-1749",
+            "id": 1793,
+            "score": 0.15748819708824158
+          },
+          {
+            "full_name": "web/feed-nest",
+            "id": 31,
+            "score": 0.169752836227417
+          },
+          {
+            "full_name": "noise59/pkg-1999",
+            "id": 2043,
+            "score": 0.15437795221805573
+          },
+          {
+            "full_name": "noise89/pkg-8819",
+            "id": 8863,
+            "score": 0.15289698541164398
+          },
+          {
+            "full_name": "noise8/pkg-6119",
+            "id": 6163,
+            "score": 0.1520417183637619
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.6277777777777778
+          },
+          {
+            "full_name": "ops/infra-dashboard",
+            "id": 10,
+            "score": 0.5661679562223619
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.3916120160927231
+          },
+          {
+            "full_name": "noise20/pkg-3609",
+            "id": 3653,
+            "score": 0.2084845732318472
+          },
+          {
+            "full_name": "noise79/pkg-2019",
+            "id": 2063,
+            "score": 0.17219300059545767
+          },
+          {
+            "full_name": "noise3/pkg-1749",
+            "id": 1793,
+            "score": 0.16213733348853332
+          },
+          {
+            "full_name": "noise59/pkg-1999",
+            "id": 2043,
+            "score": 0.15060793626865476
+          },
+          {
+            "full_name": "noise89/pkg-8819",
+            "id": 8863,
+            "score": 0.14511812588611867
+          },
+          {
+            "full_name": "noise8/pkg-6119",
+            "id": 6163,
+            "score": 0.1419477280764066
+          },
+          {
+            "full_name": "noise69/pkg-2009",
+            "id": 2053,
+            "score": 0.1394747006818387
+          }
+        ]
+      }
+    },
+    {
+      "id": "mc-economy",
+      "query": "Minecraft server economy tracker",
+      "notes": null,
+      "relevant": [
+        "mc/vault-ledger",
+        "mc/shop-stats"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "mc/shop-stats",
+            "id": 15,
+            "score": 0.37377941608428955
+          },
+          {
+            "full_name": "mc/vault-ledger",
+            "id": 14,
+            "score": 0.3557051122188568
+          },
+          {
+            "full_name": "ops/infra-dashboard",
+            "id": 10,
+            "score": 0.16287943720817566
+          },
+          {
+            "full_name": "noise95/pkg-289",
+            "id": 333,
+            "score": 0.14906831085681915
+          },
+          {
+            "full_name": "noise36/pkg-1879",
+            "id": 1923,
+            "score": 0.14157800376415253
+          },
+          {
+            "full_name": "noise89/pkg-8819",
+            "id": 8863,
+            "score": 0.14093226194381714
+          },
+          {
+            "full_name": "noise42/pkg-4019",
+            "id": 4063,
+            "score": 0.1393970549106598
+          },
+          {
+            "full_name": "noise3/pkg-1749",
+            "id": 1793,
+            "score": 0.13769057393074036
+          },
+          {
+            "full_name": "noise52/pkg-4029",
+            "id": 4073,
+            "score": 0.13711942732334137
+          },
+          {
+            "full_name": "noise63/pkg-1809",
+            "id": 1853,
+            "score": 0.1385623961687088
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "mc/vault-ledger",
+            "id": 14,
+            "score": 0.6106617702448989
+          },
+          {
+            "full_name": "mc/shop-stats",
+            "id": 15,
+            "score": 0.6000000000000001
+          },
+          {
+            "full_name": "ops/infra-dashboard",
+            "id": 10,
+            "score": 0.18098194397176484
+          },
+          {
+            "full_name": "noise95/pkg-289",
+            "id": 333,
+            "score": 0.13592240388483123
+          },
+          {
+            "full_name": "noise36/pkg-1879",
+            "id": 1923,
+            "score": 0.13461995464300375
+          },
+          {
+            "full_name": "noise89/pkg-8819",
+            "id": 8863,
+            "score": 0.13321451517048205
+          },
+          {
+            "full_name": "noise42/pkg-4019",
+            "id": 4063,
+            "score": 0.1298731789042764
+          },
+          {
+            "full_name": "noise3/pkg-1749",
+            "id": 1793,
+            "score": 0.12615906956094688
+          },
+          {
+            "full_name": "noise52/pkg-4029",
+            "id": 4073,
+            "score": 0.12491598453631819
+          },
+          {
+            "full_name": "noise8/pkg-6119",
+            "id": 6163,
+            "score": 0.12220473660684157
+          }
+        ]
+      }
+    },
+    {
+      "id": "gh-backup",
+      "query": "GitHub backup/archive utility",
+      "notes": null,
+      "relevant": [
+        "archive/gh-mirror",
+        "archive/repo-vault"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "archive/gh-mirror",
+            "id": 16,
+            "score": 0.4427228271961212
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.39644235372543335
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.2947712242603302
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.26118189096450806
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.18747921288013458
+          },
+          {
+            "full_name": "notes/markdown-vault",
+            "id": 19,
+            "score": 0.19415512681007385
+          },
+          {
+            "full_name": "sec/vaultwarden-tools",
+            "id": 38,
+            "score": 0.18677586317062378
+          },
+          {
+            "full_name": "dev/remote-cache",
+            "id": 27,
+            "score": 0.19564443826675415
+          },
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": 0.18364743888378143
+          },
+          {
+            "full_name": "noise20/pkg-3609",
+            "id": 3653,
+            "score": 0.17653103172779083
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "archive/gh-mirror",
+            "id": 16,
+            "score": 0.6214285714285714
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.5185880437000574
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.35261807657890804
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.3026326864308383
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.13303575793382721
+          },
+          {
+            "full_name": "sec/vaultwarden-tools",
+            "id": 38,
+            "score": 0.12454708477743631
+          },
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": 0.11856103908007083
+          },
+          {
+            "full_name": "notes/markdown-vault",
+            "id": 19,
+            "score": 0.11723827630571146
+          },
+          {
+            "full_name": "dev/remote-cache",
+            "id": 27,
+            "score": 0.10580226705354827
+          },
+          {
+            "full_name": "noise20/pkg-3609",
+            "id": 3653,
+            "score": 0.10494423568930841
+          }
+        ]
+      }
+    },
+    {
+      "id": "local-notes",
+      "query": "local-first note application",
+      "notes": null,
+      "relevant": [
+        "notes/ink-local",
+        "notes/markdown-vault"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "notes/ink-local",
+            "id": 18,
+            "score": 0.315066397190094
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.23459306359291077
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.23458243906497955
+          },
+          {
+            "full_name": "ai/llamacpp-ui",
+            "id": 40,
+            "score": 0.22451049089431763
+          },
+          {
+            "full_name": "notes/markdown-vault",
+            "id": 19,
+            "score": 0.20063449442386627
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.18441417813301086
+          },
+          {
+            "full_name": "ai/local-infer",
+            "id": 41,
+            "score": 0.16063283383846283
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.1408633142709732
+          },
+          {
+            "full_name": "ops/k3s-helper",
+            "id": 12,
+            "score": 0.14193417131900787
+          },
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.12848612666130066
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "notes/ink-local",
+            "id": 18,
+            "score": 0.6425925925925926
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.4146423333173456
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.4072062976242283
+          },
+          {
+            "full_name": "ai/llamacpp-ui",
+            "id": 40,
+            "score": 0.4059928897602576
+          },
+          {
+            "full_name": "notes/markdown-vault",
+            "id": 19,
+            "score": 0.30832457109951383
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.24609965432157171
+          },
+          {
+            "full_name": "ai/local-infer",
+            "id": 41,
+            "score": 0.21164934332341145
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.17689796992858298
+          },
+          {
+            "full_name": "ops/k3s-helper",
+            "id": 12,
+            "score": 0.16126492563763548
+          },
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.14354706102522624
+          }
+        ]
+      }
+    },
+    {
+      "id": "term-fm",
+      "query": "terminal file manager",
+      "notes": null,
+      "relevant": [
+        "cli/ranger-like",
+        "cli/yazi-twin"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": -28.834825195323333
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": 0.3818468153476715
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.3706151247024536
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.23905439674854279
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.23341353237628937
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.2139335423707962
+          },
+          {
+            "full_name": "dl/aria-desktop",
+            "id": 9,
+            "score": 0.20472939312458038
+          },
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.19951671361923218
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.19546225666999817
+          },
+          {
+            "full_name": "noise61/pkg-9276",
+            "id": 9320,
+            "score": 0.1930706799030304
+          },
+          {
+            "full_name": "noise54/pkg-5486",
+            "id": 5530,
+            "score": 0.18987664580345154
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": 0.9791666666666667
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.6039281564484413
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.26782834976851905
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.26139359342690927
+          },
+          {
+            "full_name": "dl/aria-desktop",
+            "id": 9,
+            "score": 0.17796362369836888
+          },
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.1726498786228718
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.1645605869436267
+          },
+          {
+            "full_name": "noise61/pkg-9276",
+            "id": 9320,
+            "score": 0.1391071451539562
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.13703508984971707
+          },
+          {
+            "full_name": "noise54/pkg-5486",
+            "id": 5530,
+            "score": 0.13074499019071548
+          }
+        ]
+      }
+    },
+    {
+      "id": "pe-re",
+      "query": "reverse engineering PE tool",
+      "notes": null,
+      "relevant": [
+        "win/pe-inspector",
+        "re/importscope"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.39763128757476807
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.3096807897090912
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.2410409301519394
+          },
+          {
+            "full_name": "noise22/pkg-410",
+            "id": 454,
+            "score": 0.21442018449306488
+          },
+          {
+            "full_name": "dev/dep-graph",
+            "id": 24,
+            "score": 0.20638059079647064
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.20108339190483093
+          },
+          {
+            "full_name": "noise5/pkg-3012",
+            "id": 3056,
+            "score": 0.20163284242153168
+          },
+          {
+            "full_name": "noise47/pkg-1987",
+            "id": 2031,
+            "score": 0.19783525168895721
+          },
+          {
+            "full_name": "noise33/pkg-4107",
+            "id": 4151,
+            "score": 0.1978268176317215
+          },
+          {
+            "full_name": "win/binary-explain",
+            "id": 6,
+            "score": 0.20295098423957825
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.6205882352941177
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.3279795897332992
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.24294184788926093
+          },
+          {
+            "full_name": "noise22/pkg-410",
+            "id": 454,
+            "score": 0.1698586374632815
+          },
+          {
+            "full_name": "dev/dep-graph",
+            "id": 24,
+            "score": 0.15544600704209524
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.15383857405398552
+          },
+          {
+            "full_name": "noise5/pkg-3012",
+            "id": 3056,
+            "score": 0.12581383082153993
+          },
+          {
+            "full_name": "noise47/pkg-1987",
+            "id": 2031,
+            "score": 0.1221096245853153
+          },
+          {
+            "full_name": "noise33/pkg-4107",
+            "id": 4151,
+            "score": 0.12208833382638692
+          },
+          {
+            "full_name": "noise89/pkg-9110",
+            "id": 9154,
+            "score": 0.12127924837670788
+          }
+        ]
+      }
+    },
+    {
+      "id": "dep-viz",
+      "query": "software dependency visualizer",
+      "notes": null,
+      "relevant": [
+        "dev/dep-graph",
+        "dev/module-map"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "dev/dep-graph",
+            "id": 24,
+            "score": 0.5091834664344788
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.41067904233932495
+          },
+          {
+            "full_name": "noise13/pkg-2826",
+            "id": 2870,
+            "score": 0.39108946919441223
+          },
+          {
+            "full_name": "dev/module-map",
+            "id": 25,
+            "score": 0.3951019048690796
+          },
+          {
+            "full_name": "noise86/pkg-2026",
+            "id": 2070,
+            "score": 0.389916330575943
+          },
+          {
+            "full_name": "noise30/pkg-4686",
+            "id": 4730,
+            "score": 0.3879503905773163
+          },
+          {
+            "full_name": "noise15/pkg-2246",
+            "id": 2290,
+            "score": 0.38775309920310974
+          },
+          {
+            "full_name": "noise19/pkg-2056",
+            "id": 2100,
+            "score": 0.38594838976860046
+          },
+          {
+            "full_name": "noise1/pkg-2426",
+            "id": 2470,
+            "score": 0.3859957754611969
+          },
+          {
+            "full_name": "noise92/pkg-286",
+            "id": 330,
+            "score": 0.3860141336917877
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "dev/dep-graph",
+            "id": 24,
+            "score": 0.638888888888889
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.23120912247757908
+          },
+          {
+            "full_name": "noise13/pkg-2826",
+            "id": 2870,
+            "score": 0.13902274315211172
+          },
+          {
+            "full_name": "noise86/pkg-2026",
+            "id": 2070,
+            "score": 0.1341674802302796
+          },
+          {
+            "full_name": "noise30/pkg-4686",
+            "id": 4730,
+            "score": 0.12603105420900187
+          },
+          {
+            "full_name": "noise15/pkg-2246",
+            "id": 2290,
+            "score": 0.12521452538717154
+          },
+          {
+            "full_name": "noise19/pkg-2056",
+            "id": 2100,
+            "score": 0.11774538349370378
+          },
+          {
+            "full_name": "dev/module-map",
+            "id": 25,
+            "score": 0.11674010168423865
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.1142759333680188
+          },
+          {
+            "full_name": "noise1/pkg-2426",
+            "id": 2470,
+            "score": 0.11238594286665429
+          }
+        ]
+      }
+    },
+    {
+      "id": "ssg",
+      "query": "static site generator",
+      "notes": null,
+      "relevant": [
+        "web/tiny-ssg",
+        "web/md-site-kit"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "web/tiny-ssg",
+            "id": 28,
+            "score": -13.238902031493307
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "web/md-site-kit",
+            "id": 29,
+            "score": 0.37745967507362366
+          },
+          {
+            "full_name": "web/tiny-ssg",
+            "id": 28,
+            "score": 0.35028794407844543
+          },
+          {
+            "full_name": "noise16/pkg-2538",
+            "id": 2582,
+            "score": 0.28686267137527466
+          },
+          {
+            "full_name": "noise85/pkg-2898",
+            "id": 2942,
+            "score": 0.28586235642433167
+          },
+          {
+            "full_name": "noise22/pkg-2738",
+            "id": 2782,
+            "score": 0.28503718972206116
+          },
+          {
+            "full_name": "noise90/pkg-478",
+            "id": 522,
+            "score": 0.2859088182449341
+          },
+          {
+            "full_name": "noise58/pkg-1998",
+            "id": 2042,
+            "score": 0.2830567955970764
+          },
+          {
+            "full_name": "noise76/pkg-3568",
+            "id": 3612,
+            "score": 0.2826639413833618
+          },
+          {
+            "full_name": "noise1/pkg-98",
+            "id": 142,
+            "score": 0.283006489276886
+          },
+          {
+            "full_name": "noise88/pkg-9788",
+            "id": 9832,
+            "score": 0.28145188093185425
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "web/tiny-ssg",
+            "id": 28,
+            "score": 0.8502987996456851
+          },
+          {
+            "full_name": "web/md-site-kit",
+            "id": 29,
+            "score": 0.65
+          },
+          {
+            "full_name": "noise16/pkg-2538",
+            "id": 2582,
+            "score": 0.17047380958936484
+          },
+          {
+            "full_name": "noise85/pkg-2898",
+            "id": 2942,
+            "score": 0.16517918396097625
+          },
+          {
+            "full_name": "noise22/pkg-2738",
+            "id": 2782,
+            "score": 0.1549292578215628
+          },
+          {
+            "full_name": "noise58/pkg-1998",
+            "id": 2042,
+            "score": 0.15032946663546234
+          },
+          {
+            "full_name": "noise90/pkg-478",
+            "id": 522,
+            "score": 0.14777804563065872
+          },
+          {
+            "full_name": "noise76/pkg-3568",
+            "id": 3612,
+            "score": 0.1364853996616922
+          },
+          {
+            "full_name": "noise88/pkg-9788",
+            "id": 9832,
+            "score": 0.13595236680496717
+          },
+          {
+            "full_name": "noise25/pkg-2838",
+            "id": 2882,
+            "score": 0.13529519063319545
+          }
+        ]
+      }
+    },
+    {
+      "id": "photo-manager",
+      "query": "self-hosted photo manager",
+      "notes": null,
+      "relevant": [
+        "media/photoprism-lite",
+        "media/gallery-home"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "media/photoprism-lite",
+            "id": 32,
+            "score": 0.4611593782901764
+          },
+          {
+            "full_name": "media/gallery-home",
+            "id": 33,
+            "score": 0.2560255527496338
+          },
+          {
+            "full_name": "noise18/pkg-1958",
+            "id": 2002,
+            "score": 0.21885010600090027
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.20947112143039703
+          },
+          {
+            "full_name": "noise35/pkg-1878",
+            "id": 1922,
+            "score": 0.1967347413301468
+          },
+          {
+            "full_name": "noise85/pkg-1928",
+            "id": 1972,
+            "score": 0.19532962143421173
+          },
+          {
+            "full_name": "noise68/pkg-2008",
+            "id": 2052,
+            "score": 0.19405920803546906
+          },
+          {
+            "full_name": "noise28/pkg-1968",
+            "id": 2012,
+            "score": 0.19172930717468262
+          },
+          {
+            "full_name": "noise65/pkg-1908",
+            "id": 1952,
+            "score": 0.19156047701835632
+          },
+          {
+            "full_name": "noise6/pkg-6408",
+            "id": 6452,
+            "score": 0.18863049149513245
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "media/photoprism-lite",
+            "id": 32,
+            "score": 0.65
+          },
+          {
+            "full_name": "media/gallery-home",
+            "id": 33,
+            "score": 0.2301183221878838
+          },
+          {
+            "full_name": "noise18/pkg-1958",
+            "id": 2002,
+            "score": 0.19339930136599276
+          },
+          {
+            "full_name": "noise35/pkg-1878",
+            "id": 1922,
+            "score": 0.15172573739623796
+          },
+          {
+            "full_name": "noise85/pkg-1928",
+            "id": 1972,
+            "score": 0.14907796944213939
+          },
+          {
+            "full_name": "noise68/pkg-2008",
+            "id": 2052,
+            "score": 0.14668403857874512
+          },
+          {
+            "full_name": "noise28/pkg-1968",
+            "id": 2012,
+            "score": 0.14229363968590775
+          },
+          {
+            "full_name": "noise65/pkg-1908",
+            "id": 1952,
+            "score": 0.1419755009428016
+          },
+          {
+            "full_name": "noise6/pkg-6408",
+            "id": 6452,
+            "score": 0.1364543195853899
+          },
+          {
+            "full_name": "noise16/pkg-2538",
+            "id": 2582,
+            "score": 0.1331636474245695
+          }
+        ]
+      }
+    },
+    {
+      "id": "discord-voice",
+      "query": "Discord voice bot",
+      "notes": "talks back in a voice channel",
+      "relevant": [
+        "voice/whisper-discord-bot",
+        "voice/discord-tts"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": -36.65497975789051
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": 0.5809963345527649
+          },
+          {
+            "full_name": "voice/discord-tts",
+            "id": 4,
+            "score": 0.457855224609375
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.4304931163787842
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.3202800452709198
+          },
+          {
+            "full_name": "noise15/pkg-2537",
+            "id": 2581,
+            "score": 0.2278132140636444
+          },
+          {
+            "full_name": "noise1/pkg-2717",
+            "id": 2761,
+            "score": 0.22390645742416382
+          },
+          {
+            "full_name": "noise60/pkg-3067",
+            "id": 3111,
+            "score": 0.21805600821971893
+          },
+          {
+            "full_name": "noise21/pkg-2737",
+            "id": 2781,
+            "score": 0.2195497304201126
+          },
+          {
+            "full_name": "noise2/pkg-4367",
+            "id": 4411,
+            "score": 0.217278853058815
+          },
+          {
+            "full_name": "noise50/pkg-3057",
+            "id": 3101,
+            "score": 0.2172643393278122
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": 1
+          },
+          {
+            "full_name": "voice/discord-tts",
+            "id": 4,
+            "score": 0.4353260285495767
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.4103757280266997
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.2618590220446935
+          },
+          {
+            "full_name": "noise15/pkg-2537",
+            "id": 2581,
+            "score": 0.12926580488549688
+          },
+          {
+            "full_name": "noise1/pkg-2717",
+            "id": 2761,
+            "score": 0.11890178934804708
+          },
+          {
+            "full_name": "noise60/pkg-3067",
+            "id": 3111,
+            "score": 0.11527441687707124
+          },
+          {
+            "full_name": "noise2/pkg-4367",
+            "id": 4411,
+            "score": 0.11416001183397922
+          },
+          {
+            "full_name": "noise50/pkg-3057",
+            "id": 3101,
+            "score": 0.11413919980590906
+          },
+          {
+            "full_name": "noise21/pkg-2737",
+            "id": 2781,
+            "score": 0.11265444159957091
+          }
+        ]
+      }
+    },
+    {
+      "id": "db-migrate",
+      "query": "database migration tool",
+      "notes": null,
+      "relevant": [
+        "db/schema-evolve",
+        "db/flyway-lite"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "db/flyway-lite",
+            "id": 35,
+            "score": 0.4996195435523987
+          },
+          {
+            "full_name": "db/schema-evolve",
+            "id": 34,
+            "score": 0.44555050134658813
+          },
+          {
+            "full_name": "data/sheet-to-sql",
+            "id": 43,
+            "score": 0.3461100161075592
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.3452678918838501
+          },
+          {
+            "full_name": "archive/gh-mirror",
+            "id": 16,
+            "score": 0.2868402600288391
+          },
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.27806177735328674
+          },
+          {
+            "full_name": "noise5/pkg-3012",
+            "id": 3056,
+            "score": 0.2673635184764862
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.25262895226478577
+          },
+          {
+            "full_name": "noise32/pkg-1584",
+            "id": 1628,
+            "score": 0.2573194205760956
+          },
+          {
+            "full_name": "noise33/pkg-4107",
+            "id": 4151,
+            "score": 0.252424031496048
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "db/flyway-lite",
+            "id": 35,
+            "score": 0.5911764705882354
+          },
+          {
+            "full_name": "db/schema-evolve",
+            "id": 34,
+            "score": 0.5003981865909737
+          },
+          {
+            "full_name": "data/sheet-to-sql",
+            "id": 43,
+            "score": 0.2725233843230858
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.22368422077597755
+          },
+          {
+            "full_name": "archive/gh-mirror",
+            "id": 16,
+            "score": 0.17663259197712006
+          },
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.15219159464366494
+          },
+          {
+            "full_name": "noise5/pkg-3012",
+            "id": 3056,
+            "score": 0.12957433953829034
+          },
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.1278356668959295
+          },
+          {
+            "full_name": "noise32/pkg-1584",
+            "id": 1628,
+            "score": 0.11422240313084053
+          },
+          {
+            "full_name": "noise33/pkg-4107",
+            "id": 4151,
+            "score": 0.10387303086956523
+          }
+        ]
+      }
+    },
+    {
+      "id": "pcap",
+      "query": "network packet analyzer",
+      "notes": null,
+      "relevant": [
+        "net/pcap-viewer",
+        "net/wire-glance"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.3409064710140228
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.333770751953125
+          },
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.24758657813072205
+          },
+          {
+            "full_name": "noise75/pkg-8029",
+            "id": 8073,
+            "score": 0.20241065323352814
+          },
+          {
+            "full_name": "noise59/pkg-1999",
+            "id": 2043,
+            "score": 0.19425036013126373
+          },
+          {
+            "full_name": "noise60/pkg-1709",
+            "id": 1753,
+            "score": 0.19310183823108673
+          },
+          {
+            "full_name": "noise79/pkg-2019",
+            "id": 2063,
+            "score": 0.1897754818201065
+          },
+          {
+            "full_name": "noise68/pkg-8022",
+            "id": 8066,
+            "score": 0.19003137946128845
+          },
+          {
+            "full_name": "noise26/pkg-802",
+            "id": 846,
+            "score": 0.1907312273979187
+          },
+          {
+            "full_name": "noise90/pkg-1739",
+            "id": 1783,
+            "score": 0.1857256293296814
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.6100000000000001
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.5720539641772164
+          },
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.31991509099447035
+          },
+          {
+            "full_name": "noise75/pkg-8029",
+            "id": 8073,
+            "score": 0.17964474302088224
+          },
+          {
+            "full_name": "noise59/pkg-1999",
+            "id": 2043,
+            "score": 0.15840402694854666
+          },
+          {
+            "full_name": "noise60/pkg-1709",
+            "id": 1753,
+            "score": 0.15471077271028394
+          },
+          {
+            "full_name": "noise79/pkg-2019",
+            "id": 2063,
+            "score": 0.14401434636357535
+          },
+          {
+            "full_name": "noise68/pkg-8022",
+            "id": 8066,
+            "score": 0.1398372257947042
+          },
+          {
+            "full_name": "noise26/pkg-802",
+            "id": 846,
+            "score": 0.13208769777760737
+          },
+          {
+            "full_name": "noise90/pkg-1739",
+            "id": 1783,
+            "score": 0.1309914036819458
+          }
+        ]
+      }
+    },
+    {
+      "id": "meaning-voice-channel",
+      "query": "program that talks back to people in a voice channel",
+      "notes": "strong meaning query",
+      "relevant": [
+        "voice/whisper-discord-bot",
+        "voice/discord-tts"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 0.3333333333333333,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.4449731707572937
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.35384079813957214
+          },
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": 0.3149864971637726
+          },
+          {
+            "full_name": "voice/discord-tts",
+            "id": 4,
+            "score": 0.26082757115364075
+          },
+          {
+            "full_name": "noise81/pkg-5222",
+            "id": 5266,
+            "score": 0.14300860464572906
+          },
+          {
+            "full_name": "noise71/pkg-4242",
+            "id": 4286,
+            "score": 0.14271855354309082
+          },
+          {
+            "full_name": "noise32/pkg-1972",
+            "id": 2016,
+            "score": 0.14015483856201172
+          },
+          {
+            "full_name": "noise7/pkg-3402",
+            "id": 3446,
+            "score": 0.13939417898654938
+          },
+          {
+            "full_name": "noise24/pkg-6232",
+            "id": 6276,
+            "score": 0.14025577902793884
+          },
+          {
+            "full_name": "noise83/pkg-2702",
+            "id": 2746,
+            "score": 0.13981866836547852
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 0.3333333333333333,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.6321428571428571
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.481540336954238
+          },
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": 0.42499985696536025
+          },
+          {
+            "full_name": "voice/discord-tts",
+            "id": 4,
+            "score": 0.30268215608767957
+          },
+          {
+            "full_name": "noise81/pkg-5222",
+            "id": 5266,
+            "score": 0.11660082137926636
+          },
+          {
+            "full_name": "noise71/pkg-4242",
+            "id": 4286,
+            "score": 0.11609875806941478
+          },
+          {
+            "full_name": "noise32/pkg-1972",
+            "id": 2016,
+            "score": 0.11166110133510476
+          },
+          {
+            "full_name": "noise7/pkg-3402",
+            "id": 3446,
+            "score": 0.11034443933777656
+          },
+          {
+            "full_name": "noise24/pkg-6232",
+            "id": 6276,
+            "score": 0.10469296686683967
+          },
+          {
+            "full_name": "noise63/pkg-7532",
+            "id": 7576,
+            "score": 0.10414730411995637
+          }
+        ]
+      }
+    },
+    {
+      "id": "meaning-windows-does",
+      "query": "figure out what a Windows program does",
+      "notes": "strong meaning query",
+      "relevant": [
+        "win/pe-inspector",
+        "win/binary-explain"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/binary-explain",
+            "id": 6,
+            "score": 0.5085256695747375
+          },
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.3514786958694458
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.30069899559020996
+          },
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.26348361372947693
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.2502392530441284
+          },
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.22947680950164795
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.22980932891368866
+          },
+          {
+            "full_name": "noise32/pkg-2457",
+            "id": 2501,
+            "score": 0.22830495238304138
+          },
+          {
+            "full_name": "noise74/pkg-1917",
+            "id": 1961,
+            "score": 0.22540971636772156
+          },
+          {
+            "full_name": "noise7/pkg-1947",
+            "id": 1991,
+            "score": 0.22479699552059174
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/binary-explain",
+            "id": 6,
+            "score": 0.6000000000000001
+          },
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.3295188145945311
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.1700055204505845
+          },
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.15196016616437374
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.13885502125260085
+          },
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.13422588433687294
+          },
+          {
+            "full_name": "ai/llamacpp-ui",
+            "id": 40,
+            "score": 0.11304284224341522
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.11261164730969789
+          },
+          {
+            "full_name": "noise32/pkg-2457",
+            "id": 2501,
+            "score": 0.10986101493970563
+          },
+          {
+            "full_name": "noise74/pkg-1917",
+            "id": 1961,
+            "score": 0.10456730705456627
+          }
+        ]
+      }
+    },
+    {
+      "id": "meaning-network-eye",
+      "query": "keep an eye on machines on my network",
+      "notes": "strong meaning query",
+      "relevant": [
+        "ops/infra-dashboard",
+        "ops/host-pulse"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.22230210900306702
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.19274020195007324
+          },
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.1394835263490677
+          },
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.10570184141397476
+          },
+          {
+            "full_name": "noise55/pkg-3547",
+            "id": 3591,
+            "score": 0.09843068569898605
+          },
+          {
+            "full_name": "noise27/pkg-1967",
+            "id": 2011,
+            "score": 0.09179285913705826
+          },
+          {
+            "full_name": "noise54/pkg-2867",
+            "id": 2911,
+            "score": 0.09112516045570374
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.08781027048826218
+          },
+          {
+            "full_name": "web/feed-nest",
+            "id": 31,
+            "score": 0.0932222455739975
+          },
+          {
+            "full_name": "noise93/pkg-2227",
+            "id": 2271,
+            "score": 0.08460534363985062
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.626
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.5010096229237032
+          },
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.3238662620723154
+          },
+          {
+            "full_name": "dl/motrix-like",
+            "id": 8,
+            "score": 0.23588916339427604
+          },
+          {
+            "full_name": "noise27/pkg-1967",
+            "id": 2011,
+            "score": 0.1704908180377607
+          },
+          {
+            "full_name": "noise54/pkg-2867",
+            "id": 2911,
+            "score": 0.16811945761763997
+          },
+          {
+            "full_name": "noise55/pkg-3547",
+            "id": 3591,
+            "score": 0.16606534293071012
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.1563464841411918
+          },
+          {
+            "full_name": "noise93/pkg-2227",
+            "id": 2271,
+            "score": 0.1449640493844124
+          },
+          {
+            "full_name": "web/feed-nest",
+            "id": 31,
+            "score": 0.13956734509445468
+          }
+        ]
+      }
+    },
+    {
+      "id": "container-orch",
+      "query": "lightweight container orchestration",
+      "notes": null,
+      "relevant": [
+        "ops/k3s-helper",
+        "ops/compose-fleet"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "ops/compose-fleet",
+            "id": 13,
+            "score": 0.37173014879226685
+          },
+          {
+            "full_name": "noise5/pkg-9899",
+            "id": 9943,
+            "score": 0.25752145051956177
+          },
+          {
+            "full_name": "noise95/pkg-8049",
+            "id": 8093,
+            "score": 0.2561505436897278
+          },
+          {
+            "full_name": "noise85/pkg-8039",
+            "id": 8083,
+            "score": 0.2528311610221863
+          },
+          {
+            "full_name": "noise65/pkg-8019",
+            "id": 8063,
+            "score": 0.25268763303756714
+          },
+          {
+            "full_name": "noise38/pkg-8089",
+            "id": 8133,
+            "score": 0.25085726380348206
+          },
+          {
+            "full_name": "noise28/pkg-8079",
+            "id": 8123,
+            "score": 0.24891290068626404
+          },
+          {
+            "full_name": "noise16/pkg-8649",
+            "id": 8693,
+            "score": 0.2464805394411087
+          },
+          {
+            "full_name": "noise60/pkg-1709",
+            "id": 1753,
+            "score": 0.24542902410030365
+          },
+          {
+            "full_name": "noise54/pkg-9269",
+            "id": 9313,
+            "score": 0.24370010197162628
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "ops/compose-fleet",
+            "id": 13,
+            "score": 0.6444444444444445
+          },
+          {
+            "full_name": "noise5/pkg-9899",
+            "id": 9943,
+            "score": 0.1927094858223444
+          },
+          {
+            "full_name": "noise95/pkg-8049",
+            "id": 8093,
+            "score": 0.18722038824408868
+          },
+          {
+            "full_name": "noise85/pkg-8039",
+            "id": 8083,
+            "score": 0.1739296124122165
+          },
+          {
+            "full_name": "noise65/pkg-8019",
+            "id": 8063,
+            "score": 0.1677993722058592
+          },
+          {
+            "full_name": "noise38/pkg-8089",
+            "id": 8133,
+            "score": 0.16602614719698583
+          },
+          {
+            "full_name": "noise28/pkg-8079",
+            "id": 8123,
+            "score": 0.1582409362361041
+          },
+          {
+            "full_name": "noise16/pkg-8649",
+            "id": 8693,
+            "score": 0.1485017855296757
+          },
+          {
+            "full_name": "noise60/pkg-1709",
+            "id": 1753,
+            "score": 0.14429152835894532
+          },
+          {
+            "full_name": "noise54/pkg-9269",
+            "id": 9313,
+            "score": 0.13736894101530733
+          }
+        ]
+      }
+    },
+    {
+      "id": "password-mgr",
+      "query": "self-hosted password manager",
+      "notes": null,
+      "relevant": [
+        "sec/vaultwarden-tools",
+        "sec/pass-server"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "sec/vaultwarden-tools",
+            "id": 38,
+            "score": 0.26028338074684143
+          },
+          {
+            "full_name": "sec/pass-server",
+            "id": 39,
+            "score": 0.26171499490737915
+          },
+          {
+            "full_name": "mc/vault-ledger",
+            "id": 14,
+            "score": 0.1143505647778511
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.11718346178531647
+          },
+          {
+            "full_name": "noise20/pkg-3609",
+            "id": 3653,
+            "score": 0.09164883196353912
+          },
+          {
+            "full_name": "ops/infra-dashboard",
+            "id": 10,
+            "score": 0.08848509192466736
+          },
+          {
+            "full_name": "notes/markdown-vault",
+            "id": 19,
+            "score": 0.0940297544002533
+          },
+          {
+            "full_name": "noise79/pkg-2019",
+            "id": 2063,
+            "score": 0.0872608944773674
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.08488844335079193
+          },
+          {
+            "full_name": "noise74/pkg-5409",
+            "id": 5453,
+            "score": 0.07666818797588348
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "sec/vaultwarden-tools",
+            "id": 38,
+            "score": 0.6245684528938806
+          },
+          {
+            "full_name": "sec/pass-server",
+            "id": 39,
+            "score": 0.5785714285714286
+          },
+          {
+            "full_name": "mc/vault-ledger",
+            "id": 14,
+            "score": 0.23795026914048903
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.16729998170503751
+          },
+          {
+            "full_name": "noise20/pkg-3609",
+            "id": 3653,
+            "score": 0.15304475902352627
+          },
+          {
+            "full_name": "ops/infra-dashboard",
+            "id": 10,
+            "score": 0.151341395742766
+          },
+          {
+            "full_name": "noise79/pkg-2019",
+            "id": 2063,
+            "score": 0.14791838363437954
+          },
+          {
+            "full_name": "notes/markdown-vault",
+            "id": 19,
+            "score": 0.13827355021891463
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.12699899358767244
+          },
+          {
+            "full_name": "noise74/pkg-5409",
+            "id": 5453,
+            "score": 0.11829982602740607
+          }
+        ]
+      }
+    },
+    {
+      "id": "ci-cache",
+      "query": "CI build cache for monorepos",
+      "notes": null,
+      "relevant": [
+        "dev/turbo-cache-proxy",
+        "dev/remote-cache"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "dev/remote-cache",
+            "id": 27,
+            "score": -32.474804432554585
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "dev/remote-cache",
+            "id": 27,
+            "score": 0.41097840666770935
+          },
+          {
+            "full_name": "dev/turbo-cache-proxy",
+            "id": 26,
+            "score": 0.3841315805912018
+          },
+          {
+            "full_name": "dev/module-map",
+            "id": 25,
+            "score": 0.2553345859050751
+          },
+          {
+            "full_name": "noise76/pkg-3859",
+            "id": 3903,
+            "score": 0.25043174624443054
+          },
+          {
+            "full_name": "noise19/pkg-6809",
+            "id": 6853,
+            "score": 0.24200916290283203
+          },
+          {
+            "full_name": "noise62/pkg-4039",
+            "id": 4083,
+            "score": 0.23646609485149384
+          },
+          {
+            "full_name": "noise77/pkg-3569",
+            "id": 3613,
+            "score": 0.23156140744686127
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.22664543986320496
+          },
+          {
+            "full_name": "noise94/pkg-2519",
+            "id": 2563,
+            "score": 0.2279650717973709
+          },
+          {
+            "full_name": "noise43/pkg-7609",
+            "id": 7653,
+            "score": 0.22519870102405548
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "dev/remote-cache",
+            "id": 27,
+            "score": 0.9555555555555556
+          },
+          {
+            "full_name": "dev/turbo-cache-proxy",
+            "id": 26,
+            "score": 0.5412227207678468
+          },
+          {
+            "full_name": "noise76/pkg-3859",
+            "id": 3903,
+            "score": 0.16550444999745076
+          },
+          {
+            "full_name": "dev/module-map",
+            "id": 25,
+            "score": 0.16261555985655105
+          },
+          {
+            "full_name": "noise19/pkg-6809",
+            "id": 6853,
+            "score": 0.15294673261684308
+          },
+          {
+            "full_name": "noise62/pkg-4039",
+            "id": 4083,
+            "score": 0.14848092133918156
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.13199439533981955
+          },
+          {
+            "full_name": "noise94/pkg-2519",
+            "id": 2563,
+            "score": 0.12459166450292977
+          },
+          {
+            "full_name": "noise77/pkg-3569",
+            "id": 3613,
+            "score": 0.12358684124130001
+          },
+          {
+            "full_name": "noise43/pkg-7609",
+            "id": 7653,
+            "score": 0.11681771288707321
+          }
+        ]
+      }
+    },
+    {
+      "id": "llm-local",
+      "query": "run language models locally on CPU",
+      "notes": null,
+      "relevant": [
+        "ai/llamacpp-ui",
+        "ai/local-infer"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "ai/local-infer",
+            "id": 41,
+            "score": 0.3832460939884186
+          },
+          {
+            "full_name": "ai/llamacpp-ui",
+            "id": 40,
+            "score": 0.30086150765419006
+          },
+          {
+            "full_name": "dev/turbo-cache-proxy",
+            "id": 26,
+            "score": 0.2594917118549347
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.2501562833786011
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.24088749289512634
+          },
+          {
+            "full_name": "noise38/pkg-8089",
+            "id": 8133,
+            "score": 0.22233985364437103
+          },
+          {
+            "full_name": "noise28/pkg-8079",
+            "id": 8123,
+            "score": 0.22231581807136536
+          },
+          {
+            "full_name": "noise69/pkg-2009",
+            "id": 2053,
+            "score": 0.2217303365468979
+          },
+          {
+            "full_name": "noise19/pkg-6809",
+            "id": 6853,
+            "score": 0.2228274643421173
+          },
+          {
+            "full_name": "noise75/pkg-8029",
+            "id": 8073,
+            "score": 0.22186675667762756
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "ai/local-infer",
+            "id": 41,
+            "score": 0.6214285714285714
+          },
+          {
+            "full_name": "ai/llamacpp-ui",
+            "id": 40,
+            "score": 0.3925519589912537
+          },
+          {
+            "full_name": "dev/turbo-cache-proxy",
+            "id": 26,
+            "score": 0.22041610807285372
+          },
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.21029094274234916
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.17180258950146243
+          },
+          {
+            "full_name": "noise38/pkg-8089",
+            "id": 8133,
+            "score": 0.12336587991710013
+          },
+          {
+            "full_name": "noise28/pkg-8079",
+            "id": 8123,
+            "score": 0.123290769857559
+          },
+          {
+            "full_name": "noise69/pkg-2009",
+            "id": 2053,
+            "score": 0.12146116703708167
+          },
+          {
+            "full_name": "noise75/pkg-8029",
+            "id": 8073,
+            "score": 0.11712556890574038
+          },
+          {
+            "full_name": "noise52/pkg-4029",
+            "id": 4073,
+            "score": 0.1166578018964464
+          }
+        ]
+      }
+    },
+    {
+      "id": "rss-reader",
+      "query": "self-hosted RSS feed reader",
+      "notes": null,
+      "relevant": [
+        "web/miniflux-tools",
+        "web/feed-nest"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": -33.864049848499164
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "web/feed-nest",
+            "id": 31,
+            "score": 0.5141646265983582
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.49499648809432983
+          },
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.2221231907606125
+          },
+          {
+            "full_name": "noise81/pkg-1924",
+            "id": 1968,
+            "score": 0.2080022096633911
+          },
+          {
+            "full_name": "noise78/pkg-1824",
+            "id": 1868,
+            "score": 0.2095639854669571
+          },
+          {
+            "full_name": "noise61/pkg-1904",
+            "id": 1948,
+            "score": 0.1945914626121521
+          },
+          {
+            "full_name": "noise82/pkg-1634",
+            "id": 1678,
+            "score": 0.18969307839870453
+          },
+          {
+            "full_name": "noise8/pkg-1754",
+            "id": 1798,
+            "score": 0.18794113397598267
+          },
+          {
+            "full_name": "noise89/pkg-4454",
+            "id": 4498,
+            "score": 0.1938157081604004
+          },
+          {
+            "full_name": "noise31/pkg-1874",
+            "id": 1918,
+            "score": 0.1858084350824356
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.8785887059859413
+          },
+          {
+            "full_name": "web/feed-nest",
+            "id": 31,
+            "score": 0.56
+          },
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.15142460763942012
+          },
+          {
+            "full_name": "noise81/pkg-1924",
+            "id": 1968,
+            "score": 0.14828421302475428
+          },
+          {
+            "full_name": "noise78/pkg-1824",
+            "id": 1868,
+            "score": 0.14084353295764937
+          },
+          {
+            "full_name": "noise61/pkg-1904",
+            "id": 1948,
+            "score": 0.12630769618739363
+          },
+          {
+            "full_name": "noise82/pkg-1634",
+            "id": 1678,
+            "score": 0.11828059503252197
+          },
+          {
+            "full_name": "noise8/pkg-1754",
+            "id": 1798,
+            "score": 0.11540964116567456
+          },
+          {
+            "full_name": "noise31/pkg-1874",
+            "id": 1918,
+            "score": 0.11191473570187141
+          },
+          {
+            "full_name": "noise63/pkg-2294",
+            "id": 2338,
+            "score": 0.10982091315833008
+          }
+        ]
+      }
+    },
+    {
+      "id": "git-tui",
+      "query": "terminal git client with diff review",
+      "notes": null,
+      "relevant": [
+        "cli/lazy-git-twin",
+        "cli/tig-plus"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.4107208847999573
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.3997727632522583
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.27009090781211853
+          },
+          {
+            "full_name": "noise80/pkg-2020",
+            "id": 2064,
+            "score": 0.24416907131671906
+          },
+          {
+            "full_name": "noise95/pkg-5430",
+            "id": 5474,
+            "score": 0.2436298429965973
+          },
+          {
+            "full_name": "noise2/pkg-1360",
+            "id": 1404,
+            "score": 0.2426416128873825
+          },
+          {
+            "full_name": "dev/dep-graph",
+            "id": 24,
+            "score": 0.24175360798835754
+          },
+          {
+            "full_name": "noise18/pkg-5450",
+            "id": 5494,
+            "score": 0.23835396766662598
+          },
+          {
+            "full_name": "noise14/pkg-1760",
+            "id": 1804,
+            "score": 0.23657381534576416
+          },
+          {
+            "full_name": "archive/gh-mirror",
+            "id": 16,
+            "score": 0.24138808250427246
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "cli/lazy-git-twin",
+            "id": 22,
+            "score": 0.65
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.6035123871517429
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.20779119682644948
+          },
+          {
+            "full_name": "noise80/pkg-2020",
+            "id": 2064,
+            "score": 0.16011828103771553
+          },
+          {
+            "full_name": "noise95/pkg-5430",
+            "id": 5474,
+            "score": 0.15853223948794293
+          },
+          {
+            "full_name": "noise2/pkg-1360",
+            "id": 1404,
+            "score": 0.15562554123886535
+          },
+          {
+            "full_name": "noise18/pkg-5450",
+            "id": 5494,
+            "score": 0.14301421646781431
+          },
+          {
+            "full_name": "dev/dep-graph",
+            "id": 24,
+            "score": 0.1387279228418514
+          },
+          {
+            "full_name": "noise14/pkg-1760",
+            "id": 1804,
+            "score": 0.1377782237714859
+          },
+          {
+            "full_name": "noise12/pkg-1370",
+            "id": 1414,
+            "score": 0.1312914378691053
+          }
+        ]
+      }
+    },
+    {
+      "id": "csv-etl",
+      "query": "transform messy CSV into a clean database",
+      "notes": "meaning-based ETL",
+      "relevant": [
+        "data/csv-normalize",
+        "data/sheet-to-sql"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "data/csv-normalize",
+            "id": 42,
+            "score": 0.5120937824249268
+          },
+          {
+            "full_name": "noise66/pkg-2006",
+            "id": 2050,
+            "score": 0.30571895837783813
+          },
+          {
+            "full_name": "noise93/pkg-1936",
+            "id": 1980,
+            "score": 0.3025389015674591
+          },
+          {
+            "full_name": "noise73/pkg-1916",
+            "id": 1960,
+            "score": 0.3005070686340332
+          },
+          {
+            "full_name": "data/sheet-to-sql",
+            "id": 43,
+            "score": 0.30488041043281555
+          },
+          {
+            "full_name": "noise56/pkg-1996",
+            "id": 2040,
+            "score": 0.29613128304481506
+          },
+          {
+            "full_name": "noise20/pkg-2736",
+            "id": 2780,
+            "score": 0.29724133014678955
+          },
+          {
+            "full_name": "noise36/pkg-1976",
+            "id": 2020,
+            "score": 0.294888973236084
+          },
+          {
+            "full_name": "noise71/pkg-3466",
+            "id": 3510,
+            "score": 0.2929261326789856
+          },
+          {
+            "full_name": "noise86/pkg-9786",
+            "id": 9830,
+            "score": 0.29384201765060425
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "data/csv-normalize",
+            "id": 42,
+            "score": 0.6285714285714286
+          },
+          {
+            "full_name": "noise66/pkg-2006",
+            "id": 2050,
+            "score": 0.16182017415682526
+          },
+          {
+            "full_name": "noise93/pkg-1936",
+            "id": 1980,
+            "score": 0.15429774700501328
+          },
+          {
+            "full_name": "noise73/pkg-1916",
+            "id": 1960,
+            "score": 0.14949144443316487
+          },
+          {
+            "full_name": "noise56/pkg-1996",
+            "id": 2040,
+            "score": 0.13914051981464562
+          },
+          {
+            "full_name": "noise36/pkg-1976",
+            "id": 2020,
+            "score": 0.13620183488120033
+          },
+          {
+            "full_name": "noise20/pkg-2736",
+            "id": 2780,
+            "score": 0.13462348005732375
+          },
+          {
+            "full_name": "noise71/pkg-3466",
+            "id": 3510,
+            "score": 0.1315587338355826
+          },
+          {
+            "full_name": "noise26/pkg-1966",
+            "id": 2010,
+            "score": 0.12879650394324113
+          },
+          {
+            "full_name": "noise83/pkg-1926",
+            "id": 1970,
+            "score": 0.12862646416731524
+          }
+        ]
+      }
+    }
+  ],
+  "weightResults": [
+    {
+      "weights": {
+        "semantic": 0.7,
+        "lexical": 0.25,
+        "quality": 0.05
+      },
+      "macro_recall_at_10": 0.96,
+      "macro_mrr": 0.9733333333333334
+    },
+    {
+      "weights": {
+        "semantic": 0.6,
+        "lexical": 0.3,
+        "quality": 0.1
+      },
+      "macro_recall_at_10": 0.94,
+      "macro_mrr": 0.9733333333333334
+    },
+    {
+      "weights": {
+        "semantic": 0.55,
+        "lexical": 0.35,
+        "quality": 0.1
+      },
+      "macro_recall_at_10": 0.94,
+      "macro_mrr": 0.9733333333333334
+    },
+    {
+      "weights": {
+        "semantic": 0.45,
+        "lexical": 0.45,
+        "quality": 0.1
+      },
+      "macro_recall_at_10": 0.94,
+      "macro_mrr": 0.9733333333333334
+    }
+  ],
+  "filterResults": [
+    {
+      "name": "language=Python",
+      "query": "offline speech recognition wake word",
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "minStars=500",
+      "query": "download manager torrent",
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "maxStars=50",
+      "query": "utility formatting JSON logs",
+      "returned": 11,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "category=networking",
+      "query": "network monitoring dashboard",
+      "returned": 6,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "cluster=ops",
+      "query": "infrastructure monitoring",
+      "returned": 16,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "date range 2024",
+      "query": "local voice assistant",
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "hasReadme",
+      "query": "GitHub backup archive",
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "hasRelease",
+      "query": "GitHub backup archive",
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "archivedOnly",
+      "query": "GitHub backup archive",
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "language=Python soft-max exceeded",
+      "query": "offline speech recognition wake word",
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "no hard filters still hides tombstones",
+      "query": "utility formatting JSON logs",
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    }
+  ],
+  "restartReport": {
+    "indexed_before": 9995,
+    "indexed_after_restart": 9995,
+    "top_ids_before": [
+      3,
+      4,
+      2,
+      1,
+      2581
+    ],
+    "top_ids_after": [
+      3,
+      4,
+      2,
+      1,
+      2581
+    ],
+    "removed_ids": [
+      3,
+      4,
+      2
+    ],
+    "removed_still_absent": true,
+    "contains": {
+      "present": [],
+      "missing": [
+        3,
+        4,
+        2
+      ]
+    }
+  },
+  "bitReport": {
+    "ok": true,
+    "n_docs": 3000,
+    "model": "sentence-transformers/all-MiniLM-L6-v2",
+    "model_load_s": 1.1331176049998248,
+    "embed_docs_s": 7.022396905000278,
+    "docs_per_s": 427.2045628557193,
+    "exact_query_p50_ms": 7.982122000612435,
+    "exact_query_p95_ms": 119.44318820005718,
+    "exact_macro_recall_at_10": 0.98,
+    "exact_macro_mrr": 0.9733333333333333,
+    "bits": [
+      {
+        "bits": 2,
+        "index_bytes": 569907,
+        "build_s": 0.01212355400002707,
+        "search_p50_ms": 0.07631100015714765,
+        "search_p95_ms": 0.10063480058306593,
+        "macro_recall_at_10": 0.96,
+        "macro_mrr": 0.9733333333333333,
+        "mean_overlap_at_10_vs_exact": 0.62
+      },
+      {
+        "bits": 3,
+        "index_bytes": 1058195,
+        "build_s": 0.006390036000084365,
+        "search_p50_ms": 0.08927099952416029,
+        "search_p95_ms": 0.09363879999000346,
+        "macro_recall_at_10": 0.98,
+        "macro_mrr": 0.9733333333333333,
+        "mean_overlap_at_10_vs_exact": 0.6920000000000001
+      },
+      {
+        "bits": 4,
+        "index_bytes": 1058259,
+        "build_s": 0.0059299049999026465,
+        "search_p50_ms": 0.09833500007516704,
+        "search_p95_ms": 0.10778880005091196,
+        "macro_recall_at_10": 0.98,
+        "macro_mrr": 0.9733333333333333,
+        "mean_overlap_at_10_vs_exact": 0.772
+      }
+    ],
+    "sample_names": [
+      "voice/wake-word-local",
+      "voice/offline-speech-kit",
+      "voice/whisper-discord-bot",
+      "voice/discord-tts",
+      "win/pe-inspector"
+    ]
+  },
+  "turbovecMicro": [
+    {
+      "n": 10000,
+      "dim": 384,
+      "bits": 2,
+      "build_seconds": 0.04258988999936264,
+      "vectors_per_sec": 234797.5071114213,
+      "index_bytes": 1326771,
+      "last_sync_at": "2026-08-20T20:40:20Z",
+      "query_p50_ms": 0.03325499983475311,
+      "query_p95_ms": 0.04565400013234466,
+      "query_p99_ms": 0.18598400038172258,
+      "queries_per_sec": 25466.871411106218,
+      "filtered_p50_ms": 0.07459300013579195,
+      "filtered_p95_ms": 0.09861200032901252,
+      "add_p50_ms": 0.004400000761961564,
+      "remove_p50_ms": 0.0010109997674589977
+    },
+    {
+      "n": 10000,
+      "dim": 384,
+      "bits": 3,
+      "build_seconds": 0.023634417999346624,
+      "vectors_per_sec": 423111.75169519515,
+      "index_bytes": 2487827,
+      "last_sync_at": "2026-08-20T20:40:21Z",
+      "query_p50_ms": 0.06904000019858358,
+      "query_p95_ms": 0.08745200011617271,
+      "query_p99_ms": 0.1822479998736526,
+      "queries_per_sec": 13574.972370189142,
+      "filtered_p50_ms": 0.12051900012011174,
+      "filtered_p95_ms": 0.12939299995196052,
+      "add_p50_ms": 0.004343999535194598,
+      "remove_p50_ms": 0.0014320003174361773
+    },
+    {
+      "n": 10000,
+      "dim": 384,
+      "bits": 4,
+      "build_seconds": 0.02424410200001148,
+      "vectors_per_sec": 412471.4538816601,
+      "index_bytes": 2487891,
+      "last_sync_at": "2026-08-20T20:40:22Z",
+      "query_p50_ms": 0.10831899999175221,
+      "query_p95_ms": 0.12471399986679899,
+      "query_p99_ms": 0.20454100013012066,
+      "queries_per_sec": 8895.979972979716,
+      "filtered_p50_ms": 0.15944900042086374,
+      "filtered_p95_ms": 0.18597399957798189,
+      "add_p50_ms": 0.004532999810180627,
+      "remove_p50_ms": 0.0014219995136954822
+    },
+    {
+      "n": 50000,
+      "dim": 384,
+      "bits": 2,
+      "build_seconds": 0.09068614600073488,
+      "vectors_per_sec": 551352.1326575597,
+      "index_bytes": 5646771,
+      "last_sync_at": "2026-08-20T20:40:28Z",
+      "query_p50_ms": 0.10572500013950048,
+      "query_p95_ms": 0.24165400009223958,
+      "query_p99_ms": 0.3149429994664388,
+      "queries_per_sec": 7795.5644408342005,
+      "filtered_p50_ms": 0.4077659996255534,
+      "filtered_p95_ms": 0.5510910004886682,
+      "add_p50_ms": 0.004538000212050974,
+      "remove_p50_ms": 0.0010080002539325505
+    },
+    {
+      "n": 50000,
+      "dim": 384,
+      "bits": 3,
+      "build_seconds": 0.11731375199997274,
+      "vectors_per_sec": 426207.4918549329,
+      "index_bytes": 10647827,
+      "last_sync_at": "2026-08-20T20:40:34Z",
+      "query_p50_ms": 0.17196400040120352,
+      "query_p95_ms": 0.3030090001630015,
+      "query_p99_ms": 0.5388859999584383,
+      "queries_per_sec": 5123.18703188403,
+      "filtered_p50_ms": 0.5031769997003721,
+      "filtered_p95_ms": 0.7587070003864937,
+      "add_p50_ms": 0.004645000444725156,
+      "remove_p50_ms": 0.001463999979023356
+    },
+    {
+      "n": 50000,
+      "dim": 384,
+      "bits": 4,
+      "build_seconds": 0.1111801529996228,
+      "vectors_per_sec": 449720.55399284826,
+      "index_bytes": 10647891,
+      "last_sync_at": "2026-08-20T20:40:40Z",
+      "query_p50_ms": 0.1592900007381104,
+      "query_p95_ms": 0.35368200042285025,
+      "query_p99_ms": 0.41715899988048477,
+      "queries_per_sec": 5317.502773042324,
+      "filtered_p50_ms": 0.4360270004326594,
+      "filtered_p95_ms": 0.5688979999831645,
+      "add_p50_ms": 0.004787000762007665,
+      "remove_p50_ms": 0.0014360002751345746
+    }
+  ],
+  "recommendation": {
+    "verdict": "GO_BEHIND_FEATURE_FLAG",
+    "go": true,
+    "keep_default_weights": true,
+    "default_weights_note": "Do not change defaults from this run alone unless evidence is overwhelming; current 0.55/0.35/0.10 remains recommended unless bestWeight clearly dominates on real production data.",
+    "observed_best_weights": {
+      "weights": {
+        "semantic": 0.7,
+        "lexical": 0.25,
+        "quality": 0.05
+      },
+      "macro_recall_at_10": 0.96,
+      "macro_mrr": 0.9733333333333334
+    },
+    "vector_bits_default": 2,
+    "vector_bits_note": "2-bit remains sensible for production (smallest index, sub-ms queries in microbench). Re-check recall vs exact on full production archive before raising bits.",
+    "railway": {
+      "worker_private": true,
+      "expose_publicly": false,
+      "suggested_resources": "Start with 1 vCPU / 2GB RAM private service for ≤~100k repos; plan 4GB+ and dedicated disk for multi-hundred-thousand archives. Keep indexBatch/remove/rebuild on localhost/private network only.",
+      "disk_estimate_2bit_per_100k": "~12–15 MB TurboVec + SQLite state overhead",
+      "startup": "MiniLM load ~1–5s once cached; cold HF download longer",
+      "query_latency_target": "end-to-end hybrid p95 well under 200ms locally on 10k"
+    },
+    "blockers": [],
+    "limitations": [
+      "Corpus is representative, not a full production dump",
+      "Railway MCP unavailable — resource estimates are extrapolated",
+      "Weight recommendation should be revalidated on live archive traffic"
+    ]
+  }
+}

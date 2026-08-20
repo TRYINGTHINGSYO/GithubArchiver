@@ -71,14 +71,14 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - **2026-08-20** · `feature` · `confirmed` · `permanent` · `open` · `search`, `enrichment`, `sqlite` — [TurboVec semantic search layer behind feature flag](entries/2026-08-20-feature-semantic-search-turbovec.md)
   - edges: references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+- **2026-08-20** · `research` · `confirmed` · `release` · `open` · `search` — [MiniLM + TurboVec production-readiness validation (10k representative corpus)](entries/2026-08-20-validation-semantic-production-readiness.md)
+  - edges: related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:`pr-33`
 - **2026-08-03** · `feature` · `confirmed` · `permanent` · `verified` · `auth`, `admin`, `security` — [Restore ADMIN_PASSWORD admin login beside GitHub OAuth](entries/2026-08-03-feature-admin-password-fallback.md)
   - edges: related:[`feature-auth-user-foundation`](entries/2026-08-02-feature-auth-user-foundation.md)
 - **2026-08-02** · `feature` · `confirmed` · `permanent` · migration 45 · `verified` · `auth`, `security`, `accounts`, `sqlite` — [Auth.js GitHub accounts and centralized access control](entries/2026-08-02-feature-auth-user-foundation.md)
   - edges: related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - **2026-08-01** · `bugfix` · `confirmed` · `permanent` · PR #30 · `2c5b89f` · `open` · `discovery`, `clusters`, `cache` — [Wipe must clear stale cluster cards from materialization and TTL](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
   - edges: caused-by:[`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), related:[`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), related:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), implemented-by:[`pr-30`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
-- **2026-08-01** · `bugfix` · `confirmed` · `release` · PR #28 · migration 44 · `open` · `websites`, `schema`, `collections` — [PR #28 release-blocking hardening for ratings and domains](entries/2026-08-01-bugfix-pr28-release-hardening.md)
-  - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 
 ## Open technical debt
 
@@ -95,6 +95,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - **2026-08-20** · `feature` · `confirmed` · `permanent` · `open` · `search`, `enrichment`, `sqlite` — [TurboVec semantic search layer behind feature flag](entries/2026-08-20-feature-semantic-search-turbovec.md)
   - edges: references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
+- **2026-08-20** · `research` · `confirmed` · `release` · `open` · `search` — [MiniLM + TurboVec production-readiness validation (10k representative corpus)](entries/2026-08-20-validation-semantic-production-readiness.md)
+  - edges: related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:`pr-33`
 - **2026-08-01** · `bugfix` · `confirmed` · `permanent` · PR #30 · `2c5b89f` · `open` · `discovery`, `clusters`, `cache` — [Wipe must clear stale cluster cards from materialization and TTL](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
   - edges: caused-by:[`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), related:[`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), related:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), implemented-by:[`pr-30`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 - **2026-08-01** · `bugfix` · `confirmed` · `release` · PR #28 · migration 44 · `open` · `websites`, `schema`, `collections` — [PR #28 release-blocking hardening for ratings and domains](entries/2026-08-01-bugfix-pr28-release-hardening.md)

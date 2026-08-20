@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-20T20:08:57.037Z",
+  "generatedAt": "2026-08-20T20:52:41.147Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -149,6 +149,39 @@
       "title": "TurboVec semantic search layer behind feature flag",
       "path": "entries/2026-08-20-feature-semantic-search-turbovec.md",
       "summary": "Added an optional TurboVec-powered semantic retrieval layer to GithubArchiver. SQLite remains the source of truth; a localhost Python worker owns compressed vectors (`IdMapIndex`) and embeddings. Search modes: keyword / semantic / hybrid. SQLite migration **047** adds `semantic_index_state`. Default `SEMANTIC_SEARCH_ENABLED=0`."
+    },
+    {
+      "id": "validation-semantic-production-readiness",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-20",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "search"
+      ],
+      "related": [
+        "feature-semantic-search-turbovec",
+        "pr-33"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "feature-semantic-search-turbovec"
+        },
+        {
+          "type": "related",
+          "id": "pr-33"
+        }
+      ],
+      "supersedes": null,
+      "title": "MiniLM + TurboVec production-readiness validation (10k representative corpus)",
+      "path": "entries/2026-08-20-validation-semantic-production-readiness.md",
+      "summary": "Ran production-readiness validation for PR #33 against a 10k GithubArchiver-shaped corpus (no production DB available). MiniLM-L6-v2 + TurboVec 2-bit."
     },
     {
       "id": "feature-admin-password-fallback",
