@@ -171,9 +171,14 @@ similar-repos, and admin stats. It requires matching:
 - `semanticDocumentVersion`
 
 HTTP-healthy is not enough. On mismatch: do not index, do not mix vectors, fall
-back search to keyword/FTS, and report a clear reason. Model/document/dimension/
-bit mismatches mark active rows `stale`. Index `schemaVersion` mismatches require
-`npm run semantic:rebuild` after aligning config.
+back search to keyword/FTS, and report a clear reason.
+
+Stale marking compares **stored row metadata to the app config**
+(`markSemanticStaleForModelOrVersion`) — never a global wipe because the worker
+is wrong. Healthy rows that already match the app stay `indexed` so a corrected
+worker can resume without re-embedding. Index `schemaVersion` mismatches and
+worker-unavailable require no state mutation; schema mismatches need
+`npm run semantic:rebuild`.
 
 ## Model / dimension mismatches
 

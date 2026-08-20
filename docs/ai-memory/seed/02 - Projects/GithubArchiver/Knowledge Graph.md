@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`bugfix-semantic-no-global-stale-on-worker-mismatch`](entries/2026-08-20-bugfix-semantic-no-global-stale-on-worker-mismatch.md) (`bugfix`, `confirmed`, `release`) — Do not globally stale semantic state on worker misconfig
+  - `caused-by` → [`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md), `related` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `implemented-by` → `pr-33`
 - [`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md) (`bugfix`, `confirmed`, `release`) — Semantic eligibility, reconcile cursor, and worker compatibility
   - `caused-by` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `related` → [`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), `implemented-by` → `pr-33`
 - [`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md) (`bugfix`, `confirmed`, `release`) — Harden TurboVec semantic search before merge (BM25, durability, backfill)

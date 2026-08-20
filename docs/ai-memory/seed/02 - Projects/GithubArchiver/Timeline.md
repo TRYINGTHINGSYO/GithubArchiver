@@ -13,6 +13,8 @@ Chronological event log (newest first). Source of truth is `entries/`.
 
 ## 2026-08-20
 
+- **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search` — [Do not globally stale semantic state on worker misconfig](entries/2026-08-20-bugfix-semantic-no-global-stale-on-worker-mismatch.md)
+  - edges: caused-by:[`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:`pr-33`
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `sqlite` — [Semantic eligibility, reconcile cursor, and worker compatibility](entries/2026-08-20-bugfix-semantic-search-release-correctness.md)
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), implemented-by:`pr-33`
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `enrichment`, `sqlite` — [Harden TurboVec semantic search before merge (BM25, durability, backfill)](entries/2026-08-20-bugfix-semantic-search-release-hardening.md)

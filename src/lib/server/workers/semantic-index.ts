@@ -25,7 +25,7 @@ import {
 	markSemanticIndexed,
 	markSemanticIndexing,
 	markSemanticRemoved,
-	markSemanticStaleForIncompatibility,
+	markSemanticStaleForModelOrVersion,
 	upsertSemanticPending
 } from '../semantic/index-state.js';
 import {
@@ -260,8 +260,16 @@ export async function runSemanticIndexCycle(
 	const health = await semanticWorkerHealth();
 	const compat = checkWorkerCompatibility(health, config);
 	if (!compat.ok) {
+		// Never globally stale the corpus because the worker is wrong.
+		// Only mark rows whose *stored* metadata differs from the *app* config
+		// (targeted). Unavailable / schema-only mismatches mutate nothing.
 		if (compatibilityRequiresStaleMark(compat)) {
-			markSemanticStaleForIncompatibility(compat.reason);
+			markSemanticStaleForModelOrVersion({
+				embeddingModel: config.embeddingModel,
+				documentVersion: config.documentVersion,
+				dimensions: config.dimensions,
+				vectorBits: config.vectorBits
+			});
 		}
 		return {
 			skipped: true,

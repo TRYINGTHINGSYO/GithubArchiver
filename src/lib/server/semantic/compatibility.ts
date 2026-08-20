@@ -77,9 +77,15 @@ export function checkWorkerCompatibility(
 }
 
 /**
- * True when a mismatch means existing indexed rows should be marked stale
- * so they re-embed under the app's current document/model settings.
- * Index schemaVersion mismatches require an explicit rebuild instead.
+ * True when a worker↔app mismatch may warrant marking *stale rows whose stored
+ * metadata differs from the app config* via `markSemanticStaleForModelOrVersion`.
+ *
+ * Never use this to justify a global stale of the corpus — a misconfigured
+ * worker must not invalidate healthy rows that already match the app.
+ *
+ * - unavailable (`ok`) → false (no state mutation)
+ * - schemaVersion → false (explicit rebuild required)
+ * - model / dimensions / bits / document version → true (targeted mark only)
  */
 export function compatibilityRequiresStaleMark(
 	result: WorkerCompatibilityFail

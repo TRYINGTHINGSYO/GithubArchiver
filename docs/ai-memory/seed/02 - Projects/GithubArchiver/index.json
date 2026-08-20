@@ -1,9 +1,47 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-20T18:50:04.396Z",
+  "generatedAt": "2026-08-20T20:08:57.037Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "bugfix-semantic-no-global-stale-on-worker-mismatch",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-20",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "search"
+      ],
+      "related": [
+        "bugfix-semantic-search-release-correctness",
+        "feature-semantic-search-turbovec",
+        "pr-33"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "bugfix-semantic-search-release-correctness"
+        },
+        {
+          "type": "related",
+          "id": "feature-semantic-search-turbovec"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-33"
+        }
+      ],
+      "supersedes": null,
+      "title": "Do not globally stale semantic state on worker misconfig",
+      "path": "entries/2026-08-20-bugfix-semantic-no-global-stale-on-worker-mismatch.md",
+      "summary": "Removed `markSemanticStaleForIncompatibility`. On worker compatibility failure:"
+    },
     {
       "id": "bugfix-semantic-search-release-correctness",
       "schema": 1,

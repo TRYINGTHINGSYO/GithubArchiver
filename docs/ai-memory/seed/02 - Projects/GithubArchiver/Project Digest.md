@@ -63,6 +63,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search` — [Do not globally stale semantic state on worker misconfig](entries/2026-08-20-bugfix-semantic-no-global-stale-on-worker-mismatch.md)
+  - edges: caused-by:[`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:`pr-33`
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `sqlite` — [Semantic eligibility, reconcile cursor, and worker compatibility](entries/2026-08-20-bugfix-semantic-search-release-correctness.md)
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), implemented-by:`pr-33`
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `enrichment`, `sqlite` — [Harden TurboVec semantic search before merge (BM25, durability, backfill)](entries/2026-08-20-bugfix-semantic-search-release-hardening.md)
@@ -77,8 +79,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: caused-by:[`feature-durable-discovery-materialization`](entries/2026-07-31-feature-durable-discovery-materialization.md), related:[`feature-cache-hit-metrics`](entries/2026-07-18-feature-cache-hit-metrics.md), related:[`incident-schema26-discovery-tables-missing`](entries/2026-07-31-incident-schema26-discovery-tables-missing.md), implemented-by:[`pr-30`](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)
 - **2026-08-01** · `bugfix` · `confirmed` · `release` · PR #28 · migration 44 · `open` · `websites`, `schema`, `collections` — [PR #28 release-blocking hardening for ratings and domains](entries/2026-08-01-bugfix-pr28-release-hardening.md)
   - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
-- **2026-08-01** · `feature` · `confirmed` · `release` · PR #28 · `cbb7d80` · migration 44 · `open` · `ui`, `websites`, `collections`, `schema` — [Dual discovery redesign — shell, ratings, random websites](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
-  - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
 
 ## Open technical debt
 
@@ -87,6 +87,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search` — [Do not globally stale semantic state on worker misconfig](entries/2026-08-20-bugfix-semantic-no-global-stale-on-worker-mismatch.md)
+  - edges: caused-by:[`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:`pr-33`
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `sqlite` — [Semantic eligibility, reconcile cursor, and worker compatibility](entries/2026-08-20-bugfix-semantic-search-release-correctness.md)
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), implemented-by:`pr-33`
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `enrichment`, `sqlite` — [Harden TurboVec semantic search before merge (BM25, durability, backfill)](entries/2026-08-20-bugfix-semantic-search-release-hardening.md)
