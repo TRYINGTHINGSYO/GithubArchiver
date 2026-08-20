@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-20T21:10:19.847Z",
+  "generatedAt": "2026-08-20T21:22:33.144Z",
   "project": "githubarchiver",
   "entries": [
     {
@@ -41,6 +41,44 @@
       "title": "Prod-readiness harness hardened (latency, worker RSS, filters, noise)",
       "path": "entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md",
       "summary": "Hardened `npm run semantic:prod-readiness` before any production-snapshot gate:"
+    },
+    {
+      "id": "validation-semantic-prod-snapshot-gate-blocked",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-20",
+      "pr": 33,
+      "commit": "pending",
+      "migration": null,
+      "area": [
+        "search"
+      ],
+      "related": [
+        "validation-semantic-prod-readiness-harness-hardening",
+        "feature-semantic-search-turbovec",
+        "pr-33"
+      ],
+      "relationships": [
+        {
+          "type": "related",
+          "id": "validation-semantic-prod-readiness-harness-hardening"
+        },
+        {
+          "type": "related",
+          "id": "feature-semantic-search-turbovec"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-33"
+        }
+      ],
+      "supersedes": null,
+      "title": "Production-snapshot gate blocked — no prod DB copy available",
+      "path": "entries/2026-08-20-validation-semantic-prod-snapshot-gate-blocked.md",
+      "summary": "Implemented `npm run semantic:prod-snapshot-gate` for the PR #33 final gate:"
     },
     {
       "id": "bugfix-semantic-no-global-stale-on-worker-mismatch",

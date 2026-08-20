@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "mode": "safety-proof",
+  "production_gate_passed": false,
+  "source_fingerprint": {
+    "path": "/tmp/semantic-prod-snapshot-safety-14868/fixture-source.db",
+    "size": 20783104,
+    "mtimeMs": 1787260976495.3428,
+    "ino": 1967480
+  },
+  "source_unchanged": true,
+  "work_db": "/tmp/semantic-prod-snapshot-safety-14868/fixture-work.db",
+  "inventory_sample": {
+    "total": 10000,
+    "eligible": 9995,
+    "enriched": 10000
+  },
+  "note": "Copy→work-open→inventory succeeded; source file bytes/mtime/ino unchanged. This does NOT pass the production gate."
+}
