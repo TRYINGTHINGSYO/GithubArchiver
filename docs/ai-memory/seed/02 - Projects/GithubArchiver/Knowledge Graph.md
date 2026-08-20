@@ -11,16 +11,18 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`validation-semantic-prod-readiness-harness-hardening`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md) (`research`, `confirmed`, `release`) — Prod-readiness harness hardened (latency, worker RSS, filters, noise)
+  - `supersedes` → [`validation-semantic-production-readiness`](entries/2026-08-20-validation-semantic-production-readiness.md), `related` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `implemented-by` → [`pr-33`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
 - [`bugfix-semantic-no-global-stale-on-worker-mismatch`](entries/2026-08-20-bugfix-semantic-no-global-stale-on-worker-mismatch.md) (`bugfix`, `confirmed`, `release`) — Do not globally stale semantic state on worker misconfig
-  - `caused-by` → [`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md), `related` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `implemented-by` → `pr-33`
+  - `caused-by` → [`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md), `related` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `implemented-by` → [`pr-33`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
 - [`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md) (`bugfix`, `confirmed`, `release`) — Semantic eligibility, reconcile cursor, and worker compatibility
-  - `caused-by` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `related` → [`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), `implemented-by` → `pr-33`
+  - `caused-by` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `related` → [`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), `implemented-by` → [`pr-33`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
 - [`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md) (`bugfix`, `confirmed`, `release`) — Harden TurboVec semantic search before merge (BM25, durability, backfill)
   - `caused-by` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `related` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md) (`feature`, `confirmed`, `permanent`) — TurboVec semantic search layer behind feature flag
   - `references` → [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), `related` → [`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - [`validation-semantic-production-readiness`](entries/2026-08-20-validation-semantic-production-readiness.md) (`research`, `confirmed`, `release`) — MiniLM + TurboVec production-readiness validation (10k representative corpus)
-  - `related` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `related` → `pr-33`
+  - `related` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `related` → [`pr-33`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
 - [`feature-admin-password-fallback`](entries/2026-08-03-feature-admin-password-fallback.md) (`feature`, `confirmed`, `permanent`) — Restore ADMIN_PASSWORD admin login beside GitHub OAuth
   - `related` → [`feature-auth-user-foundation`](entries/2026-08-02-feature-auth-user-foundation.md)
 - [`feature-auth-user-foundation`](entries/2026-08-02-feature-auth-user-foundation.md) (`feature`, `confirmed`, `permanent`) — Auth.js GitHub accounts and centralized access control

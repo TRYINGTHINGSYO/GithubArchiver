@@ -13,16 +13,18 @@ Chronological event log (newest first). Source of truth is `entries/`.
 
 ## 2026-08-20
 
+- **2026-08-20** · `research` · `confirmed` · `release` · PR #33 · `ff30ae7` · `open` · `search` — [Prod-readiness harness hardened (latency, worker RSS, filters, noise)](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
+  - edges: supersedes:[`validation-semantic-production-readiness`](entries/2026-08-20-validation-semantic-production-readiness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search` — [Do not globally stale semantic state on worker misconfig](entries/2026-08-20-bugfix-semantic-no-global-stale-on-worker-mismatch.md)
-  - edges: caused-by:[`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:`pr-33`
+  - edges: caused-by:[`bugfix-semantic-search-release-correctness`](entries/2026-08-20-bugfix-semantic-search-release-correctness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `sqlite` — [Semantic eligibility, reconcile cursor, and worker compatibility](entries/2026-08-20-bugfix-semantic-search-release-correctness.md)
-  - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), implemented-by:`pr-33`
+  - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `enrichment`, `sqlite` — [Harden TurboVec semantic search before merge (BM25, durability, backfill)](entries/2026-08-20-bugfix-semantic-search-release-hardening.md)
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - **2026-08-20** · `feature` · `confirmed` · `permanent` · `open` · `search`, `enrichment`, `sqlite` — [TurboVec semantic search layer behind feature flag](entries/2026-08-20-feature-semantic-search-turbovec.md)
   - edges: references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - **2026-08-20** · `research` · `confirmed` · `release` · `open` · `search` — [MiniLM + TurboVec production-readiness validation (10k representative corpus)](entries/2026-08-20-validation-semantic-production-readiness.md)
-  - edges: related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:`pr-33`
+  - edges: related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`pr-33`](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
 ## 2026-08-03
 
 - **2026-08-03** · `feature` · `confirmed` · `permanent` · `verified` · `auth`, `admin`, `security` — [Restore ADMIN_PASSWORD admin login beside GitHub OAuth](entries/2026-08-03-feature-admin-password-fallback.md)

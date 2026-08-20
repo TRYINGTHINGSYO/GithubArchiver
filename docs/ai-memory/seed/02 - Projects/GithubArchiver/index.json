@@ -1,9 +1,47 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-20T20:52:41.147Z",
+  "generatedAt": "2026-08-20T21:10:19.847Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "validation-semantic-prod-readiness-harness-hardening",
+      "schema": 1,
+      "type": "research",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-20",
+      "pr": 33,
+      "commit": "ff30ae7",
+      "migration": null,
+      "area": [
+        "search"
+      ],
+      "related": [
+        "validation-semantic-production-readiness",
+        "feature-semantic-search-turbovec",
+        "pr-33"
+      ],
+      "relationships": [
+        {
+          "type": "supersedes",
+          "id": "validation-semantic-production-readiness"
+        },
+        {
+          "type": "related",
+          "id": "feature-semantic-search-turbovec"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-33"
+        }
+      ],
+      "supersedes": "validation-semantic-production-readiness",
+      "title": "Prod-readiness harness hardened (latency, worker RSS, filters, noise)",
+      "path": "entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md",
+      "summary": "Hardened `npm run semantic:prod-readiness` before any production-snapshot gate:"
+    },
     {
       "id": "bugfix-semantic-no-global-stale-on-worker-mismatch",
       "schema": 1,
