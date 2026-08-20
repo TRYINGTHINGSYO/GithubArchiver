@@ -62,8 +62,8 @@ describe('migration 044 website curation', () => {
 		db.pragma('foreign_keys = ON');
 		runMigrations(db);
 
-		expect(CURRENT_SCHEMA_VERSION).toBe(46);
-		expect(getSchemaVersion(db)).toBe(46);
+		expect(CURRENT_SCHEMA_VERSION).toBe(47);
+		expect(getSchemaVersion(db)).toBe(47);
 
 		const tables = (
 			db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`).all() as Array<{
@@ -111,7 +111,7 @@ describe('migration 044 website curation', () => {
 
 		expect(getSchemaVersion(db)).toBe(43);
 		runMigrations(db);
-		expect(getSchemaVersion(db)).toBe(46);
+		expect(getSchemaVersion(db)).toBe(47);
 		const items = db
 			.prepare(`SELECT item_type, item_key FROM collection_items`)
 			.all() as Array<{ item_type: string; item_key: string }>;

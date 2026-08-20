@@ -93,6 +93,9 @@ export interface RepoSummary {
 	clustered_at: string | null;
 	search_snippet?: string | null;
 	search_rank?: number | null;
+	semantic_score?: number | null;
+	final_score?: number | null;
+	match_reason?: 'semantic' | 'lexical' | 'hybrid' | 'quality' | null;
 	download_zip_url?: string | null;
 	archive_badges: RepoArchiveBadges;
 	archive_storage_disabled: boolean;
@@ -288,6 +291,9 @@ function toSummary(
 		clustered_at: row.clustered_at ?? null,
 		search_snippet: row.fts_snippet ?? null,
 		search_rank: row.fts_rank ?? null,
+		semantic_score: (row as { semantic_score?: number | null }).semantic_score ?? null,
+		final_score: (row as { final_score?: number | null }).final_score ?? null,
+		match_reason: (row as { match_reason?: RepoSummary['match_reason'] }).match_reason ?? null,
 		download_zip_url:
 			listMeta?.downloadZipUrl ?? getRepoZipDownloadUrl(row.owner, row.name, row.id),
 		archive_badges: listMeta?.badges ?? getRepoArchiveBadges(row.id, row.deleted_at),
@@ -321,6 +327,7 @@ export interface ListReposOptions {
 	clusters?: string[];
 	clusterMatch?: 'any' | 'all';
 	minClusterConfidence?: number;
+	searchMode?: 'keyword' | 'semantic' | 'hybrid';
 	page?: number;
 	perPage?: number;
 }
@@ -360,7 +367,56 @@ export function listRepos(opts: ListReposOptions = {}) {
 	return {
 		...result,
 		repos: result.repos.map((row) => toSummary(row, listMeta.get(row.id))),
-		search_mode: opts.q?.trim() ? ('fts' as const) : ('list' as const)
+		search_mode: opts.q?.trim() ? ('fts' as const) : ('list' as const),
+		semantic_available: false
+	};
+}
+
+/** Search-aware list that can blend FTS + TurboVec when semantic search is enabled. */
+export async function listReposSearchAware(opts: ListReposOptions = {}) {
+	const mode = opts.searchMode;
+	const wantsSemantic = Boolean(opts.q?.trim()) && mode && mode !== 'keyword';
+	if (!wantsSemantic) {
+		return listRepos(opts);
+	}
+
+	const { searchReposSemanticAware } = await import('$lib/server/semantic/search.js');
+	const result = await searchReposSemanticAware({
+		q: opts.q,
+		language: opts.language,
+		neverEnriched: opts.neverEnriched,
+		feed: opts.feed,
+		sort: opts.sort,
+		source: opts.source,
+		year: opts.year,
+		dateFrom: opts.dateFrom,
+		dateTo: opts.dateTo,
+		archivedOnly: opts.archivedOnly,
+		hasReadme: opts.hasReadme,
+		hasRelease: opts.hasRelease,
+		deletedOnly: opts.deletedOnly,
+		includeDeleted: opts.deletedOnly,
+		minStars: opts.minStars,
+		maxStars: opts.maxStars,
+		minForks: opts.minForks,
+		category: opts.category,
+		signalTier: opts.signalTier,
+		minInterestingScore: opts.minInterestingScore,
+		cluster: opts.cluster,
+		clusters: opts.clusters,
+		clusterMatch: opts.clusterMatch,
+		minClusterConfidence: opts.minClusterConfidence,
+		searchMode: mode,
+		page: opts.page,
+		perPage: opts.perPage
+	});
+
+	const listMeta = loadListArchiveMeta(result.repos);
+	return {
+		...result,
+		repos: result.repos.map((row) => toSummary(row, listMeta.get(row.id))),
+		search_mode: result.searchMode,
+		semantic_available: result.semanticAvailable
 	};
 }
 

@@ -1,9 +1,44 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-03T22:32:06.613Z",
+  "generatedAt": "2026-08-20T17:28:15.646Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "feature-semantic-search-turbovec",
+      "schema": 1,
+      "type": "feature",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "permanent",
+      "date": "2026-08-20",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "search",
+        "enrichment",
+        "sqlite"
+      ],
+      "related": [
+        "decision-knowledge-engine-philosophy",
+        "feature-intelligence-discovery-redesign"
+      ],
+      "relationships": [
+        {
+          "type": "references",
+          "id": "decision-knowledge-engine-philosophy"
+        },
+        {
+          "type": "related",
+          "id": "feature-intelligence-discovery-redesign"
+        }
+      ],
+      "supersedes": null,
+      "title": "TurboVec semantic search layer behind feature flag",
+      "path": "entries/2026-08-20-feature-semantic-search-turbovec.md",
+      "summary": "Added an optional TurboVec-powered semantic retrieval layer to GithubArchiver. SQLite remains the source of truth; a localhost Python worker owns compressed vectors (`IdMapIndex`) and embeddings. Search modes: keyword / semantic / hybrid. SQLite migration **047** adds `semantic_index_state`. Default `SEMANTIC_SEARCH_ENABLED=0`."
+    },
     {
       "id": "feature-admin-password-fallback",
       "schema": 1,

@@ -14,8 +14,8 @@ describe('migration 042 github_id', () => {
 		db.pragma('foreign_keys = ON');
 		runMigrations(db);
 
-		expect(CURRENT_SCHEMA_VERSION).toBe(46);
-		expect(getSchemaVersion(db)).toBe(46);
+		expect(CURRENT_SCHEMA_VERSION).toBe(47);
+		expect(getSchemaVersion(db)).toBe(47);
 		const cols = (
 			db.prepare('PRAGMA table_info(repos)').all() as Array<{ name: string }>
 		).map((row) => row.name);

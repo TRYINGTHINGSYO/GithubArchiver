@@ -49,6 +49,7 @@ import { isMetadataOnlyMode } from '$lib/server/runtime-mode';
 import { getDiscoverySystemStatus } from '$lib/server/discovery-materialized';
 import { listScheduledJobs } from '$lib/server/db/scheduled-jobs';
 import { getTtlCacheStats } from '$lib/server/ttl-cache';
+import { getSemanticAdminStats } from '$lib/server/semantic/stats';
 import { getEnrichmentOpsSnapshot } from '$lib/server/workers/enrich';
 
 const REFRESH_INTERVAL_HOURS = Number(process.env.REFRESH_INTERVAL_HOURS ?? 24);
@@ -147,7 +148,8 @@ export async function getAdminStatus() {
 			discoveryStatus: getDiscoverySystemStatus(),
 			scheduledJobs: listScheduledJobs(),
 			enrichment: getEnrichmentOpsSnapshot(),
-			cache: getTtlCacheStats()
+			cache: getTtlCacheStats(),
+			semantic: await getSemanticAdminStats()
 		}
 	};
 }

@@ -175,10 +175,14 @@ First deploy typically takes **5–10 minutes** (native `better-sqlite3` compile
 | `doctor` | Health checks; optional FTS rebuild / missing snapshot cleanup |
 | `storage:analyze` | Archive + database inventory, retention preview, cleanup |
 | `backfill:day` / `backfill:range` / `backfill:resume` | Resumable historical backfill |
+| `semantic:worker` / `semantic:index` / `semantic:rebuild` | Optional TurboVec semantic index (off by default) |
+| `semantic:eval` / `semantic:benchmark` | Relevance eval + TurboVec microbenchmarks |
 
 ```bash
 npm run daemon    # foreground loop; Ctrl+C to stop
 ```
+
+Optional semantic search (SQLite remains source of truth): see [docs/SEMANTIC_SEARCH.md](docs/SEMANTIC_SEARCH.md).
 
 ---
 

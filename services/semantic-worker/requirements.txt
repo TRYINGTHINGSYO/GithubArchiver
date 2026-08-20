@@ -1,0 +1,4 @@
+turbovec>=1.0.0
+numpy>=1.20
+# Optional production embedder (not required for hashing provider / CI):
+# sentence-transformers>=3.0.0

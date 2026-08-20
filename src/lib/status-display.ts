@@ -59,6 +59,7 @@ export function formatJobTypeLabel(job: {
 	if (job.job_type === 'website_discover_ct') return 'websites · CT poll';
 	if (job.job_type === 'website_discover_zone') return 'websites · zone feed';
 	if (job.job_type === 'website_verify') return 'websites · verify';
+	if (job.job_type === 'semantic_index') return 'semantic index';
 
 	if (job.job_type === 'pipeline') {
 		const phase = typeof detail.phase === 'string' ? detail.phase : null;
