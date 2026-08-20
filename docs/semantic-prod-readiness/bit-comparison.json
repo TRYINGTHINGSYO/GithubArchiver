@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "n_docs": 3000,
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "model_load_s": 0.8821096770006989,
+  "embed_docs_s": 8.522691087000567,
+  "docs_per_s": 352.001494525106,
+  "exact_query_p50_ms": 114.06265900041035,
+  "exact_query_p95_ms": 123.48124979980639,
+  "exact_macro_recall_at_10": 0.76,
+  "exact_macro_mrr": 0.88,
+  "bits": [
+    {
+      "bits": 2,
+      "index_bytes": 569907,
+      "build_s": 0.012003362999166711,
+      "search_p50_ms": 0.07837100019969512,
+      "search_p95_ms": 0.09887940068438182,
+      "macro_recall_at_10": 0.74,
+      "macro_mrr": 0.85,
+      "mean_overlap_at_10_vs_exact": 0.49200000000000005
+    },
+    {
+      "bits": 3,
+      "index_bytes": 1058195,
+      "build_s": 0.006820577000326011,
+      "search_p50_ms": 0.08963700020103715,
+      "search_p95_ms": 0.0937000000703847,
+      "macro_recall_at_10": 0.72,
+      "macro_mrr": 0.8533333333333333,
+      "mean_overlap_at_10_vs_exact": 0.612
+    },
+    {
+      "bits": 4,
+      "index_bytes": 1058259,
+      "build_s": 0.00719123899943952,
+      "search_p50_ms": 0.09892200068861712,
+      "search_p95_ms": 0.10169919878535438,
+      "macro_recall_at_10": 0.74,
+      "macro_mrr": 0.88,
+      "mean_overlap_at_10_vs_exact": 0.772
+    }
+  ],
+  "sample_names": [
+    "voice/wake-word-local",
+    "voice/offline-speech-kit",
+    "voice/whisper-discord-bot",
+    "voice/discord-tts",
+    "win/pe-inspector"
+  ]
+}
