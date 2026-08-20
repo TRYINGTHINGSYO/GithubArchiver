@@ -124,6 +124,8 @@ export interface RepoQuery {
 	clusters?: string[];
 	clusterMatch?: 'any' | 'all';
 	minClusterConfidence?: number;
+	/** keyword | semantic | hybrid — ignored unless SEMANTIC_SEARCH_ENABLED. */
+	searchMode?: 'keyword' | 'semantic' | 'hybrid';
 	page?: number;
 	perPage?: number;
 }
@@ -226,7 +228,8 @@ export type JobType =
 	| 'export'
 	| 'website_discover_ct'
 	| 'website_discover_zone'
-	| 'website_verify';
+	| 'website_verify'
+	| 'semantic_index';
 export type JobStatus = 'running' | 'success' | 'failed' | 'cancelled' | 'interrupted';
 
 export interface JobRunRow {

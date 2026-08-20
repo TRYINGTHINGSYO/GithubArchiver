@@ -630,7 +630,22 @@
 		{/if}
 	</details>
 
-	{#if data.related.length}
+	{#if data.similar?.length}
+		<section class="related">
+			<div class="section-title-row">
+				<h2>Similar projects</h2>
+				<p>Semantic neighbors</p>
+			</div>
+			<div class="related-list">
+				{#each data.similar.slice(0, 8) as repo}
+					<a href="/repo/{repo.owner}/{repo.name}">
+						<strong class="mono">{repo.full_name}</strong>
+						<span>{repo.language ?? 'Unknown language'}</span>
+					</a>
+				{/each}
+			</div>
+		</section>
+	{:else if data.related.length}
 		<section class="related">
 			<div class="section-title-row">
 				<h2>Related projects</h2>

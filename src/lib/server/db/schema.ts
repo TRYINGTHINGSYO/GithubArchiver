@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import { readFileSync } from 'node:fs';
 import { CLUSTER_DEFINITIONS } from '$lib/server/cluster-registry';
 
-export const CURRENT_SCHEMA_VERSION = 46;
+export const CURRENT_SCHEMA_VERSION = 48;
 
 const ENRICHMENT_COLUMNS = [
 	'default_branch TEXT',
@@ -1640,6 +1640,59 @@ function migration045(database: Database.Database) {
 	`);
 }
 
+/**
+ * Semantic index state for TurboVec-backed retrieval.
+ * SQLite remains source of truth for entities; this table tracks indexing lifecycle only.
+ */
+function migration047(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS semantic_index_state (
+			entity_type TEXT NOT NULL CHECK (entity_type IN ('repository', 'website')),
+			entity_key TEXT NOT NULL,
+			vector_id INTEGER NOT NULL,
+			status TEXT NOT NULL DEFAULT 'pending'
+				CHECK (status IN ('pending', 'indexing', 'indexed', 'failed', 'stale', 'removed')),
+			fingerprint TEXT,
+			embedding_model TEXT,
+			document_version INTEGER,
+			dimensions INTEGER,
+			vector_bits INTEGER,
+			indexed_at TEXT,
+			updated_at TEXT NOT NULL,
+			last_error TEXT,
+			attempts INTEGER NOT NULL DEFAULT 0,
+			PRIMARY KEY (entity_type, entity_key)
+		);
+
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_semantic_index_vector_id
+		  ON semantic_index_state(vector_id);
+
+		CREATE INDEX IF NOT EXISTS idx_semantic_index_status_updated
+		  ON semantic_index_state(status, updated_at);
+
+		CREATE INDEX IF NOT EXISTS idx_semantic_index_entity_type_status
+		  ON semantic_index_state(entity_type, status);
+	`);
+}
+
+/**
+ * Persisted keyset cursors for semantic reconciliation sweeps.
+ * Prevents ORDER BY updated_at starvation on large archives.
+ */
+function migration048(database: Database.Database) {
+	database.exec(`
+		CREATE TABLE IF NOT EXISTS semantic_reconcile_cursor (
+			sweep_kind TEXT PRIMARY KEY
+				CHECK (sweep_kind IN ('indexed', 'removed')),
+			last_vector_id INTEGER NOT NULL DEFAULT 0,
+			updated_at TEXT NOT NULL
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_semantic_index_type_status_vector
+		  ON semantic_index_state(entity_type, status, vector_id);
+	`);
+}
+
 /** Opt-in personalized email digests and per-repository delivery deduplication. */
 function migration046(database: Database.Database) {
 	database.exec(`
@@ -1799,7 +1852,9 @@ const MIGRATIONS: Record<number, (db: Database.Database) => void> = {
 	43: migration043,
 	44: migration044,
 	45: migration045,
-	46: migration046
+	46: migration046,
+	47: migration047,
+	48: migration048
 };
 
 export interface MigrationRunResult {
@@ -2011,6 +2066,34 @@ export function repairSchemaDrift(database: Database.Database): string[] {
 		) {
 			migration046(database);
 			repairs.push('046:personalized_email_alerts');
+		}
+	}
+
+	if (version >= 47) {
+		const tables47 = new Set(
+			(
+				database
+					.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+					.all() as { name: string }[]
+			).map((row) => row.name)
+		);
+		if (!tables47.has('semantic_index_state')) {
+			migration047(database);
+			repairs.push('047:semantic_index_state');
+		}
+	}
+
+	if (version >= 48) {
+		const tables48 = new Set(
+			(
+				database
+					.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+					.all() as { name: string }[]
+			).map((row) => row.name)
+		);
+		if (!tables48.has('semantic_reconcile_cursor')) {
+			migration048(database);
+			repairs.push('048:semantic_reconcile_cursor');
 		}
 	}
 

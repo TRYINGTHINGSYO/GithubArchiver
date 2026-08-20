@@ -1,0 +1,12 @@
+# Production embedding provider for GithubArchiver semantic search.
+# Install AFTER the base requirements:
+#   pip install -r services/semantic-worker/requirements.txt
+#   pip install -r services/semantic-worker/requirements-prod.txt
+#
+# hashing-v1 (default without this file) is a deterministic token/char n-gram
+# bag for CI only — it is NOT true semantic retrieval.
+#
+# sentence-transformers + all-MiniLM-L6-v2 is the supported local production
+# path (384-d, reasonably light for a single Railway worker). Prefer this over
+# shipping a giant generative LLM runtime.
+sentence-transformers>=3.0.0

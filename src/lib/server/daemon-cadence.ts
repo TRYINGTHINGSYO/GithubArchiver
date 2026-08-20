@@ -18,6 +18,8 @@ import {
 	runPersonalizedEmailDigest,
 	type PersonalizedDigestResult
 } from './personalized-email.js';
+import { isSemanticSearchEnabled } from './semantic/config.js';
+import { runSemanticIndexCycle } from './workers/semantic-index.js';
 
 /**
  * Cadenced jobs for the in-process daemon. These use `scheduled_jobs` intervals
@@ -30,7 +32,8 @@ export const IN_PROCESS_CADENCE_JOBS: ScheduledJobName[] = [
 	'website_ct',
 	'website_zone',
 	'website_verify',
-	'email_digest'
+	'email_digest',
+	'semantic_index'
 ];
 
 /** How often the orphan safety-net may run (default 2 min). */
@@ -276,6 +279,27 @@ export async function maybeRunDueWebsiteCycles(
 			hadFailure = true;
 			opts.log?.(
 				`[daemon] website_verify failed: ${err instanceof Error ? err.message : String(err)}`
+			);
+		}
+	}
+
+	if (opts.shouldSkip?.()) return { ran: jobs.length > 0, hadFailure, jobs };
+
+	if (isSemanticSearchEnabled() && isJobDue('semantic_index', now)) {
+		jobs.push('semantic_index');
+		opts.log?.('[daemon] cadence: semantic_index due');
+		try {
+			const r = await runScheduledJob('semantic_index', () => runSemanticIndexCycle());
+			opts.log?.(
+				r.skipped
+					? `[daemon] semantic_index: skipped (${r.reason ?? 'n/a'})`
+					: `[daemon] semantic_index: indexed=${r.indexed} failed=${r.failed} removed=${r.removed} eligible=${r.eligible}`
+			);
+			if (r.failed > 0) hadFailure = true;
+		} catch (err) {
+			hadFailure = true;
+			opts.log?.(
+				`[daemon] semantic_index failed: ${err instanceof Error ? err.message : String(err)}`
 			);
 		}
 	}

@@ -44,7 +44,7 @@ describe('low-value repository cleanup', () => {
 	beforeEach(() => {
 		setupTestDb();
 		expect(getSchemaVersion(getDb())).toBe(CURRENT_SCHEMA_VERSION);
-		expect(CURRENT_SCHEMA_VERSION).toBe(46);
+		expect(CURRENT_SCHEMA_VERSION).toBe(48);
 	});
 
 	afterEach(() => teardownTestDb());

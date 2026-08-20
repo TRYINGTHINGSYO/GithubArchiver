@@ -424,6 +424,18 @@ export async function enrichRepo(repo: RepoRow, opts: EnrichRepoOptions = {}): P
 	applyRepoClusters(refreshed, enrichment);
 	timings.clusterMs = elapsedMs(clusterStarted);
 
+	try {
+		const { isSemanticSearchEnabled } = await import('$lib/server/semantic/config.js');
+		if (isSemanticSearchEnabled()) {
+			const { enqueueRepositoryForSemanticIndex } = await import(
+				'$lib/server/workers/semantic-index.js'
+			);
+			enqueueRepositoryForSemanticIndex(getRepoById(repo.id) ?? refreshed);
+		}
+	} catch {
+		/* semantic indexing is optional; never fail enrichment */
+	}
+
 	if (depth === 'deep') {
 		// README fetch improves classification evidence without full source archive.
 		const readmeStarted = performance.now();

@@ -31,6 +31,7 @@
 		if (f.minClusterConfidence) {
 			params.set('min_cluster_confidence', String(f.minClusterConfidence));
 		}
+		if (f.mode && f.mode !== 'keyword') params.set('mode', String(f.mode));
 		if (f.neverEnriched) params.set('never_enriched', '1');
 		if (f.archivedOnly) params.set('archived_only', '1');
 		if (f.hasReadme) params.set('has_readme', '1');
@@ -80,9 +81,22 @@
 			name="q"
 			type="search"
 			value={data.filters.q}
-			placeholder="owner, name, topic, or phrase"
+			placeholder="owner, name, topic, phrase, or meaning"
 		/>
 	</label>
+
+	{#if data.semanticEnabled}
+		<label>
+			<span>Mode</span>
+			<select name="mode">
+				<option value="keyword" selected={data.filters.mode === 'keyword' || !data.filters.mode}
+					>Keyword</option
+				>
+				<option value="hybrid" selected={data.filters.mode === 'hybrid'}>Hybrid</option>
+				<option value="semantic" selected={data.filters.mode === 'semantic'}>Semantic</option>
+			</select>
+		</label>
+	{/if}
 
 	<label>
 		<span>Sort</span>

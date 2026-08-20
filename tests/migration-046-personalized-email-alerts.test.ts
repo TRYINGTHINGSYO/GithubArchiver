@@ -15,18 +15,22 @@ describe('migration 046 personalized email alerts', () => {
 			).toBeUndefined();
 
 			const result = runMigrationsThrough(db, CURRENT_SCHEMA_VERSION);
-			expect(CURRENT_SCHEMA_VERSION).toBe(46);
-			expect(result.applied).toEqual([46]);
+			expect(CURRENT_SCHEMA_VERSION).toBe(48);
+			expect(result.applied).toEqual([46, 47, 48]);
 
 			const tables = (
 				db
 					.prepare(
-						"SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('user_email_preferences', 'personalized_email_deliveries')"
+						"SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('user_email_preferences', 'personalized_email_deliveries', 'semantic_index_state')"
 					)
 					.all() as Array<{ name: string }>
 			).map((row) => row.name);
 			expect(tables.sort()).toEqual(
-				['personalized_email_deliveries', 'user_email_preferences'].sort()
+				[
+					'personalized_email_deliveries',
+					'semantic_index_state',
+					'user_email_preferences'
+				].sort()
 			);
 
 			const deliveryIndexes = db

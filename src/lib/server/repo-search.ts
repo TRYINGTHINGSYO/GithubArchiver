@@ -29,6 +29,7 @@ export function parseRepoQueryParams(url: URL): RepoQuery {
 	const clustersRaw = url.searchParams.get('clusters');
 	const clusterMatchRaw = url.searchParams.get('cluster_match');
 	const minClusterConfidenceRaw = url.searchParams.get('min_cluster_confidence');
+	const modeRaw = url.searchParams.get('mode');
 
 	const deletedOnly =
 		url.searchParams.get('deleted_only') === '1' || feed === 'recently_deleted';
@@ -47,6 +48,9 @@ export function parseRepoQueryParams(url: URL): RepoQuery {
 
 	const clusterMatch =
 		clusterMatchRaw === 'all' ? ('all' as const) : clusterMatchRaw === 'any' ? ('any' as const) : undefined;
+
+	const searchMode =
+		modeRaw === 'semantic' || modeRaw === 'hybrid' || modeRaw === 'keyword' ? modeRaw : undefined;
 
 	return {
 		q,
@@ -73,6 +77,7 @@ export function parseRepoQueryParams(url: URL): RepoQuery {
 		clusters,
 		clusterMatch,
 		minClusterConfidence: minClusterConfidenceRaw ? Number(minClusterConfidenceRaw) : undefined,
+		searchMode,
 		page: boundedInteger(url.searchParams.get('page'), 1, { min: 1, max: 1_000_000 }),
 		perPage: parseRepoPageSize(url.searchParams.get('per_page'))
 	};
@@ -103,6 +108,7 @@ export function repoQueryFiltersForUi(opts: RepoQuery) {
 		clusters: opts.clusters?.join(',') ?? '',
 		clusterMatch: opts.clusterMatch ?? '',
 		minClusterConfidence: opts.minClusterConfidence ? String(opts.minClusterConfidence) : '',
+		mode: opts.searchMode ?? '',
 		page: opts.page ?? 1,
 		perPage: parseRepoPageSize(opts.perPage)
 	};

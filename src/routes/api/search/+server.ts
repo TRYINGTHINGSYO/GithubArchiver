@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
-import { listRepos } from '$lib/server/repos';
+import { listReposSearchAware } from '$lib/server/repos';
 import { parseRepoQueryParams } from '$lib/server/repo-search';
+import { getSemanticConfig, isSemanticSearchEnabled } from '$lib/server/semantic/config';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ url }) => {
@@ -10,7 +11,10 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	const opts = parseRepoQueryParams(url);
-	const result = listRepos({ ...opts, q });
+	const config = getSemanticConfig();
+	const searchMode =
+		opts.searchMode ?? (isSemanticSearchEnabled() ? config.defaultMode : 'keyword');
+	const result = await listReposSearchAware({ ...opts, q, searchMode });
 
 	return json(result);
 };

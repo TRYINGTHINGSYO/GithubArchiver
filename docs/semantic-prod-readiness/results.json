@@ -1,0 +1,3911 @@
+{
+  "generated_at": "2026-08-20T21:09:52.164Z",
+  "git_head": "4e318103d9021ca8e24b6cca7caefb46371deaa6",
+  "disclaimer": "No production DB was available in this environment. Corpus is a representative 10k-repo GithubArchiver-shaped sample (curated gold + realistic noise). Quality conclusions use MiniLM, not hashing-v1.",
+  "indexReport": {
+    "corpus": {
+      "requested": 10000,
+      "seeded": 10000,
+      "total": 10000,
+      "eligible": 9995,
+      "deleted": 3,
+      "pending_deletion": 2,
+      "gold": 43,
+      "noise": 9957,
+      "noise_template_count": 35
+    },
+    "indexing": {
+      "indexed": 9995,
+      "failed": 0,
+      "sqlite_indexed_current": 9995,
+      "status_counts": {
+        "indexed": 9995
+      },
+      "wall_clock_s": 47.881,
+      "repos_per_sec": 208.74668448862806,
+      "index_batch_wall_s": 43.501220449000094,
+      "worker_embed_s": 36.61201513101696,
+      "worker_upsert_s": 0.03302199999779987,
+      "batches_with_worker_timings": 157,
+      "sync_wall_s": 0.6282064829999435,
+      "timing_note": "index_batch_wall_s is end-to-end HTTP indexBatch (serialize+embed+upsert+response). worker_embed_s / worker_upsert_s come from Python worker instrumentation. sync_wall_s is durable sync() only. No synthetic upsert fraction is invented.",
+      "index_bytes": 1326771,
+      "model_load_s": 4.815
+    },
+    "memory": {
+      "node_rss_before_mb": 165,
+      "node_rss_peak_mb": 196,
+      "node_rss_after_index_mb": 196,
+      "python_worker_pid": 12873,
+      "python_worker_rss_after_model_load_mb": 839,
+      "python_worker_peak_rss_during_index_mb": 948,
+      "python_worker_rss_after_index_mb": 948,
+      "note": "Python worker RSS includes recursive child processes when visible via ps. Railway sizing uses python_worker_peak_rss_mb, not Node harness RSS.",
+      "python_worker_rss_during_query_load_mb": 948,
+      "python_worker_peak_rss_mb": 948
+    },
+    "worker_model": {
+      "ok": true,
+      "modelId": "sentence-transformers/all-MiniLM-L6-v2",
+      "dimensions": 384,
+      "vectorBits": 2,
+      "indexedCount": 0,
+      "indexPath": "/workspace/data/semantic/prod-readiness-2bit.tvim",
+      "schemaVersion": 1,
+      "semanticDocumentVersion": 1
+    }
+  },
+  "quality": {
+    "macro": {
+      "keyword": {
+        "recallAt10": 0.1,
+        "precisionAt10": 0.02,
+        "mrr": 0.2
+      },
+      "semantic": {
+        "recallAt10": 0.66,
+        "precisionAt10": 0.13200000000000006,
+        "mrr": 0.7879999999999999
+      },
+      "hybrid": {
+        "recallAt10": 0.66,
+        "precisionAt10": 0.13200000000000006,
+        "mrr": 0.7866666666666666
+      }
+    },
+    "semantic_vs_keyword_wins": 16,
+    "keyword_vs_semantic_wins": 0,
+    "ties": 9,
+    "regressions": [],
+    "mode_latency": {
+      "note": "Each mode measured independently. Warm stats exclude the cold first query. Combined 3-mode durations are never labeled as hybrid latency.",
+      "warm_iterations": 40,
+      "keyword": {
+        "mode": "keyword",
+        "cold_first_query_ms": 0.5945280000014463,
+        "warm": {
+          "n": 40,
+          "mean_ms": 0.3716016499980469,
+          "p50_ms": 0.3667060000007041,
+          "p95_ms": 0.4097650000039721,
+          "min_ms": 0.34742399999231566,
+          "max_ms": 0.47851700001046993
+        }
+      },
+      "semantic": {
+        "mode": "semantic",
+        "cold_first_query_ms": 51.42924800000037,
+        "warm": {
+          "n": 40,
+          "mean_ms": 50.5871982500008,
+          "p50_ms": 50.96723700000439,
+          "p95_ms": 53.962868000002345,
+          "min_ms": 47.34692700000596,
+          "max_ms": 56.04445100000885
+        }
+      },
+      "hybrid": {
+        "mode": "hybrid",
+        "cold_first_query_ms": 50.477035000003525,
+        "warm": {
+          "n": 40,
+          "mean_ms": 52.2930958500001,
+          "p50_ms": 52.0038099999947,
+          "p95_ms": 52.23408900000504,
+          "min_ms": 51.73122600000352,
+          "max_ms": 60.25133199999982
+        }
+      }
+    }
+  },
+  "perQuery": [
+    {
+      "id": "offline-voice",
+      "query": "local voice assistant that works offline",
+      "notes": "meaning: no \"assistant\" in one relevant desc",
+      "relevant": [
+        "voice/wake-word-local",
+        "voice/offline-speech-kit"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.4644570052623749
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.45712774991989136
+          },
+          {
+            "full_name": "noise89/pkg-3193-nm-voice",
+            "id": 3237,
+            "score": 0.4279595911502838
+          },
+          {
+            "full_name": "noise30/pkg-2843-nm-voice",
+            "id": 2887,
+            "score": 0.41895583271980286
+          },
+          {
+            "full_name": "noise54/pkg-3158-nm-voice",
+            "id": 3202,
+            "score": 0.41488587856292725
+          },
+          {
+            "full_name": "noise86/pkg-183-nm-voice",
+            "id": 227,
+            "score": 0.40833374857902527
+          },
+          {
+            "full_name": "noise52/pkg-5678-nm-voice",
+            "id": 5722,
+            "score": 0.40214669704437256
+          },
+          {
+            "full_name": "noise46/pkg-3053-nm-voice",
+            "id": 3097,
+            "score": 0.39990103244781494
+          },
+          {
+            "full_name": "noise31/pkg-4978-nm-voice",
+            "id": 5022,
+            "score": 0.39984461665153503
+          },
+          {
+            "full_name": "noise32/pkg-7113-nm-voice",
+            "id": 7157,
+            "score": 0.40081164240837097
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "voice/wake-word-local",
+            "id": 1,
+            "score": 0.6115384615384616
+          },
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.5440060715173185
+          },
+          {
+            "full_name": "noise89/pkg-3193-nm-voice",
+            "id": 3237,
+            "score": 0.3903202867143625
+          },
+          {
+            "full_name": "noise30/pkg-2843-nm-voice",
+            "id": 2887,
+            "score": 0.3262583945337364
+          },
+          {
+            "full_name": "noise54/pkg-3158-nm-voice",
+            "id": 3202,
+            "score": 0.29730060247490075
+          },
+          {
+            "full_name": "noise86/pkg-183-nm-voice",
+            "id": 227,
+            "score": 0.25068208779316536
+          },
+          {
+            "full_name": "noise52/pkg-5678-nm-voice",
+            "id": 5722,
+            "score": 0.1989688047060606
+          },
+          {
+            "full_name": "noise46/pkg-3053-nm-voice",
+            "id": 3097,
+            "score": 0.19068317114535774
+          },
+          {
+            "full_name": "noise31/pkg-4978-nm-voice",
+            "id": 5022,
+            "score": 0.19028177180901695
+          },
+          {
+            "full_name": "noise70/pkg-3368-nm-voice",
+            "id": 3412,
+            "score": 0.18601820263003987
+          }
+        ]
+      }
+    },
+    {
+      "id": "windows-analyzer",
+      "query": "Windows program/executable analyzer",
+      "notes": "meaning-based",
+      "relevant": [
+        "win/pe-inspector",
+        "win/binary-explain"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/binary-explain",
+            "id": 6,
+            "score": 0.38725343346595764
+          },
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.3531344532966614
+          },
+          {
+            "full_name": "noise41/pkg-9741-nm-windows",
+            "id": 9785,
+            "score": 0.29010191559791565
+          },
+          {
+            "full_name": "noise96/pkg-9602-nm-windows",
+            "id": 9646,
+            "score": 0.282351553440094
+          },
+          {
+            "full_name": "noise9/pkg-397-nm-windows",
+            "id": 441,
+            "score": 0.2819373309612274
+          },
+          {
+            "full_name": "noise81/pkg-8132-nm-windows",
+            "id": 8176,
+            "score": 0.27900823950767517
+          },
+          {
+            "full_name": "noise94/pkg-1937-nm-windows",
+            "id": 1981,
+            "score": 0.27813488245010376
+          },
+          {
+            "full_name": "noise72/pkg-9287-nm-windows",
+            "id": 9331,
+            "score": 0.2778089642524719
+          },
+          {
+            "full_name": "noise94/pkg-8727-nm-windows",
+            "id": 8771,
+            "score": 0.276626855134964
+          },
+          {
+            "full_name": "noise71/pkg-3757-nm-windows",
+            "id": 3801,
+            "score": 0.2764727473258972
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/binary-explain",
+            "id": 6,
+            "score": 0.55
+          },
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.43771201917369335
+          },
+          {
+            "full_name": "noise96/pkg-9602-nm-windows",
+            "id": 9646,
+            "score": 0.20227414326615756
+          },
+          {
+            "full_name": "noise9/pkg-397-nm-windows",
+            "id": 441,
+            "score": 0.20050622343304086
+          },
+          {
+            "full_name": "noise41/pkg-9741-nm-windows",
+            "id": 9785,
+            "score": 0.1909085867906676
+          },
+          {
+            "full_name": "noise81/pkg-8132-nm-windows",
+            "id": 8176,
+            "score": 0.18800473175176574
+          },
+          {
+            "full_name": "noise94/pkg-1937-nm-windows",
+            "id": 1981,
+            "score": 0.18427720525996882
+          },
+          {
+            "full_name": "noise72/pkg-9287-nm-windows",
+            "id": 9331,
+            "score": 0.1828861719989454
+          },
+          {
+            "full_name": "noise94/pkg-8727-nm-windows",
+            "id": 8771,
+            "score": 0.1778408780799171
+          },
+          {
+            "full_name": "noise71/pkg-3757-nm-windows",
+            "id": 3801,
+            "score": 0.17718313914495443
+          }
+        ]
+      }
+    },
+    {
+      "id": "download-manager",
+      "query": "torrent and normal download manager",
+      "notes": null,
+      "relevant": [
+        "dl/motrix-like",
+        "dl/aria-desktop"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": [
+          {
+            "full_name": "noise92/pkg-189-nm-download",
+            "id": 233,
+            "score": 0.4841846823692322
+          },
+          {
+            "full_name": "noise70/pkg-4144-nm-download",
+            "id": 4188,
+            "score": 0.48344624042510986
+          },
+          {
+            "full_name": "noise40/pkg-7994-nm-download",
+            "id": 8038,
+            "score": 0.48307883739471436
+          },
+          {
+            "full_name": "noise58/pkg-2289-nm-download",
+            "id": 2333,
+            "score": 0.4820539057254791
+          },
+          {
+            "full_name": "noise79/pkg-2989-nm-download",
+            "id": 3033,
+            "score": 0.481855571269989
+          },
+          {
+            "full_name": "noise65/pkg-259-nm-download",
+            "id": 303,
+            "score": 0.48050904273986816
+          },
+          {
+            "full_name": "noise3/pkg-7084-nm-download",
+            "id": 7128,
+            "score": 0.4803324341773987
+          },
+          {
+            "full_name": "noise84/pkg-3479-nm-download",
+            "id": 3523,
+            "score": 0.4798521399497986
+          },
+          {
+            "full_name": "noise86/pkg-7749-nm-download",
+            "id": 7793,
+            "score": 0.47964590787887573
+          },
+          {
+            "full_name": "noise52/pkg-3059-nm-download",
+            "id": 3103,
+            "score": 0.47837966680526733
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": [
+          {
+            "full_name": "noise92/pkg-189-nm-download",
+            "id": 233,
+            "score": 0.65
+          },
+          {
+            "full_name": "noise70/pkg-4144-nm-download",
+            "id": 4188,
+            "score": 0.5985369791777917
+          },
+          {
+            "full_name": "noise40/pkg-7994-nm-download",
+            "id": 8038,
+            "score": 0.5978706170542877
+          },
+          {
+            "full_name": "noise58/pkg-2289-nm-download",
+            "id": 2333,
+            "score": 0.5736408669091362
+          },
+          {
+            "full_name": "noise79/pkg-2989-nm-download",
+            "id": 3033,
+            "score": 0.5540332955324392
+          },
+          {
+            "full_name": "noise65/pkg-259-nm-download",
+            "id": 303,
+            "score": 0.5182787065103626
+          },
+          {
+            "full_name": "noise84/pkg-3479-nm-download",
+            "id": 3523,
+            "score": 0.49473774658772496
+          },
+          {
+            "full_name": "noise86/pkg-7749-nm-download",
+            "id": 7793,
+            "score": 0.4873471539616179
+          },
+          {
+            "full_name": "noise3/pkg-7084-nm-download",
+            "id": 7128,
+            "score": 0.48069971057072236
+          },
+          {
+            "full_name": "noise52/pkg-3059-nm-download",
+            "id": 3103,
+            "score": 0.44196976964109214
+          }
+        ]
+      }
+    },
+    {
+      "id": "net-monitor",
+      "query": "self-hosted network monitoring",
+      "notes": "meaning: keep an eye on machines",
+      "relevant": [
+        "ops/infra-dashboard",
+        "ops/host-pulse"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.2890971899032593
+          },
+          {
+            "full_name": "noise13/pkg-2535-nm-network",
+            "id": 2579,
+            "score": 0.2760007381439209
+          },
+          {
+            "full_name": "ops/infra-dashboard",
+            "id": 10,
+            "score": 0.2664821147918701
+          },
+          {
+            "full_name": "noise66/pkg-3655-nm-network",
+            "id": 3699,
+            "score": 0.25251296162605286
+          },
+          {
+            "full_name": "noise53/pkg-3060-nm-network",
+            "id": 3104,
+            "score": 0.24737833440303802
+          },
+          {
+            "full_name": "noise72/pkg-4146-nm-network",
+            "id": 4190,
+            "score": 0.24578529596328735
+          },
+          {
+            "full_name": "noise74/pkg-365-nm-network",
+            "id": 409,
+            "score": 0.2438017576932907
+          },
+          {
+            "full_name": "noise67/pkg-5790-nm-network",
+            "id": 5834,
+            "score": 0.24286766350269318
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.24636942148208618
+          },
+          {
+            "full_name": "noise0/pkg-5335-nm-network",
+            "id": 5379,
+            "score": 0.24165192246437073
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.622
+          },
+          {
+            "full_name": "noise13/pkg-2535-nm-network",
+            "id": 2579,
+            "score": 0.537845257079271
+          },
+          {
+            "full_name": "ops/infra-dashboard",
+            "id": 10,
+            "score": 0.4363301433197534
+          },
+          {
+            "full_name": "noise66/pkg-3655-nm-network",
+            "id": 3699,
+            "score": 0.3367018034516369
+          },
+          {
+            "full_name": "noise53/pkg-3060-nm-network",
+            "id": 3104,
+            "score": 0.2927301379369389
+          },
+          {
+            "full_name": "noise72/pkg-4146-nm-network",
+            "id": 4190,
+            "score": 0.26308775449169175
+          },
+          {
+            "full_name": "noise74/pkg-365-nm-network",
+            "id": 409,
+            "score": 0.25810122800093643
+          },
+          {
+            "full_name": "noise67/pkg-5790-nm-network",
+            "id": 5834,
+            "score": 0.25410187857902056
+          },
+          {
+            "full_name": "noise0/pkg-5335-nm-network",
+            "id": 5379,
+            "score": 0.23569057587529318
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.2280900595891474
+          }
+        ]
+      }
+    },
+    {
+      "id": "mc-economy",
+      "query": "Minecraft server economy tracker",
+      "notes": null,
+      "relevant": [
+        "mc/vault-ledger",
+        "mc/shop-stats"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 0.2,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "noise16/pkg-2538-nm-minecraft",
+            "id": 2582,
+            "score": 0.38681402802467346
+          },
+          {
+            "full_name": "noise75/pkg-2888-nm-minecraft",
+            "id": 2932,
+            "score": 0.37685906887054443
+          },
+          {
+            "full_name": "noise26/pkg-3518-nm-minecraft",
+            "id": 3562,
+            "score": 0.37649592757225037
+          },
+          {
+            "full_name": "noise26/pkg-6913-nm-minecraft",
+            "id": 6957,
+            "score": 0.3714282214641571
+          },
+          {
+            "full_name": "mc/shop-stats",
+            "id": 15,
+            "score": 0.37377941608428955
+          },
+          {
+            "full_name": "noise39/pkg-7508-nm-minecraft",
+            "id": 7552,
+            "score": 0.3710133731365204
+          },
+          {
+            "full_name": "noise94/pkg-2713-nm-minecraft",
+            "id": 2757,
+            "score": 0.36892634630203247
+          },
+          {
+            "full_name": "noise6/pkg-1558-nm-minecraft",
+            "id": 1602,
+            "score": 0.3674295246601105
+          },
+          {
+            "full_name": "noise29/pkg-3133-nm-minecraft",
+            "id": 3177,
+            "score": 0.36682090163230896
+          },
+          {
+            "full_name": "noise93/pkg-578-nm-minecraft",
+            "id": 622,
+            "score": 0.3666745722293854
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 0.16666666666666666,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "noise16/pkg-2538-nm-minecraft",
+            "id": 2582,
+            "score": 0.65
+          },
+          {
+            "full_name": "noise75/pkg-2888-nm-minecraft",
+            "id": 2932,
+            "score": 0.4918137443990206
+          },
+          {
+            "full_name": "noise26/pkg-3518-nm-minecraft",
+            "id": 3562,
+            "score": 0.4860433578668577
+          },
+          {
+            "full_name": "noise26/pkg-6913-nm-minecraft",
+            "id": 6957,
+            "score": 0.405516512772472
+          },
+          {
+            "full_name": "noise39/pkg-7508-nm-minecraft",
+            "id": 7552,
+            "score": 0.3989244913914538
+          },
+          {
+            "full_name": "mc/shop-stats",
+            "id": 15,
+            "score": 0.36640686870475436
+          },
+          {
+            "full_name": "noise94/pkg-2713-nm-minecraft",
+            "id": 2757,
+            "score": 0.3598788722655561
+          },
+          {
+            "full_name": "noise6/pkg-1558-nm-minecraft",
+            "id": 1602,
+            "score": 0.3360940824766454
+          },
+          {
+            "full_name": "noise29/pkg-3133-nm-minecraft",
+            "id": 3177,
+            "score": 0.3323052960038023
+          },
+          {
+            "full_name": "noise93/pkg-578-nm-minecraft",
+            "id": 622,
+            "score": 0.3299800930597794
+          }
+        ]
+      }
+    },
+    {
+      "id": "gh-backup",
+      "query": "GitHub backup/archive utility",
+      "notes": null,
+      "relevant": [
+        "archive/gh-mirror",
+        "archive/repo-vault"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "archive/gh-mirror",
+            "id": 16,
+            "score": 0.4427226781845093
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.39644235372543335
+          },
+          {
+            "full_name": "noise19/pkg-407-nm-git",
+            "id": 451,
+            "score": 0.30749037861824036
+          },
+          {
+            "full_name": "noise34/pkg-4011-nm-git",
+            "id": 4055,
+            "score": 0.2980400025844574
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.2947712242603302
+          },
+          {
+            "full_name": "noise96/pkg-8632-nm-git",
+            "id": 8676,
+            "score": 0.2901960611343384
+          },
+          {
+            "full_name": "noise1/pkg-2717-nm-git",
+            "id": 2761,
+            "score": 0.2853473424911499
+          },
+          {
+            "full_name": "noise82/pkg-9297-nm-git",
+            "id": 9341,
+            "score": 0.28245019912719727
+          },
+          {
+            "full_name": "noise64/pkg-8212-nm-git",
+            "id": 8256,
+            "score": 0.280638724565506
+          },
+          {
+            "full_name": "noise12/pkg-9227-nm-git",
+            "id": 9271,
+            "score": 0.2806055247783661
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "archive/gh-mirror",
+            "id": 16,
+            "score": 0.6
+          },
+          {
+            "full_name": "archive/repo-vault",
+            "id": 17,
+            "score": 0.43340262419619074
+          },
+          {
+            "full_name": "noise19/pkg-407-nm-git",
+            "id": 451,
+            "score": 0.21163869372048338
+          },
+          {
+            "full_name": "noise34/pkg-4011-nm-git",
+            "id": 4055,
+            "score": 0.19170371934196853
+          },
+          {
+            "full_name": "noise96/pkg-8632-nm-git",
+            "id": 8676,
+            "score": 0.15685728090433415
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.15134954983252275
+          },
+          {
+            "full_name": "noise82/pkg-9297-nm-git",
+            "id": 9341,
+            "score": 0.13232151852891225
+          },
+          {
+            "full_name": "noise1/pkg-2717-nm-git",
+            "id": 2761,
+            "score": 0.1314984985835451
+          },
+          {
+            "full_name": "noise64/pkg-8212-nm-git",
+            "id": 8256,
+            "score": 0.12658349875089359
+          },
+          {
+            "full_name": "noise12/pkg-9227-nm-git",
+            "id": 9271,
+            "score": 0.1264783352342407
+          }
+        ]
+      }
+    },
+    {
+      "id": "local-notes",
+      "query": "local-first note application",
+      "notes": null,
+      "relevant": [
+        "notes/ink-local",
+        "notes/markdown-vault"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "notes/ink-local",
+            "id": 18,
+            "score": 0.315066397190094
+          },
+          {
+            "full_name": "noise89/pkg-1350-nm-notes",
+            "id": 1394,
+            "score": 0.26462802290916443
+          },
+          {
+            "full_name": "noise89/pkg-4745-nm-notes",
+            "id": 4789,
+            "score": 0.2641412019729614
+          },
+          {
+            "full_name": "noise91/pkg-2225-nm-notes",
+            "id": 2269,
+            "score": 0.2629542648792267
+          },
+          {
+            "full_name": "noise34/pkg-6145-nm-notes",
+            "id": 6189,
+            "score": 0.26269209384918213
+          },
+          {
+            "full_name": "noise82/pkg-3380-nm-notes",
+            "id": 3424,
+            "score": 0.2624720633029938
+          },
+          {
+            "full_name": "noise77/pkg-2890-nm-notes",
+            "id": 2934,
+            "score": 0.25943681597709656
+          },
+          {
+            "full_name": "noise19/pkg-4675-nm-notes",
+            "id": 4719,
+            "score": 0.2587638199329376
+          },
+          {
+            "full_name": "noise62/pkg-1420-nm-notes",
+            "id": 1464,
+            "score": 0.25718843936920166
+          },
+          {
+            "full_name": "noise67/pkg-8700-nm-notes",
+            "id": 8744,
+            "score": 0.2570641338825226
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "notes/ink-local",
+            "id": 18,
+            "score": 0.6375000000000001
+          },
+          {
+            "full_name": "noise89/pkg-1350-nm-notes",
+            "id": 1394,
+            "score": 0.25986967203210315
+          },
+          {
+            "full_name": "noise91/pkg-2225-nm-notes",
+            "id": 2269,
+            "score": 0.24713090337368632
+          },
+          {
+            "full_name": "noise34/pkg-6145-nm-notes",
+            "id": 6189,
+            "score": 0.24513555157196823
+          },
+          {
+            "full_name": "noise89/pkg-4745-nm-notes",
+            "id": 4789,
+            "score": 0.24366453713599476
+          },
+          {
+            "full_name": "noise82/pkg-3380-nm-notes",
+            "id": 3424,
+            "score": 0.24346092586410362
+          },
+          {
+            "full_name": "noise77/pkg-2890-nm-notes",
+            "id": 2934,
+            "score": 0.2203600278764052
+          },
+          {
+            "full_name": "noise19/pkg-4675-nm-notes",
+            "id": 4719,
+            "score": 0.2152379368923881
+          },
+          {
+            "full_name": "noise62/pkg-1420-nm-notes",
+            "id": 1464,
+            "score": 0.20324790715604374
+          },
+          {
+            "full_name": "noise67/pkg-8700-nm-notes",
+            "id": 8744,
+            "score": 0.20230183322573042
+          }
+        ]
+      }
+    },
+    {
+      "id": "term-fm",
+      "query": "terminal file manager",
+      "notes": null,
+      "relevant": [
+        "cli/ranger-like",
+        "cli/yazi-twin"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": -12.043835507556967
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": 0.3818468153476715
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.3706151247024536
+          },
+          {
+            "full_name": "noise94/pkg-1937-nm-windows",
+            "id": 1981,
+            "score": 0.333161860704422
+          },
+          {
+            "full_name": "noise33/pkg-4107-nm-windows",
+            "id": 4151,
+            "score": 0.3164404630661011
+          },
+          {
+            "full_name": "noise62/pkg-4912-nm-windows",
+            "id": 4956,
+            "score": 0.31553223729133606
+          },
+          {
+            "full_name": "noise6/pkg-4177-nm-windows",
+            "id": 4221,
+            "score": 0.31356799602508545
+          },
+          {
+            "full_name": "noise2/pkg-2427-nm-windows",
+            "id": 2471,
+            "score": 0.31110307574272156
+          },
+          {
+            "full_name": "noise6/pkg-782-nm-windows",
+            "id": 826,
+            "score": 0.30913403630256653
+          },
+          {
+            "full_name": "noise64/pkg-2392-nm-windows",
+            "id": 2436,
+            "score": 0.3114067614078522
+          },
+          {
+            "full_name": "noise67/pkg-2007-nm-windows",
+            "id": 2051,
+            "score": 0.308673620223999
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "cli/yazi-twin",
+            "id": 21,
+            "score": 0.9142857142857143
+          },
+          {
+            "full_name": "cli/ranger-like",
+            "id": 20,
+            "score": 0.5066766658069785
+          },
+          {
+            "full_name": "noise94/pkg-1937-nm-windows",
+            "id": 1981,
+            "score": 0.3383645236645908
+          },
+          {
+            "full_name": "noise33/pkg-4107-nm-windows",
+            "id": 4151,
+            "score": 0.2313297989493966
+          },
+          {
+            "full_name": "noise62/pkg-4912-nm-windows",
+            "id": 4956,
+            "score": 0.22551618827618142
+          },
+          {
+            "full_name": "noise6/pkg-4177-nm-windows",
+            "id": 4221,
+            "score": 0.19865724131250362
+          },
+          {
+            "full_name": "noise6/pkg-782-nm-windows",
+            "id": 826,
+            "score": 0.18456089875325388
+          },
+          {
+            "full_name": "noise2/pkg-2427-nm-windows",
+            "id": 2471,
+            "score": 0.18287913056038047
+          },
+          {
+            "full_name": "noise67/pkg-2007-nm-windows",
+            "id": 2051,
+            "score": 0.18161374629089125
+          },
+          {
+            "full_name": "noise64/pkg-2392-nm-windows",
+            "id": 2436,
+            "score": 0.17053732743988564
+          }
+        ]
+      }
+    },
+    {
+      "id": "pe-re",
+      "query": "reverse engineering PE tool",
+      "notes": null,
+      "relevant": [
+        "win/pe-inspector",
+        "re/importscope"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.39763128757476807
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.3096807897090912
+          },
+          {
+            "full_name": "noise70/pkg-5017-nm-windows",
+            "id": 5061,
+            "score": 0.2638251781463623
+          },
+          {
+            "full_name": "noise67/pkg-8797-nm-windows",
+            "id": 8841,
+            "score": 0.255187064409256
+          },
+          {
+            "full_name": "noise64/pkg-2392-nm-windows",
+            "id": 2436,
+            "score": 0.2542777955532074
+          },
+          {
+            "full_name": "noise94/pkg-8727-nm-windows",
+            "id": 8771,
+            "score": 0.24945423007011414
+          },
+          {
+            "full_name": "noise33/pkg-4107-nm-windows",
+            "id": 4151,
+            "score": 0.24820196628570557
+          },
+          {
+            "full_name": "noise48/pkg-8002-nm-git",
+            "id": 8046,
+            "score": 0.2491312026977539
+          },
+          {
+            "full_name": "noise81/pkg-1924-nm-ops",
+            "id": 1968,
+            "score": 0.24734045565128326
+          },
+          {
+            "full_name": "noise54/pkg-8202-nm-windows",
+            "id": 8246,
+            "score": 0.24527700245380402
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "win/pe-inspector",
+            "id": 5,
+            "score": 0.6166666666666667
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.257676188064568
+          },
+          {
+            "full_name": "noise67/pkg-8797-nm-windows",
+            "id": 8841,
+            "score": 0.17655369424379325
+          },
+          {
+            "full_name": "noise70/pkg-5017-nm-windows",
+            "id": 5061,
+            "score": 0.16637557330779595
+          },
+          {
+            "full_name": "noise64/pkg-2392-nm-windows",
+            "id": 2436,
+            "score": 0.1624204178860426
+          },
+          {
+            "full_name": "noise94/pkg-8727-nm-windows",
+            "id": 8771,
+            "score": 0.1574992940086549
+          },
+          {
+            "full_name": "noise33/pkg-4107-nm-windows",
+            "id": 4151,
+            "score": 0.15333710582450064
+          },
+          {
+            "full_name": "noise48/pkg-8002-nm-git",
+            "id": 8046,
+            "score": 0.14531452674846723
+          },
+          {
+            "full_name": "noise81/pkg-1924-nm-ops",
+            "id": 1968,
+            "score": 0.14491812051256253
+          },
+          {
+            "full_name": "noise54/pkg-8202-nm-windows",
+            "id": 8246,
+            "score": 0.1436153123399363
+          }
+        ]
+      }
+    },
+    {
+      "id": "dep-viz",
+      "query": "software dependency visualizer",
+      "notes": null,
+      "relevant": [
+        "dev/dep-graph",
+        "dev/module-map"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "dev/dep-graph",
+            "id": 24,
+            "score": 0.5091834664344788
+          },
+          {
+            "full_name": "noise86/pkg-571-nm-windows",
+            "id": 615,
+            "score": 0.41901612281799316
+          },
+          {
+            "full_name": "noise84/pkg-6486-nm-windows",
+            "id": 6530,
+            "score": 0.4235241413116455
+          },
+          {
+            "full_name": "noise51/pkg-536-nm-windows",
+            "id": 580,
+            "score": 0.4138523042201996
+          },
+          {
+            "full_name": "noise93/pkg-5331-nm-windows",
+            "id": 5375,
+            "score": 0.4144059419631958
+          },
+          {
+            "full_name": "noise15/pkg-1761-nm-windows",
+            "id": 1805,
+            "score": 0.41241857409477234
+          },
+          {
+            "full_name": "noise93/pkg-1936-nm-windows",
+            "id": 1980,
+            "score": 0.41229021549224854
+          },
+          {
+            "full_name": "noise63/pkg-5786-nm-windows",
+            "id": 5830,
+            "score": 0.4109126031398773
+          },
+          {
+            "full_name": "noise59/pkg-641-nm-windows",
+            "id": 685,
+            "score": 0.41018402576446533
+          },
+          {
+            "full_name": "cli/tig-plus",
+            "id": 23,
+            "score": 0.41067904233932495
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "dev/dep-graph",
+            "id": 24,
+            "score": 0.6323529411764706
+          },
+          {
+            "full_name": "noise86/pkg-571-nm-windows",
+            "id": 615,
+            "score": 0.20066255718206155
+          },
+          {
+            "full_name": "noise84/pkg-6486-nm-windows",
+            "id": 6530,
+            "score": 0.18195122109672807
+          },
+          {
+            "full_name": "noise51/pkg-536-nm-windows",
+            "id": 580,
+            "score": 0.17492932660384528
+          },
+          {
+            "full_name": "noise15/pkg-1761-nm-windows",
+            "id": 1805,
+            "score": 0.1677845156067435
+          },
+          {
+            "full_name": "noise93/pkg-1936-nm-windows",
+            "id": 1980,
+            "score": 0.16714485690206826
+          },
+          {
+            "full_name": "noise93/pkg-5331-nm-windows",
+            "id": 5375,
+            "score": 0.1659236037158625
+          },
+          {
+            "full_name": "noise63/pkg-5786-nm-windows",
+            "id": 5830,
+            "score": 0.1602797016609227
+          },
+          {
+            "full_name": "noise23/pkg-5261-nm-windows",
+            "id": 5305,
+            "score": 0.14886074674419025
+          },
+          {
+            "full_name": "noise85/pkg-5226-nm-windows",
+            "id": 5270,
+            "score": 0.14727860507228277
+          }
+        ]
+      }
+    },
+    {
+      "id": "ssg",
+      "query": "static site generator",
+      "notes": null,
+      "relevant": [
+        "web/tiny-ssg",
+        "web/md-site-kit"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "web/tiny-ssg",
+            "id": 28,
+            "score": -12.017771613161479
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "web/md-site-kit",
+            "id": 29,
+            "score": 0.37745967507362366
+          },
+          {
+            "full_name": "web/tiny-ssg",
+            "id": 28,
+            "score": 0.35028794407844543
+          },
+          {
+            "full_name": "noise89/pkg-9789-nm-photos",
+            "id": 9833,
+            "score": 0.2997654676437378
+          },
+          {
+            "full_name": "noise69/pkg-7829-nm-photos",
+            "id": 7873,
+            "score": 0.2852524518966675
+          },
+          {
+            "full_name": "noise79/pkg-2019-nm-photos",
+            "id": 2063,
+            "score": 0.2810628116130829
+          },
+          {
+            "full_name": "noise44/pkg-1984-nm-photos",
+            "id": 2028,
+            "score": 0.27868157625198364
+          },
+          {
+            "full_name": "noise61/pkg-4329-nm-photos",
+            "id": 4373,
+            "score": 0.27366048097610474
+          },
+          {
+            "full_name": "noise28/pkg-1774-nm-photos",
+            "id": 1818,
+            "score": 0.28428909182548523
+          },
+          {
+            "full_name": "noise36/pkg-1879-nm-photos",
+            "id": 1923,
+            "score": 0.2727857232093811
+          },
+          {
+            "full_name": "noise14/pkg-9229-nm-photos",
+            "id": 9273,
+            "score": 0.2725192904472351
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "web/tiny-ssg",
+            "id": 28,
+            "score": 0.8204982220046175
+          },
+          {
+            "full_name": "web/md-site-kit",
+            "id": 29,
+            "score": 0.6045454545454545
+          },
+          {
+            "full_name": "noise89/pkg-9789-nm-photos",
+            "id": 9833,
+            "score": 0.28361192366135773
+          },
+          {
+            "full_name": "noise69/pkg-7829-nm-photos",
+            "id": 7873,
+            "score": 0.22596092770960946
+          },
+          {
+            "full_name": "noise79/pkg-2019-nm-photos",
+            "id": 2063,
+            "score": 0.2066937692607294
+          },
+          {
+            "full_name": "noise44/pkg-1984-nm-photos",
+            "id": 2028,
+            "score": 0.19574303461505205
+          },
+          {
+            "full_name": "noise61/pkg-4329-nm-photos",
+            "id": 4373,
+            "score": 0.17265221255896118
+          },
+          {
+            "full_name": "noise36/pkg-1879-nm-photos",
+            "id": 1923,
+            "score": 0.16862940979904678
+          },
+          {
+            "full_name": "noise14/pkg-9229-nm-photos",
+            "id": 9273,
+            "score": 0.16740414894208183
+          },
+          {
+            "full_name": "noise46/pkg-2859-nm-photos",
+            "id": 2903,
+            "score": 0.16657319183069721
+          }
+        ]
+      }
+    },
+    {
+      "id": "photo-manager",
+      "query": "self-hosted photo manager",
+      "notes": null,
+      "relevant": [
+        "media/photoprism-lite",
+        "media/gallery-home"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "media/photoprism-lite",
+            "id": 32,
+            "score": 0.4611593782901764
+          },
+          {
+            "full_name": "noise71/pkg-1914-nm-photos",
+            "id": 1958,
+            "score": 0.30525678396224976
+          },
+          {
+            "full_name": "noise9/pkg-1949-nm-photos",
+            "id": 1993,
+            "score": 0.2946432828903198
+          },
+          {
+            "full_name": "noise89/pkg-9789-nm-photos",
+            "id": 9833,
+            "score": 0.29520875215530396
+          },
+          {
+            "full_name": "noise70/pkg-8703-nm-photos",
+            "id": 8747,
+            "score": 0.2937451899051666
+          },
+          {
+            "full_name": "noise35/pkg-1878-nm-photos",
+            "id": 1922,
+            "score": 0.2897379696369171
+          },
+          {
+            "full_name": "noise0/pkg-3104-nm-photos",
+            "id": 3148,
+            "score": 0.28962215781211853
+          },
+          {
+            "full_name": "noise27/pkg-6429-nm-photos",
+            "id": 6473,
+            "score": 0.2888331115245819
+          },
+          {
+            "full_name": "noise49/pkg-9264-nm-photos",
+            "id": 9308,
+            "score": 0.28853821754455566
+          },
+          {
+            "full_name": "noise83/pkg-3769-nm-photos",
+            "id": 3813,
+            "score": 0.28753945231437683
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "media/photoprism-lite",
+            "id": 32,
+            "score": 0.6291666666666667
+          },
+          {
+            "full_name": "noise71/pkg-1914-nm-photos",
+            "id": 1958,
+            "score": 0.18199841601461603
+          },
+          {
+            "full_name": "noise9/pkg-1949-nm-photos",
+            "id": 1993,
+            "score": 0.15013791148160055
+          },
+          {
+            "full_name": "noise89/pkg-9789-nm-photos",
+            "id": 9833,
+            "score": 0.1476687182460108
+          },
+          {
+            "full_name": "noise70/pkg-8703-nm-photos",
+            "id": 8747,
+            "score": 0.14744194005514832
+          },
+          {
+            "full_name": "noise35/pkg-1878-nm-photos",
+            "id": 1922,
+            "score": 0.13541272757793704
+          },
+          {
+            "full_name": "noise0/pkg-3104-nm-photos",
+            "id": 3148,
+            "score": 0.13506507385425384
+          },
+          {
+            "full_name": "noise27/pkg-6429-nm-photos",
+            "id": 6473,
+            "score": 0.13269644802094543
+          },
+          {
+            "full_name": "noise49/pkg-9264-nm-photos",
+            "id": 9308,
+            "score": 0.13181121034831414
+          },
+          {
+            "full_name": "noise83/pkg-3769-nm-photos",
+            "id": 3813,
+            "score": 0.12881303246828452
+          }
+        ]
+      }
+    },
+    {
+      "id": "discord-voice",
+      "query": "Discord voice bot",
+      "notes": "talks back in a voice channel",
+      "relevant": [
+        "voice/whisper-discord-bot",
+        "voice/discord-tts"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": -12.75076839240134
+          },
+          {
+            "full_name": "noise10/pkg-10-nm-discord",
+            "id": 54,
+            "score": -10.302160787708276
+          },
+          {
+            "full_name": "noise45/pkg-45-nm-discord",
+            "id": 89,
+            "score": -10.302160787708276
+          },
+          {
+            "full_name": "noise80/pkg-80-nm-discord",
+            "id": 124,
+            "score": -10.302160787708276
+          },
+          {
+            "full_name": "noise18/pkg-115-nm-discord",
+            "id": 159,
+            "score": -10.302160787708276
+          },
+          {
+            "full_name": "noise53/pkg-150-nm-discord",
+            "id": 194,
+            "score": -10.302160787708276
+          },
+          {
+            "full_name": "noise88/pkg-185-nm-discord",
+            "id": 229,
+            "score": -10.302160787708276
+          },
+          {
+            "full_name": "noise26/pkg-220-nm-discord",
+            "id": 264,
+            "score": -10.302160787708276
+          },
+          {
+            "full_name": "noise61/pkg-255-nm-discord",
+            "id": 299,
+            "score": -10.302160787708276
+          },
+          {
+            "full_name": "noise96/pkg-290-nm-discord",
+            "id": 334,
+            "score": -10.302160787708276
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": 0.5809963345527649
+          },
+          {
+            "full_name": "noise8/pkg-2530-nm-discord",
+            "id": 2574,
+            "score": 0.5564787983894348
+          },
+          {
+            "full_name": "noise80/pkg-6870-nm-discord",
+            "id": 6914,
+            "score": 0.5531686544418335
+          },
+          {
+            "full_name": "noise92/pkg-1935-nm-discord",
+            "id": 1979,
+            "score": 0.5528295636177063
+          },
+          {
+            "full_name": "noise34/pkg-7115-nm-discord",
+            "id": 7159,
+            "score": 0.5527880787849426
+          },
+          {
+            "full_name": "noise67/pkg-2880-nm-discord",
+            "id": 2924,
+            "score": 0.5516355037689209
+          },
+          {
+            "full_name": "noise59/pkg-6170-nm-discord",
+            "id": 6214,
+            "score": 0.5508072376251221
+          },
+          {
+            "full_name": "noise0/pkg-9215-nm-discord",
+            "id": 9259,
+            "score": 0.5492960214614868
+          },
+          {
+            "full_name": "noise91/pkg-3195-nm-discord",
+            "id": 3239,
+            "score": 0.5486368536949158
+          },
+          {
+            "full_name": "noise70/pkg-9285-nm-discord",
+            "id": 9329,
+            "score": 0.547538161277771
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "voice/whisper-discord-bot",
+            "id": 3,
+            "score": 0.992
+          },
+          {
+            "full_name": "noise8/pkg-2530-nm-discord",
+            "id": 2574,
+            "score": 0.37310166554063984
+          },
+          {
+            "full_name": "noise80/pkg-6870-nm-discord",
+            "id": 6914,
+            "score": 0.33571726688795545
+          },
+          {
+            "full_name": "noise92/pkg-1935-nm-discord",
+            "id": 1979,
+            "score": 0.331887612725083
+          },
+          {
+            "full_name": "noise34/pkg-7115-nm-discord",
+            "id": 7159,
+            "score": 0.3234190876244749
+          },
+          {
+            "full_name": "noise67/pkg-2880-nm-discord",
+            "id": 2924,
+            "score": 0.3184020332128974
+          },
+          {
+            "full_name": "noise59/pkg-6170-nm-discord",
+            "id": 6214,
+            "score": 0.30904768723868836
+          },
+          {
+            "full_name": "noise0/pkg-9215-nm-discord",
+            "id": 9259,
+            "score": 0.2919801794788943
+          },
+          {
+            "full_name": "noise91/pkg-3195-nm-discord",
+            "id": 3239,
+            "score": 0.2845356118242615
+          },
+          {
+            "full_name": "noise70/pkg-9285-nm-discord",
+            "id": 9329,
+            "score": 0.27212710150887603
+          }
+        ]
+      }
+    },
+    {
+      "id": "db-migrate",
+      "query": "database migration tool",
+      "notes": null,
+      "relevant": [
+        "db/schema-evolve",
+        "db/flyway-lite"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "db/flyway-lite",
+            "id": 35,
+            "score": 0.4996195435523987
+          },
+          {
+            "full_name": "db/schema-evolve",
+            "id": 34,
+            "score": 0.44555050134658813
+          },
+          {
+            "full_name": "data/sheet-to-sql",
+            "id": 43,
+            "score": 0.3461100161075592
+          },
+          {
+            "full_name": "re/importscope",
+            "id": 7,
+            "score": 0.3452678918838501
+          },
+          {
+            "full_name": "noise11/pkg-1951-nm-db",
+            "id": 1995,
+            "score": 0.32264605164527893
+          },
+          {
+            "full_name": "noise8/pkg-3306-nm-network",
+            "id": 3350,
+            "score": 0.31844058632850647
+          },
+          {
+            "full_name": "noise65/pkg-1811-nm-db",
+            "id": 1855,
+            "score": 0.3179872930049896
+          },
+          {
+            "full_name": "noise73/pkg-1916-nm-db",
+            "id": 1960,
+            "score": 0.3148675262928009
+          },
+          {
+            "full_name": "noise27/pkg-5556-nm-db",
+            "id": 5600,
+            "score": 0.3143632709980011
+          },
+          {
+            "full_name": "noise40/pkg-6151-nm-db",
+            "id": 6195,
+            "score": 0.31435427069664
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "db/flyway-lite",
+            "id": 35,
+            "score": 0.588888888888889
+          },
+          {
+            "full_name": "db/schema-evolve",
+            "id": 34,
+            "score": 0.46081932833756845
+          },
+          {
+            "full_name": "data/sheet-to-sql",
+            "id": 43,
+            "score": 0.1677451797415523
+          },
+          {
+            "full_name": "noise11/pkg-1951-nm-db",
+            "id": 1995,
+            "score": 0.15252410486939222
+          },
+          {
+            "full_name": "noise8/pkg-3306-nm-network",
+            "id": 3350,
+            "score": 0.1408344789010944
+          },
+          {
+            "full_name": "noise73/pkg-1916-nm-db",
+            "id": 1960,
+            "score": 0.1309027038813146
+          },
+          {
+            "full_name": "noise27/pkg-5556-nm-db",
+            "id": 5600,
+            "score": 0.12950106212594584
+          },
+          {
+            "full_name": "noise40/pkg-6151-nm-db",
+            "id": 6195,
+            "score": 0.12947604464307813
+          },
+          {
+            "full_name": "noise65/pkg-1811-nm-db",
+            "id": 1855,
+            "score": 0.12846338131840176
+          },
+          {
+            "full_name": "noise32/pkg-6046-nm-db",
+            "id": 6090,
+            "score": 0.1256448905117368
+          }
+        ]
+      }
+    },
+    {
+      "id": "pcap",
+      "query": "network packet analyzer",
+      "notes": null,
+      "relevant": [
+        "net/pcap-viewer",
+        "net/wire-glance"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 0.5,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "noise80/pkg-9780-nm-network",
+            "id": 9824,
+            "score": 0.3460253179073334
+          },
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.3409064710140228
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.333770751953125
+          },
+          {
+            "full_name": "noise13/pkg-2535-nm-network",
+            "id": 2579,
+            "score": 0.3278716206550598
+          },
+          {
+            "full_name": "noise0/pkg-8730-nm-network",
+            "id": 8774,
+            "score": 0.3274233043193817
+          },
+          {
+            "full_name": "noise62/pkg-1905-nm-network",
+            "id": 1949,
+            "score": 0.3260594606399536
+          },
+          {
+            "full_name": "noise96/pkg-1939-nm-download",
+            "id": 1983,
+            "score": 0.3165275454521179
+          },
+          {
+            "full_name": "noise70/pkg-2010-nm-network",
+            "id": 2054,
+            "score": 0.31540632247924805
+          },
+          {
+            "full_name": "noise67/pkg-5790-nm-network",
+            "id": 5834,
+            "score": 0.3153282403945923
+          },
+          {
+            "full_name": "noise73/pkg-1625-nm-network",
+            "id": 1669,
+            "score": 0.31317344307899475
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 0.5,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "noise80/pkg-9780-nm-network",
+            "id": 9824,
+            "score": 0.6428571428571429
+          },
+          {
+            "full_name": "net/pcap-viewer",
+            "id": 36,
+            "score": 0.5312073739738473
+          },
+          {
+            "full_name": "noise13/pkg-2535-nm-network",
+            "id": 2579,
+            "score": 0.45669436017212706
+          },
+          {
+            "full_name": "noise0/pkg-8730-nm-network",
+            "id": 8774,
+            "score": 0.45192056258647617
+          },
+          {
+            "full_name": "noise62/pkg-1905-nm-network",
+            "id": 1949,
+            "score": 0.43739797407938663
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.43379567252331575
+          },
+          {
+            "full_name": "noise96/pkg-1939-nm-download",
+            "id": 1983,
+            "score": 0.32875662114450377
+          },
+          {
+            "full_name": "noise70/pkg-2010-nm-network",
+            "id": 2054,
+            "score": 0.3239603828431435
+          },
+          {
+            "full_name": "noise67/pkg-5790-nm-network",
+            "id": 5834,
+            "score": 0.3231289429924219
+          },
+          {
+            "full_name": "noise73/pkg-1625-nm-network",
+            "id": 1669,
+            "score": 0.30018405920359487
+          }
+        ]
+      }
+    },
+    {
+      "id": "meaning-voice-channel",
+      "query": "program that talks back to people in a voice channel",
+      "notes": "strong meaning query",
+      "relevant": [
+        "voice/whisper-discord-bot",
+        "voice/discord-tts"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": [
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.4449732303619385
+          },
+          {
+            "full_name": "noise59/pkg-253-nm-voice",
+            "id": 297,
+            "score": 0.42513957619667053
+          },
+          {
+            "full_name": "noise89/pkg-3193-nm-voice",
+            "id": 3237,
+            "score": 0.40200552344322205
+          },
+          {
+            "full_name": "noise68/pkg-2493-nm-voice",
+            "id": 2537,
+            "score": 0.3989100158214569
+          },
+          {
+            "full_name": "noise76/pkg-2598-nm-voice",
+            "id": 2642,
+            "score": 0.39350709319114685
+          },
+          {
+            "full_name": "noise46/pkg-3053-nm-voice",
+            "id": 3097,
+            "score": 0.3909792900085449
+          },
+          {
+            "full_name": "noise30/pkg-2843-nm-voice",
+            "id": 2887,
+            "score": 0.38968756794929504
+          },
+          {
+            "full_name": "noise82/pkg-1828-nm-voice",
+            "id": 1872,
+            "score": 0.3902130424976349
+          },
+          {
+            "full_name": "noise19/pkg-9913-nm-voice",
+            "id": 9957,
+            "score": 0.38620856404304504
+          },
+          {
+            "full_name": "noise57/pkg-9563-nm-voice",
+            "id": 9607,
+            "score": 0.38619956374168396
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": [
+          {
+            "full_name": "voice/offline-speech-kit",
+            "id": 2,
+            "score": 0.55
+          },
+          {
+            "full_name": "noise59/pkg-253-nm-voice",
+            "id": 297,
+            "score": 0.4923685700812428
+          },
+          {
+            "full_name": "noise89/pkg-3193-nm-voice",
+            "id": 3237,
+            "score": 0.3085066460527421
+          },
+          {
+            "full_name": "noise68/pkg-2493-nm-voice",
+            "id": 2537,
+            "score": 0.2839045586775507
+          },
+          {
+            "full_name": "noise76/pkg-2598-nm-voice",
+            "id": 2642,
+            "score": 0.24096388759094856
+          },
+          {
+            "full_name": "noise46/pkg-3053-nm-voice",
+            "id": 3097,
+            "score": 0.22087373038106334
+          },
+          {
+            "full_name": "noise30/pkg-2843-nm-voice",
+            "id": 2887,
+            "score": 0.21060754374896376
+          },
+          {
+            "full_name": "noise82/pkg-1828-nm-voice",
+            "id": 1872,
+            "score": 0.20049813019686688
+          },
+          {
+            "full_name": "noise19/pkg-9913-nm-voice",
+            "id": 9957,
+            "score": 0.18295755268501393
+          },
+          {
+            "full_name": "noise57/pkg-9563-nm-voice",
+            "id": 9607,
+            "score": 0.18288602121827435
+          }
+        ]
+      }
+    },
+    {
+      "id": "meaning-windows-does",
+      "query": "figure out what a Windows program does",
+      "notes": "strong meaning query",
+      "relevant": [
+        "win/pe-inspector",
+        "win/binary-explain"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "win/binary-explain",
+            "id": 6,
+            "score": 0.5085256695747375
+          },
+          {
+            "full_name": "noise41/pkg-9741-nm-windows",
+            "id": 9785,
+            "score": 0.38384175300598145
+          },
+          {
+            "full_name": "noise31/pkg-1971-nm-windows",
+            "id": 2015,
+            "score": 0.3709712028503418
+          },
+          {
+            "full_name": "noise71/pkg-9286-nm-windows",
+            "id": 9330,
+            "score": 0.36306118965148926
+          },
+          {
+            "full_name": "noise66/pkg-2006-nm-windows",
+            "id": 2050,
+            "score": 0.362690269947052
+          },
+          {
+            "full_name": "noise36/pkg-9251-nm-windows",
+            "id": 9295,
+            "score": 0.36132606863975525
+          },
+          {
+            "full_name": "noise93/pkg-1936-nm-windows",
+            "id": 1980,
+            "score": 0.35793980956077576
+          },
+          {
+            "full_name": "noise69/pkg-1621-nm-windows",
+            "id": 1665,
+            "score": 0.3565564453601837
+          },
+          {
+            "full_name": "noise10/pkg-8061-nm-windows",
+            "id": 8105,
+            "score": 0.35564351081848145
+          },
+          {
+            "full_name": "noise58/pkg-1901-nm-windows",
+            "id": 1945,
+            "score": 0.35428956151008606
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "win/binary-explain",
+            "id": 6,
+            "score": 0.6166666666666667
+          },
+          {
+            "full_name": "noise41/pkg-9741-nm-windows",
+            "id": 9785,
+            "score": 0.2371814532416791
+          },
+          {
+            "full_name": "noise31/pkg-1971-nm-windows",
+            "id": 2015,
+            "score": 0.21091216406714042
+          },
+          {
+            "full_name": "noise71/pkg-9286-nm-windows",
+            "id": 9330,
+            "score": 0.18566259812870087
+          },
+          {
+            "full_name": "noise66/pkg-2006-nm-windows",
+            "id": 2050,
+            "score": 0.18447858473964435
+          },
+          {
+            "full_name": "noise36/pkg-9251-nm-windows",
+            "id": 9295,
+            "score": 0.18012391553796825
+          },
+          {
+            "full_name": "noise93/pkg-1936-nm-windows",
+            "id": 1980,
+            "score": 0.16931463244957395
+          },
+          {
+            "full_name": "noise69/pkg-1621-nm-windows",
+            "id": 1665,
+            "score": 0.16489879334518506
+          },
+          {
+            "full_name": "noise10/pkg-8061-nm-windows",
+            "id": 8105,
+            "score": 0.16198461351656804
+          },
+          {
+            "full_name": "noise58/pkg-1901-nm-windows",
+            "id": 1945,
+            "score": 0.15766266973718304
+          }
+        ]
+      }
+    },
+    {
+      "id": "meaning-network-eye",
+      "query": "keep an eye on machines on my network",
+      "notes": "strong meaning query",
+      "relevant": [
+        "ops/infra-dashboard",
+        "ops/host-pulse"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.22230210900306702
+          },
+          {
+            "full_name": "noise14/pkg-2536-nm-network",
+            "id": 2580,
+            "score": 0.1917915642261505
+          },
+          {
+            "full_name": "noise40/pkg-5860-nm-network",
+            "id": 5904,
+            "score": 0.19095410406589508
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.19274020195007324
+          },
+          {
+            "full_name": "noise35/pkg-1975-nm-network",
+            "id": 2019,
+            "score": 0.185396209359169
+          },
+          {
+            "full_name": "noise36/pkg-1976-nm-network",
+            "id": 2020,
+            "score": 0.18467175960540771
+          },
+          {
+            "full_name": "noise69/pkg-7926-nm-network",
+            "id": 7970,
+            "score": 0.18404261767864227
+          },
+          {
+            "full_name": "noise61/pkg-4426-nm-network",
+            "id": 4470,
+            "score": 0.18516486883163452
+          },
+          {
+            "full_name": "noise27/pkg-9921-nm-network",
+            "id": 9965,
+            "score": 0.18280404806137085
+          },
+          {
+            "full_name": "noise13/pkg-2535-nm-network",
+            "id": 2579,
+            "score": 0.18276144564151764
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "ops/host-pulse",
+            "id": 11,
+            "score": 0.6111111111111112
+          },
+          {
+            "full_name": "noise14/pkg-2536-nm-network",
+            "id": 2580,
+            "score": 0.341832527755559
+          },
+          {
+            "full_name": "noise40/pkg-5860-nm-network",
+            "id": 5904,
+            "score": 0.3333738790300667
+          },
+          {
+            "full_name": "net/wire-glance",
+            "id": 37,
+            "score": 0.2847474431810667
+          },
+          {
+            "full_name": "noise35/pkg-1975-nm-network",
+            "id": 2019,
+            "score": 0.27723714416362255
+          },
+          {
+            "full_name": "noise36/pkg-1976-nm-network",
+            "id": 2020,
+            "score": 0.2699199411763579
+          },
+          {
+            "full_name": "noise69/pkg-7926-nm-network",
+            "id": 7970,
+            "score": 0.2635653815094657
+          },
+          {
+            "full_name": "noise27/pkg-9921-nm-network",
+            "id": 9965,
+            "score": 0.25105538305011094
+          },
+          {
+            "full_name": "noise13/pkg-2535-nm-network",
+            "id": 2579,
+            "score": 0.2506250832919895
+          },
+          {
+            "full_name": "noise60/pkg-2291-nm-network",
+            "id": 2335,
+            "score": 0.24680145077884683
+          }
+        ]
+      }
+    },
+    {
+      "id": "container-orch",
+      "query": "lightweight container orchestration",
+      "notes": null,
+      "relevant": [
+        "ops/k3s-helper",
+        "ops/compose-fleet"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "ops/compose-fleet",
+            "id": 13,
+            "score": 0.37173014879226685
+          },
+          {
+            "full_name": "noise26/pkg-9920-nm-network",
+            "id": 9964,
+            "score": 0.29758039116859436
+          },
+          {
+            "full_name": "noise66/pkg-3655-nm-network",
+            "id": 3699,
+            "score": 0.2848042845726013
+          },
+          {
+            "full_name": "noise25/pkg-995-nm-network",
+            "id": 1039,
+            "score": 0.2844173014163971
+          },
+          {
+            "full_name": "noise88/pkg-6490-nm-network",
+            "id": 6534,
+            "score": 0.2858789563179016
+          },
+          {
+            "full_name": "noise62/pkg-8695-nm-network",
+            "id": 8739,
+            "score": 0.2821180522441864
+          },
+          {
+            "full_name": "noise82/pkg-470-nm-network",
+            "id": 514,
+            "score": 0.2819235622882843
+          },
+          {
+            "full_name": "noise60/pkg-1030-nm-network",
+            "id": 1074,
+            "score": 0.2817462086677551
+          },
+          {
+            "full_name": "noise80/pkg-2990-nm-network",
+            "id": 3034,
+            "score": 0.28048592805862427
+          },
+          {
+            "full_name": "noise70/pkg-2010-nm-network",
+            "id": 2054,
+            "score": 0.2789665162563324
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "ops/compose-fleet",
+            "id": 13,
+            "score": 0.6227272727272728
+          },
+          {
+            "full_name": "noise26/pkg-9920-nm-network",
+            "id": 9964,
+            "score": 0.2566147482405268
+          },
+          {
+            "full_name": "noise66/pkg-3655-nm-network",
+            "id": 3699,
+            "score": 0.18883392102220492
+          },
+          {
+            "full_name": "noise25/pkg-995-nm-network",
+            "id": 1039,
+            "score": 0.18678086688947676
+          },
+          {
+            "full_name": "noise62/pkg-8695-nm-network",
+            "id": 8739,
+            "score": 0.17458270544627463
+          },
+          {
+            "full_name": "noise82/pkg-470-nm-network",
+            "id": 514,
+            "score": 0.17355088170579067
+          },
+          {
+            "full_name": "noise60/pkg-1030-nm-network",
+            "id": 1074,
+            "score": 0.17260997102855807
+          },
+          {
+            "full_name": "noise88/pkg-6490-nm-network",
+            "id": 6534,
+            "score": 0.1672626286379011
+          },
+          {
+            "full_name": "noise70/pkg-2010-nm-network",
+            "id": 2054,
+            "score": 0.1578629235111387
+          },
+          {
+            "full_name": "noise67/pkg-5790-nm-network",
+            "id": 5834,
+            "score": 0.1573563401117347
+          }
+        ]
+      }
+    },
+    {
+      "id": "password-mgr",
+      "query": "self-hosted password manager",
+      "notes": null,
+      "relevant": [
+        "sec/vaultwarden-tools",
+        "sec/pass-server"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": [
+          {
+            "full_name": "noise79/pkg-1922-nm-password",
+            "id": 1966,
+            "score": 0.4041088819503784
+          },
+          {
+            "full_name": "noise55/pkg-1607-nm-password",
+            "id": 1651,
+            "score": 0.3914548456668854
+          },
+          {
+            "full_name": "noise20/pkg-4967-nm-password",
+            "id": 5011,
+            "score": 0.3851519525051117
+          },
+          {
+            "full_name": "noise92/pkg-2517-nm-password",
+            "id": 2561,
+            "score": 0.3828301727771759
+          },
+          {
+            "full_name": "noise22/pkg-2447-nm-password",
+            "id": 2491,
+            "score": 0.3807543218135834
+          },
+          {
+            "full_name": "noise44/pkg-1887-nm-password",
+            "id": 1931,
+            "score": 0.37696927785873413
+          },
+          {
+            "full_name": "noise52/pkg-1992-nm-password",
+            "id": 2036,
+            "score": 0.3740384578704834
+          },
+          {
+            "full_name": "noise57/pkg-9272-nm-password",
+            "id": 9316,
+            "score": 0.3728339374065399
+          },
+          {
+            "full_name": "noise28/pkg-1677-nm-password",
+            "id": 1721,
+            "score": 0.3727920353412628
+          },
+          {
+            "full_name": "noise49/pkg-5772-nm-password",
+            "id": 5816,
+            "score": 0.37182220816612244
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": [
+          {
+            "full_name": "noise79/pkg-1922-nm-password",
+            "id": 1966,
+            "score": 0.65
+          },
+          {
+            "full_name": "noise55/pkg-1607-nm-password",
+            "id": 1651,
+            "score": 0.5027458644777015
+          },
+          {
+            "full_name": "noise20/pkg-4967-nm-password",
+            "id": 5011,
+            "score": 0.42939953742179493
+          },
+          {
+            "full_name": "noise92/pkg-2517-nm-password",
+            "id": 2561,
+            "score": 0.4023811490553594
+          },
+          {
+            "full_name": "noise22/pkg-2447-nm-password",
+            "id": 2491,
+            "score": 0.3782246165254425
+          },
+          {
+            "full_name": "noise44/pkg-1887-nm-password",
+            "id": 1931,
+            "score": 0.33417832465473735
+          },
+          {
+            "full_name": "noise52/pkg-1992-nm-password",
+            "id": 2036,
+            "score": 0.30007257736015147
+          },
+          {
+            "full_name": "noise57/pkg-9272-nm-password",
+            "id": 9316,
+            "score": 0.2860556569354572
+          },
+          {
+            "full_name": "noise28/pkg-1677-nm-password",
+            "id": 1721,
+            "score": 0.28556804553141635
+          },
+          {
+            "full_name": "noise49/pkg-5772-nm-password",
+            "id": 5816,
+            "score": 0.27428223449990985
+          }
+        ]
+      }
+    },
+    {
+      "id": "ci-cache",
+      "query": "CI build cache for monorepos",
+      "notes": null,
+      "relevant": [
+        "dev/turbo-cache-proxy",
+        "dev/remote-cache"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "dev/remote-cache",
+            "id": 27,
+            "score": -30.125778462158966
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "dev/remote-cache",
+            "id": 27,
+            "score": 0.41097840666770935
+          },
+          {
+            "full_name": "dev/turbo-cache-proxy",
+            "id": 26,
+            "score": 0.3841314911842346
+          },
+          {
+            "full_name": "noise38/pkg-1590-nm-network",
+            "id": 1634,
+            "score": 0.30380555987358093
+          },
+          {
+            "full_name": "noise31/pkg-3620-nm-network",
+            "id": 3664,
+            "score": 0.30319544672966003
+          },
+          {
+            "full_name": "noise60/pkg-7820-nm-network",
+            "id": 7864,
+            "score": 0.2897900640964508
+          },
+          {
+            "full_name": "noise31/pkg-225-nm-network",
+            "id": 269,
+            "score": 0.28900647163391113
+          },
+          {
+            "full_name": "noise31/pkg-7015-nm-network",
+            "id": 7059,
+            "score": 0.2860453128814697
+          },
+          {
+            "full_name": "noise1/pkg-4075-nm-network",
+            "id": 4119,
+            "score": 0.28308966755867004
+          },
+          {
+            "full_name": "noise74/pkg-3760-nm-network",
+            "id": 3804,
+            "score": 0.2826120853424072
+          },
+          {
+            "full_name": "noise18/pkg-6420-nm-network",
+            "id": 6464,
+            "score": 0.2823060154914856
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "dev/remote-cache",
+            "id": 27,
+            "score": 0.9153846153846155
+          },
+          {
+            "full_name": "dev/turbo-cache-proxy",
+            "id": 26,
+            "score": 0.47772042352213506
+          },
+          {
+            "full_name": "noise38/pkg-1590-nm-network",
+            "id": 1634,
+            "score": 0.23862931429837178
+          },
+          {
+            "full_name": "noise31/pkg-3620-nm-network",
+            "id": 3664,
+            "score": 0.22859515724889962
+          },
+          {
+            "full_name": "noise60/pkg-7820-nm-network",
+            "id": 7864,
+            "score": 0.184832440549543
+          },
+          {
+            "full_name": "noise31/pkg-225-nm-network",
+            "id": 269,
+            "score": 0.1818247107162133
+          },
+          {
+            "full_name": "noise31/pkg-7015-nm-network",
+            "id": 7059,
+            "score": 0.1704586423238793
+          },
+          {
+            "full_name": "noise1/pkg-4075-nm-network",
+            "id": 4119,
+            "score": 0.15911373659914374
+          },
+          {
+            "full_name": "noise74/pkg-3760-nm-network",
+            "id": 3804,
+            "score": 0.1572805920139268
+          },
+          {
+            "full_name": "noise18/pkg-6420-nm-network",
+            "id": 6464,
+            "score": 0.15610577798021838
+          }
+        ]
+      }
+    },
+    {
+      "id": "llm-local",
+      "query": "run language models locally on CPU",
+      "notes": null,
+      "relevant": [
+        "ai/llamacpp-ui",
+        "ai/local-infer"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "ai/local-infer",
+            "id": 41,
+            "score": 0.3832460939884186
+          },
+          {
+            "full_name": "ai/llamacpp-ui",
+            "id": 40,
+            "score": 0.30086150765419006
+          },
+          {
+            "full_name": "noise50/pkg-244-nm-ops",
+            "id": 288,
+            "score": 0.28093788027763367
+          },
+          {
+            "full_name": "noise91/pkg-1643-nm-llm",
+            "id": 1687,
+            "score": 0.27278614044189453
+          },
+          {
+            "full_name": "noise36/pkg-6438-nm-llm",
+            "id": 6482,
+            "score": 0.27203676104545593
+          },
+          {
+            "full_name": "noise8/pkg-978-nm-llm",
+            "id": 1022,
+            "score": 0.2710961103439331
+          },
+          {
+            "full_name": "noise18/pkg-1958-nm-llm",
+            "id": 2002,
+            "score": 0.26316413283348083
+          },
+          {
+            "full_name": "noise85/pkg-279-nm-ops",
+            "id": 323,
+            "score": 0.2624925374984741
+          },
+          {
+            "full_name": "noise62/pkg-838-nm-llm",
+            "id": 882,
+            "score": 0.2617708444595337
+          },
+          {
+            "full_name": "noise2/pkg-1748-nm-llm",
+            "id": 1792,
+            "score": 0.26087486743927
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "ai/local-infer",
+            "id": 41,
+            "score": 0.62
+          },
+          {
+            "full_name": "ai/llamacpp-ui",
+            "id": 40,
+            "score": 0.31427617282065534
+          },
+          {
+            "full_name": "noise50/pkg-244-nm-ops",
+            "id": 288,
+            "score": 0.22808578598037266
+          },
+          {
+            "full_name": "noise91/pkg-1643-nm-llm",
+            "id": 1687,
+            "score": 0.1948667893500815
+          },
+          {
+            "full_name": "noise36/pkg-6438-nm-llm",
+            "id": 6482,
+            "score": 0.19181300793081152
+          },
+          {
+            "full_name": "noise8/pkg-978-nm-llm",
+            "id": 1022,
+            "score": 0.18797978053226627
+          },
+          {
+            "full_name": "noise18/pkg-1958-nm-llm",
+            "id": 2002,
+            "score": 0.15565633308414645
+          },
+          {
+            "full_name": "noise85/pkg-279-nm-ops",
+            "id": 323,
+            "score": 0.15291952798240654
+          },
+          {
+            "full_name": "noise62/pkg-838-nm-llm",
+            "id": 882,
+            "score": 0.14997857070067885
+          },
+          {
+            "full_name": "noise2/pkg-1748-nm-llm",
+            "id": 1792,
+            "score": 0.1463273921526998
+          }
+        ]
+      }
+    },
+    {
+      "id": "rss-reader",
+      "query": "self-hosted RSS feed reader",
+      "notes": null,
+      "relevant": [
+        "web/miniflux-tools",
+        "web/feed-nest"
+      ],
+      "keyword": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": -15.667330376924589
+          }
+        ]
+      },
+      "semantic": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "web/feed-nest",
+            "id": 31,
+            "score": 0.5141646265983582
+          },
+          {
+            "full_name": "noise50/pkg-6646-nm-rss",
+            "id": 6690,
+            "score": 0.4999484121799469
+          },
+          {
+            "full_name": "noise36/pkg-521-nm-rss",
+            "id": 565,
+            "score": 0.4987429976463318
+          },
+          {
+            "full_name": "noise80/pkg-2796-nm-rss",
+            "id": 2840,
+            "score": 0.49594631791114807
+          },
+          {
+            "full_name": "noise83/pkg-2411-nm-rss",
+            "id": 2455,
+            "score": 0.49317440390586853
+          },
+          {
+            "full_name": "noise71/pkg-7346-nm-rss",
+            "id": 7390,
+            "score": 0.4919666349887848
+          },
+          {
+            "full_name": "noise70/pkg-5211-nm-rss",
+            "id": 5255,
+            "score": 0.491781085729599
+          },
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.49499648809432983
+          },
+          {
+            "full_name": "noise74/pkg-171-nm-rss",
+            "id": 215,
+            "score": 0.4886377453804016
+          },
+          {
+            "full_name": "noise6/pkg-976-nm-rss",
+            "id": 1020,
+            "score": 0.4875066578388214
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.2,
+        "recall": 1,
+        "mrr": 1,
+        "hits": 2,
+        "top10": [
+          {
+            "full_name": "web/miniflux-tools",
+            "id": 30,
+            "score": 0.6166364542989542
+          },
+          {
+            "full_name": "web/feed-nest",
+            "id": 31,
+            "score": 0.55
+          },
+          {
+            "full_name": "noise50/pkg-6646-nm-rss",
+            "id": 6690,
+            "score": 0.43984099456497805
+          },
+          {
+            "full_name": "noise36/pkg-521-nm-rss",
+            "id": 565,
+            "score": 0.4220212915086292
+          },
+          {
+            "full_name": "noise80/pkg-2796-nm-rss",
+            "id": 2840,
+            "score": 0.38067783576380687
+          },
+          {
+            "full_name": "noise83/pkg-2411-nm-rss",
+            "id": 2455,
+            "score": 0.32541477875128955
+          },
+          {
+            "full_name": "noise71/pkg-7346-nm-rss",
+            "id": 7390,
+            "score": 0.32184598501263634
+          },
+          {
+            "full_name": "noise70/pkg-5211-nm-rss",
+            "id": 5255,
+            "score": 0.319103001077392
+          },
+          {
+            "full_name": "noise74/pkg-171-nm-rss",
+            "id": 215,
+            "score": 0.27263484421873063
+          },
+          {
+            "full_name": "noise6/pkg-976-nm-rss",
+            "id": 1020,
+            "score": 0.2559139207856551
+          }
+        ]
+      }
+    },
+    {
+      "id": "git-tui",
+      "query": "terminal git client with diff review",
+      "notes": null,
+      "relevant": [
+        "cli/lazy-git-twin",
+        "cli/tig-plus"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": [
+          {
+            "full_name": "noise57/pkg-5586-nm-git",
+            "id": 5630,
+            "score": 0.4445929527282715
+          },
+          {
+            "full_name": "noise77/pkg-4151-nm-git",
+            "id": 4195,
+            "score": 0.44539862871170044
+          },
+          {
+            "full_name": "noise10/pkg-301-nm-git",
+            "id": 345,
+            "score": 0.44489216804504395
+          },
+          {
+            "full_name": "noise57/pkg-2191-nm-git",
+            "id": 2235,
+            "score": 0.43968987464904785
+          },
+          {
+            "full_name": "noise95/pkg-1841-nm-git",
+            "id": 1885,
+            "score": 0.43595796823501587
+          },
+          {
+            "full_name": "noise80/pkg-371-nm-git",
+            "id": 415,
+            "score": 0.43574008345603943
+          },
+          {
+            "full_name": "noise61/pkg-3941-nm-git",
+            "id": 3985,
+            "score": 0.43330541253089905
+          },
+          {
+            "full_name": "noise0/pkg-2716-nm-git",
+            "id": 2760,
+            "score": 0.43188759684562683
+          },
+          {
+            "full_name": "noise15/pkg-4186-nm-git",
+            "id": 4230,
+            "score": 0.4315352439880371
+          },
+          {
+            "full_name": "noise3/pkg-5726-nm-git",
+            "id": 5770,
+            "score": 0.4285772442817688
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": [
+          {
+            "full_name": "noise57/pkg-5586-nm-git",
+            "id": 5630,
+            "score": 0.6358082872722518
+          },
+          {
+            "full_name": "noise77/pkg-4151-nm-git",
+            "id": 4195,
+            "score": 0.6192307692307693
+          },
+          {
+            "full_name": "noise10/pkg-301-nm-git",
+            "id": 345,
+            "score": 0.5564634802919414
+          },
+          {
+            "full_name": "noise57/pkg-2191-nm-git",
+            "id": 2235,
+            "score": 0.5494422083357593
+          },
+          {
+            "full_name": "noise95/pkg-1841-nm-git",
+            "id": 1885,
+            "score": 0.4760136185100608
+          },
+          {
+            "full_name": "noise80/pkg-371-nm-git",
+            "id": 415,
+            "score": 0.4721756510708151
+          },
+          {
+            "full_name": "noise61/pkg-3941-nm-git",
+            "id": 3985,
+            "score": 0.4369820454842641
+          },
+          {
+            "full_name": "noise0/pkg-2716-nm-git",
+            "id": 2760,
+            "score": 0.4043153891454412
+          },
+          {
+            "full_name": "noise15/pkg-4186-nm-git",
+            "id": 4230,
+            "score": 0.3981088115180029
+          },
+          {
+            "full_name": "noise3/pkg-5726-nm-git",
+            "id": 5770,
+            "score": 0.35369694464939017
+          }
+        ]
+      }
+    },
+    {
+      "id": "csv-etl",
+      "query": "transform messy CSV into a clean database",
+      "notes": "meaning-based ETL",
+      "relevant": [
+        "data/csv-normalize",
+        "data/sheet-to-sql"
+      ],
+      "keyword": {
+        "precision": 0,
+        "recall": 0,
+        "mrr": 0,
+        "hits": 0,
+        "top10": []
+      },
+      "semantic": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "data/csv-normalize",
+            "id": 42,
+            "score": 0.5120937824249268
+          },
+          {
+            "full_name": "noise17/pkg-9232-nm-csv",
+            "id": 9276,
+            "score": 0.4408292770385742
+          },
+          {
+            "full_name": "noise12/pkg-1952-nm-csv",
+            "id": 1996,
+            "score": 0.4389083981513977
+          },
+          {
+            "full_name": "noise43/pkg-3632-nm-csv",
+            "id": 3676,
+            "score": 0.42853185534477234
+          },
+          {
+            "full_name": "noise25/pkg-9337-nm-csv",
+            "id": 9381,
+            "score": 0.42722976207733154
+          },
+          {
+            "full_name": "noise82/pkg-2022-nm-csv",
+            "id": 2066,
+            "score": 0.42633292078971863
+          },
+          {
+            "full_name": "noise41/pkg-9547-nm-csv",
+            "id": 9591,
+            "score": 0.4243726134300232
+          },
+          {
+            "full_name": "noise2/pkg-4367-nm-csv",
+            "id": 4411,
+            "score": 0.4236027002334595
+          },
+          {
+            "full_name": "noise47/pkg-1987-nm-csv",
+            "id": 2031,
+            "score": 0.4218924939632416
+          },
+          {
+            "full_name": "noise39/pkg-1882-nm-csv",
+            "id": 1926,
+            "score": 0.42153316736221313
+          }
+        ]
+      },
+      "hybrid": {
+        "precision": 0.1,
+        "recall": 0.5,
+        "mrr": 1,
+        "hits": 1,
+        "top10": [
+          {
+            "full_name": "data/csv-normalize",
+            "id": 42,
+            "score": 0.5722222222222222
+          },
+          {
+            "full_name": "noise17/pkg-9232-nm-csv",
+            "id": 9276,
+            "score": 0.26979432418470184
+          },
+          {
+            "full_name": "noise12/pkg-1952-nm-csv",
+            "id": 1996,
+            "score": 0.25954617818973713
+          },
+          {
+            "full_name": "noise43/pkg-3632-nm-csv",
+            "id": 3676,
+            "score": 0.2041859332960022
+          },
+          {
+            "full_name": "noise25/pkg-9337-nm-csv",
+            "id": 9381,
+            "score": 0.1972390914139468
+          },
+          {
+            "full_name": "noise82/pkg-2022-nm-csv",
+            "id": 2066,
+            "score": 0.19245432309194244
+          },
+          {
+            "full_name": "noise41/pkg-9547-nm-csv",
+            "id": 9591,
+            "score": 0.18199582091813182
+          },
+          {
+            "full_name": "noise2/pkg-4367-nm-csv",
+            "id": 4411,
+            "score": 0.17788823095266937
+          },
+          {
+            "full_name": "noise47/pkg-1987-nm-csv",
+            "id": 2031,
+            "score": 0.1687640515701478
+          },
+          {
+            "full_name": "noise39/pkg-1882-nm-csv",
+            "id": 1926,
+            "score": 0.1668469960536354
+          }
+        ]
+      }
+    }
+  ],
+  "weightResults": [
+    {
+      "weights": {
+        "semantic": 0.7,
+        "lexical": 0.25,
+        "quality": 0.05
+      },
+      "macro_recall_at_10": 0.66,
+      "macro_mrr": 0.79
+    },
+    {
+      "weights": {
+        "semantic": 0.6,
+        "lexical": 0.3,
+        "quality": 0.1
+      },
+      "macro_recall_at_10": 0.66,
+      "macro_mrr": 0.7866666666666666
+    },
+    {
+      "weights": {
+        "semantic": 0.55,
+        "lexical": 0.35,
+        "quality": 0.1
+      },
+      "macro_recall_at_10": 0.66,
+      "macro_mrr": 0.7866666666666666
+    },
+    {
+      "weights": {
+        "semantic": 0.45,
+        "lexical": 0.45,
+        "quality": 0.1
+      },
+      "macro_recall_at_10": 0.66,
+      "macro_mrr": 0.7857142857142857
+    }
+  ],
+  "filterResults": [
+    {
+      "name": "language=Python",
+      "query": "offline speech recognition wake word",
+      "opts": {
+        "language": "Python"
+      },
+      "softMax": 80,
+      "eligibleCount": 1430,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": null,
+      "returned": 2,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "minStars=500",
+      "query": "download manager torrent",
+      "opts": {
+        "minStars": 500
+      },
+      "softMax": 80,
+      "eligibleCount": 8972,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": null,
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "maxStars=50",
+      "query": "utility formatting JSON logs",
+      "opts": {
+        "maxStars": 50
+      },
+      "softMax": 80,
+      "eligibleCount": 101,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": null,
+      "returned": 2,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "category=networking",
+      "query": "network monitoring dashboard",
+      "opts": {
+        "category": "networking"
+      },
+      "softMax": 80,
+      "eligibleCount": 1146,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": null,
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "cluster=ops",
+      "query": "infrastructure monitoring",
+      "opts": {
+        "cluster": "ops"
+      },
+      "softMax": 80,
+      "eligibleCount": 322,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": null,
+      "returned": 11,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "date range 2024",
+      "query": "local voice assistant",
+      "opts": {
+        "dateFrom": "2024-01-01",
+        "dateTo": "2024-12-31"
+      },
+      "softMax": 80,
+      "eligibleCount": 9995,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": null,
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "hasReadme",
+      "query": "GitHub backup archive",
+      "opts": {
+        "hasReadme": true
+      },
+      "softMax": 80,
+      "eligibleCount": 906,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": null,
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "hasRelease",
+      "query": "GitHub backup archive",
+      "opts": {
+        "hasRelease": true
+      },
+      "softMax": 80,
+      "eligibleCount": 433,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": null,
+      "returned": 19,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "archivedOnly",
+      "query": "GitHub backup archive",
+      "opts": {
+        "archivedOnly": true
+      },
+      "softMax": 80,
+      "eligibleCount": 906,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": null,
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "language=Python soft-max exceeded",
+      "query": "offline speech recognition wake word",
+      "opts": {
+        "language": "Python"
+      },
+      "softMax": 50,
+      "eligibleCount": 1430,
+      "retrievalPath": "post-filter",
+      "postFilterPathExercised": true,
+      "returned": 2,
+      "semanticAvailable": true,
+      "leaks": []
+    },
+    {
+      "name": "no hard filters still hides tombstones",
+      "query": "utility formatting JSON logs",
+      "opts": {},
+      "softMax": 80,
+      "eligibleCount": 9995,
+      "retrievalPath": "unfiltered",
+      "postFilterPathExercised": null,
+      "returned": 20,
+      "semanticAvailable": true,
+      "leaks": []
+    }
+  ],
+  "restartReport": {
+    "indexed_before": 9995,
+    "indexed_after_restart": 9995,
+    "top_ids_before": [
+      3,
+      2574,
+      6914,
+      1979,
+      7159
+    ],
+    "top_ids_after": [
+      3,
+      2574,
+      6914,
+      1979,
+      7159
+    ],
+    "removed_ids": [
+      3,
+      2574,
+      6914
+    ],
+    "removed_still_absent": true,
+    "contains": {
+      "present": [],
+      "missing": [
+        3,
+        2574,
+        6914
+      ]
+    }
+  },
+  "bitReport": {
+    "ok": true,
+    "n_docs": 3000,
+    "model": "sentence-transformers/all-MiniLM-L6-v2",
+    "model_load_s": 0.8821096770006989,
+    "embed_docs_s": 8.522691087000567,
+    "docs_per_s": 352.001494525106,
+    "exact_query_p50_ms": 114.06265900041035,
+    "exact_query_p95_ms": 123.48124979980639,
+    "exact_macro_recall_at_10": 0.76,
+    "exact_macro_mrr": 0.88,
+    "bits": [
+      {
+        "bits": 2,
+        "index_bytes": 569907,
+        "build_s": 0.012003362999166711,
+        "search_p50_ms": 0.07837100019969512,
+        "search_p95_ms": 0.09887940068438182,
+        "macro_recall_at_10": 0.74,
+        "macro_mrr": 0.85,
+        "mean_overlap_at_10_vs_exact": 0.49200000000000005
+      },
+      {
+        "bits": 3,
+        "index_bytes": 1058195,
+        "build_s": 0.006820577000326011,
+        "search_p50_ms": 0.08963700020103715,
+        "search_p95_ms": 0.0937000000703847,
+        "macro_recall_at_10": 0.72,
+        "macro_mrr": 0.8533333333333333,
+        "mean_overlap_at_10_vs_exact": 0.612
+      },
+      {
+        "bits": 4,
+        "index_bytes": 1058259,
+        "build_s": 0.00719123899943952,
+        "search_p50_ms": 0.09892200068861712,
+        "search_p95_ms": 0.10169919878535438,
+        "macro_recall_at_10": 0.74,
+        "macro_mrr": 0.88,
+        "mean_overlap_at_10_vs_exact": 0.772
+      }
+    ],
+    "sample_names": [
+      "voice/wake-word-local",
+      "voice/offline-speech-kit",
+      "voice/whisper-discord-bot",
+      "voice/discord-tts",
+      "win/pe-inspector"
+    ]
+  },
+  "turbovecMicro": [
+    {
+      "n": 10000,
+      "dim": 384,
+      "bits": 2,
+      "build_seconds": 0.04258988999936264,
+      "vectors_per_sec": 234797.5071114213,
+      "index_bytes": 1326771,
+      "last_sync_at": "2026-08-20T20:40:20Z",
+      "query_p50_ms": 0.03325499983475311,
+      "query_p95_ms": 0.04565400013234466,
+      "query_p99_ms": 0.18598400038172258,
+      "queries_per_sec": 25466.871411106218,
+      "filtered_p50_ms": 0.07459300013579195,
+      "filtered_p95_ms": 0.09861200032901252,
+      "add_p50_ms": 0.004400000761961564,
+      "remove_p50_ms": 0.0010109997674589977
+    },
+    {
+      "n": 10000,
+      "dim": 384,
+      "bits": 3,
+      "build_seconds": 0.023634417999346624,
+      "vectors_per_sec": 423111.75169519515,
+      "index_bytes": 2487827,
+      "last_sync_at": "2026-08-20T20:40:21Z",
+      "query_p50_ms": 0.06904000019858358,
+      "query_p95_ms": 0.08745200011617271,
+      "query_p99_ms": 0.1822479998736526,
+      "queries_per_sec": 13574.972370189142,
+      "filtered_p50_ms": 0.12051900012011174,
+      "filtered_p95_ms": 0.12939299995196052,
+      "add_p50_ms": 0.004343999535194598,
+      "remove_p50_ms": 0.0014320003174361773
+    },
+    {
+      "n": 10000,
+      "dim": 384,
+      "bits": 4,
+      "build_seconds": 0.02424410200001148,
+      "vectors_per_sec": 412471.4538816601,
+      "index_bytes": 2487891,
+      "last_sync_at": "2026-08-20T20:40:22Z",
+      "query_p50_ms": 0.10831899999175221,
+      "query_p95_ms": 0.12471399986679899,
+      "query_p99_ms": 0.20454100013012066,
+      "queries_per_sec": 8895.979972979716,
+      "filtered_p50_ms": 0.15944900042086374,
+      "filtered_p95_ms": 0.18597399957798189,
+      "add_p50_ms": 0.004532999810180627,
+      "remove_p50_ms": 0.0014219995136954822
+    },
+    {
+      "n": 50000,
+      "dim": 384,
+      "bits": 2,
+      "build_seconds": 0.09068614600073488,
+      "vectors_per_sec": 551352.1326575597,
+      "index_bytes": 5646771,
+      "last_sync_at": "2026-08-20T20:40:28Z",
+      "query_p50_ms": 0.10572500013950048,
+      "query_p95_ms": 0.24165400009223958,
+      "query_p99_ms": 0.3149429994664388,
+      "queries_per_sec": 7795.5644408342005,
+      "filtered_p50_ms": 0.4077659996255534,
+      "filtered_p95_ms": 0.5510910004886682,
+      "add_p50_ms": 0.004538000212050974,
+      "remove_p50_ms": 0.0010080002539325505
+    },
+    {
+      "n": 50000,
+      "dim": 384,
+      "bits": 3,
+      "build_seconds": 0.11731375199997274,
+      "vectors_per_sec": 426207.4918549329,
+      "index_bytes": 10647827,
+      "last_sync_at": "2026-08-20T20:40:34Z",
+      "query_p50_ms": 0.17196400040120352,
+      "query_p95_ms": 0.3030090001630015,
+      "query_p99_ms": 0.5388859999584383,
+      "queries_per_sec": 5123.18703188403,
+      "filtered_p50_ms": 0.5031769997003721,
+      "filtered_p95_ms": 0.7587070003864937,
+      "add_p50_ms": 0.004645000444725156,
+      "remove_p50_ms": 0.001463999979023356
+    },
+    {
+      "n": 50000,
+      "dim": 384,
+      "bits": 4,
+      "build_seconds": 0.1111801529996228,
+      "vectors_per_sec": 449720.55399284826,
+      "index_bytes": 10647891,
+      "last_sync_at": "2026-08-20T20:40:40Z",
+      "query_p50_ms": 0.1592900007381104,
+      "query_p95_ms": 0.35368200042285025,
+      "query_p99_ms": 0.41715899988048477,
+      "queries_per_sec": 5317.502773042324,
+      "filtered_p50_ms": 0.4360270004326594,
+      "filtered_p95_ms": 0.5688979999831645,
+      "add_p50_ms": 0.004787000762007665,
+      "remove_p50_ms": 0.0014360002751345746
+    }
+  ],
+  "recommendation": {
+    "verdict": "GO_BEHIND_FEATURE_FLAG",
+    "go": true,
+    "keep_default_weights": true,
+    "default_weights_note": "Do not change defaults from this synthetic run alone. Current 0.55/0.35/0.10 remains recommended unless production-snapshot traffic clearly prefers another mix.",
+    "observed_best_weights": {
+      "weights": {
+        "semantic": 0.7,
+        "lexical": 0.25,
+        "quality": 0.05
+      },
+      "macro_recall_at_10": 0.66,
+      "macro_mrr": 0.79
+    },
+    "vector_bits_default": 2,
+    "vector_bits_note": "2-bit remains sensible (smallest index, labeled R@10 near exact). Re-check on a production snapshot before raising bits.",
+    "railway": {
+      "worker_private": true,
+      "expose_publicly": false,
+      "measured_python_worker_peak_rss_mb": 948,
+      "suggested_ram_gb": 4,
+      "suggested_resources": "Private MiniLM worker: start with 4 GB RAM / 1 vCPU for this measured peak (948 MB) with headroom. Scale disk/CPU with archive size. Keep indexBatch/remove/rebuild private.",
+      "disk_estimate_2bit_per_100k": "~12–15 MB TurboVec + SQLite state overhead",
+      "startup": "MiniLM load typically a few seconds once weights are cached",
+      "hybrid_warm_p95_ms": 52.23408900000504
+    },
+    "blockers": [],
+    "limitations": [
+      "Corpus is representative with harder near-miss noise — still not a full production dump",
+      "Final gate remains a READ-ONLY production-snapshot run of this harness",
+      "Weight recommendation must be revalidated on live archive traffic"
+    ]
+  }
+}

@@ -20,6 +20,7 @@
 		summary?: string | null;
 		category?: string | null;
 		search_snippet?: string | null;
+		match_reason?: 'semantic' | 'lexical' | 'hybrid' | 'quality' | null;
 		deleted_at?: string | null;
 		enriched_at?: string | null;
 		is_favorite?: boolean;
@@ -118,6 +119,10 @@
 			<p class="repo-summary">{repo.description}</p>
 		{:else}
 			<p class="repo-summary muted">No description yet — open it to fetch the full story from GitHub.</p>
+		{/if}
+
+		{#if repo.match_reason === 'semantic' || repo.match_reason === 'hybrid'}
+			<p class="match-reason">Semantic match</p>
 		{/if}
 
 		{#if repo.category || topicChips.length}
@@ -234,6 +239,13 @@
 		color: var(--text-muted);
 		font-size: 0.92rem;
 		line-height: 1.5;
+	}
+
+	.match-reason {
+		margin: 0;
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		opacity: 0.9;
 	}
 
 	.muted {
