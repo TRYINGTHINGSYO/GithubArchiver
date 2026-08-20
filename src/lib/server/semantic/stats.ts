@@ -1,3 +1,4 @@
+import { checkWorkerCompatibility } from './compatibility.js';
 import { getSemanticConfig, isSemanticSearchEnabled } from './config.js';
 import { semanticWorkerHealth, semanticWorkerStats } from './client.js';
 import { countSemanticByStatus, countSemanticIndexedCurrent } from './index-state.js';
@@ -5,6 +6,8 @@ import { countSemanticByStatus, countSemanticIndexedCurrent } from './index-stat
 export interface SemanticAdminStats {
 	enabled: boolean;
 	workerHealthy: boolean;
+	workerCompatible: boolean;
+	compatibilityReason: string | null;
 	embeddingModel: string | null;
 	dimensions: number | null;
 	vectorBits: number | null;
@@ -25,6 +28,8 @@ export async function getSemanticAdminStats(): Promise<SemanticAdminStats> {
 	const base: SemanticAdminStats = {
 		enabled: config.enabled,
 		workerHealthy: false,
+		workerCompatible: false,
+		compatibilityReason: null,
 		embeddingModel: config.embeddingModel,
 		dimensions: config.dimensions,
 		vectorBits: config.vectorBits,
@@ -41,17 +46,26 @@ export async function getSemanticAdminStats(): Promise<SemanticAdminStats> {
 	if (!isSemanticSearchEnabled()) return base;
 
 	const health = await semanticWorkerHealth();
-	if (!health?.ok) {
-		return { ...base, workerHealthy: false, workerError: 'worker unavailable' };
+	const compat = checkWorkerCompatibility(health, config);
+	if (!compat.ok) {
+		return {
+			...base,
+			workerHealthy: Boolean(health?.ok),
+			workerCompatible: false,
+			compatibilityReason: compat.reason,
+			workerError: compat.reason
+		};
 	}
 
 	const stats = await semanticWorkerStats();
 	return {
 		...base,
 		workerHealthy: true,
-		embeddingModel: stats?.modelId ?? health.modelId,
-		dimensions: stats?.dimensions ?? health.dimensions,
-		vectorBits: stats?.vectorBits ?? health.vectorBits,
+		workerCompatible: true,
+		compatibilityReason: null,
+		embeddingModel: stats?.modelId ?? health!.modelId,
+		dimensions: stats?.dimensions ?? health!.dimensions,
+		vectorBits: stats?.vectorBits ?? health!.vectorBits,
 		indexBytes: stats?.indexBytes ?? null,
 		lastSyncAt: stats?.lastSyncAt ?? null
 	};

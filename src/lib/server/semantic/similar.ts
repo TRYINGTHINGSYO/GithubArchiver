@@ -1,11 +1,13 @@
 import { getDb } from '../db/connection.js';
 import { readLatestReadmeText } from '../db/fts.js';
 import type { RepoRow } from '../db/types.js';
+import { checkWorkerCompatibility } from './compatibility.js';
 import { getSemanticConfig, isSemanticSearchEnabled } from './config.js';
 import { semanticWorkerHealth, semanticWorkerSimilar } from './client.js';
 import { buildRepositorySemanticDocument } from './document.js';
 import { getSemanticIndexState } from './index-state.js';
 import { repositoryVectorId } from './ids.js';
+import { filterRepoIdsByQuery } from './search.js';
 
 export interface SimilarRepoResult {
 	repo: RepoRow;
@@ -21,8 +23,9 @@ export async function findSimilarRepositories(
 	limit = 8
 ): Promise<SimilarRepoResult[]> {
 	if (!isSemanticSearchEnabled()) return [];
+	const config = getSemanticConfig();
 	const health = await semanticWorkerHealth();
-	if (!health?.ok) return [];
+	if (!checkWorkerCompatibility(health, config).ok) return [];
 
 	const state = getSemanticIndexState('repository', String(repoId));
 	if (!state || state.status !== 'indexed') return [];
@@ -50,20 +53,16 @@ export async function findSimilarRepositories(
 		return [];
 	}
 
-	const ids = hits
+	const candidateIds = hits
 		.map((h) => h.vectorId)
-		.filter((id) => id !== repoId)
-		.slice(0, limit);
+		.filter((id) => id !== repoId);
+	// Same baseline eligibility as search (deleted / pending-deletion / …).
+	const ids = filterRepoIdsByQuery(candidateIds, {}).slice(0, limit);
 	if (ids.length === 0) return [];
 
 	const placeholders = ids.map(() => '?').join(', ');
 	const rows = db
-		.prepare(
-			`SELECT * FROM repos
-			 WHERE id IN (${placeholders})
-			   AND deleted_at IS NULL
-			   AND pending_deletion_at IS NULL`
-		)
+		.prepare(`SELECT * FROM repos WHERE id IN (${placeholders})`)
 		.all(...ids) as RepoRow[];
 	const byId = new Map(rows.map((r) => [r.id, r]));
 	const scoreById = new Map(hits.map((h) => [h.vectorId, h.score]));

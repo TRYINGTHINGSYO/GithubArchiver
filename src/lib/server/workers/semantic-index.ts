@@ -1,6 +1,10 @@
 import { getDb } from '../db/connection.js';
 import { readLatestReadmeText } from '../db/fts.js';
 import type { RepoRow } from '../db/types.js';
+import {
+	checkWorkerCompatibility,
+	compatibilityRequiresStaleMark
+} from '../semantic/compatibility.js';
 import { getSemanticConfig, isSemanticSearchEnabled } from '../semantic/config.js';
 import {
 	semanticWorkerContains,
@@ -21,9 +25,13 @@ import {
 	markSemanticIndexed,
 	markSemanticIndexing,
 	markSemanticRemoved,
-	markSemanticStaleForModelOrVersion,
+	markSemanticStaleForIncompatibility,
 	upsertSemanticPending
 } from '../semantic/index-state.js';
+import {
+	nextSemanticReconcileBatch,
+	setSemanticReconcileCursor
+} from '../semantic/reconcile-cursor.js';
 
 export interface SemanticIndexCycleResult {
 	skipped: boolean;
@@ -174,29 +182,29 @@ export async function removeDeletedFromIndex(): Promise<{
  * Repair impossible SQLite ↔ TurboVec states:
  * - SQLite indexed but vector missing → stale (retry)
  * - SQLite removed but vector still present → remove + durable sync
+ *
+ * Uses a persisted vector_id keyset cursor so every indexed/removed row is
+ * eventually examined. Healthy rows do not stall progress (unlike ORDER BY
+ * updated_at ASC, which re-scans the same oldest batch forever).
  */
 export async function reconcileSemanticIndexState(
 	opts: { limit?: number } = {}
-): Promise<{ repaired: number; synced: boolean }> {
+): Promise<{ repaired: number; synced: boolean; examined: number }> {
 	const db = getDb();
 	const limit = opts.limit ?? 500;
 	let repaired = 0;
 	let synced = false;
+	let examined = 0;
 
-	const indexed = db
-		.prepare(
-			`SELECT entity_key, vector_id FROM semantic_index_state
-			 WHERE entity_type = 'repository' AND status = 'indexed'
-			 ORDER BY updated_at ASC
-			 LIMIT ?`
-		)
-		.all(limit) as { entity_key: string; vector_id: number }[];
-
-	if (indexed.length > 0) {
-		const check = await semanticWorkerContains(indexed.map((r) => r.vector_id));
+	const indexedBatch = nextSemanticReconcileBatch('indexed', limit);
+	examined += indexedBatch.rows.length;
+	if (indexedBatch.rows.length > 0) {
+		const check = await semanticWorkerContains(
+			indexedBatch.rows.map((r) => r.vector_id)
+		);
 		const missing = new Set(check.missing);
 		const now = new Date().toISOString();
-		for (const row of indexed) {
+		for (const row of indexedBatch.rows) {
 			if (!missing.has(row.vector_id)) continue;
 			db.prepare(
 				`UPDATE semantic_index_state
@@ -206,18 +214,14 @@ export async function reconcileSemanticIndexState(
 			repaired += 1;
 		}
 	}
+	setSemanticReconcileCursor('indexed', indexedBatch.nextCursor);
 
-	const removed = db
-		.prepare(
-			`SELECT entity_key, vector_id FROM semantic_index_state
-			 WHERE entity_type = 'repository' AND status = 'removed'
-			 ORDER BY updated_at ASC
-			 LIMIT ?`
-		)
-		.all(limit) as { entity_key: string; vector_id: number }[];
-
-	if (removed.length > 0) {
-		const check = await semanticWorkerContains(removed.map((r) => r.vector_id));
+	const removedBatch = nextSemanticReconcileBatch('removed', limit);
+	examined += removedBatch.rows.length;
+	if (removedBatch.rows.length > 0) {
+		const check = await semanticWorkerContains(
+			removedBatch.rows.map((r) => r.vector_id)
+		);
 		if (check.present.length > 0) {
 			await semanticWorkerRemove(check.present);
 			await semanticWorkerSync();
@@ -225,8 +229,9 @@ export async function reconcileSemanticIndexState(
 			repaired += check.present.length;
 		}
 	}
+	setSemanticReconcileCursor('removed', removedBatch.nextCursor);
 
-	return { repaired, synced };
+	return { repaired, synced, examined };
 }
 
 export async function runSemanticIndexCycle(
@@ -253,33 +258,14 @@ export async function runSemanticIndexCycle(
 
 	const config = getSemanticConfig();
 	const health = await semanticWorkerHealth();
-	if (!health?.ok) {
+	const compat = checkWorkerCompatibility(health, config);
+	if (!compat.ok) {
+		if (compatibilityRequiresStaleMark(compat)) {
+			markSemanticStaleForIncompatibility(compat.reason);
+		}
 		return {
 			skipped: true,
-			reason: 'semantic worker unavailable',
-			eligible: 0,
-			attempted: 0,
-			indexed: 0,
-			failed: 0,
-			removed: 0,
-			synced: false
-		};
-	}
-
-	if (
-		health.modelId !== config.embeddingModel ||
-		health.dimensions !== config.dimensions ||
-		health.vectorBits !== config.vectorBits
-	) {
-		markSemanticStaleForModelOrVersion({
-			embeddingModel: config.embeddingModel,
-			documentVersion: config.documentVersion,
-			dimensions: config.dimensions,
-			vectorBits: config.vectorBits
-		});
-		return {
-			skipped: true,
-			reason: `worker/model mismatch (worker=${health.modelId}/${health.dimensions}/${health.vectorBits})`,
+			reason: compat.reason,
 			eligible: 0,
 			attempted: 0,
 			indexed: 0,

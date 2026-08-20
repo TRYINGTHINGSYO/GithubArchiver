@@ -163,6 +163,20 @@ export function markSemanticStaleForModelOrVersion(opts: {
 	return result.changes;
 }
 
+/** Force-mark active rows stale after a worker compatibility mismatch. */
+export function markSemanticStaleForIncompatibility(reason: string): number {
+	const db = getDb();
+	const now = new Date().toISOString();
+	const result = db
+		.prepare(
+			`UPDATE semantic_index_state
+			 SET status = 'stale', updated_at = ?, last_error = ?
+			 WHERE status IN ('indexed', 'failed', 'pending', 'indexing')`
+		)
+		.run(now, reason.slice(0, 500));
+	return result.changes;
+}
+
 export function getSemanticIndexState(
 	entityType: SemanticEntityType,
 	entityKey: string

@@ -113,6 +113,12 @@ rank matching candidates only
 
 Never approximate eligibility with “first N repo ids”.
 
+**Baseline visibility always applies** — even when the user supplied no language /
+stars / category filters. Every semantic or hybrid candidate ID is passed through
+`filterRepoIdsByQuery` → `buildRepoFilters`, which excludes `deleted_at` and
+`pending_deletion_at` (unless explicitly opted in). TurboVec hits alone are never
+sufficient; the deletion worker is not the search correctness barrier.
+
 ## Pagination
 
 Semantic/hybrid search ranks a **bounded candidate window**, then pages inside
@@ -142,10 +148,32 @@ Startup/index-cycle reconciliation repairs:
 - SQLite `indexed` but vector missing → `stale`
 - SQLite `removed` but vector still present → remove + durable sync
 
+Sweeps use a **persisted `vector_id` keyset cursor** (`semantic_reconcile_cursor`)
+with wraparound so every indexed/removed row is eventually examined. Bounded
+work per cycle; no `OFFSET` over large tables; healthy rows do not pin the scan
+on the oldest `updated_at` forever.
+
 ## Deletion
 
 Deleted / pending-deletion / missing repos are removed from TurboVec, synced, then
-marked `removed` in SQLite.
+marked `removed` in SQLite. Until that happens, search still hides them via
+baseline SQL eligibility.
+
+## Worker compatibility
+
+`checkWorkerCompatibility` is the single definition used by search, indexing,
+similar-repos, and admin stats. It requires matching:
+
+- `modelId`
+- `dimensions`
+- `vectorBits`
+- `schemaVersion`
+- `semanticDocumentVersion`
+
+HTTP-healthy is not enough. On mismatch: do not index, do not mix vectors, fall
+back search to keyword/FTS, and report a clear reason. Model/document/dimension/
+bit mismatches mark active rows `stale`. Index `schemaVersion` mismatches require
+`npm run semantic:rebuild` after aligning config.
 
 ## Model / dimension mismatches
 
@@ -159,7 +187,8 @@ Use `npm run semantic:rebuild`.
 npm run semantic:worker
 npm run semantic:index          # --limit --batch-size --force --dry-run --repo-id
 npm run semantic:rebuild
-npm run semantic:eval
+npm run semantic:eval           # CI hashing / token-overlap stand-in
+npm run semantic:eval:prod      # optional MiniLM meaning eval (needs requirements-prod)
 npm run semantic:benchmark      # 10k/100k × 2/3/4-bit
 ```
 
@@ -168,7 +197,8 @@ npm run semantic:benchmark      # 10k/100k × 2/3/4-bit
 | Symptom | Fix |
 |---------|-----|
 | Mode control missing | Feature flag off — expected |
-| Hybrid falls back to keyword | Worker down — start `semantic:worker` |
-| Dimension / model mismatch | Explicit rebuild after changing provider |
+| Hybrid falls back to keyword | Worker down or incompatible — check health + compatibility fields |
+| Dimension / model / doc / schema mismatch | Align SEMANTIC_* env; rebuild after schema changes |
 | Production setup missing MiniLM | Install `requirements-prod.txt` |
 | Index grows but search empty | Check sync succeeded before rows marked indexed |
+| Deleted repo still in semantic hits | Should be impossible after eligibility filter — file a bug |

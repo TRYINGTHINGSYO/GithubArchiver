@@ -1,8 +1,14 @@
+/**
+ * Always apply the same SQLite visibility/eligibility rules used by ordinary
+ * repository search (buildRepoFilters), including when the user supplied no
+ * explicit hard filters. TurboVec hits alone are never sufficient.
+ */
 import { getDb } from '../db/connection.js';
 import { buildRepoFilters } from '../db/repo-query.js';
 import { searchReposFts } from '../db/fts.js';
 import { queryRepos } from '../db/repos.js';
 import type { RepoQuery, RepoQueryResult, RepoRow } from '../db/types.js';
+import { checkWorkerCompatibility } from './compatibility.js';
 import { getSemanticConfig, isSemanticSearchEnabled, type SemanticSearchMode } from './config.js';
 import { semanticWorkerHealth, semanticWorkerSearch } from './client.js';
 import { bm25ToSimilarity, rankHybridCandidates, similarityToBm25 } from './ranking.js';
@@ -27,7 +33,7 @@ export interface SemanticRepoQueryResult extends RepoQueryResult {
 	pagination: 'candidate-window' | 'fts' | 'list';
 }
 
-function hasHardFilters(opts: RepoQuery): boolean {
+function hasExplicitHardFilters(opts: RepoQuery): boolean {
 	return Boolean(
 		opts.language ||
 			opts.source ||
@@ -82,7 +88,11 @@ function listEligibleRepoIds(opts: RepoQuery, softMax: number): {
 	};
 }
 
-/** Apply the complete SQL hard-filter set to an explicit candidate id list. */
+/**
+ * Apply the complete SQL filter set (including baseline deleted/pending-deletion
+ * visibility) to an explicit candidate id list. Shared by keyword and semantic
+ * paths so eligibility cannot drift.
+ */
 export function filterRepoIdsByQuery(ids: number[], opts: RepoQuery): number[] {
 	if (ids.length === 0) return [];
 	const db = getDb();
@@ -109,6 +119,26 @@ function loadReposByIds(ids: number[]): RepoRow[] {
 		.all(...ids) as RepoRow[];
 	const byId = new Map(rows.map((r) => [r.id, r]));
 	return ids.map((id) => byId.get(id)).filter((r): r is RepoRow => Boolean(r));
+}
+
+function ftsFallback(
+	opts: RepoQuery,
+	mode: SemanticSearchMode,
+	configEnabled: boolean
+): SemanticRepoQueryResult {
+	const fts = searchReposFts(opts);
+	return {
+		...fts,
+		repos: fts.repos.map((r) => ({
+			...r,
+			semantic_score: null,
+			final_score: r.fts_rank != null ? bm25ToSimilarity(r.fts_rank) : null,
+			match_reason: 'lexical' as const
+		})),
+		searchMode: mode === 'keyword' || !configEnabled ? 'keyword' : mode,
+		semanticAvailable: false,
+		pagination: 'fts'
+	};
 }
 
 export async function searchReposSemanticAware(
@@ -152,43 +182,33 @@ export async function searchReposSemanticAware(
 	const wantSemantic =
 		config.enabled && (mode === 'semantic' || mode === 'hybrid');
 	let semanticAvailable = false;
-	let healthOk = false;
 
 	if (wantSemantic) {
 		const health = await semanticWorkerHealth();
-		healthOk = Boolean(health?.ok);
-		semanticAvailable = healthOk;
+		const compat = checkWorkerCompatibility(health, config);
+		if (!compat.ok) {
+			return ftsFallback(opts, mode, config.enabled);
+		}
+		semanticAvailable = true;
 	}
 
-	if (!wantSemantic || !healthOk) {
-		const fts = searchReposFts(opts);
-		return {
-			...fts,
-			repos: fts.repos.map((r) => ({
-				...r,
-				semantic_score: null,
-				final_score: r.fts_rank != null ? bm25ToSimilarity(r.fts_rank) : null,
-				match_reason: 'lexical' as const
-			})),
-			searchMode: mode === 'keyword' || !config.enabled ? 'keyword' : mode,
-			semanticAvailable: false,
-			pagination: 'fts'
-		};
+	if (!wantSemantic || !semanticAvailable) {
+		return ftsFallback(opts, mode, config.enabled);
 	}
 
 	const candidateLimit = Math.min(500, Math.max(perPage * 5, 50));
 	let allowlist: number[] | undefined;
 	let useCandidatePostFilter = false;
 
-	if (hasHardFilters(opts)) {
+	// Baseline eligibility (deleted_at / pending_deletion_at / …) always comes
+	// from buildRepoFilters via filterRepoIdsByQuery after retrieval. Explicit
+	// user filters may additionally drive TurboVec allowlists when small enough.
+	if (hasExplicitHardFilters(opts)) {
 		const eligible = listEligibleRepoIds(opts, config.allowlistSoftMax);
 		if (eligible.totalEligible === 0) return empty(true);
 		if (!eligible.truncated) {
 			allowlist = eligible.ids;
 		} else {
-			// Pathological allowlist: retrieve a global semantic window, then apply
-			// the COMPLETE SQL filter to those candidate IDs only (never approximate
-			// eligibility with the first N repo ids).
 			useCandidatePostFilter = true;
 		}
 	}
@@ -205,19 +225,7 @@ export async function searchReposSemanticAware(
 			allowlist
 		});
 	} catch {
-		const fts = searchReposFts(opts);
-		return {
-			...fts,
-			repos: fts.repos.map((r) => ({
-				...r,
-				semantic_score: null,
-				final_score: r.fts_rank != null ? bm25ToSimilarity(r.fts_rank) : null,
-				match_reason: 'lexical' as const
-			})),
-			searchMode: mode,
-			semanticAvailable: false,
-			pagination: 'fts'
-		};
+		return ftsFallback(opts, mode, config.enabled);
 	}
 
 	const semanticScoreById = new Map<number, number>();
@@ -250,10 +258,9 @@ export async function searchReposSemanticAware(
 		...lexicalById.keys()
 	]);
 
-	if (hasHardFilters(opts) && useCandidatePostFilter) {
-		const kept = filterRepoIdsByQuery([...idSet], opts);
-		idSet = new Set(kept);
-	}
+	// ALWAYS apply buildRepoFilters eligibility — with or without user filters —
+	// so deleted / pending-deletion repos cannot leak through TurboVec hits.
+	idSet = new Set(filterRepoIdsByQuery([...idSet], opts));
 
 	const missingIds = [...idSet].filter((id) => !lexicalById.has(id));
 	const loaded = loadReposByIds(missingIds);
@@ -304,7 +311,6 @@ export async function searchReposSemanticAware(
 		}
 	);
 
-	// Candidate-window pagination: total is the ranked retrieval window, not corpus size.
 	const total = ranked.length;
 	const offset = (page - 1) * perPage;
 	const pageRows = ranked.slice(offset, offset + perPage);

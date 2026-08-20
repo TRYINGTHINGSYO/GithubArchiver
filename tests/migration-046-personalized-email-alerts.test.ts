@@ -15,7 +15,7 @@ describe('migration 046 personalized email alerts', () => {
 			).toBeUndefined();
 
 			const result = runMigrationsThrough(db, CURRENT_SCHEMA_VERSION);
-			expect(CURRENT_SCHEMA_VERSION).toBe(47);
+			expect(CURRENT_SCHEMA_VERSION).toBe(48);
 			expect(result.applied).toEqual([46, 47]);
 
 			const tables = (

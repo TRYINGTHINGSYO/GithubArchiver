@@ -27,3 +27,8 @@ export {
 export { searchReposSemanticAware, type SemanticRepoQueryResult } from './search.js';
 export { findSimilarRepositories } from './similar.js';
 export { getSemanticAdminStats } from './stats.js';
+export {
+	checkWorkerCompatibility,
+	compatibilityRequiresStaleMark,
+	type WorkerCompatibilityResult
+} from './compatibility.js';

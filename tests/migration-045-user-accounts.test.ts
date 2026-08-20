@@ -13,7 +13,7 @@ describe('migration 045 user accounts', () => {
 			).toBeUndefined();
 
 			const result = runMigrationsThrough(db, 45);
-			expect(CURRENT_SCHEMA_VERSION).toBe(47);
+			expect(CURRENT_SCHEMA_VERSION).toBe(48);
 			expect(result.applied).toEqual([45]);
 
 			const tables = (

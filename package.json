@@ -57,6 +57,7 @@
     "semantic:index": "tsx scripts/semantic-index.ts",
     "semantic:rebuild": "tsx scripts/semantic-rebuild.ts",
     "semantic:eval": "tsx scripts/semantic-eval.ts",
+    "semantic:eval:prod": "tsx scripts/semantic-eval-prod.ts",
     "semantic:benchmark": "python3 services/semantic-worker/benchmark.py",
     "semantic:worker": "python3 services/semantic-worker/server.py",
     "mcp:githubarchive": "node scripts/run-mcp-githubarchive.mjs",
