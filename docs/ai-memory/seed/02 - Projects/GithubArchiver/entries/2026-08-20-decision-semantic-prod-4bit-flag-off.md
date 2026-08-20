@@ -2,7 +2,7 @@
 id: decision-semantic-prod-4bit-flag-off
 date: 2026-08-20
 pr: 33
-commit: pending
+commit: 0280d0a
 area:
   - search
 type: decision

@@ -63,7 +63,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
-- **2026-08-20** · `decision` · `confirmed` · `permanent` · PR #33 · `pending` · `open` · `search` — [Production MiniLM uses SEMANTIC_VECTOR_BITS=4; flag stays OFF at merge](entries/2026-08-20-decision-semantic-prod-4bit-flag-off.md)
+- **2026-08-20** · `decision` · `confirmed` · `permanent` · PR #33 · `0280d0a` · `open` · `search` — [Production MiniLM uses SEMANTIC_VECTOR_BITS=4; flag stays OFF at merge](entries/2026-08-20-decision-semantic-prod-4bit-flag-off.md)
   - edges: related:[`validation-semantic-prod-snapshot-gate-result`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
 - **2026-08-20** · `research` · `confirmed` · `release` · PR #33 · `ff30ae7` · `open` · `search` — [Prod-readiness harness hardened (latency, worker RSS, filters, noise)](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
   - edges: supersedes:[`validation-semantic-production-readiness`](entries/2026-08-20-validation-semantic-production-readiness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
@@ -87,7 +87,7 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
-- **2026-08-20** · `decision` · `confirmed` · `permanent` · PR #33 · `pending` · `open` · `search` — [Production MiniLM uses SEMANTIC_VECTOR_BITS=4; flag stays OFF at merge](entries/2026-08-20-decision-semantic-prod-4bit-flag-off.md)
+- **2026-08-20** · `decision` · `confirmed` · `permanent` · PR #33 · `0280d0a` · `open` · `search` — [Production MiniLM uses SEMANTIC_VECTOR_BITS=4; flag stays OFF at merge](entries/2026-08-20-decision-semantic-prod-4bit-flag-off.md)
   - edges: related:[`validation-semantic-prod-snapshot-gate-result`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
 - **2026-08-20** · `research` · `confirmed` · `release` · PR #33 · `ff30ae7` · `open` · `search` — [Prod-readiness harness hardened (latency, worker RSS, filters, noise)](entries/2026-08-20-validation-semantic-prod-readiness-harness-hardening.md)
   - edges: supersedes:[`validation-semantic-production-readiness`](entries/2026-08-20-validation-semantic-production-readiness.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), implemented-by:[`pr-33`](entries/2026-08-20-validation-semantic-prod-snapshot-gate-result.md)
