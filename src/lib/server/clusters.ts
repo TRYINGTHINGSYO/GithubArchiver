@@ -22,7 +22,10 @@ export function getClusterDetail(slug: string): ClusterAnalyticsRow | null {
 	return getClusterAnalytics(slug);
 }
 
-export function getClusterRepos(slug: string, opts: RepoQuery = {}): RepoQueryResult | null {
+export function getClusterRepos(
+	slug: string,
+	opts: RepoQuery = {}
+): ReturnType<typeof listRepos> | null {
 	if (!getClusterBySlug(slug)) return null;
 	return listRepos({
 		...opts,

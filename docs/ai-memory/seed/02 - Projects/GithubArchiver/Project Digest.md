@@ -63,6 +63,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Recent changes
 
+- **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `sqlite` — [Semantic eligibility, reconcile cursor, and worker compatibility](entries/2026-08-20-bugfix-semantic-search-release-correctness.md)
+  - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), implemented-by:`pr-33`
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `enrichment`, `sqlite` — [Harden TurboVec semantic search before merge (BM25, durability, backfill)](entries/2026-08-20-bugfix-semantic-search-release-hardening.md)
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - **2026-08-20** · `feature` · `confirmed` · `permanent` · `open` · `search`, `enrichment`, `sqlite` — [TurboVec semantic search layer behind feature flag](entries/2026-08-20-feature-semantic-search-turbovec.md)
@@ -77,8 +79,6 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
   - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - **2026-08-01** · `feature` · `confirmed` · `release` · PR #28 · `cbb7d80` · migration 44 · `open` · `ui`, `websites`, `collections`, `schema` — [Dual discovery redesign — shell, ratings, random websites](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
   - edges: implemented-by:[`pr-28`](entries/2026-08-01-feature-intelligence-discovery-redesign.md), references:[`feature-website-discovery-v1`](entries/2026-07-30-feature-website-discovery-v1.md)
-- **2026-08-01** · `feature` · `confirmed` · `permanent` · PR #27 · `c998fd2` · migration 43 · `open` · `storage`, `sqlite`, `ops`, `quality` — [Staged low-value repo cleanup with quarantine](entries/2026-08-01-feature-low-value-repo-cleanup.md)
-  - edges: related:[`feature-storage-retention-volume`](entries/2026-08-01-feature-storage-retention-volume.md)
 
 ## Open technical debt
 
@@ -87,6 +87,8 @@ Discovery (GH Archive → optional Search gap) → Ingestion → Enrichment → 
 
 ## Current priorities
 
+- **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `sqlite` — [Semantic eligibility, reconcile cursor, and worker compatibility](entries/2026-08-20-bugfix-semantic-search-release-correctness.md)
+  - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), implemented-by:`pr-33`
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `enrichment`, `sqlite` — [Harden TurboVec semantic search before merge (BM25, durability, backfill)](entries/2026-08-20-bugfix-semantic-search-release-hardening.md)
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - **2026-08-20** · `feature` · `confirmed` · `permanent` · `open` · `search`, `enrichment`, `sqlite` — [TurboVec semantic search layer behind feature flag](entries/2026-08-20-feature-semantic-search-turbovec.md)

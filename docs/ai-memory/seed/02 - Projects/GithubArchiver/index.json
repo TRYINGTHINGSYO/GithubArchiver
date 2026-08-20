@@ -1,9 +1,48 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-20T17:47:02.935Z",
+  "generatedAt": "2026-08-20T18:50:04.396Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "bugfix-semantic-search-release-correctness",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-20",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "search",
+        "sqlite"
+      ],
+      "related": [
+        "feature-semantic-search-turbovec",
+        "bugfix-semantic-search-release-hardening",
+        "pr-33"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "feature-semantic-search-turbovec"
+        },
+        {
+          "type": "related",
+          "id": "bugfix-semantic-search-release-hardening"
+        },
+        {
+          "type": "implemented-by",
+          "id": "pr-33"
+        }
+      ],
+      "supersedes": null,
+      "title": "Semantic eligibility, reconcile cursor, and worker compatibility",
+      "path": "entries/2026-08-20-bugfix-semantic-search-release-correctness.md",
+      "summary": "Three remaining release-correctness fixes on PR #33 (no redesign):"
+    },
     {
       "id": "bugfix-semantic-search-release-hardening",
       "schema": 1,

@@ -20,6 +20,8 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Open work
 
+- **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `sqlite` — [Semantic eligibility, reconcile cursor, and worker compatibility](entries/2026-08-20-bugfix-semantic-search-release-correctness.md)
+  - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md), implemented-by:`pr-33`
 - **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `enrichment`, `sqlite` — [Harden TurboVec semantic search before merge (BM25, durability, backfill)](entries/2026-08-20-bugfix-semantic-search-release-hardening.md)
   - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - **2026-08-20** · `feature` · `confirmed` · `permanent` · `open` · `search`, `enrichment`, `sqlite` — [TurboVec semantic search layer behind feature flag](entries/2026-08-20-feature-semantic-search-turbovec.md)

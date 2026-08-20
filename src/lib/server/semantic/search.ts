@@ -5,7 +5,7 @@
  */
 import { getDb } from '../db/connection.js';
 import { buildRepoFilters } from '../db/repo-query.js';
-import { searchReposFts } from '../db/fts.js';
+import { searchReposFts, type RepoFtsRow } from '../db/fts.js';
 import { queryRepos } from '../db/repos.js';
 import type { RepoQuery, RepoQueryResult, RepoRow } from '../db/types.js';
 import { checkWorkerCompatibility } from './compatibility.js';
@@ -127,10 +127,13 @@ function ftsFallback(
 	configEnabled: boolean
 ): SemanticRepoQueryResult {
 	const fts = searchReposFts(opts);
+	const ftsRepos = fts.repos as RepoFtsRow[];
 	return {
 		...fts,
-		repos: fts.repos.map((r) => ({
+		repos: ftsRepos.map((r) => ({
 			...r,
+			fts_rank: r.fts_rank,
+			fts_snippet: r.fts_snippet,
 			semantic_score: null,
 			final_score: r.fts_rank != null ? bm25ToSimilarity(r.fts_rank) : null,
 			match_reason: 'lexical' as const
@@ -238,13 +241,13 @@ export async function searchReposSemanticAware(
 		{ lexicalScore: number | null; snippet: string | null; row: RepoRow }
 	>();
 
-	if (mode === 'hybrid' || mode === 'keyword') {
+	if (mode === 'hybrid') {
 		const fts = searchReposFts({
 			...opts,
 			page: 1,
 			perPage: candidateLimit
 		});
-		for (const row of fts.repos) {
+		for (const row of fts.repos as RepoFtsRow[]) {
 			lexicalById.set(row.id, {
 				lexicalScore: bm25ToSimilarity(row.fts_rank),
 				snippet: row.fts_snippet,

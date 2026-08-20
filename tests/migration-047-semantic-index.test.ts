@@ -18,7 +18,7 @@ describe('migration 047 semantic index state', () => {
 
 			const result = runMigrationsThrough(db, CURRENT_SCHEMA_VERSION);
 			expect(CURRENT_SCHEMA_VERSION).toBe(48);
-			expect(result.applied).toEqual([47]);
+			expect(result.applied).toEqual([47, 48]);
 
 			const cols = (
 				db.prepare('PRAGMA table_info(semantic_index_state)').all() as Array<{ name: string }>
