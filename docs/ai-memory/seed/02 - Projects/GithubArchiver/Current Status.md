@@ -20,6 +20,8 @@ Living summary derived from the entry log. For AI priming prefer [[Project Diges
 
 ## Open work
 
+- **2026-08-20** · `bugfix` · `confirmed` · `release` · `open` · `search`, `enrichment`, `sqlite` — [Harden TurboVec semantic search before merge (BM25, durability, backfill)](entries/2026-08-20-bugfix-semantic-search-release-hardening.md)
+  - edges: caused-by:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), related:[`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - **2026-08-20** · `feature` · `confirmed` · `permanent` · `open` · `search`, `enrichment`, `sqlite` — [TurboVec semantic search layer behind feature flag](entries/2026-08-20-feature-semantic-search-turbovec.md)
   - edges: references:[`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), related:[`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - **2026-08-01** · `bugfix` · `confirmed` · `permanent` · PR #30 · `2c5b89f` · `open` · `discovery`, `clusters`, `cache` — [Wipe must clear stale cluster cards from materialization and TTL](entries/2026-08-01-bugfix-cluster-wipe-empty-state.md)

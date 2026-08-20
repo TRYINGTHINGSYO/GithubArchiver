@@ -11,6 +11,8 @@ generated: true
 
 Typed edges from `relationships:` (`caused-by`, `implemented-by`, `supersedes`, `references`, `validates`, `related`).
 
+- [`bugfix-semantic-search-release-hardening`](entries/2026-08-20-bugfix-semantic-search-release-hardening.md) (`bugfix`, `confirmed`, `release`) — Harden TurboVec semantic search before merge (BM25, durability, backfill)
+  - `caused-by` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md), `related` → [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md)
 - [`feature-semantic-search-turbovec`](entries/2026-08-20-feature-semantic-search-turbovec.md) (`feature`, `confirmed`, `permanent`) — TurboVec semantic search layer behind feature flag
   - `references` → [`decision-knowledge-engine-philosophy`](entries/2026-07-18-decision-knowledge-engine-philosophy.md), `related` → [`feature-intelligence-discovery-redesign`](entries/2026-08-01-feature-intelligence-discovery-redesign.md)
 - [`feature-admin-password-fallback`](entries/2026-08-03-feature-admin-password-fallback.md) (`feature`, `confirmed`, `permanent`) — Restore ADMIN_PASSWORD admin login beside GitHub OAuth

@@ -1,9 +1,43 @@
 {
   "schema": 1,
   "generated": true,
-  "generatedAt": "2026-08-20T17:46:45.703Z",
+  "generatedAt": "2026-08-20T17:47:02.935Z",
   "project": "githubarchiver",
   "entries": [
+    {
+      "id": "bugfix-semantic-search-release-hardening",
+      "schema": 1,
+      "type": "bugfix",
+      "status": "open",
+      "confidence": "confirmed",
+      "durability": "release",
+      "date": "2026-08-20",
+      "pr": null,
+      "commit": null,
+      "migration": null,
+      "area": [
+        "search",
+        "enrichment",
+        "sqlite"
+      ],
+      "related": [
+        "feature-semantic-search-turbovec"
+      ],
+      "relationships": [
+        {
+          "type": "caused-by",
+          "id": "feature-semantic-search-turbovec"
+        },
+        {
+          "type": "related",
+          "id": "feature-semantic-search-turbovec"
+        }
+      ],
+      "supersedes": null,
+      "title": "Harden TurboVec semantic search before merge (BM25, durability, backfill)",
+      "path": "entries/2026-08-20-bugfix-semantic-search-release-hardening.md",
+      "summary": "Release-blocking fixes on PR #33:"
+    },
     {
       "id": "feature-semantic-search-turbovec",
       "schema": 1,
